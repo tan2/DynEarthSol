@@ -9,7 +9,7 @@ namespace po = boost::program_options;
 
 #include "parameters.hpp"
 
-void get_input_parameters(const char* filename, Param& param)
+void get_input_parameters(const char* filename, Param& p)
 {
     std::ifstream ifs(filename);
     if (!ifs) {
@@ -22,20 +22,20 @@ void get_input_parameters(const char* filename, Param& param)
     //
     po::options_description cfg("Config file options");
     cfg.add_options()
-        ("sim.max_steps", po::value<int>(&param.sim.max_steps), "Max. number of time steps")
-        ("sim.max_time", po::value<double>(&param.sim.max_time), "Max. time (in seconds)")
-        ("sim.output_step_interval", po::value<int>(&param.sim.output_step_interval),
+        ("sim.max_steps", po::value<int>(&p.sim.max_steps), "Max. number of time steps")
+        ("sim.max_time", po::value<double>(&p.sim.max_time), "Max. time (in seconds)")
+        ("sim.output_step_interval", po::value<int>(&p.sim.output_step_interval),
          "Output step interval")
-        ("sim.output_time_interval", po::value<double>(&param.sim.output_time_interval),
+        ("sim.output_time_interval", po::value<double>(&p.sim.output_time_interval),
          "Output time interval")
-        ("sim.is_restarting", po::value<bool>(&param.sim.is_restarting)->default_value(false),
+        ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
          "Restarting from previous save?")
         ;
 
     cfg.add_options()
-        ("mesh.xlength", po::value<double>(&param.mesh.xlength)->required(), "Length of x (in meters)")
-        ("mesh.ylength", po::value<double>(&param.mesh.ylength)->required(), "Length of y (in meters)")
-        ("mesh.zlength", po::value<double>(&param.mesh.zlength)->required(), "Length of z (in meters)")
+        ("mesh.xlength", po::value<double>(&p.mesh.xlength)->required(), "Length of x (in meters)")
+        ("mesh.ylength", po::value<double>(&p.mesh.ylength)->required(), "Length of y (in meters)")
+        ("mesh.zlength", po::value<double>(&p.mesh.zlength)->required(), "Length of z (in meters)")
         ;
 
     //
@@ -60,18 +60,18 @@ void get_input_parameters(const char* filename, Param& param)
         std::exit(1);
     }
     if ( ! vm.count("sim.max_steps") )
-        param.sim.max_steps = std::numeric_limits<int>::max();;
+        p.sim.max_steps = std::numeric_limits<int>::max();;
     if ( ! vm.count("sim.max_time") )
-        param.sim.max_time = std::numeric_limits<double>::max();;
+        p.sim.max_time = std::numeric_limits<double>::max();;
 
     if ( ! (vm.count("sim.output_step_interval") || vm.count("sim.output_time_interval")) ) {
         std::cerr << "Must provide either sim.output_step_interval or sim.output_time_interval\n";
         std::exit(1);
     }
     if ( ! vm.count("sim.output_step_interval") )
-        param.sim.output_step_interval = std::numeric_limits<int>::max();;
+        p.sim.output_step_interval = std::numeric_limits<int>::max();;
     if ( ! vm.count("sim.output_time_interval") )
-        param.sim.output_time_interval = std::numeric_limits<double>::max();;
+        p.sim.output_time_interval = std::numeric_limits<double>::max();;
 
     return;
 }
