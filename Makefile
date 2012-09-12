@@ -7,15 +7,18 @@
 
 ## Execute "make" if making production run. Or "make debug=1" for debugging run.
 ##
-## dim = 3: 3D code; 2: 2D code
+## ndims = 3: 3D code; 2: 2D code
 ## debug = 0: optimized build; 1: debugging build
 
-dim = 3
+ndims = 3
 debug = 0
 
 ## Select C++ compiler
 CXX = g++
 
+## Boost
+BOOSTCXXFLAGS =
+BOOSTLDFLAGS = -lboost_program_options
 
 ########################################################################
 ## Select compiler and linker flags
@@ -36,11 +39,7 @@ endif
 SRCS =	\
 	dynearthsol3d.cxx
 
-
 INCS =	\
-	constants.h \
-	parameters.h \
-
 
 OBJS = $(SRCS:.cxx=.o)
 
@@ -57,17 +56,28 @@ TRI_SRCS = triangle/triangle.c
 TRI_INCS = triangle/triangle.h
 TRI_OBJS = $(TRI_SRCS:.c=.o)
 
+ifeq ($(ndims), 2)
+	M_SRCS = $(TRI_SRCS)
+	M_INCS = $(TRI_INCS)
+	M_OBJS = $(TRI_OBJS)
+else
+	M_SRCS = $(TET_SRCS)
+	M_INCS = $(TET_INCS)
+	M_OBJS = $(TET_OBJS)
+	CXXFLAGS += -DTHREED
+endif
+
 ## Action
 
 all: $(EXE)
 
-$(EXE): $(TET_OBJS) $(TRI_OBJS) $(OBJS)
-	$(CXX) $(LDFLAGS) $(TRI_OBJS) $(OBJS) -o $@
+$(EXE): $(M_OBJS) $(OBJS)
+	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOSTLDFLAGS) -o $@
 	@# snapshot of the code for building the executable
 	@which hg 2>&1 > /dev/null && (hg summary; hg diff) > snapshot.diff
 
-$(OBJS): %.o : %.cxx
-	$(CXX) $(CXXFLAGS) -c $<
+$(OBJS): %.o : %.cxx $(INCS)
+	$(CXX) $(CXXFLAGS) $(BOOSTCXXFLAGS) -c $<
 
 $(TRI_OBJS): %.o : %.c $(TRI_INCS)
 	@# Triangle cannot be compiled with -O2
