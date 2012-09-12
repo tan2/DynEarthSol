@@ -6,6 +6,15 @@ namespace po = boost::program_options;
 #include <fstream>
 //#include <string>
 
+
+struct param {
+    int max_steps;
+    double max_time;
+
+    double xlength, ylength, zlength;
+};
+
+
 int main(int argc, const char *argv[])
 {
     //
@@ -25,18 +34,17 @@ int main(int argc, const char *argv[])
     //
     // declare input parameters
     //
-    int max_steps;
-    double max_time;
+    struct param param;
     po::options_description cfg("Config file options");
     cfg.add_options()
-        ("sim.max_steps", po::value<int>(&max_steps)->required(), "Max. number of time steps")
-        ("sim.max_time", po::value<double>(&max_time)->required(), "Max. time (in seconds)")
+        ("sim.max_steps", po::value<int>(&param.max_steps), "Max. number of time steps")
+        ("sim.max_time", po::value<double>(&param.max_time), "Max. time (in seconds)")
         ;
 
     cfg.add_options()
-        ("mesh.xlength", po::value<double>()->required(), "Length of x (in meters)")
-        ("mesh.ylength", po::value<double>()->required(), "Length of y (in meters)")
-        ("mesh.zlength", po::value<double>()->required(), "Length of z (in meters)")
+        ("mesh.xlength", po::value<double>(&param.xlength)->required(), "Length of x (in meters)")
+        ("mesh.ylength", po::value<double>(&param.ylength)->required(), "Length of y (in meters)")
+        ("mesh.zlength", po::value<double>(&param.zlength)->required(), "Length of z (in meters)")
         ;
 
     //
@@ -54,15 +62,10 @@ int main(int argc, const char *argv[])
     }
 
     //
-    // get parameters from config file
+    // validate parameters
     //
-    try {
-        if (vm.count("mesh.xlength")) {
-            std::cout << vm["mesh.xlength"].as<double>() << "\n";
-        }
-    }
-    catch (std::exception& e) {
-        std::cerr << e.what() << "\n";
+    if ( !(vm.count("sim.max_steps") || vm.count("sim.max_time")) ) {
+        std::cerr << "Must provide either sim.max_steps or sim.max_time\n";
         return 1;
     }
 
@@ -72,11 +75,11 @@ int main(int argc, const char *argv[])
     int steps = 0;
     double time = 0;
     do {
-        double dt = 0;
-        std::cout << "Step: " << steps << ", time:" << max_time << "\n";
+        double dt = 1e7;
+        std::cout << "Step: " << steps << ", time:" << time << "\n";
         steps++;
         time += dt;
-    } while (steps <= max_steps && time <= max_time);
+    } while (steps <= param.max_steps && time <= param.max_time);
 
 
     //
