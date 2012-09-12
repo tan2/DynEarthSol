@@ -22,9 +22,13 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
+    //
+    // declare input parameters
+    //
     po::options_description cfg("Config file options");
     cfg.add_options()
-        ("sim.steps", po::value<int>(), "Max. number of time steps")
+        ("sim.max_steps", po::value<int>(), "Max. number of time steps")
+        ("sim.max_time", po::value<double>(), "Max. time (in seconds)")
         ;
 
     cfg.add_options()
@@ -34,7 +38,7 @@ int main(int argc, const char *argv[])
         ;
 
     //
-    // read config file
+    // parse config file
     //
     po::variables_map vm;
     try {
@@ -48,7 +52,7 @@ int main(int argc, const char *argv[])
     }
 
     //
-    // get parameters
+    // get parameters from config file
     //
     try {
         if (vm.count("mesh.xlength")) {
@@ -63,6 +67,16 @@ int main(int argc, const char *argv[])
     //
     // run simulation
     //
+    int steps = 0;
+    double time = 0;
+    int max_steps = vm["sim.max_steps"].as<int>();
+    double max_time = vm["sim.max_time"].as<double>();
+    do {
+        double dt = 0;
+        std::cout << "Step: " << steps << ", time:" << max_time << "\n";
+        steps++;
+        time += dt;
+    } while (steps <= max_steps && time <= max_time);
 
 
     //
