@@ -25,10 +25,12 @@ int main(int argc, const char *argv[])
     //
     // declare input parameters
     //
+    int max_steps;
+    double max_time;
     po::options_description cfg("Config file options");
     cfg.add_options()
-        ("sim.max_steps", po::value<int>(), "Max. number of time steps")
-        ("sim.max_time", po::value<double>(), "Max. time (in seconds)")
+        ("sim.max_steps", po::value<int>(&max_steps), "Max. number of time steps")
+        ("sim.max_time", po::value<double>(&max_time), "Max. time (in seconds)")
         ;
 
     cfg.add_options()
@@ -69,8 +71,6 @@ int main(int argc, const char *argv[])
     //
     int steps = 0;
     double time = 0;
-    int max_steps = vm["sim.max_steps"].as<int>();
-    double max_time = vm["sim.max_time"].as<double>();
     do {
         double dt = 0;
         std::cout << "Step: " << steps << ", time:" << max_time << "\n";
