@@ -6,22 +6,7 @@ namespace po = boost::program_options;
 #include <fstream>
 //#include <string>
 
-
-struct Sim {
-    int max_steps;
-    double max_time;
-};
-
-
-struct Mesh {
-    double xlength, ylength, zlength;
-};
-
-struct Param {
-    Sim sim;
-    Mesh mesh;
-};
-
+#include "parameters.hpp"
 
 void get_input_parameters(const char* filename, Param& param)
 {

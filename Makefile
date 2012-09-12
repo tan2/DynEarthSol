@@ -40,6 +40,7 @@ SRCS =	\
 	dynearthsol3d.cxx
 
 INCS =	\
+	parameters.hpp
 
 OBJS = $(SRCS:.cxx=.o)
 
