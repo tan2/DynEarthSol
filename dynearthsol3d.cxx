@@ -29,14 +29,14 @@ int main(int argc, const char *argv[])
     double max_time;
     po::options_description cfg("Config file options");
     cfg.add_options()
-        ("sim.max_steps", po::value<int>(&max_steps), "Max. number of time steps")
-        ("sim.max_time", po::value<double>(&max_time), "Max. time (in seconds)")
+        ("sim.max_steps", po::value<int>(&max_steps)->required(), "Max. number of time steps")
+        ("sim.max_time", po::value<double>(&max_time)->required(), "Max. time (in seconds)")
         ;
 
     cfg.add_options()
-        ("mesh.xlength", po::value<double>(), "Length of x (in meters)")
-        ("mesh.ylength", po::value<double>(), "Length of y (in meters)")
-        ("mesh.zlength", po::value<double>(), "Length of z (in meters)")
+        ("mesh.xlength", po::value<double>()->required(), "Length of x (in meters)")
+        ("mesh.ylength", po::value<double>()->required(), "Length of y (in meters)")
+        ("mesh.zlength", po::value<double>()->required(), "Length of z (in meters)")
         ;
 
     //
