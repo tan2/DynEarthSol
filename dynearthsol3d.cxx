@@ -2,6 +2,7 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+#include <limits>
 #include <iostream>
 #include <fstream>
 //#include <string>
@@ -23,6 +24,12 @@ void get_input_parameters(const char* filename, Param& param)
     cfg.add_options()
         ("sim.max_steps", po::value<int>(&param.sim.max_steps), "Max. number of time steps")
         ("sim.max_time", po::value<double>(&param.sim.max_time), "Max. time (in seconds)")
+        ("sim.output_step_interval", po::value<int>(&param.sim.output_step_interval),
+         "Output step interval")
+        ("sim.output_time_interval", po::value<double>(&param.sim.output_time_interval),
+         "Output time interval")
+        ("sim.is_restarting", po::value<bool>(&param.sim.is_restarting)->default_value(false),
+         "Restarting from previous save?")
         ;
 
     cfg.add_options()
@@ -48,15 +55,39 @@ void get_input_parameters(const char* filename, Param& param)
     //
     // validate parameters
     //
-    if ( !(vm.count("sim.max_steps") || vm.count("sim.max_time")) ) {
+    if ( ! (vm.count("sim.max_steps") || vm.count("sim.max_time")) ) {
         std::cerr << "Must provide either sim.max_steps or sim.max_time\n";
         std::exit(1);
     }
+    if ( ! vm.count("sim.max_steps") )
+        param.sim.max_steps = std::numeric_limits<int>::max();;
+    if ( ! vm.count("sim.max_time") )
+        param.sim.max_time = std::numeric_limits<double>::max();;
+
+    if ( ! (vm.count("sim.output_step_interval") || vm.count("sim.output_time_interval")) ) {
+        std::cerr << "Must provide either sim.output_step_interval or sim.output_time_interval\n";
+        std::exit(1);
+    }
+    if ( ! vm.count("sim.output_step_interval") )
+        param.sim.output_step_interval = std::numeric_limits<int>::max();;
+    if ( ! vm.count("sim.output_time_interval") )
+        param.sim.output_time_interval = std::numeric_limits<double>::max();;
+
+    return;
 }
 
+void init() {};
+void restart() {};
+void update_temperature() {};
+void update_strain_rate() {};
+void update_stress() {};
+void update_force() {};
+void update_mesh() {};
+void rotate_stress() {};
+void output() {};
 
 
-int main(int argc, const char *argv[])
+int main(int argc, const char* argv[])
 {
     //
     // read command line
@@ -74,18 +105,37 @@ int main(int argc, const char *argv[])
     //
     int steps = 0;
     double time = 0;
+    if (! param.sim.is_restarting) {
+        init();
+        output();
+    }
+    else {
+        restart();
+    }
+
+    int frame = 1;
     do {
         double dt = 1e7;
-        std::cout << "Step: " << steps << ", time:" << time << "\n";
         steps++;
         time += dt;
-    } while (steps <= param.sim.max_steps && time <= param.sim.max_time);
 
+        update_temperature();
+        update_strain_rate();
+        update_stress();
+        update_force();
+        update_mesh();
+        rotate_stress();
 
-    //
-    // output
-    //
+        std::cout << "Step: " << steps << ", time:" << time << "\n";
 
+        if ( (steps >= frame*param.sim.output_step_interval) ||
+             (time >= frame*param.sim.output_time_interval) ) {
+            output();
+            std::cout << frame <<"-th output\n";
+            frame++;
+        }
+
+    } while (steps < param.sim.max_steps && time <= param.sim.max_time);
 
     return 0;
 }
