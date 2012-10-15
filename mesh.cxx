@@ -29,7 +29,8 @@ void triangulate_polygon
     char options[255];
     struct triangulateio in, out;
 
-    std::sprintf(options, "VVpq%fjza%f", min_angle, max_area);
+    // add 'Q' for no output; add multiple 'V's for verbose output
+    std::sprintf(options, "pq%fjza%f", min_angle, max_area);
     std::puts(options);
 
     in.pointlist = points;
