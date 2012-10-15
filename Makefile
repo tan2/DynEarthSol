@@ -37,9 +37,11 @@ endif
 ##
 
 SRCS =	\
-	dynearthsol3d.cxx
+	dynearthsol3d.cxx \
+	mesh.cxx
 
 INCS =	\
+	constants.hpp \
 	parameters.hpp
 
 OBJS = $(SRCS:.cxx=.o)

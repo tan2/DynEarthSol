@@ -1,13 +1,12 @@
+#include <fstream>
+#include <limits>
+#include <iostream>
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-#include <limits>
-#include <iostream>
-#include <fstream>
-//#include <string>
-
 #include "parameters.hpp"
+#include "mesh.hpp"
 
 void get_input_parameters(const char* filename, Param& p)
 {
@@ -36,6 +35,7 @@ void get_input_parameters(const char* filename, Param& p)
         ("mesh.xlength", po::value<double>(&p.mesh.xlength)->required(), "Length of x (in meters)")
         ("mesh.ylength", po::value<double>(&p.mesh.ylength)->required(), "Length of y (in meters)")
         ("mesh.zlength", po::value<double>(&p.mesh.zlength)->required(), "Length of z (in meters)")
+        ("mesh.resolution", po::value<double>(&p.mesh.resolution)->required(), "Spatial resolution (in meters)")
         ;
 
     //
@@ -76,7 +76,13 @@ void get_input_parameters(const char* filename, Param& p)
     return;
 }
 
-void init() {};
+
+void init(const Param& param, Variables& var)
+{
+    new_mesh(param, var);
+};
+
+
 void restart() {};
 void update_temperature() {};
 void update_strain_rate() {};
@@ -84,6 +90,8 @@ void update_stress() {};
 void update_force() {};
 void update_mesh() {};
 void rotate_stress() {};
+
+
 void output() {};
 
 
@@ -103,10 +111,11 @@ int main(int argc, const char* argv[])
     //
     // run simulation
     //
+    Variables var;
     int steps = 0;
     double time = 0;
     if (! param.sim.is_restarting) {
-        init();
+        init(param, var);
         output();
     }
     else {
