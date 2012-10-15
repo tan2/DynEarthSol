@@ -10,7 +10,7 @@
 ## ndims = 3: 3D code; 2: 2D code
 ## debug = 0: optimized build; 1: debugging build
 
-ndims = 3
+ndims = 2
 debug = 0
 
 ## Select C++ compiler
@@ -18,7 +18,7 @@ CXX = g++
 
 ## Boost
 BOOSTCXXFLAGS =
-BOOSTLDFLAGS = -lboost_program_options
+BOOSTLDFLAGS = -lboost_program_options-mt
 
 ########################################################################
 ## Select compiler and linker flags
