@@ -49,12 +49,13 @@ struct Variables {
     int nelem;
     int nseg;
 
-
     // These 4 arrays are allocated by external library
     double2d_ref* coord;
     int2d_ref* connectivity;
     int2d_ref* segment;
     int1d_ref* segflag;
+
+    int2d* bcflag;
 };
 
 #endif
