@@ -29,7 +29,7 @@ CXXFLAGS = -g
 LDFLAGS = -lm
 
 ifeq ($(debug), 0)
-	CXXFLAGS += -O2
+	CXXFLAGS += -O2 -DBOOST_DISABLE_ASSERTS -DNDEBUG
 else
 	CXXFLAGS += -O0 -Wall
 endif
