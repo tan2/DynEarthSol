@@ -106,10 +106,12 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 
     if (NDIMS == 2) {
 
-	/* Define 4 corner points, with this order:
-         *      0 ----- 3
-         *      |       |
-         *      1 ----- 2
+	/* Define 4 corner points of the box, with this order:
+         *            BOUNDZ1
+         *          0 ------- 3
+         *  BOUNDX0 |         | BOUNDX1
+         *          1 ------- 2
+         *            BOUNDZ0
          */
         points[0] = 0;
 	points[1] = 0;
@@ -131,9 +133,9 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 
         // boundary flags (see definition in constants.hpp)
         init_segflags[0] = BOUNDX0;
-        init_segflags[1] = BOUNDZ1;
+        init_segflags[1] = BOUNDZ0;
         init_segflags[2] = BOUNDX1;
-        init_segflags[3] = BOUNDZ0;
+        init_segflags[3] = BOUNDZ1;
 
 	triangulate_polygon(min_triangle_angle, max_triangle_size,
 			    npoints, n_init_segments, points,
