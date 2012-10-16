@@ -25,7 +25,7 @@ BOOSTLDFLAGS = -lboost_program_options-mt
 ## (Usually you won't need to modify anything below)
 ########################################################################
 
-CXXFLAGS = -g
+CXXFLAGS = -g -std=c++0x
 LDFLAGS = -lm
 
 ifeq ($(debug), 0)
@@ -38,7 +38,8 @@ endif
 
 SRCS =	\
 	dynearthsol3d.cxx \
-	mesh.cxx
+	mesh.cxx \
+	sortindex.cxx
 
 INCS =	\
 	constants.hpp \
