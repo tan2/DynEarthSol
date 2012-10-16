@@ -156,14 +156,10 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
         var.nnode = nnode;
         var.nelem = nelem;
         var.nseg = nseg;
-        var.coord = new boost::multi_array_ref<double,2>
-            (pcoord, boost::extents[nnode][NDIMS]);
-        var.connectivity = new boost::multi_array_ref<int,2>
-            (pconnectivity, boost::extents[nelem][NODES_PER_ELEM]);
-        var.segment = new boost::multi_array_ref<int,2>
-            (psegment, boost::extents[nseg][NDIMS]);
-        var.segflag = new boost::multi_array_ref<int,1>
-            (psegflag, boost::extents[nseg]);
+        var.coord = new double2d_ref(pcoord, boost::extents[nnode][NDIMS]);
+        var.connectivity = new int2d_ref(pconnectivity, boost::extents[nelem][NODES_PER_ELEM]);
+        var.segment = new int2d_ref(psegment, boost::extents[nseg][NDIMS]);
+        var.segflag = new int1d_ref(psegflag, boost::extents[nseg]);
 
         /*
         std::cout << "coord:\n";

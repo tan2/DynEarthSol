@@ -143,7 +143,7 @@ int main(int argc, const char* argv[])
     //
     // run simulation
     //
-    Variables var;
+    static Variables var; // declared as static to silence valgrind's memory leak detection
     var.time = 0;
     var.dt = 1e7;
     var.steps = 0;
