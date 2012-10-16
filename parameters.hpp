@@ -37,6 +37,10 @@ struct Variables {
     int steps;
     int frame;
 
+    int nnode;
+    int nelem;
+    int nseg;
+
     boost::multi_array_ref<double,2>* coord;
     boost::multi_array_ref<int,2>* connectivity;
     boost::multi_array_ref<int,2>* segment;

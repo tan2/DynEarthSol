@@ -151,6 +151,9 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 	free(init_segments);
 	free(init_segflags);
 
+        var.nnode = nnode;
+        var.nelem = nelem;
+        var.nseg = nseg;
         var.coord = new boost::multi_array_ref<double,2>
             (pcoord, boost::extents[nnode][NDIMS]);
         var.connectivity = new boost::multi_array_ref<int,2>

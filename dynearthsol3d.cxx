@@ -107,7 +107,8 @@ void output(const Param& param, const Variables& var)
         f = fopen(buffer, "a");
 
     snprintf(buffer, 255, "%6d\t%10d\t%12.6e\t%12.4e\t%12.6e\t%8d\t%8d\t%8d\n",
-             var.frame, var.steps, var.time, var.dt, run_time, 0, 0, 0);
+             var.frame, var.steps, var.time, var.dt, run_time,
+             var.nnode, var.nelem, var.nseg);
     fputs(buffer, f);
     fclose(f);
 
