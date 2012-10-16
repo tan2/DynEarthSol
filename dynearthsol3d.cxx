@@ -10,12 +10,6 @@ namespace po = boost::program_options;
 
 void get_input_parameters(const char* filename, Param& p)
 {
-    std::ifstream ifs(filename);
-    if (!ifs) {
-        std::cerr << "Error: cannot open config_file '" << filename << "'\n";
-        std::exit(1);
-    }
-
     //
     // declare input parameters
     //
@@ -43,7 +37,7 @@ void get_input_parameters(const char* filename, Param& p)
     //
     po::variables_map vm;
     try {
-        po::store(po::parse_config_file(ifs, cfg), vm);
+        po::store(po::parse_config_file<char>(filename, cfg), vm);
         po::notify(vm);
     }
     catch (std::exception& e) {
