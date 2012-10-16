@@ -88,8 +88,7 @@ void update_mesh() {};
 void rotate_stress() {};
 
 
-void output(const Param& param, const Variables& var,
-            int steps, int frame, double time, double dt)
+void output(const Param& param, const Variables& var)
 {
     /* Not using C++ stream IO here since it can be much slower than C stdio. */
 
@@ -100,25 +99,25 @@ void output(const Param& param, const Variables& var,
     double run_time = 3.548641321351658e-13; // XXX
 
     // info
-    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "info", frame);
-    if (frame == 0)
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "info", var.frame);
+    if (var.frame == 0)
         f = fopen(buffer, "w");
     else
         f = fopen(buffer, "a");
 
     snprintf(buffer, 255, "%6d\t%10d\t%12.6e\t%12.4e\t%12.6e\t%8d\t%8d\t%8d\n",
-                  frame, steps, time, dt, run_time, 0, 0, 0);
+             var.frame, var.steps, var.time, var.dt, run_time, 0, 0, 0);
     fputs(buffer, f);
     fclose(f);
 
     // coord
-    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "coord", frame);
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "coord", var.frame);
     f = fopen(buffer, "w");
     fwrite(var.coord->data(), sizeof(double), var.coord->num_elements(), f);
     fclose(f);
 
     // connectivity
-    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "connectivity", frame);
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "connectivity", var.frame);
     f = fopen(buffer, "w");
     fwrite(var.connectivity->data(), sizeof(int), var.connectivity->num_elements(), f);
     fclose(f);
@@ -143,23 +142,24 @@ int main(int argc, const char* argv[])
     // run simulation
     //
     Variables var;
-    int steps = 0;
-    int frame = 0;
-    double time = 0;
-    double dt = 1e7;
+    var.time = 0;
+    var.dt = 1e7;
+    var.steps = 0;
+    var.frame = 0;
+
     if (! param.sim.is_restarting) {
         init(param, var);
-        output(param, var, steps, frame, time, dt);
-        frame ++;
+        output(param, var);
+        var.frame ++;
     }
     else {
         restart();
-        frame ++;
+        var.frame ++;
     }
 
     do {
-        steps++;
-        time += dt;
+        var.steps ++;
+        var.time += var.dt;
 
         update_temperature();
         update_strain_rate();
@@ -168,16 +168,16 @@ int main(int argc, const char* argv[])
         update_mesh();
         rotate_stress();
 
-        std::cout << "Step: " << steps << ", time:" << time << "\n";
+        std::cout << "Step: " << var.steps << ", time:" << var.time << "\n";
 
-        if ( (steps >= frame*param.sim.output_step_interval) ||
-             (time >= frame*param.sim.output_time_interval) ) {
+        if ( (var.steps >= var.frame*param.sim.output_step_interval) ||
+             (var.time >= var.frame*param.sim.output_time_interval) ) {
             //output();
-            std::cout << frame <<"-th output\n";
-            frame++;
+            std::cout << var.frame <<"-th output\n";
+            var.frame ++;
         }
 
-    } while (steps < param.sim.max_steps && time <= param.sim.max_time);
+    } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time);
 
     return 0;
 }

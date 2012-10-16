@@ -32,6 +32,11 @@ struct Param {
 // Structures for model variables
 //
 struct Variables {
+    double time;
+    double dt;
+    int steps;
+    int frame;
+
     boost::multi_array_ref<double,2>* coord;
     boost::multi_array_ref<int,2>* connectivity;
     boost::multi_array_ref<int,2>* segment;
