@@ -1,4 +1,4 @@
-#include <fstream>
+#include <cstdio>
 #include <limits>
 #include <iostream>
 
@@ -15,6 +15,8 @@ void get_input_parameters(const char* filename, Param& p)
     //
     po::options_description cfg("Config file options");
     cfg.add_options()
+        ("sim.modelname", po::value<std::string>(&p.sim.modelname), "Prefix for the output files")
+
         ("sim.max_steps", po::value<int>(&p.sim.max_steps), "Max. number of time steps")
         ("sim.max_time", po::value<double>(&p.sim.max_time), "Max. time (in seconds)")
         ("sim.output_step_interval", po::value<int>(&p.sim.output_step_interval),
@@ -86,7 +88,42 @@ void update_mesh() {};
 void rotate_stress() {};
 
 
-void output() {};
+void output(const Param& param, const Variables& var,
+            int steps, int frame, double time, double dt)
+{
+    /* Not using C++ stream IO here since it can be much slower than C stdio. */
+
+    using namespace std;
+    char buffer[255];
+    std::FILE* f;
+
+    double run_time = 3.548641321351658e-13; // XXX
+
+    // info
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "info", frame);
+    if (frame == 0)
+        f = fopen(buffer, "w");
+    else
+        f = fopen(buffer, "a");
+
+    snprintf(buffer, 255, "%6d\t%10d\t%12.6e\t%12.4e\t%12.6e\t%8d\t%8d\t%8d\n",
+                  frame, steps, time, dt, run_time, 0, 0, 0);
+    fputs(buffer, f);
+    fclose(f);
+
+    // coord
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "coord", frame);
+    f = fopen(buffer, "w");
+    fwrite(var.coord->data(), sizeof(double), var.coord->num_elements(), f);
+    fclose(f);
+
+    // connectivity
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "connectivity", frame);
+    f = fopen(buffer, "w");
+    fwrite(var.connectivity->data(), sizeof(int), var.connectivity->num_elements(), f);
+    fclose(f);
+
+}
 
 
 int main(int argc, const char* argv[])
@@ -107,18 +144,20 @@ int main(int argc, const char* argv[])
     //
     Variables var;
     int steps = 0;
+    int frame = 0;
     double time = 0;
+    double dt = 1e7;
     if (! param.sim.is_restarting) {
         init(param, var);
-        output();
+        output(param, var, steps, frame, time, dt);
+        frame ++;
     }
     else {
         restart();
+        frame ++;
     }
 
-    int frame = 1;
     do {
-        double dt = 1e7;
         steps++;
         time += dt;
 
@@ -133,7 +172,7 @@ int main(int argc, const char* argv[])
 
         if ( (steps >= frame*param.sim.output_step_interval) ||
              (time >= frame*param.sim.output_time_interval) ) {
-            output();
+            //output();
             std::cout << frame <<"-th output\n";
             frame++;
         }

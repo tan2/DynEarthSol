@@ -1,6 +1,7 @@
 #ifndef DYNEARTHSOL3D_PARAMETERS_HPP
 #define DYNEARTHSOL3D_PARAMETERS_HPP
 
+#include <string>
 #include <boost/multi_array.hpp>
 
 //
@@ -12,6 +13,8 @@ struct Sim {
     int output_step_interval;
     double output_time_interval;
     bool is_restarting;
+
+    std::string modelname;
 };
 
 struct Mesh {
