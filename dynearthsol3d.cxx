@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <ctime>
 #include <limits>
 #include <iostream>
 
@@ -96,10 +97,10 @@ void output(const Param& param, const Variables& var)
     char buffer[255];
     std::FILE* f;
 
-    double run_time = 3.548641321351658e-13; // XXX
+    double run_time = double(std::clock()) / CLOCKS_PER_SEC;
 
     // info
-    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "info", var.frame);
+    snprintf(buffer, 255, "%s.%s", param.sim.modelname.c_str(), "info");
     if (var.frame == 0)
         f = fopen(buffer, "w");
     else
@@ -172,7 +173,7 @@ int main(int argc, const char* argv[])
 
         if ( (var.steps >= var.frame*param.sim.output_step_interval) ||
              (var.time >= var.frame*param.sim.output_time_interval) ) {
-            //output();
+            output(param, var);
             std::cout << var.frame <<"-th output\n";
             var.frame ++;
         }
