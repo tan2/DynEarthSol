@@ -1,0 +1,11 @@
+syntax:glob
+dynearthsol3d
+snapshot.diff
+*.o
+*.pyc
+*.vtu
+*[0-9]
+*.info
+*.orig
+*.rej
+*.bak
