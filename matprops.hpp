@@ -1,6 +1,8 @@
 #ifndef DYNEARTHSOL3D_MATPROPS_HPP
 #define DYNEARTHSOL3D_MATPROPS_HPP
 
+#include "parameters.hpp"
+
 class MatProps
 {
 public:

@@ -1,15 +1,7 @@
 
 #include <algorithm>
 
-#include "parameters.hpp"
 #include "matprops.hpp"
-
-void create_matprops(const Param &par, Variables &var)
-{
-    // TODO: get material properties from cfg file
-    var.mat = new MatProps(1, MatProps::rh_evp);
-}
-
 
 MatProps::MatProps(int n, int rh) :
     nmat(n), rheol_type(rh)

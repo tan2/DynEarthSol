@@ -108,6 +108,13 @@ static void allocate_variables(Variables& var)
 }
 
 
+static void create_matprops(const Param &par, Variables &var)
+{
+    // TODO: get material properties from cfg file
+    var.mat = new MatProps(1, MatProps::rh_evp);
+}
+
+
 void init(const Param& param, Variables& var)
 {
     void create_matprops(const Param&, Variables&);
