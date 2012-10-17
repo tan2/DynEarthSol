@@ -44,11 +44,15 @@ def main(modelname, start, end):
 
         # node-based field
         fvtu.write('  <PointData>\n')
+        # node number for debugging
+        vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node#')
 
         fvtu.write('  </PointData>\n')
 
         # element-based field
         fvtu.write('  <CellData>\n')
+        # element number for debugging
+        vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem#')
 
         fvtu.write('  </CellData>\n')
 
