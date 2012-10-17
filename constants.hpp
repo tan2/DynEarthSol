@@ -9,6 +9,10 @@ const int NDIMS = 2;
 // triangles (3 node) in 2D and tetrahedra (4 nodes) in 3D
 const int NODES_PER_ELEM = NDIMS + 1;
 
+// # of indep. components of a symmetric tensor
+// 2D -> 3;  3D -> 6
+const int NSTR = NDIMS * (NDIMS + 1) / 2;
+
 // Flags for boundary
 const int BOUNDX0 = 1;
 const int BOUNDX1 = 2;

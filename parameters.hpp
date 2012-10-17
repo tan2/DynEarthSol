@@ -2,7 +2,11 @@
 #define DYNEARTHSOL3D_PARAMETERS_HPP
 
 #include <string>
+#include <vector>
 #include <boost/multi_array.hpp>
+
+typedef std::vector<double> double_vec;
+typedef std::vector<int> int_vec;
 
 typedef boost::multi_array<double,2> double2d;
 typedef boost::multi_array<int,2> int2d;
@@ -39,6 +43,7 @@ struct Param {
 //
 // Structures for model variables
 //
+class MatProps;
 struct Variables {
     double time;
     double dt;
@@ -50,12 +55,24 @@ struct Variables {
     int nseg;
 
     // These 4 arrays are allocated by external library
-    double2d_ref* coord;
-    int2d_ref* connectivity;
-    int2d_ref* segment;
-    int1d_ref* segflag;
+    double2d_ref *coord;
+    int2d_ref *connectivity;
+    int2d_ref *segment;
+    int1d_ref *segflag;
 
     int2d* bcflag;
+
+    int_vec volume, volume_old, volume_n;
+    double_vec mass, tmass;
+    double_vec jacobian, ejacobian;
+    double_vec temperature, plstrain;
+    double_vec tmp0;
+
+    double2d *vel, *force;
+    double2d *strain_rate, *strain, *stress;
+    double2d *shpdx, *shpdy, *shpdz;
+
+    MatProps *mat;
 };
 
 #endif

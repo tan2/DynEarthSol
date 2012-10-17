@@ -6,7 +6,9 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+#include "constants.hpp"
 #include "parameters.hpp"
+#include "matprops.hpp"
 #include "mesh.hpp"
 
 void get_input_parameters(const char* filename, Param& p)
@@ -74,9 +76,49 @@ void get_input_parameters(const char* filename, Param& p)
 }
 
 
+static void allocate_variables(Variables& var)
+{
+    const int n = var.nnode;
+    const int e = var.nelem;
+
+    var.volume.reserve(e);
+    var.volume_old.reserve(e);
+    var.volume_n.reserve(n);
+
+    var.mass.reserve(n);
+    var.tmass.reserve(n);
+
+    var.jacobian.reserve(n);
+    var.ejacobian.reserve(e);
+
+    var.temperature.reserve(n);
+    var.plstrain.reserve(e);
+    var.tmp0.reserve(std::max(n,e));
+
+    var.vel = new double2d(boost::extents[n][NDIMS]);
+    var.force = new double2d(boost::extents[n][NDIMS]);
+
+    var.strain_rate = new double2d(boost::extents[e][NSTR]);
+    var.strain = new double2d(boost::extents[e][NSTR]);
+    var.stress = new double2d(boost::extents[e][NSTR]);
+
+    var.shpdx = new double2d(boost::extents[e][NODES_PER_ELEM]);
+    if (NDIMS == 3) var.shpdy = new double2d(boost::extents[e][NODES_PER_ELEM]);
+    var.shpdz = new double2d(boost::extents[e][NODES_PER_ELEM]);
+}
+
+
 void init(const Param& param, Variables& var)
 {
+    void create_matprops(const Param&, Variables&);
+
     new_mesh(param, var);
+    allocate_variables(var);
+    // XXX
+    //create_nsupport(*connectivity, nnode, var.nsupport, var.support);
+    create_matprops(param, var);
+
+    //compute_area_mass_and_dt(var.area, var.area_n, var.mass, var.tmass, var.dt)
 };
 
 
