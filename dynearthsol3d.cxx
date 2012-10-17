@@ -12,19 +12,19 @@ static void allocate_variables(Variables& var)
     const int n = var.nnode;
     const int e = var.nelem;
 
-    var.volume.reserve(e);
-    var.volume_old.reserve(e);
-    var.volume_n.reserve(n);
+    var.volume.resize(e);
+    var.volume_old.resize(e);
+    var.volume_n.resize(n);
 
-    var.mass.reserve(n);
-    var.tmass.reserve(n);
+    var.mass.resize(n);
+    var.tmass.resize(n);
 
-    var.jacobian.reserve(n);
-    var.ejacobian.reserve(e);
+    var.jacobian.resize(n);
+    var.ejacobian.resize(e);
 
-    var.temperature.reserve(n);
-    var.plstrain.reserve(e);
-    var.tmp0.reserve(std::max(n,e));
+    var.temperature.resize(n);
+    var.plstrain.resize(e);
+    var.tmp0.resize(std::max(n,e));
 
     var.vel = new double2d(boost::extents[n][NDIMS]);
     var.force = new double2d(boost::extents[n][NDIMS]);
