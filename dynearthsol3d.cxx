@@ -46,6 +46,68 @@ static void create_matprops(const Param &par, Variables &var)
 }
 
 
+static double tetrahedron_volume(const double1d &a,
+                                 const double1d &b,
+                                 const double1d &c,
+                                 const double1d &d)
+{
+    // TODO
+    std::exit(-100);
+    return 1;
+}
+
+
+static double triangle_area(const double1d &a,
+                            const double1d &b,
+                            const double1d &c)
+{
+    double ab0, ab1, ac0, ac1;
+
+    // ab: vector from a to b
+    ab0 = b[0] - a[0];
+    ab1 = b[1] - a[1];
+    // ac: vector from a to c
+    ac0 = c[0] - a[0];
+    ac1 = c[1] - a[1];
+
+    // area = (cross product of ab and ac) / 2
+    return (ab0*ac1 - ab1*ac0) / 2;
+}
+
+
+static void compute_volume(const double2d &coord, const int2d &connectivity,
+                           double_vec &volume, double_vec &volume_n)
+{
+    const int nelem = connectivity.shape()[0];
+    for (int e=0; e<nelem; ++e) {
+        int n0, n1, n2, n3;
+        double vol;
+
+        n0 = connectivity[e][0];
+        n1 = connectivity[e][1];
+        n2 = connectivity[e][2];
+
+        typedef double2d::index_range range;
+        auto a = coord[ boost::indices[n0][range(0,NDIMS)] ];
+        auto b = coord[ boost::indices[n1][range(0,NDIMS)] ];
+        auto c = coord[ boost::indices[n2][range(0,NDIMS)] ];
+
+        if (NDIMS == 3) {
+            n3 = connectivity[e][3];
+            auto d = coord[ boost::indices[n3][range(0,NDIMS)] ];
+            vol = tetrahedron_volume(a, b, c, d);
+        }
+        else {
+            vol = triangle_area(a, b, c);
+        }
+        volume[e] = vol;
+        std::cout << e << ": " << vol << '\n';
+    }
+
+    // XXX volume -> volume_n
+}
+
+
 void init(const Param& param, Variables& var)
 {
     void create_matprops(const Param&, Variables&);
@@ -56,7 +118,7 @@ void init(const Param& param, Variables& var)
     //create_nsupport(*connectivity, nnode, var.nsupport, var.support);
     create_matprops(param, var);
 
-    //compute_area_mass_and_dt(var.area, var.area_n, var.mass, var.tmass, var.dt)
+    compute_volume(*var.coord, *var.connectivity, var.volume, var.volume_n);
 };
 
 

@@ -9,6 +9,7 @@ typedef std::vector<double> double_vec;
 typedef std::vector<int> int_vec;
 
 typedef boost::multi_array<double,2> double2d;
+typedef boost::multi_array<double,1> double1d;
 typedef boost::multi_array<int,2> int2d;
 typedef boost::multi_array<int,1> int1d;
 
@@ -62,7 +63,7 @@ struct Variables {
 
     int2d* bcflag;
 
-    int_vec volume, volume_old, volume_n;
+    double_vec volume, volume_old, volume_n;
     double_vec mass, tmass;
     double_vec jacobian, ejacobian;
     double_vec temperature, plstrain;
