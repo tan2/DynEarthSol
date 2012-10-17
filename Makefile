@@ -38,6 +38,7 @@ endif
 
 SRCS =	\
 	dynearthsol3d.cxx \
+	input.cxx \
 	matprops.cxx \
 	mesh.cxx \
 	sortindex.cxx
