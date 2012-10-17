@@ -14,6 +14,8 @@ public:
     double bulkm(int e) const;
     double shearm(int e) const;
     double density(int e) const;
+    double cp(int e) const;
+    double k(int e) const;
     double visc(int e) const;
 
     const static int rh_elastic = 0x00000001;

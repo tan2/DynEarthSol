@@ -46,6 +46,20 @@ double MatProps::density(int e) const
 }
 
 
+double MatProps::cp(int e) const
+{
+    // TODO: compute average heat capacity
+    return heat_capacity[0];
+}
+
+
+double MatProps::k(int e) const
+{
+    // TODO: compute average thermal conductivity
+    return therm_cond[0];
+}
+
+
 double MatProps::visc(int e) const
 {
     // TODO: compute average viscosity
