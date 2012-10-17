@@ -4,20 +4,20 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-#include "constants.hpp"
 #include "parameters.hpp"
 
-void get_input_parameters(const char* filename, Param& p)
-{
-    //
-    // declare input parameters
-    //
-    po::options_description cfg("Config file options");
-    cfg.add_options()
-        ("sim.modelname", po::value<std::string>(&p.sim.modelname), "Prefix for the output files")
 
-        ("sim.max_steps", po::value<int>(&p.sim.max_steps), "Max. number of time steps")
-        ("sim.max_time", po::value<double>(&p.sim.max_time), "Max. time (in seconds)")
+static void declare_parameters(po::options_description &cfg,
+                               Param &p)
+{
+    cfg.add_options()
+        ("sim.modelname", po::value<std::string>(&p.sim.modelname),
+         "Prefix for the output files")
+
+        ("sim.max_steps", po::value<int>(&p.sim.max_steps),
+         "Max. number of time steps")
+        ("sim.max_time", po::value<double>(&p.sim.max_time),
+         "Max. time (in seconds)")
         ("sim.output_step_interval", po::value<int>(&p.sim.output_step_interval),
          "Output step interval")
         ("sim.output_time_interval", po::value<double>(&p.sim.output_time_interval),
@@ -27,16 +27,23 @@ void get_input_parameters(const char* filename, Param& p)
         ;
 
     cfg.add_options()
-        ("mesh.xlength", po::value<double>(&p.mesh.xlength)->required(), "Length of x (in meters)")
-        ("mesh.ylength", po::value<double>(&p.mesh.ylength)->required(), "Length of y (in meters)")
-        ("mesh.zlength", po::value<double>(&p.mesh.zlength)->required(), "Length of z (in meters)")
-        ("mesh.resolution", po::value<double>(&p.mesh.resolution)->required(), "Spatial resolution (in meters)")
+        ("mesh.xlength", po::value<double>(&p.mesh.xlength)->required(),
+         "Length of x (in meters)")
+        ("mesh.ylength", po::value<double>(&p.mesh.ylength)->required(),
+         "Length of y (in meters)")
+        ("mesh.zlength", po::value<double>(&p.mesh.zlength)->required(),
+         "Length of z (in meters)")
+        ("mesh.resolution", po::value<double>(&p.mesh.resolution)->required(),
+         "Spatial resolution (in meters)")
         ;
+}
 
-    //
-    // parse config file
-    //
-    po::variables_map vm;
+
+static void read_parameters_from_file
+(const char* filename,
+ const po::options_description cfg,
+ po::variables_map &vm)
+{
     try {
         po::store(po::parse_config_file<char>(filename, cfg), vm);
         po::notify(vm);
@@ -46,10 +53,11 @@ void get_input_parameters(const char* filename, Param& p)
         std::cerr << e.what() << "\n";
         std::exit(1);
     }
+}
 
-    //
-    // validate parameters
-    //
+
+static void validate_parameters(const po::variables_map &vm, Param &p)
+{
     if ( ! (vm.count("sim.max_steps") || vm.count("sim.max_time")) ) {
         std::cerr << "Must provide either sim.max_steps or sim.max_time\n";
         std::exit(1);
@@ -67,6 +75,15 @@ void get_input_parameters(const char* filename, Param& p)
         p.sim.output_step_interval = std::numeric_limits<int>::max();;
     if ( ! vm.count("sim.output_time_interval") )
         p.sim.output_time_interval = std::numeric_limits<double>::max();;
+}
 
-    return;
+
+void get_input_parameters(const char* filename, Param& p)
+{
+    po::options_description cfg("Config file options");
+    po::variables_map vm;
+
+    declare_parameters(cfg, p);
+    read_parameters_from_file(filename, cfg, vm);
+    validate_parameters(vm, p);
 }
