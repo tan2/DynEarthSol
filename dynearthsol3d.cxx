@@ -101,10 +101,20 @@ static void compute_volume(const double2d &coord, const int2d &connectivity,
             vol = triangle_area(a, b, c);
         }
         volume[e] = vol;
-        std::cout << e << ": " << vol << '\n';
+        //std::cout << e << ": volume =" << vol << '\n';
     }
 
-    // XXX volume -> volume_n
+    // volume_n is (node-averaged volume * NODES_PER_ELEM)
+    // volume_n[n] is init'd to 0 by resize()
+    for (int e=0; e<nelem; ++e) {
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            int n = connectivity[e][i];
+            volume_n[n] += volume[e];
+        }
+    }
+
+    //for (int i=0; i<volume_n.size(); ++i)
+    //    std::cout << i << ": volume_n = " << volume_n[i] << '\n';
 }
 
 
