@@ -119,7 +119,7 @@ void init(const Param& param, Variables& var)
 {
     void create_matprops(const Param&, Variables&);
 
-    new_mesh(param, var);
+    create_new_mesh(param, var);
     allocate_variables(var);
     // XXX
     //create_nsupport(*connectivity, nnode, var.nsupport, var.support);

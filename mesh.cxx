@@ -221,7 +221,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 
 
 
-void new_mesh(const Param& param, Variables& var)
+void create_new_mesh(const Param& param, Variables& var)
 {
     new_mesh_uniform_resolution(param, var);
     create_boundary(param, var);
