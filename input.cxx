@@ -22,6 +22,7 @@ static void declare_parameters(po::options_description &cfg,
          "Output step interval")
         ("sim.output_time_interval", po::value<double>(&p.sim.output_time_interval),
          "Output time interval")
+
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
          "Restarting from previous save?")
         ;
@@ -33,9 +34,19 @@ static void declare_parameters(po::options_description &cfg,
          "Length of y (in meters)")
         ("mesh.zlength", po::value<double>(&p.mesh.zlength)->required(),
          "Length of z (in meters)")
+
         ("mesh.resolution", po::value<double>(&p.mesh.resolution)->required(),
          "Spatial resolution (in meters)")
         ;
+
+    cfg.add_options()
+        ("surface_temperature", po::value<double>(&p.surface_temperature)->default_value(273),
+         "Surface temperature (in Kelvin)")
+
+        ("mantle_temperature", po::value<double>(&p.mantle_temperature)->default_value(1600),
+         "Mantle temperature (in Kelvin)")
+        ;
+
 }
 
 

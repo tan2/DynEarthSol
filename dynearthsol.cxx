@@ -224,6 +224,19 @@ static void compute_shape_fn(const double2d &coord, const int2d &connectivity,
 }
 
 
+void initial_temperature(const Param &param, const Variables &var, double_vec &temperature)
+{
+    const double oceanic_plate_age = 1e6 * YEAR2SEC;
+    const double diffusivity = 1e-6;
+
+    for (int i=0; i<var.nnode; ++i) {
+        double w = -(*var.coord)[i][NDIMS-1] / std::sqrt(4 * diffusivity * oceanic_plate_age);
+        temperature[i] = param.surface_temperature +
+            (param.mantle_temperature - param.surface_temperature) * std::erf(w);
+    }
+}
+
+
 void init(const Param& param, Variables& var)
 {
     void create_matprops(const Param&, Variables&);
@@ -241,6 +254,8 @@ void init(const Param& param, Variables& var)
                      *var.shpdx, *var.shpdy, *var.shpdz);
     // XXX
     //create_jacobian();
+
+    initial_temperature(param, var, *var.temperature);
 };
 
 
@@ -286,6 +301,12 @@ void output(const Param& param, const Variables& var)
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "connectivity", var.frame);
     f = fopen(buffer, "w");
     fwrite(var.connectivity->data(), sizeof(int), var.connectivity->num_elements(), f);
+    fclose(f);
+
+    // temperature
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "temperature", var.frame);
+    f = fopen(buffer, "w");
+    fwrite(&(var.temperature->front()), sizeof(double), var.temperature->size(), f);
     fclose(f);
 
 }

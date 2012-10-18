@@ -38,6 +38,9 @@ struct Mesh {
 struct Param {
     Sim sim;
     Mesh mesh;
+
+    double surface_temperature;
+    double mantle_temperature;
 };
 
 

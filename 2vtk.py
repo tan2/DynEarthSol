@@ -44,6 +44,9 @@ def main(ndims, modelname, start, end):
 
         # node-based field
         fvtu.write('  <PointData>\n')
+        temperature = np.fromfile(prefix+'.temperature.'+suffix, dtype=np.float64, count=nnode)
+        vtk_dataarray(fvtu, temperature, 'temperature')
+
         # node number for debugging
         vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node#')
 
