@@ -135,10 +135,11 @@ static void compute_mass(const double2d &coord, const int2d &connectivity,
             tmass[n] += mat.density(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
         }
     }
-    for (int i=0; i<mass.size(); ++i)
-        std::cout << i << ": mass = " << mass[i] << '\n';
-    for (int i=0; i<tmass.size(); ++i)
-        std::cout << i << ": tmass = " << tmass[i] << '\n';
+    //for (int i=0; i<mass.size(); ++i)
+    //    std::cout << i << ": mass = " << mass[i] << '\n';
+
+    //for (int i=0; i<tmass.size(); ++i)
+    //    std::cout << i << ": tmass = " << tmass[i] << '\n';
 }
 
 
