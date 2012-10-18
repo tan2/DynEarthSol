@@ -227,6 +227,8 @@ void init(const Param& param, Variables& var)
                  var.mass, var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, var.volume,
                      *var.shpdx, *var.shpdy, *var.shpdz);
+    // XXX
+    //create_jacobian();
 };
 
 
