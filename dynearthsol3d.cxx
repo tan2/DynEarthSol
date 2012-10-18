@@ -118,6 +118,30 @@ static void compute_volume(const double2d &coord, const int2d &connectivity,
 }
 
 
+static void compute_mass(const double2d &coord, const int2d &connectivity,
+                         const double_vec &volume, const MatProps &mat,
+                         double_vec &mass, double_vec &tmass)
+{
+    const int nelem = connectivity.shape()[0];
+    for (int e=0; e<nelem; ++e) {
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            int n = connectivity[e][i];
+            // TODO
+            const double maxvbcval = 1e-10;
+            const double pseudo_factor = 1e5; // == 1/strain_inert in geoflac
+            double pseudo_speed = maxvbcval * pseudo_factor;
+            double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
+            mass[n] += pseudo_rho * volume[e] / NODES_PER_ELEM;
+            tmass[n] += mat.density(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
+        }
+    }
+    for (int i=0; i<mass.size(); ++i)
+        std::cout << i << ": mass = " << mass[i] << '\n';
+    for (int i=0; i<tmass.size(); ++i)
+        std::cout << i << ": tmass = " << tmass[i] << '\n';
+}
+
+
 void init(const Param& param, Variables& var)
 {
     void create_matprops(const Param&, Variables&);
@@ -129,6 +153,8 @@ void init(const Param& param, Variables& var)
     create_matprops(param, var);
 
     compute_volume(*var.coord, *var.connectivity, var.volume, var.volume_n);
+    compute_mass(*var.coord, *var.connectivity, var.volume, *var.mat,
+                 var.mass, var.tmass);
 };
 
 
