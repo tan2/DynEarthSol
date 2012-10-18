@@ -26,6 +26,7 @@ void triangulate_polygon
  double **outpoints, int **triangles,
  int **outsegments, int **outsegflags)
 {
+#ifndef THREED
     char options[255];
     struct triangulateio in, out;
 
@@ -82,7 +83,7 @@ void triangulate_polygon
     *outsegflags = out.segmentmarkerlist;
 
     trifree(out.pointmarkerlist);
-    return;
+#endif
 }
 
 

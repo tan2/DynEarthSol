@@ -4,7 +4,11 @@
 # include <cmath>
 
 // # of spatial dimension, either 2 or 3
+#ifdef THREED
+const int NDIMS = 3;
+#else
 const int NDIMS = 2;
+#endif
 
 // triangles (3 node) in 2D and tetrahedra (4 nodes) in 3D
 const int NODES_PER_ELEM = NDIMS + 1;

@@ -37,7 +37,7 @@ endif
 ##
 
 SRCS =	\
-	dynearthsol3d.cxx \
+	dynearthsol.cxx \
 	input.cxx \
 	matprops.cxx \
 	mesh.cxx \
@@ -47,9 +47,9 @@ INCS =	\
 	constants.hpp \
 	parameters.hpp
 
-OBJS = $(SRCS:.cxx=.o)
+OBJS = $(SRCS:.cxx=.$(ndims)d.o)
 
-EXE = dynearthsol3d
+EXE = dynearthsol$(ndims)d
 
 
 ## Libraries
@@ -82,8 +82,8 @@ $(EXE): $(M_OBJS) $(OBJS)
 	@# snapshot of the code for building the executable
 	@which hg 2>&1 > /dev/null && (hg summary; hg diff) > snapshot.diff
 
-$(OBJS): %.o : %.cxx $(INCS)
-	$(CXX) $(CXXFLAGS) $(BOOSTCXXFLAGS) -c $<
+$(OBJS): %.$(ndims)d.o : %.cxx $(INCS)
+	$(CXX) $(CXXFLAGS) $(BOOSTCXXFLAGS) -c $< -o $@
 
 $(TRI_OBJS): %.o : %.c $(TRI_INCS)
 	@# Triangle cannot be compiled with -O2
