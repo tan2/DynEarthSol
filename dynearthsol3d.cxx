@@ -46,10 +46,10 @@ static void create_matprops(const Param &par, Variables &var)
 }
 
 
-static double tetrahedron_volume(const double1d &a,
-                                 const double1d &b,
-                                 const double1d &c,
-                                 const double1d &d)
+static double tetrahedron_volume(const double *a,
+                                 const double *b,
+                                 const double *c,
+                                 const double *d)
 {
     // TODO
     std::exit(-100);
@@ -57,9 +57,9 @@ static double tetrahedron_volume(const double1d &a,
 }
 
 
-static double triangle_area(const double1d &a,
-                            const double1d &b,
-                            const double1d &c)
+static double triangle_area(const double *a,
+                            const double *b,
+                            const double *c)
 {
     double ab0, ab1, ac0, ac1;
 
@@ -87,14 +87,13 @@ static void compute_volume(const double2d &coord, const int2d &connectivity,
         n1 = connectivity[e][1];
         n2 = connectivity[e][2];
 
-        typedef double2d::index_range range;
-        auto a = coord[ boost::indices[n0][range(0,NDIMS)] ];
-        auto b = coord[ boost::indices[n1][range(0,NDIMS)] ];
-        auto c = coord[ boost::indices[n2][range(0,NDIMS)] ];
+        const double *a = &coord[n0][0];
+        const double *b = &coord[n1][0];
+        const double *c = &coord[n2][0];
 
         if (NDIMS == 3) {
             n3 = connectivity[e][3];
-            auto d = coord[ boost::indices[n3][range(0,NDIMS)] ];
+            const double *d = &coord[n3][0];
             vol = tetrahedron_volume(a, b, c, d);
         }
         else {
