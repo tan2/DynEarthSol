@@ -46,14 +46,26 @@ static void create_matprops(const Param &par, Variables &var)
 }
 
 
-static double tetrahedron_volume(const double *a,
-                                 const double *b,
-                                 const double *c,
-                                 const double *d)
+static double tetrahedron_volume(const double *d0,
+                                 const double *d1,
+                                 const double *d2,
+                                 const double *d3)
 {
-    // TODO
-    std::exit(-100);
-    return 1;
+    double x01 = d0[0] - d1[0];
+    double x12 = d1[0] - d2[0];
+    double x23 = d2[0] - d3[0];
+
+    double y01 = d0[1] - d1[1];
+    double y12 = d1[1] - d2[1];
+    double y23 = d2[1] - d3[1];
+
+    double z01 = d0[2] - d1[2];
+    double z12 = d1[2] - d2[2];
+    double z23 = d2[2] - d3[2];
+
+    return (x01*(y23*z12 - y12*z23) +
+            x12*(y01*z23 - y23*z01) +
+            x23*(y12*z01 - y01*z12)) / 6;
 }
 
 
