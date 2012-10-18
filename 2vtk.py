@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 '''Convert the binary output of DynEarthSol3D to VTK files.
 
-usage: 2vtk.py modelname [start [end]]
+usage: 2vtk.py [-2 or -3] modelname [start [end]]
+
+Using -2 (default) or -3 to specify 2D or 3D data.
 '''
 
 import sys, os
 import base64, zlib
 import numpy as np
 
-ndims = 2
-
 # Save in ASCII or encoded binary.
 # Some old VTK programs cannot read binary VTK files.
 output_in_binary = 0
 
 
-def main(modelname, start, end):
+def main(ndims, modelname, start, end):
     path = os.path.dirname(modelname)
     prefix = os.path.basename(modelname)
     if path:
@@ -151,7 +151,14 @@ if __name__ == '__main__':
             if arg.lower() in ('-h', '--help'):
                 print __doc__
                 sys.exit(0)
-        modelname = sys.argv[1]
+
+    ndims = 2
+    if sys.argv[1] == '-3':
+        ndims = 3
+    if sys.argv[1] == '-3' or sys.argv[1] == '-2':
+        del sys.argv[1]
+
+    modelname = sys.argv[1]
 
     if len(sys.argv) < 3:
         start = 0
@@ -163,4 +170,4 @@ if __name__ == '__main__':
     else:
         end = int(sys.argv[3]) + 1
 
-    main(modelname, start, end)
+    main(ndims, modelname, start, end)
