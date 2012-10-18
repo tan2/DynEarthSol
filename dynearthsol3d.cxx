@@ -80,19 +80,17 @@ static void compute_volume(const double2d &coord, const int2d &connectivity,
 {
     const int nelem = connectivity.shape()[0];
     for (int e=0; e<nelem; ++e) {
-        int n0, n1, n2, n3;
-        double vol;
-
-        n0 = connectivity[e][0];
-        n1 = connectivity[e][1];
-        n2 = connectivity[e][2];
+        int n0 = connectivity[e][0];
+        int n1 = connectivity[e][1];
+        int n2 = connectivity[e][2];
 
         const double *a = &coord[n0][0];
         const double *b = &coord[n1][0];
         const double *c = &coord[n2][0];
 
+        double vol;
         if (NDIMS == 3) {
-            n3 = connectivity[e][3];
+            int n3 = connectivity[e][3];
             const double *d = &coord[n3][0];
             vol = tetrahedron_volume(a, b, c, d);
         }
