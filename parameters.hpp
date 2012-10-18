@@ -61,13 +61,13 @@ struct Variables {
     int2d_ref *segment;
     int1d_ref *segflag;
 
-    int2d* bcflag;
+    int2d *bcflag;
 
-    double_vec volume, volume_old, volume_n;
-    double_vec mass, tmass;
-    double_vec jacobian, ejacobian;
-    double_vec temperature, plstrain;
-    double_vec tmp0;
+    double_vec *volume, *volume_old, *volume_n;
+    double_vec *mass, *tmass;
+    double_vec *jacobian, *ejacobian;
+    double_vec *temperature, *plstrain;
+    double_vec *tmp0;
 
     double2d *vel, *force;
     double2d *strain_rate, *strain, *stress;

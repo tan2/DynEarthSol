@@ -12,19 +12,19 @@ static void allocate_variables(Variables& var)
     const int n = var.nnode;
     const int e = var.nelem;
 
-    var.volume.resize(e);
-    var.volume_old.resize(e);
-    var.volume_n.resize(n);
+    var.volume = new double_vec(e);
+    var.volume_old = new double_vec(e);
+    var.volume_n = new double_vec(n);
 
-    var.mass.resize(n);
-    var.tmass.resize(n);
+    var.mass = new double_vec(n);
+    var.tmass = new double_vec(n);
 
-    var.jacobian.resize(n);
-    var.ejacobian.resize(e);
+    var.jacobian = new double_vec(n);
+    var.ejacobian = new double_vec(e);
 
-    var.temperature.resize(n);
-    var.plstrain.resize(e);
-    var.tmp0.resize(std::max(n,e));
+    var.temperature = new double_vec(n);
+    var.plstrain = new double_vec(e);
+    var.tmp0 = new double_vec(std::max(n,e));
 
     var.vel = new double2d(boost::extents[n][NDIMS]);
     var.force = new double2d(boost::extents[n][NDIMS]);
@@ -222,10 +222,10 @@ void init(const Param& param, Variables& var)
     //create_nsupport(*connectivity, nnode, var.nsupport, var.support);
     create_matprops(param, var);
 
-    compute_volume(*var.coord, *var.connectivity, var.volume, var.volume_n);
-    compute_mass(*var.coord, *var.connectivity, var.volume, *var.mat,
-                 var.mass, var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, var.volume,
+    compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
+    compute_mass(*var.coord, *var.connectivity, *var.volume, *var.mat,
+                 *var.mass, *var.tmass);
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
                      *var.shpdx, *var.shpdy, *var.shpdz);
     // XXX
     //create_jacobian();
