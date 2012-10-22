@@ -311,6 +311,24 @@ void update_mesh() {};
 void rotate_stress() {};
 
 
+template <typename Array>
+static void write_array(const char* filename, const Array& A)
+{
+    std::FILE *f = fopen(filename, "w");
+    std::fwrite(A.data(), sizeof(typename Array::value_type), A.num_elements(), f);
+    std::fclose(f);
+}
+
+
+template <typename T>
+static void write_array(const char* filename, const std::vector<T>& A)
+{
+    std::FILE *f = fopen(filename, "w");
+    std::fwrite(&A.front(), sizeof(T), A.size(), f);
+    std::fclose(f);
+}
+
+
 void output(const Param& param, const Variables& var)
 {
     /* Not using C++ stream IO here since it can be much slower than C stdio. */
@@ -336,22 +354,15 @@ void output(const Param& param, const Variables& var)
 
     // coord
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "coord", var.frame);
-    f = fopen(buffer, "w");
-    fwrite(var.coord->data(), sizeof(double), var.coord->num_elements(), f);
-    fclose(f);
+    write_array(buffer, *var.coord);
 
     // connectivity
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "connectivity", var.frame);
-    f = fopen(buffer, "w");
-    fwrite(var.connectivity->data(), sizeof(int), var.connectivity->num_elements(), f);
-    fclose(f);
+    write_array(buffer, *var.connectivity);
 
     // temperature
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "temperature", var.frame);
-    f = fopen(buffer, "w");
-    fwrite(&(var.temperature->front()), sizeof(double), var.temperature->size(), f);
-    fclose(f);
-
+    write_array(buffer, *var.temperature);
 }
 
 
