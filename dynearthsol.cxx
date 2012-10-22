@@ -356,12 +356,12 @@ int main(int argc, const char* argv[])
         update_mesh();
         rotate_stress();
 
-        std::cout << "Step: " << var.steps << ", time:" << var.time << "\n";
-
-        if ( (var.steps >= var.frame*param.sim.output_step_interval) ||
-             (var.time >= var.frame*param.sim.output_time_interval) ) {
+        if ( (var.steps == var.frame * param.sim.output_step_interval) ||
+             (var.time > var.frame * param.sim.output_time_interval) ) {
             output(param, var);
-            std::cout << var.frame <<"-th output\n";
+            std::cout << "  Output # " << var.frame
+                      << " , step = " << var.steps
+                      << " , time = " << var.time / YEAR2SEC << " yr.\n";
             var.frame ++;
         }
 
