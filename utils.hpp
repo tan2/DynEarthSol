@@ -39,7 +39,7 @@ void print(std::ostream& os, const Array& A)
   for (i = A.begin(); i != A.end(); ++i) {
     print(os, *i);
     if (boost::next(i) != A.end())
-      os << ',';
+      os << ", ";
   }
   os << "]";
 }
