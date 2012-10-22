@@ -90,33 +90,15 @@ void triangulate_polygon
 void create_boundary(const Param& param, Variables& var)
 {
     // allocate and init to 0
-    var.bcflag = new int2d(boost::extents[var.nnode][NDIMS]);
-    std::fill(var.bcflag->origin(), var.bcflag->origin() + var.bcflag->size(), 0);
+    var.bcflag = new int_vec(var.nnode);
 
-    int2d& bcflag = *var.bcflag;
+    // alias for convienence
+    int_vec &bcflag = *var.bcflag;
     for (int i=0; i<var.nseg; ++i) {
         int flag = (*var.segflag)[i];
-        switch (flag) {
-        case BOUNDX0:
-        case BOUNDX1:
-            bcflag[i][0] = flag;
-            break;
-        case BOUNDY0:
-        case BOUNDY1:
-            if (NDIMS == 2) {
-                std::cerr << "Error: this segment flag only works for 3D!\n";
-                std::exit(1);
-            }
-            bcflag[i][1] = flag;
-            break;
-        case BOUNDZ0:
-        case BOUNDZ1:
-            bcflag[i][NDIMS-1] = flag;
-            break;
-        default:
-            std::cerr << "Error: Unknown segment flag!\n";
-            std::exit(1);
-        }
+        int *n = &(*var.segment)[i][0];
+        bcflag[n[0]] |= flag;
+        bcflag[n[1]] |= flag;
     }
 }
 

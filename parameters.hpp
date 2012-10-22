@@ -64,7 +64,7 @@ struct Variables {
     int2d_ref *segment;
     int1d_ref *segflag;
 
-    int2d *bcflag;
+    int_vec *bcflag;
 
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;

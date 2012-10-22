@@ -18,12 +18,12 @@ const int NODES_PER_ELEM = NDIMS + 1;
 const int NSTR = NDIMS * (NDIMS + 1) / 2;
 
 // Flags for boundary
-const int BOUNDX0 = 1;
-const int BOUNDX1 = 2;
-const int BOUNDY0 = 3;
-const int BOUNDY1 = 4;
-const int BOUNDZ0 = 5;
-const int BOUNDZ1 = 6;
+const int BOUNDX0 = 0x00000001;
+const int BOUNDX1 = 0x00000010;
+const int BOUNDY0 = 0x00000100;
+const int BOUNDY1 = 0x00001000;
+const int BOUNDZ0 = 0x00010000;
+const int BOUNDZ1 = 0x00100000;
 
 
 const double YEAR2SEC = 365.2422 * 86400;
