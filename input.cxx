@@ -16,12 +16,12 @@ static void declare_parameters(po::options_description &cfg,
 
         ("sim.max_steps", po::value<int>(&p.sim.max_steps),
          "Max. number of time steps")
-        ("sim.max_time", po::value<double>(&p.sim.max_time),
-         "Max. time (in seconds)")
+        ("sim.max_time_in_yr", po::value<double>(&p.sim.max_time_in_yr),
+         "Max. time (in years)")
         ("sim.output_step_interval", po::value<int>(&p.sim.output_step_interval),
          "Output step interval")
-        ("sim.output_time_interval", po::value<double>(&p.sim.output_time_interval),
-         "Output time interval")
+        ("sim.output_time_interval_in_yr", po::value<double>(&p.sim.output_time_interval_in_yr),
+         "Output time interval (in years)")
 
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
          "Restarting from previous save?")
@@ -69,23 +69,23 @@ static void read_parameters_from_file
 
 static void validate_parameters(const po::variables_map &vm, Param &p)
 {
-    if ( ! (vm.count("sim.max_steps") || vm.count("sim.max_time")) ) {
-        std::cerr << "Must provide either sim.max_steps or sim.max_time\n";
+    if ( ! (vm.count("sim.max_steps") || vm.count("sim.max_time_in_yr")) ) {
+        std::cerr << "Must provide either sim.max_steps or sim.max_time_in_yr\n";
         std::exit(1);
     }
     if ( ! vm.count("sim.max_steps") )
         p.sim.max_steps = std::numeric_limits<int>::max();;
-    if ( ! vm.count("sim.max_time") )
-        p.sim.max_time = std::numeric_limits<double>::max();;
+    if ( ! vm.count("sim.max_time_in_yr") )
+        p.sim.max_time_in_yr = std::numeric_limits<double>::max();;
 
-    if ( ! (vm.count("sim.output_step_interval") || vm.count("sim.output_time_interval")) ) {
-        std::cerr << "Must provide either sim.output_step_interval or sim.output_time_interval\n";
+    if ( ! (vm.count("sim.output_step_interval") || vm.count("sim.output_time_interval_in_yr")) ) {
+        std::cerr << "Must provide either sim.output_step_interval or sim.output_time_interval_in_yr\n";
         std::exit(1);
     }
     if ( ! vm.count("sim.output_step_interval") )
         p.sim.output_step_interval = std::numeric_limits<int>::max();;
-    if ( ! vm.count("sim.output_time_interval") )
-        p.sim.output_time_interval = std::numeric_limits<double>::max();;
+    if ( ! vm.count("sim.output_time_interval_in_yr") )
+        p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();;
 }
 
 

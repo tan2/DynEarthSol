@@ -21,10 +21,10 @@ typedef boost::multi_array_ref<int,1> int1d_ref;
 // Structures for input parameters
 //
 struct Sim {
-    double max_time;
+    double max_time_in_yr;
+    double output_time_interval_in_yr;
     int max_steps;
     int output_step_interval;
-    double output_time_interval;
     bool is_restarting;
 
     std::string modelname;
