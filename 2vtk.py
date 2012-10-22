@@ -42,8 +42,12 @@ def main(ndims, modelname, start, end):
         vtu_header(fvtu, nnode, nelem)
 
 
+        #
         # node-based field
+        #
         fvtu.write('  <PointData>\n')
+
+        # temperature
         temperature = np.fromfile(prefix+'.temperature.'+suffix, dtype=np.float64, count=nnode)
         vtk_dataarray(fvtu, temperature, 'temperature')
 
@@ -52,31 +56,47 @@ def main(ndims, modelname, start, end):
 
         fvtu.write('  </PointData>\n')
 
+        #
         # element-based field
+        #
         fvtu.write('  <CellData>\n')
+
         # element number for debugging
         vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem#')
 
         fvtu.write('  </CellData>\n')
 
-        # coordinate
+        #
+        # node coordinate
+        #
+        fvtu.write('  <Points>\n')
         coord = np.fromfile(prefix+'.coord.'+suffix, dtype=np.float64, count=ndims*nnode)
         coord.shape = (nnode, ndims)
-        fvtu.write('  <Points>\n')
-        # VTK requires vector field (velocity, coordinate) has 3 components.
-        # Allocating a 3-vector tmp array for VTK data output.
-        tmp = np.zeros((nnode, 3), dtype=coord.dtype)
-        tmp[:,:ndims] = coord
+        if ndims == 2:
+            # VTK requires vector field (velocity, coordinate) has 3 components.
+            # Allocating a 3-vector tmp array for VTK data output.
+            tmp = np.zeros((nnode, 3), dtype=coord.dtype)
+            tmp[:,:ndims] = coord
+        else:
+            tmp = coord
         vtk_dataarray(fvtu, tmp, '', 3)
         fvtu.write('  </Points>\n')
 
-        # cell connectivity
+        #
+        # element connectivity & types
+        #
+        fvtu.write('  <Cells>\n')
         conn = np.fromfile(prefix+'.connectivity.'+suffix, dtype=np.int32, count=(ndims+1)*nelem)
         conn.shape = (nelem, ndims+1)
-        fvtu.write('  <Cells>\n')
         vtk_dataarray(fvtu, conn, 'connectivity')
         vtk_dataarray(fvtu, (ndims+1)*np.array(range(1, nelem+1), dtype=np.int32), 'offsets')
-        vtk_dataarray(fvtu, 5*np.ones((nelem,), dtype=np.int32), 'types')
+        if ndims == 2:
+            # VTK_ TRIANGLE == 5
+            celltype = 5
+        else:
+            # VTK_ TETRA == 10
+            celltype = 10
+        vtk_dataarray(fvtu, celltype*np.ones((nelem,), dtype=np.int32), 'types')
         fvtu.write('  </Cells>\n')
 
         vtu_footer(fvtu)
