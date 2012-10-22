@@ -6,6 +6,7 @@
 #include "parameters.hpp"
 #include "matprops.hpp"
 #include "mesh.hpp"
+#include "utils.hpp"
 
 static void allocate_variables(Variables& var)
 {
@@ -260,7 +261,49 @@ void init(const Param& param, Variables& var)
 
 
 void restart() {};
-void update_temperature() {};
+
+
+void update_temperature(const Param &param, const Variables &var,
+                        double_vec &temperature, double_vec &tdot)
+{
+    // diffusion matrix
+    double D[NODES_PER_ELEM][NODES_PER_ELEM];
+
+    tdot.assign(var.nnode, 0);
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
+        double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            for (int j=0; j<NODES_PER_ELEM; ++j) {
+                if (NDIMS == 3) {
+                    D[i][j] = ((*var.shpdx)[e][i] * (*var.shpdx)[e][j] +
+                               (*var.shpdy)[e][i] * (*var.shpdy)[e][j] +
+                               (*var.shpdz)[e][i] * (*var.shpdz)[e][j]);
+                }
+                else {
+                    D[i][j] = ((*var.shpdx)[e][i] * (*var.shpdx)[e][j] +
+                               (*var.shpdz)[e][i] * (*var.shpdz)[e][j]);
+                }
+            }
+        }
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            double diffusion = 0;
+            for (int j=0; j<NODES_PER_ELEM; ++j)
+                diffusion += D[i][j] * temperature[conn[j]];
+
+            tdot[conn[i]] += diffusion * kv;
+        }
+    }
+
+    for (int n=0; n<var.nnode; ++n) {
+        if ((*var.bcflag)[n] & BOUNDZ1)
+            temperature[n] = param.surface_temperature;
+        else
+            temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
+    }
+}
+
+
 void update_strain_rate() {};
 void update_stress() {};
 void update_force() {};
@@ -349,7 +392,7 @@ int main(int argc, const char* argv[])
         var.steps ++;
         var.time += var.dt;
 
-        update_temperature();
+        update_temperature(param, var, *var.temperature, *var.tmp0);
         update_strain_rate();
         update_stress();
         update_force();
