@@ -45,7 +45,8 @@ SRCS =	\
 
 INCS =	\
 	constants.hpp \
-	parameters.hpp
+	parameters.hpp \
+	utils.hpp
 
 OBJS = $(SRCS:.cxx=.$(ndims)d.o)
 
