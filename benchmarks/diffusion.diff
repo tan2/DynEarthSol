@@ -1,0 +1,31 @@
+parent: 64:79820c1187ad tip
+ using tetgen to generate 3D mesh within a box
+branch: default
+commit: 2 modified, 8 unknown
+update: (current)
+diff --git a/dynearthsol.cxx b/dynearthsol.cxx
+--- a/dynearthsol.cxx
++++ b/dynearthsol.cxx
+@@ -385,7 +385,7 @@ int main(int argc, const char* argv[])
+     //
+     static Variables var; // declared as static to silence valgrind's memory leak detection
+     var.time = 0;
+-    var.dt = 1e7;
++    var.dt = 1e9;
+     var.steps = 0;
+     var.frame = 0;
+
+diff --git a/mesh.cxx b/mesh.cxx
+--- a/mesh.cxx
++++ b/mesh.cxx
+@@ -119,8 +119,8 @@ void tetrahedralize_polyhedron
+     options.vtkview = 1;
+
+     options.quality = 1;
+-    options.minratio = 1.44;  // TODO: provide an input parameter for tuning it
+-    options.mindihedral = min_angle;
++    options.minratio = 2;  // TODO: provide an input parameter for tuning it
++    options.mindihedral = 15; //min_angle;
+     options.maxdihedral = 180 - 3 * options.mindihedral;
+     options.fixedvolume = 1;
+     options.maxvolume = max_volume;
