@@ -97,7 +97,7 @@ tetgen/predicates.o: tetgen/predicates.cxx $(TET_INCS)
 	$(CXX) $(CXXFLAGS) -DTETLIBRARY -O0 -c $< -o $@
 
 tetgen/tetgen.o: tetgen/tetgen.cxx $(TET_INCS)
-	$(CXX) $(CXXFLAGS) -DNDEBUG -DTETLIBRARY -O1 -c $< -o $@
+	$(CXX) $(CXXFLAGS) -DNDEBUG -DTETLIBRARY -Wno-unused-but-set-variable -Wno-int-to-pointer-cast -c $< -o $@
 
 clean:
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
