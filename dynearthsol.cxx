@@ -315,7 +315,7 @@ template <typename Array>
 static void write_array(const char* filename, const Array& A)
 {
     std::FILE *f = fopen(filename, "w");
-    std::fwrite(A.data(), sizeof(typename Array::value_type), A.num_elements(), f);
+    std::fwrite(A.data(), sizeof(typename Array::element), A.num_elements(), f);
     std::fclose(f);
 }
 
