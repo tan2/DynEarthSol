@@ -31,6 +31,19 @@ static void print(std::ostream& os, const int& x)
 }
 
 
+template <typename T>
+void print(std::ostream& os, const T& A, std::size_t size)
+{
+  os << "[";
+  for (std::size_t i = 0; i != size; ++i) {
+    print(os, A[i]);
+    if (i+1 != size)
+      os << ", ";
+  }
+  os << "]";
+}
+
+
 template <typename Array>
 void print(std::ostream& os, const Array& A)
 {
