@@ -48,6 +48,7 @@ struct Param {
 // Structures for model variables
 //
 class MatProps;
+class tetgenio;
 struct Variables {
     double time;
     double dt;
@@ -77,6 +78,11 @@ struct Variables {
     double2d *shpdx, *shpdy, *shpdz;
 
     MatProps *mat;
+
+#ifdef THREED
+    tetgenio *tetgen;
+#endif
+
 };
 
 #endif
