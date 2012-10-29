@@ -113,10 +113,11 @@ void tetrahedralize_polyhedron
 
     options.quiet = 0;
     options.verbose = 1;
+    // save the mesh as vtk file?
+    //options.vtkview = 1;
 
     options.plc = 1;
     options.zeroindex = 0;
-    options.vtkview = 1;
 
     options.quality = 1;
     options.minratio = 1.44;  // TODO: provide an input parameter for tuning it
