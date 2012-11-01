@@ -18,7 +18,7 @@
 #undef VOID
 #undef ANSI_DECLARATORS
 
-#endif //ifdef THREED
+#endif // THREED
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -36,11 +36,12 @@ void triangulate_polygon
 {
 #ifndef THREED
     char options[255];
-    struct triangulateio in, out;
+    triangulateio in, out;
 
     // add 'Q' for no output; add multiple 'V's for verbose output
-    std::sprintf(options, "pq%fjza%f", min_angle, max_area);
-    std::puts(options);
+    char verbosity[] = "V";
+    std::sprintf(options, "%spq%fjza%f", verbosity, min_angle, max_area);
+    //std::puts(options);
 
     in.pointlist = points;
     in.pointattributelist = NULL;
@@ -113,9 +114,10 @@ void tetrahedralize_polyhedron
     double max_dihedral_angle = 180 - 3 * min_angle;
 
     // add 'Q' for no output; add multiple 'V's for verbose output
-    std::sprintf(options, "Vpzq%fqq%fqqq%fa%f", max_ratio,
+    char verbosity[] = "V";
+    std::sprintf(options, "%spzq%fqq%fqqq%fa%f", verbosity, max_ratio,
                  min_dihedral_angle, max_dihedral_angle, max_volume);
-    std::puts(options);
+    //std::puts(options);
 
     //
     // Setting input arrays to tetgen
