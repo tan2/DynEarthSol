@@ -96,7 +96,7 @@ void triangulate_polygon
 
 
 void tetrahedralize_polyhedron
-(double min_angle, double max_volume,
+(double max_ratio, double min_angle, double max_volume,
  int npoints, int nsegments,
  double *points, int *segments, int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
@@ -109,12 +109,11 @@ void tetrahedralize_polyhedron
     // Setting Tetgen options.
     //
     char options[255];
-
-    // add 'Q' for no output; add multiple 'V's for verbose output
-    double min_ratio = 1.44;  // TODO: provide an input parameter for tuning it
     double min_dihedral_angle = min_angle;
     double max_dihedral_angle = 180 - 3 * min_angle;
-    std::sprintf(options, "Vpzq%fqq%fqqq%fa%f", min_ratio,
+
+    // add 'Q' for no output; add multiple 'V's for verbose output
+    std::sprintf(options, "Vpzq%fqq%fqqq%fa%f", max_ratio,
                  min_dihedral_angle, max_dihedral_angle, max_volume);
     std::puts(options);
 
@@ -356,10 +355,11 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
         init_segflags[4] = BOUNDY1;
         init_segflags[5] = BOUNDZ1;
 
+        const double max_aspect_ratio = 2.0;
         const double min_tet_angle = 22.;
         const double max_tet_size = 0.7 * param.mesh.resolution
             * param.mesh.resolution * param.mesh.resolution;
-	tetrahedralize_polyhedron(min_tet_angle, max_tet_size,
+	tetrahedralize_polyhedron(max_aspect_ratio, min_tet_angle, max_tet_size,
                                   npoints, n_init_segments, points,
                                   init_segments, init_segflags,
                                   &nnode, &nelem, &nseg,
