@@ -99,8 +99,8 @@ void tetrahedralize_polyhedron
  double *points, int *segments, int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
  double **outpoints, int **triangles,
- int **outsegments, int **outsegflags,
- tetgenio **out)
+ int **outsegments, int **outsegflags)
+
 {
 #ifdef THREED
     //
@@ -137,10 +137,9 @@ void tetrahedralize_polyhedron
     //
     // Setting input arrays to tetgen
     //
-    tetgenio *in;
-    in = new tetgenio;
-    in->pointlist = points;
-    in->numberofpoints = npoints;
+    tetgenio in;
+    in.pointlist = points;
+    in.numberofpoints = npoints;
 
     tetgenio::polygon *polys = new tetgenio::polygon[nsegments];
     for (int i=0; i<nsegments; ++i) {
@@ -156,39 +155,42 @@ void tetrahedralize_polyhedron
         fl[i].numberofholes = 0;
     }
 
-    in->facetlist = fl;
-    in->facetmarkerlist = segflags;
-    in->numberoffacets = nsegments;
+    in.facetlist = fl;
+    in.facetmarkerlist = segflags;
+    in.numberoffacets = nsegments;
 
-    in->holelist = NULL;
-    in->numberofholes = 0;
+    in.holelist = NULL;
+    in.numberofholes = 0;
 
-    in->regionlist = NULL;
-    in->numberofregions = 0;
+    in.regionlist = NULL;
+    in.numberofregions = 0;
 
-    *out = new tetgenio;
+    tetgenio out;
     /*******************************/
-    tetrahedralize(&options, in, *out);
+    tetrahedralize(&options, &in, &out);
     /*******************************/
 
     // the destructor of tetgenio will free any non-NULL pointer
     // set in.pointers to NULL to prevent double-free
-    in->pointlist = NULL;
-    in->facetmarkerlist = NULL;
-    in->facetlist = NULL;
+    in.pointlist = NULL;
+    in.facetmarkerlist = NULL;
+    in.facetlist = NULL;
     delete [] polys;
     delete [] fl;
-    delete in;
 
-    *noutpoints = (*out)->numberofpoints;
-    *outpoints = (*out)->pointlist;
+    *noutpoints = out.numberofpoints;
+    *outpoints = out.pointlist;
+    out.pointlist = NULL;
 
-    *ntriangles = (*out)->numberoftetrahedra;
-    *triangles = (*out)->tetrahedronlist;
+    *ntriangles = out.numberoftetrahedra;
+    *triangles = out.tetrahedronlist;
+    out.tetrahedronlist = NULL;
 
-    *noutsegments = (*out)->numberoftrifaces;
-    *outsegments = (*out)->trifacelist;
-    *outsegflags = (*out)->trifacemarkerlist;
+    *noutsegments = out.numberoftrifaces;
+    *outsegments = out.trifacelist;
+    *outsegflags = out.trifacemarkerlist;
+    out.trifacelist = NULL;
+    out.trifacemarkerlist = NULL;
 
 #endif
 }
@@ -378,7 +380,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
                                   init_segments, init_segflags,
                                   &nnode, &nelem, &nseg,
                                   &pcoord, &pconnectivity,
-                                  &psegment, &psegflag, &var.tetgen);
+                                  &psegment, &psegflag);
 #endif
     }
 
