@@ -97,21 +97,19 @@ void triangulate_polygon
 
 
 void tetrahedralize_polyhedron
-(double max_ratio, double min_angle, double max_volume,
+(double max_ratio, double min_dihedral_angle, double max_volume,
  int npoints, int nsegments,
  double *points, int *segments, int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
  double **outpoints, int **triangles,
  int **outsegments, int **outsegflags)
-
 {
 #ifdef THREED
     //
     // Setting Tetgen options.
     //
     char options[255];
-    double min_dihedral_angle = min_angle;
-    double max_dihedral_angle = 180 - 3 * min_angle;
+    double max_dihedral_angle = 180 - 3 * min_dihedral_angle;
 
     // add 'Q' for no output; add multiple 'V's for verbose output
     char verbosity[] = "V";
@@ -249,16 +247,17 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
         init_segflags[2] = BOUNDX1;
         init_segflags[3] = BOUNDZ1;
 
-        const double min_triangle_angle = 32.;
         const double max_triangle_size = 1.5 * param.mesh.resolution
             * param.mesh.resolution;
 
-	triangulate_polygon(min_triangle_angle, max_triangle_size,
+        /********************************************************/
+	triangulate_polygon(param.mesh.min_angle, max_triangle_size,
 			    npoints, n_init_segments, points,
 			    init_segments, init_segflags,
 			    &nnode, &nelem, &nseg,
 			    &pcoord, &pconnectivity, 
 			    &psegment, &psegflag);
+        /********************************************************/
 
         if (nelem <= 0) {
             std::cerr << "Error: triangulation failed\n";
@@ -357,16 +356,19 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
         init_segflags[4] = BOUNDY1;
         init_segflags[5] = BOUNDZ1;
 
-        const double max_aspect_ratio = 2.0;
-        const double min_tet_angle = 22.;
         const double max_tet_size = 0.7 * param.mesh.resolution
             * param.mesh.resolution * param.mesh.resolution;
-	tetrahedralize_polyhedron(max_aspect_ratio, min_tet_angle, max_tet_size,
+
+        /***************************************************************/
+	tetrahedralize_polyhedron(param.mesh.max_ratio,
+                                  param.mesh.min_tet_angle, max_tet_size,
                                   npoints, n_init_segments, points,
                                   init_segments, init_segflags,
                                   &nnode, &nelem, &nseg,
                                   &pcoord, &pconnectivity,
                                   &psegment, &psegflag);
+        /***************************************************************/
+
 #endif
     }
 

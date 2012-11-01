@@ -33,6 +33,10 @@ struct Sim {
 struct Mesh {
     double xlength, ylength, zlength;
     double resolution;
+    // for 2D only
+    double min_angle;
+    // for 3D only
+    double min_tet_angle, max_ratio;
 };
 
 struct Param {
