@@ -4,7 +4,9 @@
 
 #ifdef THREED
 
+#define TETLIBRARY
 #include "tetgen/tetgen.h"
+#undef TETLIBRARY
 
 #else
 
@@ -105,34 +107,16 @@ void tetrahedralize_polyhedron
 #ifdef THREED
     //
     // Setting Tetgen options.
-    // Using "tetgenhavior", rather than string, to specify the options for its flexibility.
-    // However, we have to maintain consistency between these options.
-    // See tetgenbehavior::parse_commandline() for details.
     //
-    tetgenbehavior options;
+    char options[255];
 
-    options.quiet = 0;
-    options.verbose = 1;
-    // save the mesh as vtk file?
-    //options.vtkview = 1;
-
-    options.plc = 1;
-    options.zeroindex = 0;
-
-    options.quality = 1;
-    options.minratio = 1.44;  // TODO: provide an input parameter for tuning it
-    options.mindihedral = min_angle;
-    options.maxdihedral = 180 - 3 * options.mindihedral;
-    options.fixedvolume = 1;
-    options.maxvolume = max_volume;
-
-    // TODO: to be replaced by param.modelname
-    std::strncpy(options.outfilename, "zzz", tetgenio::FILENAMESIZE-1);
-
-    // derived from options above
-    options.useshelles = 1;
-    options.goodratio = options.minratio;
-    options.goodratio *= options.goodratio;
+    // add 'Q' for no output; add multiple 'V's for verbose output
+    double min_ratio = 1.44;  // TODO: provide an input parameter for tuning it
+    double min_dihedral_angle = min_angle;
+    double max_dihedral_angle = 180 - 3 * min_angle;
+    std::sprintf(options, "Vpzq%fqq%fqqq%fa%f", min_ratio,
+                 min_dihedral_angle, max_dihedral_angle, max_volume);
+    std::puts(options);
 
     //
     // Setting input arrays to tetgen
@@ -167,7 +151,7 @@ void tetrahedralize_polyhedron
 
     tetgenio out;
     /*******************************/
-    tetrahedralize(&options, &in, &out);
+    tetrahedralize(options, &in, &out, NULL, NULL);
     /*******************************/
 
     // the destructor of tetgenio will free any non-NULL pointer
