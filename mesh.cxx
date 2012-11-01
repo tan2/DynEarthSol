@@ -179,22 +179,6 @@ void tetrahedralize_polyhedron
 }
 
 
-void create_boundary(const Param& param, Variables& var)
-{
-    // allocate and init to 0
-    var.bcflag = new int_vec(var.nnode);
-
-    // alias for convienence
-    int_vec &bcflag = *var.bcflag;
-    for (int i=0; i<var.nseg; ++i) {
-        int flag = (*var.segflag)[i];
-        int *n = &(*var.segment)[i][0];
-        bcflag[n[0]] |= flag;
-        bcflag[n[1]] |= flag;
-    }
-}
-
-
 static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 {
     int npoints = 4 * (NDIMS - 1); // 2D:4;  3D:8
@@ -403,6 +387,21 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
     */
 }
 
+
+void create_boundary(const Param& param, Variables& var)
+{
+    // allocate and init to 0
+    var.bcflag = new int_vec(var.nnode);
+
+    // alias for convienence
+    int_vec &bcflag = *var.bcflag;
+    for (int i=0; i<var.nseg; ++i) {
+        int flag = (*var.segflag)[i];
+        int *n = &(*var.segment)[i][0];
+        bcflag[n[0]] |= flag;
+        bcflag[n[1]] |= flag;
+    }
+}
 
 
 void create_new_mesh(const Param& param, Variables& var)
