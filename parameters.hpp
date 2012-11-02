@@ -31,6 +31,8 @@ struct Sim {
 };
 
 struct Mesh {
+    int meshing_option;
+
     double xlength, ylength, zlength;
     double resolution;
     // for 2D only

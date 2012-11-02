@@ -406,6 +406,13 @@ void create_boundary(const Param& param, Variables& var)
 
 void create_new_mesh(const Param& param, Variables& var)
 {
-    new_mesh_uniform_resolution(param, var);
+    switch (param.mesh.meshing_option) {
+    case 1:
+        new_mesh_uniform_resolution(param, var);
+        break;
+    default:
+        std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';
+        std::exit(1);
+    }
     create_boundary(param, var);
 }

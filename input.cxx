@@ -28,6 +28,9 @@ static void declare_parameters(po::options_description &cfg,
         ;
 
     cfg.add_options()
+        ("mesh.meshing_option", po::value<int>(&p.mesh.meshing_option)->default_value(1),
+         "How to create the new mesh?")
+
         ("mesh.xlength", po::value<double>(&p.mesh.xlength)->required(),
          "Length of x (in meters)")
         ("mesh.ylength", po::value<double>(&p.mesh.ylength)->required(),
