@@ -616,7 +616,7 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
 }
 
 
-void create_boundary(const Param& param, Variables& var)
+void create_boundary(Variables& var)
 {
     // allocate and init to 0
     var.bcflag = new int_vec(var.nnode);
@@ -645,5 +645,5 @@ void create_new_mesh(const Param& param, Variables& var)
         std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';
         std::exit(1);
     }
-    create_boundary(param, var);
+    create_boundary(var);
 }
