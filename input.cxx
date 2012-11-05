@@ -53,11 +53,11 @@ static void declare_parameters(po::options_description &cfg,
         // for meshing_option = 2 only
         /* read the value as string, then parse as two numbers later */
         ("mesh.refined_zonex", po::value<std::string>(),
-         "Refining portion of xlength (two numbers between 0~1)")
+         "Refining portion of xlength ([d0,d1]; 0<=d0<=d1<=1)")
         ("mesh.refined_zoney", po::value<std::string>(),
-         "Refining portion of ylength (two numbers between 0~1)")
+         "Refining portion of ylength ([d0,d1]; 0<=d0<=d1<=1)")
         ("mesh.refined_zonez", po::value<std::string>(),
-         "Refining portion of zlength (two numbers between 0~1)")
+         "Refining portion of zlength ([d0,d1]; 0<=d0<=d1<=1)")
         ;
 
     cfg.add_options()
@@ -128,9 +128,9 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         std::string str;
         str = vm["mesh.refined_zonex"].as<std::string>();
         n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
-        if (n != 2 || d0 < 0 || d0 > 1 || d1 < 0 || d1 > 1) {
+        if (n != 2 || d0 < 0 || d1 > 1 || d0 > d1) {
             std::cerr << "Error: incorrect value for mesh.refine_zonex,\n"
-                      << "       must in this format '[d0, d1]', 0 <= d0,d1 <= 1.\n";
+                      << "       must in this format '[d0, d1]', 0 <= d0 <= d1 <= 1.\n";
             std::exit(1);
         }
         p.mesh.refined_zonex.first = d0;
@@ -138,9 +138,9 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
 #ifdef THREED
         str = vm["mesh.refined_zoney"].as<std::string>();
         n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
-        if (n != 2 || d0 < 0 || d0 > 1 || d1 < 0 || d1 > 1) {
+        if (n != 2 || d0 < 0 || d1 > 1 || d0 > d1) {
             std::cerr << "Error: incorrect value for mesh.refine_zoney,\n"
-                      << "       must in this format '[d0, d1]', 0 <= d0,d1 <= 1.\n";
+                      << "       must in this format '[d0, d1]', 0 <= d0 <= d1 <= 1.\n";
             std::exit(1);
         }
         p.mesh.refined_zoney.first = d0;
@@ -148,9 +148,9 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
 #endif
         str = vm["mesh.refined_zonez"].as<std::string>();
         n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
-        if (n != 2 || d0 < 0 || d0 > 1 || d1 < 0 || d1 > 1) {
+        if (n != 2 || d0 < 0 || d1 > 1 || d0 > d1) {
             std::cerr << "Error: incorrect value for mesh.refine_zonez,\n"
-                      << "       must in this format '[d0, d1]', 0 <= d0,d1 <= 1.\n";
+                      << "       must in this format '[d0, d1]', 0 <= d0 <= d1 <= 1.\n";
             std::exit(1);
         }
         p.mesh.refined_zonez.first = d0;
