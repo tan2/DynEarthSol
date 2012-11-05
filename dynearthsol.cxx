@@ -238,6 +238,42 @@ void initial_temperature(const Param &param, const Variables &var, double_vec &t
 }
 
 
+void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
+{
+    const double maxvbcval = 1e-10;
+    // TODO: adding different types of vbcs later
+
+    // diverging x-boundary
+    for (int i=0; i<var.nnode; ++i) {
+        int flag = (*var.bcflag)[i];
+
+        // X
+        if (flag & BOUNDX0) {
+            vel[i][0] = -maxvbcval;
+        }
+        else if (flag & BOUNDX1) {
+            vel[i][0] = maxvbcval;
+        }
+#ifdef THREED
+        // Y
+        if (flag & BOUNDY0) {
+            vel[i][1] = 0;
+        }
+        else if (flag & BOUNDY1) {
+            vel[i][1] = 0;
+        }
+#endif
+        // Z
+        if (flag & BOUNDZ0) {
+            //vel[i][NDIMS-1] = 0;
+        }
+        else if (flag & BOUNDZ1) {
+            vel[i][NDIMS-1] = 0;
+        }
+    }
+}
+
+
 void init(const Param& param, Variables& var)
 {
     void create_matprops(const Param&, Variables&);
@@ -255,6 +291,7 @@ void init(const Param& param, Variables& var)
     //create_jacobian();
 
     initial_temperature(param, var, *var.temperature);
+    apply_vbcs(param, var, *var.vel);
 };
 
 
