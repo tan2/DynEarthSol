@@ -632,6 +632,23 @@ void create_boundary(Variables& var)
 }
 
 
+void create_support(Variables& var)
+{
+    var.support = new std::vector<int_vec>(var.nnode);
+
+    // create the inverse mapping of connectivity
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            (*var.support)[conn[i]].push_back(e);
+        }
+    }
+    // std::cout << "support:\n";
+    // print(std::cout, *var.support);
+    // std::cout << "\n";
+}
+
+
 void create_new_mesh(const Param& param, Variables& var)
 {
     switch (param.mesh.meshing_option) {
@@ -646,4 +663,5 @@ void create_new_mesh(const Param& param, Variables& var)
         std::exit(1);
     }
     create_boundary(var);
+    create_support(var);
 }

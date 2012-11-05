@@ -77,6 +77,8 @@ struct Variables {
 
     int_vec *bcflag;
 
+    std::vector<int_vec> *support;
+
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;
     double_vec *jacobian, *ejacobian;

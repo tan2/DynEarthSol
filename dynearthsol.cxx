@@ -244,8 +244,6 @@ void init(const Param& param, Variables& var)
 
     create_new_mesh(param, var);
     allocate_variables(var);
-    // XXX
-    //create_nsupport(*connectivity, nnode, var.nsupport, var.support);
     create_matprops(param, var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
