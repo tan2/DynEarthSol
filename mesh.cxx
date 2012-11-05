@@ -1,5 +1,6 @@
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #ifdef THREED
@@ -367,24 +368,251 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
     var.connectivity = new int2d_ref(pconnectivity, boost::extents[nelem][NODES_PER_ELEM]);
     var.segment = new int2d_ref(psegment, boost::extents[nseg][NDIMS]);
     var.segflag = new int1d_ref(psegflag, boost::extents[nseg]);
+}
 
-    /*
-    std::cout << "coord:\n";
-    print(std::cout, *var.coord);
-    std::cout << "\n";
 
-    std::cout << "connectivity:\n";
-    print(std::cout, *var.connectivity);
-    std::cout << "\n";
+static void new_mesh_refined_zone(const Param& param, Variables& var)
+{
+    const Mesh& m = param.mesh;
 
-    std::cout << "segment:\n";
-    print(std::cout, *var.segment);
-    std::cout << "\n";
+    // To prevent the meshing library giving us a regular grid, the nodes
+    // will be shifted randomly by a small distance
+    const double shift_factor = 0.1;
 
-    std::cout << "segflag:\n";
-    print(std::cout, *var.segflag);
-    std::cout << "\n";
-    */
+    // typical distance between nodes in the refined zone
+    const double d = param.mesh.resolution / std::sqrt(2);
+
+    // adjust the bounds of the refined zone so that nodes are not on the boundary
+    double x0, x1, y0, y1, z0, z1;
+    double dx, dy, dz;
+    int nx, ny, nz;
+    x0 = std::max(m.refined_zonex.first, d / m.xlength);
+    x1 = std::min(m.refined_zonex.second, 1 - d / m.xlength);
+    nx = m.xlength * (x1 - x0) / d + 1;
+    dx = m.xlength * (x1 - x0) / nx;
+    z0 = std::max(m.refined_zonez.first, d / m.zlength);
+    z1 = std::min(m.refined_zonez.second, 1 - d / m.zlength);
+    nz = m.zlength * (z1 - z0) / d + 1;
+    dz = m.zlength * (z1 - z0) / (nz - 1);
+
+    int npoints;
+    if (NDIMS == 2) {
+        npoints = nx * nz + 4 * (NDIMS - 1);
+    }
+    else {
+        y0 = std::max(m.refined_zoney.first, d / m.ylength);
+        y1 = std::min(m.refined_zoney.second, 1 - d / m.ylength);
+        ny = m.ylength * (y1 - y0) / d + 1;
+        dy = m.ylength * (y1 - y0) / (ny - 1);
+        npoints = nx * ny * nz + 4 * (NDIMS - 1);
+    }
+    double *points = new double[npoints*NDIMS];
+
+    int n_init_segments = 2 * NDIMS; // 2D:4;  3D:6
+    int n_segment_nodes = 2 * (NDIMS - 1); // 2D:2; 3D:4
+    int *init_segments = new int[n_init_segments*n_segment_nodes];
+    int *init_segflags = new int[n_init_segments];
+
+    int nnode, nelem, nseg;
+    double *pcoord;
+    int *pconnectivity, *psegment, *psegflag;
+
+    if (NDIMS == 2) {
+#ifndef THREED
+
+	/* Define 4 corner points of the rectangle, with this order:
+         *            BOUNDZ1
+         *          0 ------- 3
+         *  BOUNDX0 |         | BOUNDX1
+         *          1 ------- 2
+         *            BOUNDZ0
+         */
+        // corner 0
+        points[0] = 0;
+	points[1] = 0;
+        // corner 1
+	points[2] = 0;
+	points[3] = -param.mesh.zlength;
+        // corner 2
+	points[4] = param.mesh.xlength;
+	points[5] = -param.mesh.zlength;
+        // corner 3
+	points[6] = param.mesh.xlength;
+	points[7] = 0;
+
+        // add refined nodes
+        int n = 8;
+        for (int i=0; i<nx; ++i) {
+            for (int k=0; k<nz; ++k) {
+                double rx = drand48() - 0.5;
+                double rz = drand48() - 0.5;
+                points[n  ] = x0 * m.xlength + (i + shift_factor*rx) * dx;
+                points[n+1] = (1-z0) * -m.zlength + (k + shift_factor*rz) * dz;
+                n += NDIMS;
+            }
+        }
+
+	for (int i=0; i<n_init_segments; ++i) {
+            // 0th node of the i-th segment
+	    init_segments[2*i] = i;
+            // 1st node of the i-th segment
+	    init_segments[2*i+1] = i+1;
+	}
+	// the 1st node of the last segment is connected back to the 0th node
+	init_segments[2*n_init_segments-1] = 0;
+
+        // boundary flags (see definition in constants.hpp)
+        init_segflags[0] = BOUNDX0;
+        init_segflags[1] = BOUNDZ0;
+        init_segflags[2] = BOUNDX1;
+        init_segflags[3] = BOUNDZ1;
+
+        /********************************************************/
+	triangulate_polygon(param.mesh.min_angle, 40*d*d,
+			    npoints, n_init_segments, points,
+			    init_segments, init_segflags,
+			    &nnode, &nelem, &nseg,
+			    &pcoord, &pconnectivity,
+			    &psegment, &psegflag);
+        /********************************************************/
+
+        if (nelem <= 0) {
+            std::cerr << "Error: triangulation failed\n";
+            std::exit(10);
+        }
+#endif
+    } else {
+#ifdef THREED
+	/* Define 8 corner points of the box, with this order:
+         *         4 ------- 7
+         *        /         /|
+         *       /         / 6
+         *      0 ------- 3 /
+         *      |         |/
+         *      1 ------- 2
+         *
+         * Cut-out diagram with boundary flag:
+         *             4 ------- 7
+         *             | BOUNDZ1 |
+         *   4 ------- 0 ------- 3 ------- 7 ------- 4
+         *   | BOUNDX0 | BOUNDY0 | BOUNDX1 | BOUNDY1 |
+         *   5 ------- 1 ------- 2 ------- 6 ------- 5
+         *             | BOUNDZ0 |
+         *             5 ------- 6
+         */
+
+        // corner 0
+        points[0] = 0;
+	points[1] = 0;
+	points[2] = 0;
+        // corner 1
+	points[3] = 0;
+	points[4] = 0;
+	points[5] = -param.mesh.zlength;
+        // corner 2
+	points[6] = param.mesh.xlength;
+	points[7] = 0;
+	points[8] = -param.mesh.zlength;
+        // corner 3
+	points[9] = param.mesh.xlength;
+	points[10] = 0;
+	points[11] = 0;
+        // corner 4
+	points[12] = 0;
+	points[13] = param.mesh.ylength;
+	points[14] = 0;
+        // corner 5
+	points[15] = 0;
+	points[16] = param.mesh.ylength;
+	points[17] = -param.mesh.zlength;
+        // corner 6
+	points[18] = param.mesh.xlength;
+	points[19] = param.mesh.ylength;
+	points[20] = -param.mesh.zlength;
+        // corner 7
+	points[21] = param.mesh.xlength;
+	points[22] = param.mesh.ylength;
+	points[23] = 0;
+
+        // add refined nodes
+        int n = 24;
+        for (int i=0; i<nx; ++i) {
+            for (int j=0; j<ny; ++j) {
+                for (int k=0; k<nz; ++k) {
+                    double rx = drand48() - 0.5;
+                    double ry = drand48() - 0.5;
+                    double rz = drand48() - 0.5;
+                    points[n  ] = x0 * m.xlength + (i + shift_factor*rx) * dx;
+                    points[n+1] = y0 * m.ylength + (j + shift_factor*ry) * dy;
+                    points[n+2] = (1-z0) * -m.zlength + (k + shift_factor*rz) * dz;
+                    n += NDIMS;
+                }
+            }
+        }
+
+        // BOUNDX0
+        init_segments[0] = 0;
+        init_segments[1] = 1;
+        init_segments[2] = 5;
+        init_segments[3] = 4;
+        // BOUNDY0
+        init_segments[4] = 0;
+        init_segments[5] = 3;
+        init_segments[6] = 2;
+        init_segments[7] = 1;
+        // BOUNDZ0
+        init_segments[8] = 1;
+        init_segments[9] = 2;
+        init_segments[10] = 6;
+        init_segments[11] = 5;
+        // BOUNDX1
+        init_segments[12] = 3;
+        init_segments[13] = 7;
+        init_segments[14] = 6;
+        init_segments[15] = 2;
+        // BOUNDY1
+        init_segments[16] = 7;
+        init_segments[17] = 4;
+        init_segments[18] = 5;
+        init_segments[19] = 6;
+        // BOUNDZ1
+        init_segments[20] = 0;
+        init_segments[21] = 4;
+        init_segments[22] = 7;
+        init_segments[23] = 3;
+
+        // boundary flags (see definition in constants.hpp)
+        init_segflags[0] = BOUNDX0;
+        init_segflags[1] = BOUNDY0;
+        init_segflags[2] = BOUNDZ0;
+        init_segflags[3] = BOUNDX1;
+        init_segflags[4] = BOUNDY1;
+        init_segflags[5] = BOUNDZ1;
+
+        /***************************************************************/
+	tetrahedralize_polyhedron(param.mesh.max_ratio,
+                                  param.mesh.min_tet_angle, 40*d*d*d,
+                                  npoints, n_init_segments, points,
+                                  init_segments, init_segflags,
+                                  &nnode, &nelem, &nseg,
+                                  &pcoord, &pconnectivity,
+                                  &psegment, &psegflag);
+        /***************************************************************/
+
+#endif
+    }
+
+    delete [] points;
+    delete [] init_segments;
+    delete [] init_segflags;
+
+    var.nnode = nnode;
+    var.nelem = nelem;
+    var.nseg = nseg;
+    var.coord = new double2d_ref(pcoord, boost::extents[nnode][NDIMS]);
+    var.connectivity = new int2d_ref(pconnectivity, boost::extents[nelem][NODES_PER_ELEM]);
+    var.segment = new int2d_ref(psegment, boost::extents[nseg][NDIMS]);
+    var.segflag = new int1d_ref(psegflag, boost::extents[nseg]);
 }
 
 
@@ -409,6 +637,9 @@ void create_new_mesh(const Param& param, Variables& var)
     switch (param.mesh.meshing_option) {
     case 1:
         new_mesh_uniform_resolution(param, var);
+        break;
+    case 2:
+        new_mesh_refined_zone(param, var);
         break;
     default:
         std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';
