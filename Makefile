@@ -31,7 +31,7 @@ LDFLAGS = -lm
 ifeq ($(debug), 0)
 	CXXFLAGS += -O2 -DBOOST_DISABLE_ASSERTS -DNDEBUG
 else
-	CXXFLAGS += -O0 -Wall
+	CXXFLAGS += -O0 -Wall -Wno-unused-function
 endif
 
 ##
