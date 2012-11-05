@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iostream>
 #include <limits>
 
@@ -48,6 +49,15 @@ static void declare_parameters(po::options_description &cfg,
          "Min. dihedral angle of all tetrahedra (in degrees)")
         ("mesh.max_ratio", po::value<double>(&p.mesh.max_ratio)->default_value(2.),
          "Max. radius / length ratio of all tetrahedra")
+
+        // for meshing_option = 2 only
+        /* read the value as string, then parse as two numbers later */
+        ("mesh.refined_zonex", po::value<std::string>(),
+         "Refining portion of xlength (two numbers between 0~1)")
+        ("mesh.refined_zoney", po::value<std::string>(),
+         "Refining portion of ylength (two numbers between 0~1)")
+        ("mesh.refined_zonez", po::value<std::string>(),
+         "Refining portion of zlength (two numbers between 0~1)")
         ;
 
     cfg.add_options()
@@ -97,6 +107,55 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         p.sim.output_step_interval = std::numeric_limits<int>::max();;
     if ( ! vm.count("sim.output_time_interval_in_yr") )
         p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();;
+
+    if (p.mesh.meshing_option == 2) {
+        if ( ! vm.count("mesh.refined_zonex") ||
+#ifdef THREED
+             ! vm.count("mesh.refined_zoney") ||
+#endif
+             ! vm.count("mesh.refined_zonez") ) {
+        std::cerr << "Must provide mesh.refined_zonex, "
+#ifdef THREED
+                  << "mesh.refined_zoney, "
+#endif
+                  << "mesh.refined_zonez.\n";
+        std::exit(1);
+        }
+
+        /* get 2 numbers from the string */
+        double d0, d1;
+        int n;
+        std::string str;
+        str = vm["mesh.refined_zonex"].as<std::string>();
+        n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
+        if (n != 2 || d0 < 0 || d0 > 1 || d1 < 0 || d1 > 1) {
+            std::cerr << "Error: incorrect value for mesh.refine_zonex,\n"
+                      << "       must in this format '[d0, d1]', 0 <= d0,d1 <= 1.\n";
+            std::exit(1);
+        }
+        p.mesh.refined_zonex.first = d0;
+        p.mesh.refined_zonex.second = d1;
+#ifdef THREED
+        str = vm["mesh.refined_zoney"].as<std::string>();
+        n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
+        if (n != 2 || d0 < 0 || d0 > 1 || d1 < 0 || d1 > 1) {
+            std::cerr << "Error: incorrect value for mesh.refine_zoney,\n"
+                      << "       must in this format '[d0, d1]', 0 <= d0,d1 <= 1.\n";
+            std::exit(1);
+        }
+        p.mesh.refined_zoney.first = d0;
+        p.mesh.refined_zoney.second = d1;
+#endif
+        str = vm["mesh.refined_zonez"].as<std::string>();
+        n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
+        if (n != 2 || d0 < 0 || d0 > 1 || d1 < 0 || d1 > 1) {
+            std::cerr << "Error: incorrect value for mesh.refine_zonez,\n"
+                      << "       must in this format '[d0, d1]', 0 <= d0,d1 <= 1.\n";
+            std::exit(1);
+        }
+        p.mesh.refined_zonez.first = d0;
+        p.mesh.refined_zonez.second = d1;
+    }
 }
 
 

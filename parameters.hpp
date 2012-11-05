@@ -2,8 +2,11 @@
 #define DYNEARTHSOL3D_PARAMETERS_HPP
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <boost/multi_array.hpp>
+
+typedef std::pair<double,double> double_pair;
 
 typedef std::vector<double> double_vec;
 typedef std::vector<int> int_vec;
@@ -39,6 +42,8 @@ struct Mesh {
     double min_angle;
     // for 3D only
     double min_tet_angle, max_ratio;
+
+    double_pair refined_zonex, refined_zoney, refined_zonez;
 };
 
 struct Param {
