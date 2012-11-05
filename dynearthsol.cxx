@@ -342,8 +342,32 @@ void update_temperature(const Param &param, const Variables &var,
 void update_strain_rate() {};
 void update_stress() {};
 void update_force() {};
-void update_mesh() {};
 void rotate_stress() {};
+
+
+static void update_coordinate(const Variables& var, double2d_ref& coord)
+{
+    double* x = var.coord->data();
+    const double* v = var.vel->data();
+    for (int i=0; i<var.nnode*NDIMS; ++i) {
+        x[i] += v[i] * var.dt;
+    }
+
+    // surface_processes()
+}
+
+
+void update_mesh(const Param& param, Variables& var)
+{
+    update_coordinate(var, *var.coord);
+
+    var.volume->swap(*var.volume_old);
+    compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
+    compute_mass(*var.coord, *var.connectivity, *var.volume, *var.mat,
+                 *var.mass, *var.tmass);
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
+                     *var.shpdx, *var.shpdy, *var.shpdz);
+};
 
 
 template <typename Array>
@@ -442,7 +466,7 @@ int main(int argc, const char* argv[])
         update_strain_rate();
         update_stress();
         update_force();
-        update_mesh();
+        update_mesh(param, var);
         rotate_stress();
 
         if ( (var.steps == var.frame * param.sim.output_step_interval) ||
