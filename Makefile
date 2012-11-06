@@ -42,6 +42,7 @@ SRCS =	\
 	input.cxx \
 	matprops.cxx \
 	mesh.cxx \
+	output.cxx \
 	sortindex.cxx
 
 INCS =	\
