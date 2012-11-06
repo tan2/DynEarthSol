@@ -145,7 +145,7 @@ void init(const Param& param, Variables& var)
     initial_stress_state(param, var, *var.stress, *var.strain, var.compensation_pressure);
     initial_temperature(param, var, *var.temperature);
     apply_vbcs(param, var, *var.vel);
-};
+}
 
 
 void update_temperature(const Param &param, const Variables &var,
@@ -296,7 +296,7 @@ void update_mesh(const Param& param, Variables& var)
                  *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
                      *var.shpdx, *var.shpdy, *var.shpdz);
-};
+}
 
 
 int main(int argc, const char* argv[])

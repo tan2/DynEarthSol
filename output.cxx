@@ -61,6 +61,6 @@ void output(const Param& param, const Variables& var)
 }
 
 
-void restart() {};
+void restart() {}
 
 
