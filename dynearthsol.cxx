@@ -265,6 +265,19 @@ void update_force() {};
 void rotate_stress() {};
 
 
+void update_velocity(const Variables& var, double2d& vel)
+{
+    const double* m = &(*var.volume)[0];
+    // flatten 2d arrays to simplify indexing
+    const double* f = var.force->data();
+    double* v = vel.data();
+    for (int i=0; i<var.nnode*NDIMS; ++i) {
+        int n = i / NDIMS;
+        v[i] += var.dt * f[i] / m[n];
+    }
+}
+
+
 static void update_coordinate(const Variables& var, double2d_ref& coord)
 {
     double* x = var.coord->data();
@@ -387,6 +400,8 @@ int main(int argc, const char* argv[])
         update_strain_rate(var, *var.strain_rate);
         update_stress();
         update_force();
+        update_velocity(var, *var.vel);
+        apply_vbcs(param, var, *var.vel);
         update_mesh(param, var);
         // dt computation is expensive, and dt only changes slowly
         // don't have to do it every time step
