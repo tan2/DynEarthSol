@@ -55,7 +55,7 @@ struct Param {
 
     double gravity;
 
-    double strain_inert;
+    double inertial_scaling;
     double maxvbcval;
 };
 

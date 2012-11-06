@@ -70,9 +70,8 @@ static void declare_parameters(po::options_description &cfg,
         ("gravity", po::value<double>(&p.gravity)->default_value(10),
          "Magnitude of the gravity (in m/s^2)")
 
-        // XXX: rename strain_inert
-        ("strain_inert", po::value<double>(&p.strain_inert)->default_value(1e-5),
-         "Scaling factor for inertial")
+        ("inertial_scaling", po::value<double>(&p.inertial_scaling)->default_value(1e5),
+         "Scaling factor for inertial (a large number)")
 
         // XXX: move to bc section
         ("maxvbcval", po::value<double>(&p.maxvbcval)->default_value(1e-9),
