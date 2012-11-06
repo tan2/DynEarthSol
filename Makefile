@@ -38,6 +38,7 @@ endif
 
 SRCS =	\
 	dynearthsol.cxx \
+	geometry.cxx \
 	input.cxx \
 	matprops.cxx \
 	mesh.cxx \
