@@ -64,10 +64,10 @@ void initial_stress_state(const Param &param, const Variables &var,
     const double ks = var.mat->bulkm(0);
     compensation_pressure = rho * param.gravity * param.mesh.zlength;
     for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
         double zcenter = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
-            int n = (*var.connectivity)[e][i];
-            zcenter += (*var.coord)[n][NDIMS-1];
+            zcenter += (*var.coord)[conn[i]][NDIMS-1];
         }
         zcenter /= NODES_PER_ELEM;
 
