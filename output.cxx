@@ -55,9 +55,29 @@ void output(const Param& param, const Variables& var)
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "connectivity", var.frame);
     write_array(buffer, *var.connectivity);
 
+    // vel
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "vel", var.frame);
+    write_array(buffer, *var.vel);
+
     // temperature
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "temperature", var.frame);
     write_array(buffer, *var.temperature);
+
+    // plstrain
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "plstrain", var.frame);
+    write_array(buffer, *var.plstrain);
+
+    // strain_rate
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "strain-rate", var.frame);
+    write_array(buffer, *var.strain_rate);
+
+    // strain
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "strain", var.frame);
+    write_array(buffer, *var.strain);
+
+    // stress
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "stress", var.frame);
+    write_array(buffer, *var.stress);
 
     std::cout << "  Output # " << var.frame
               << ", step = " << var.steps
