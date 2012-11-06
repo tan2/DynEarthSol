@@ -352,10 +352,6 @@ int main(int argc, const char* argv[])
         if ( (var.steps == var.frame * param.sim.output_step_interval) ||
              (var.time > var.frame * param.sim.output_time_interval_in_yr * YEAR2SEC) ) {
             output(param, var);
-            std::cout << "  Output # " << var.frame
-                      << ", step = " << var.steps
-                      << ", time = " << var.time / YEAR2SEC << " yr"
-                      << ", dt = " << var.dt / YEAR2SEC << " yr.\n";
             var.frame ++;
         }
 

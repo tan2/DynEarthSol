@@ -58,6 +58,11 @@ void output(const Param& param, const Variables& var)
     // temperature
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "temperature", var.frame);
     write_array(buffer, *var.temperature);
+
+    std::cout << "  Output # " << var.frame
+              << ", step = " << var.steps
+              << ", time = " << var.time / YEAR2SEC << " yr"
+              << ", dt = " << var.dt / YEAR2SEC << " yr.\n";
 }
 
 
