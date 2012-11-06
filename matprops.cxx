@@ -6,13 +6,13 @@
 MatProps::MatProps(int n, int rh) :
     nmat(n), rheol_type(rh)
 {
-    bulk_modulus.reserve(n);
-    shear_modulus.reserve(n);
+    bulk_modulus.resize(n);
+    shear_modulus.resize(n);
 
-    rho0.reserve(n);
-    alpha.reserve(n);
-    heat_capacity.reserve(n);
-    therm_cond.reserve(n);
+    rho0.resize(n);
+    alpha.resize(n);
+    heat_capacity.resize(n);
+    therm_cond.resize(n);
 
     // TODO: get material properties from cfg file
     std::fill_n(bulk_modulus.begin(), n, 128.2e9);
