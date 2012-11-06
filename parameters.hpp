@@ -53,6 +53,8 @@ struct Param {
     double surface_temperature;
     double mantle_temperature;
 
+    double gravity;
+
     double strain_inert;
     double maxvbcval;
 };
@@ -71,6 +73,8 @@ struct Variables {
     int nnode;
     int nelem;
     int nseg;
+
+    double compensation_pressure;
 
     // These 4 arrays are allocated by external library
     double2d_ref *coord;

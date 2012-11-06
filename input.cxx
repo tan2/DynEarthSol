@@ -67,6 +67,9 @@ static void declare_parameters(po::options_description &cfg,
         ("mantle_temperature", po::value<double>(&p.mantle_temperature)->default_value(1600),
          "Mantle temperature (in Kelvin)")
 
+        ("gravity", po::value<double>(&p.gravity)->default_value(10),
+         "Magnitude of the gravity (in m/s^2)")
+
         // XXX: rename strain_inert
         ("strain_inert", po::value<double>(&p.strain_inert)->default_value(1e-5),
          "Scaling factor for inertial")
