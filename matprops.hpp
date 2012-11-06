@@ -18,6 +18,11 @@ public:
     double k(int e) const;
     double visc(int e) const;
 
+    // XXX: take values from param
+    const double visc_min = 1e21;
+    const double visc_max = 1e21;
+    const double therm_diff_max = 1e-6;
+
     const static int rh_elastic = 0x00000001;
     const static int rh_viscous = 0x00000010;
     const static int rh_plastic = 0x00000100;

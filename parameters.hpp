@@ -52,6 +52,9 @@ struct Param {
 
     double surface_temperature;
     double mantle_temperature;
+
+    double strain_inert;
+    double maxvbcval;
 };
 
 
