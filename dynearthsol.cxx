@@ -135,7 +135,7 @@ void init(const Param& param, Variables& var)
     create_matprops(param, var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
-    compute_mass(*var.coord, *var.connectivity, *var.volume, *var.mat,
+    compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
                      *var.shpdx, *var.shpdy, *var.shpdz);
@@ -292,7 +292,7 @@ void update_mesh(const Param& param, Variables& var)
 
     var.volume->swap(*var.volume_old);
     compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
-    compute_mass(*var.coord, *var.connectivity, *var.volume, *var.mat,
+    compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
                      *var.shpdx, *var.shpdy, *var.shpdz);

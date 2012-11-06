@@ -174,21 +174,21 @@ double compute_dt(const Param& param, const Variables& var)
 }
 
 
-void compute_mass(const double2d &coord, const int2d &connectivity,
+void compute_mass(const Param &param,
+                  const double2d &coord, const int2d &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double_vec &mass, double_vec &tmass)
 {
+    double pseudo_speed = param.maxvbcval / param.strain_inert;
     const int nelem = connectivity.shape()[0];
     for (int e=0; e<nelem; ++e) {
+        double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
+        double m = pseudo_rho * volume[e] / NODES_PER_ELEM;
+        double tm = mat.density(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
+        const int *conn = &connectivity[e][0];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
-            int n = connectivity[e][i];
-            // TODO
-            const double maxvbcval = 1e-10;
-            const double pseudo_factor = 1e5; // == 1/strain_inert in geoflac
-            double pseudo_speed = maxvbcval * pseudo_factor;
-            double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
-            mass[n] += pseudo_rho * volume[e] / NODES_PER_ELEM;
-            tmass[n] += mat.density(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
+            mass[conn[i]] += m;
+            tmass[conn[i]] += tm;
         }
     }
     //for (int i=0; i<mass.size(); ++i)
