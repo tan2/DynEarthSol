@@ -193,7 +193,65 @@ void update_temperature(const Param &param, const Variables &var,
 }
 
 
-void update_strain_rate() {};
+void update_strain_rate(const Variables& var, double2d& strain_rate)
+{
+    double *v[NODES_PER_ELEM];
+
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
+        const double *shpdx = &(*var.shpdx)[e][0];
+        const double *shpdy = &(*var.shpdy)[e][0];
+        const double *shpdz = &(*var.shpdz)[e][0];
+        double *s = &(*var.strain_rate)[e][0];
+
+        for (int i=0; i<NODES_PER_ELEM; ++i)
+            v[i] = &(*var.vel)[conn[i]][0];
+
+        // XX component
+        int n = 0;
+        s[n] = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i)
+            s[n] += v[i][0] * shpdx[i];
+
+#ifdef THREED
+        // YY component
+        n++;
+        s[n] = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i)
+            s[n] += v[i][1] * shpdy[i];
+#endif
+
+        // ZZ component
+        n++;
+        s[n] = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i)
+            s[n] += v[i][NDIMS-1] * shpdz[i];
+
+#ifdef THREED
+        // XY component
+        n++;
+        s[n] = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i)
+            s[n] += 0.5 * (v[i][0] * shpdy[i] + v[i][1] * shpdx[i]);
+#endif
+
+        // XZ component
+        n++;
+        s[n] = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i)
+            s[n] += 0.5 * (v[i][0] * shpdz[i] + v[i][NDIMS-1] * shpdx[i]);
+
+#ifdef THREED
+        // YZ component
+        n++;
+        s[n] = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i)
+            s[n] += 0.5 * (v[i][1] * shpdz[i] + v[i][2] * shpdy[i]);
+#endif
+    }
+}
+
+
 void update_stress() {};
 void update_force() {};
 void rotate_stress() {};
@@ -318,7 +376,7 @@ int main(int argc, const char* argv[])
         var.time += var.dt;
 
         update_temperature(param, var, *var.temperature, *var.tmp0);
-        update_strain_rate();
+        update_strain_rate(var, *var.strain_rate);
         update_stress();
         update_force();
         update_mesh(param, var);
