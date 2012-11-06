@@ -215,35 +215,43 @@ void update_strain_rate(const Variables& var, double2d& strain_rate)
 
 #ifdef THREED
         // YY component
-        n++;
+        n = 1;
         s[n] = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i)
             s[n] += v[i][1] * shpdy[i];
 #endif
 
         // ZZ component
-        n++;
+#ifdef THREED
+        n = 2;
+#else
+        n = 1;
+#endif
         s[n] = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i)
             s[n] += v[i][NDIMS-1] * shpdz[i];
 
 #ifdef THREED
         // XY component
-        n++;
+        n = 3;
         s[n] = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i)
             s[n] += 0.5 * (v[i][0] * shpdy[i] + v[i][1] * shpdx[i]);
 #endif
 
         // XZ component
-        n++;
+#ifdef THREED
+        n = 4;
+#else
+        n = 2;
+#endif
         s[n] = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i)
             s[n] += 0.5 * (v[i][0] * shpdz[i] + v[i][NDIMS-1] * shpdx[i]);
 
 #ifdef THREED
         // YZ component
-        n++;
+        n = 5;
         s[n] = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i)
             s[n] += 0.5 * (v[i][1] * shpdz[i] + v[i][2] * shpdy[i]);
