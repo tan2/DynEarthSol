@@ -63,7 +63,6 @@ void initial_temperature(const Param &param, const Variables &var, double_vec &t
 
 void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
 {
-    const double maxvbcval = 1e-10;
     // TODO: adding different types of vbcs later
 
     // diverging x-boundary
@@ -72,10 +71,10 @@ void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
 
         // X
         if (flag & BOUNDX0) {
-            vel[i][0] = -maxvbcval;
+            vel[i][0] = -param.maxvbcval;
         }
         else if (flag & BOUNDX1) {
-            vel[i][0] = maxvbcval;
+            vel[i][0] = param.maxvbcval;
         }
 #ifdef THREED
         // Y
@@ -280,10 +279,8 @@ int main(int argc, const char* argv[])
         var.frame ++;
     }
 
-    // XXX
-    param.strain_inert = 1e-5;
-    param.maxvbcval = 1e-10;
     var.dt = compute_dt(param, var);
+
     do {
         var.steps ++;
         var.time += var.dt;

@@ -66,6 +66,14 @@ static void declare_parameters(po::options_description &cfg,
 
         ("mantle_temperature", po::value<double>(&p.mantle_temperature)->default_value(1600),
          "Mantle temperature (in Kelvin)")
+
+        // XXX: rename strain_inert
+        ("strain_inert", po::value<double>(&p.strain_inert)->default_value(1e-5),
+         "Scaling factor for inertial")
+
+        // XXX: move to bc section
+        ("maxvbcval", po::value<double>(&p.maxvbcval)->default_value(1e-9),
+         "Magnitude of boundary velocity (in m/s)")
         ;
 
 }
