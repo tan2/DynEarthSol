@@ -73,6 +73,31 @@ static void maxwell(double bulkm, double shearm, double viscosity, double dt,
 }
 
 
+static void viscous(double bulkm, double viscosity, double total_dv,
+                    const double* edot, double* s)
+{
+    /* Viscous Model + incompressibility enforced by bulk modulus */
+
+    // deviatoric strain rate (diaganol component)
+    double ded[NDIMS];
+#ifdef THREED
+    double dev = (edot[0] + edot[1] + edot[2]) / 3;
+    ded[0] = edot[0] - dev;
+    ded[1] = edot[1] - dev;
+    ded[2] = edot[2] - dev;
+#else
+    double dev = (edot[0] + edot[1]) / 2;
+    ded[0] = edot[0] - dev;
+    ded[1] = edot[1] - dev;
+#endif
+
+    for (int i=0; i<NDIMS; ++i)
+        s[i] = 2 * viscosity * ded[i] + bulkm * total_dv;
+    for (int i=NDIMS; i<NSTR; ++i)
+        s[i] = 2 * viscosity * edot[i];
+}
+
+
 void update_stress(const Variables& var, double2d& stress,
                    double2d& strain, double_vec& plstrain)
 {
@@ -92,26 +117,32 @@ void update_stress(const Variables& var, double2d& stress,
                 bulkm = var.mat->bulkm(e);
         }
 
+        // stress, strain and strain_rate of this element
+        double* s = &stress[e][0];
+        double* es = &strain[e][0];
+        const double *edot = &(*var.strain_rate)[e][0];
+
         // TODO: strain correction
 
         // strain increment
         double de[NSTR];
         for (int i=0; i<NSTR; ++i) {
-            de[i] = (*var.strain_rate)[e][i] * var.dt;
-            strain[e][i] += de[i];
+            de[i] = es[i] * var.dt;
+            es[i] += de[i];
         }
 
-        // stress of this element
-        double* s = &stress[e][0];
-
-        double dv;
+        double total_dv, dv;
         switch (rheol_type) {
         case MatProps::rh_elastic:
             elastic(bulkm, shearm, de, s);
             break;
         case MatProps::rh_viscous:
-            std::cerr << "Error: pure viscous rheology not implemented.\n";
-            std::exit(1);
+#ifdef THREED
+            total_dv = es[0] + es[1] + es[2];
+#else
+            total_dv = es[0] + es[1];
+#endif
+            viscous(bulkm, viscosity, total_dv, edot, s);
             break;
         case MatProps::rh_maxwell:
             dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
