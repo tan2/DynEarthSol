@@ -51,31 +51,25 @@ static void maxwell(double bulkm, double shearm, double viscosity, double dt,
 #endif
 
     // deviatoric stress (diaganol component)
-    double sd[NDIMS];
 #ifdef THREED
     double s0 = (s[0] + s[1] + s[2]) / 3;
-    sd[0] = s[0] - s0;
-    sd[1] = s[1] - s0;
-    sd[2] = s[2] - s0;
+    s[0] -= s0;
+    s[1] -= s0;
+    s[2] -= s0;
 #else
     double s0 = (s[0] + s[1]) / 2;
-    sd[0] = s[0] - s0;
-    sd[1] = s[2] - s0;
+    s[0] -= s0;
+    s[1] -= s0;
 #endif
-
-    // new deviatoric stress
-    for (int i=0; i<NDIMS; ++i)
-        sd[i] = (sd[i] * f1 + 2 * shearm * ded[i]) * f2;
 
     // istropic stress is elastic
     s0 += bulkm * dv;
 
     // convert back to total stress
     for (int i=0; i<NDIMS; ++i)
-        s[i] = sd[i] + s0;
+        s[i] = (s[i] * f1 + 2 * shearm * ded[i]) * f2 + s0;
     for (int i=NDIMS; i<NSTR; ++i)
         s[i] = (s[i] * f1 + 2 * shearm * de[i]) * f2;
-
 }
 
 
@@ -113,11 +107,10 @@ void update_stress(const Variables& var, double2d& stress,
         double dv;
         switch (rheol_type) {
         case MatProps::rh_elastic:
-            std::cerr << "Error: pure elastic rheology not implemented.";
-            std::exit(1);
+            elastic(bulkm, shearm, de, s);
             break;
         case MatProps::rh_viscous:
-            std::cerr << "Error: pure viscous rheology not implemented.";
+            std::cerr << "Error: pure viscous rheology not implemented.\n";
             std::exit(1);
             break;
         case MatProps::rh_maxwell:
