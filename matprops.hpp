@@ -23,12 +23,12 @@ public:
     const double visc_max = 1e21;
     const double therm_diff_max = 1e-6;
 
-    const static int rh_elastic = 0x00000001;
-    const static int rh_viscous = 0x00000010;
-    const static int rh_plastic = 0x00000100;
-    const static int rh_maxwell = rh_elastic & rh_viscous;
-    const static int rh_ep = rh_elastic & rh_plastic;
-    const static int rh_evp = rh_elastic & rh_viscous & rh_plastic;
+    const static int rh_elastic = 1 << 0;
+    const static int rh_viscous = 1 << 1;
+    const static int rh_plastic = 1 << 2;
+    const static int rh_maxwell = rh_elastic | rh_viscous;
+    const static int rh_ep = rh_elastic | rh_plastic;
+    const static int rh_evp = rh_elastic | rh_viscous | rh_plastic;
 
 private:
     double_vec bulk_modulus, shear_modulus;
