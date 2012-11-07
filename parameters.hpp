@@ -46,17 +46,20 @@ struct Mesh {
     double_pair refined_zonex, refined_zoney, refined_zonez;
 };
 
-struct Param {
-    Sim sim;
-    Mesh mesh;
-
+struct BC {
     double surface_temperature;
     double mantle_temperature;
 
-    double gravity;
+    double max_vbc_val;
+};
 
+struct Param {
+    Sim sim;
+    Mesh mesh;
+    BC bc;
+
+    double gravity;
     double inertial_scaling;
-    double maxvbcval;
 };
 
 

@@ -85,8 +85,8 @@ void initial_temperature(const Param &param, const Variables &var, double_vec &t
 
     for (int i=0; i<var.nnode; ++i) {
         double w = -(*var.coord)[i][NDIMS-1] / std::sqrt(4 * diffusivity * oceanic_plate_age);
-        temperature[i] = param.surface_temperature +
-            (param.mantle_temperature - param.surface_temperature) * std::erf(w);
+        temperature[i] = param.bc.surface_temperature +
+            (param.bc.mantle_temperature - param.bc.surface_temperature) * std::erf(w);
     }
 }
 
@@ -101,10 +101,10 @@ void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
 
         // X
         if (flag & BOUNDX0) {
-            vel[i][0] = -param.maxvbcval;
+            vel[i][0] = -param.bc.max_vbc_val;
         }
         else if (flag & BOUNDX1) {
-            vel[i][0] = param.maxvbcval;
+            vel[i][0] = param.bc.max_vbc_val;
         }
 #ifdef THREED
         // Y
@@ -182,7 +182,7 @@ void update_temperature(const Param &param, const Variables &var,
 
     for (int n=0; n<var.nnode; ++n) {
         if ((*var.bcflag)[n] & BOUNDZ1)
-            temperature[n] = param.surface_temperature;
+            temperature[n] = param.bc.surface_temperature;
         else
             temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
     }
