@@ -43,6 +43,7 @@ SRCS =	\
 	matprops.cxx \
 	mesh.cxx \
 	output.cxx \
+	rheology.cxx \
 	sortindex.cxx
 
 INCS =	\

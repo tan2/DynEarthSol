@@ -6,6 +6,7 @@
 #include "matprops.hpp"
 #include "mesh.hpp"
 #include "output.hpp"
+#include "rheology.hpp"
 #include "utils.hpp"
 
 
@@ -44,7 +45,7 @@ static void allocate_variables(Variables& var)
 static void create_matprops(const Param &par, Variables &var)
 {
     // TODO: get material properties from cfg file
-    var.mat = new MatProps(1, MatProps::rh_evp);
+    var.mat = new MatProps(1, MatProps::rh_maxwell);
 }
 
 
@@ -135,6 +136,7 @@ void init(const Param& param, Variables& var)
     create_matprops(param, var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
+    *var.volume_old = *var.volume;
     compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
@@ -256,7 +258,6 @@ void update_strain_rate(const Variables& var, double2d& strain_rate)
 }
 
 
-void update_stress() {};
 void update_force() {};
 void rotate_stress() {};
 
@@ -339,7 +340,7 @@ int main(int argc, const char* argv[])
 
         update_temperature(param, var, *var.temperature, *var.tmp0);
         update_strain_rate(var, *var.strain_rate);
-        update_stress();
+        update_stress(var, *var.stress, *var.strain, *var.plstrain);
         update_force();
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel);

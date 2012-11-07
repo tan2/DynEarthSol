@@ -1,4 +1,5 @@
 syntax:glob
+dynearthsol2d
 dynearthsol3d
 snapshot.diff
 *.o
