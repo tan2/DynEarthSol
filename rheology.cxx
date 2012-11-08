@@ -37,29 +37,12 @@ static void maxwell(double bulkm, double shearm, double viscosity, double dt,
     double f1 = 1 - tmp;
     double f2 = 1 / (1  + tmp);
 
-    // deviatoric strain (diaganol component)
-    double ded[NDIMS];
 #ifdef THREED
     double dev = (de[0] + de[1] + de[2]) / 3;
-    ded[0] = de[0] - dev;
-    ded[1] = de[1] - dev;
-    ded[2] = de[2] - dev;
+    double s0 = (s[0] + s[1] + s[2]) / 3;
 #else
     double dev = (de[0] + de[1]) / 2;
-    ded[0] = de[0] - dev;
-    ded[1] = de[1] - dev;
-#endif
-
-    // deviatoric stress (diaganol component)
-#ifdef THREED
-    double s0 = (s[0] + s[1] + s[2]) / 3;
-    s[0] -= s0;
-    s[1] -= s0;
-    s[2] -= s0;
-#else
     double s0 = (s[0] + s[1]) / 2;
-    s[0] -= s0;
-    s[1] -= s0;
 #endif
 
     // istropic stress is elastic
@@ -67,7 +50,7 @@ static void maxwell(double bulkm, double shearm, double viscosity, double dt,
 
     // convert back to total stress
     for (int i=0; i<NDIMS; ++i)
-        s[i] = (s[i] * f1 + 2 * shearm * ded[i]) * f2 + s0;
+        s[i] = ((s[i] - s0) * f1 + 2 * shearm * (de[i] - dev)) * f2 + s0;
     for (int i=NDIMS; i<NSTR; ++i)
         s[i] = (s[i] * f1 + 2 * shearm * de[i]) * f2;
 }
@@ -78,21 +61,14 @@ static void viscous(double bulkm, double viscosity, double total_dv,
 {
     /* Viscous Model + incompressibility enforced by bulk modulus */
 
-    // deviatoric strain rate (diaganol component)
-    double ded[NDIMS];
 #ifdef THREED
     double dev = (edot[0] + edot[1] + edot[2]) / 3;
-    ded[0] = edot[0] - dev;
-    ded[1] = edot[1] - dev;
-    ded[2] = edot[2] - dev;
 #else
     double dev = (edot[0] + edot[1]) / 2;
-    ded[0] = edot[0] - dev;
-    ded[1] = edot[1] - dev;
 #endif
 
     for (int i=0; i<NDIMS; ++i)
-        s[i] = 2 * viscosity * ded[i] + bulkm * total_dv;
+        s[i] = 2 * viscosity * (edot[i] - dev) + bulkm * total_dv;
     for (int i=NDIMS; i<NSTR; ++i)
         s[i] = 2 * viscosity * edot[i];
 }
