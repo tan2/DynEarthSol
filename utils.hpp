@@ -13,6 +13,7 @@
 #ifndef DYNEARTHSOL3D_UTILS_HPP
 #define DYNEARTHSOL3D_UTILS_HPP
 
+#include <cmath>
 #include <iostream>
 #include "boost/multi_array.hpp"
 #include "boost/array.hpp"
@@ -57,5 +58,25 @@ void print(std::ostream& os, const Array& A)
   os << "]";
 }
 
+
+static double second_invariant2(const double* t)
+{
+#ifdef THREED
+    double a = (t[0] + t[1] + t[2]) / 3;
+    return ( 0.5 * ((t[0]-a)*(t[0]-a) + (t[1]-a)*(t[1]-a) + (t[2]-a)*(t[2]-a))
+             + t[3]*t[3] + t[4]*t[4] + t[5]*t[5] );
+#else
+    return 0.25*(t[0]-t[1])*(t[0]-t[1]) + t[2]*t[2];
+#endif
+}
+
+
+static double second_invariant(const double* t)
+{
+    /* second invariant of the deviatoric part of tensor t
+     * defined as: td = deviatoric(t); sqrt( td(i,j) * td(i,j) / 2)
+     */
+    return std::sqrt(second_invariant2(t));
+}
 
 #endif
