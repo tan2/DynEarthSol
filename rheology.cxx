@@ -98,6 +98,19 @@ static void viscous(double bulkm, double viscosity, double total_dv,
 }
 
 
+static void elasto_plastic(double bulkm, double shearm,
+                           double amc, double anphi, double anpsi,
+                           double hardn, double ten_max,
+                           const double* de, double& dpls, double* s)
+{
+    /* Elasto-plasticity (Mohr-Coulomb criterion) */
+
+    std::cerr << "Error: elastoc-plastic rheology not implemented.\n";
+    std::exit(1);
+
+}
+
+
 void update_stress(const Variables& var, double2d& stress,
                    double2d& strain, double_vec& plstrain)
 {
@@ -145,6 +158,50 @@ void update_stress(const Variables& var, double2d& stress,
                 double viscosity = var.mat->visc(e);
                 double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
                 maxwell(bulkm, shearm, viscosity, var.dt, dv, de, s);
+            }
+            break;
+        case MatProps::rh_ep:
+            {
+                double dpls = 0;
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                double amc, anphi, anpsi, hardn, ten_max;
+                var.mat->plastic_props(e, plstrain[e],
+                                       amc, anphi, anpsi, hardn, ten_max);
+                elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                               de, dpls, s);
+                plstrain[e] += dpls;
+            }
+            break;
+        case MatProps::rh_evp:
+            {
+                double dpls = 0;
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                double viscosity = var.mat->visc(e);
+                double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
+                // stress due maxwell rheology
+                double sv[NSTR];
+                for (int i=0; i<NSTR; ++i) sv[i] = s[i];
+                maxwell(bulkm, shearm, viscosity, var.dt, dv, de, sv);
+                double svII = second_invariant2(sv);
+
+                double amc, anphi, anpsi, hardn, ten_max;
+                var.mat->plastic_props(e, plstrain[e],
+                                       amc, anphi, anpsi, hardn, ten_max);
+                // stress due elasto-plastic rheology
+                double sp[NSTR];
+                for (int i=0; i<NSTR; ++i) sp[i] = s[i];
+                elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                               de, dpls, sp);
+                double spII = second_invariant2(sp);
+
+                // use the smaller as the final stress
+                if (svII < spII)
+                    for (int i=0; i<NSTR; ++i) s[i] = sv[i];
+                else
+                    for (int i=0; i<NSTR; ++i) s[i] = sp[i];
+                plstrain[e] += dpls;
             }
             break;
         default:
