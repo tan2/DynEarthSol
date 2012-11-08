@@ -104,19 +104,6 @@ void update_stress(const Variables& var, double2d& stress,
     const int rheol_type = var.mat->rheol_type;
 
     for (int e=0; e<var.nelem; ++e) {
-        double bulkm, shearm;
-        double viscosity;
-
-        if (rheol_type & MatProps::rh_elastic) {
-            bulkm = var.mat->bulkm(e);
-            shearm = var.mat->shearm(e);
-        }
-        if (rheol_type & MatProps::rh_viscous) {
-            viscosity = var.mat->visc(e);
-            if (rheol_type == MatProps::rh_viscous)
-                bulkm = var.mat->bulkm(e);
-        }
-
         // stress, strain and strain_rate of this element
         double* s = &stress[e][0];
         double* es = &strain[e][0];
@@ -131,22 +118,34 @@ void update_stress(const Variables& var, double2d& stress,
             es[i] += de[i];
         }
 
-        double total_dv, dv;
         switch (rheol_type) {
         case MatProps::rh_elastic:
-            elastic(bulkm, shearm, de, s);
+            {
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                elastic(bulkm, shearm, de, s);
+            }
             break;
         case MatProps::rh_viscous:
+            {
+                double bulkm = var.mat->bulkm(e);
+                double viscosity = var.mat->visc(e);
 #ifdef THREED
-            total_dv = es[0] + es[1] + es[2];
+                double total_dv = es[0] + es[1] + es[2];
 #else
-            total_dv = es[0] + es[1];
+                double total_dv = es[0] + es[1];
 #endif
-            viscous(bulkm, viscosity, total_dv, edot, s);
+                viscous(bulkm, viscosity, total_dv, edot, s);
+            }
             break;
         case MatProps::rh_maxwell:
-            dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
-            maxwell(bulkm, shearm, viscosity, var.dt, dv, de, s);
+            {
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                double viscosity = var.mat->visc(e);
+                double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
+                maxwell(bulkm, shearm, viscosity, var.dt, dv, de, s);
+            }
             break;
         default:
             std::cerr << "Error: unknown rheology type: " << rheol_type << "\n";
