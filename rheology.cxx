@@ -8,6 +8,17 @@
 #include "utils.hpp"
 
 
+static inline
+double trace(const double* s)
+{
+#ifdef THREED
+    return s[0] + s[1] + s[2];
+#else
+    return s[0] + s[1];
+#endif
+}
+
+
 static void elastic(double bulkm, double shearm, const double* de, double* s)
 {
     /* increment the stress s according to the incremental strain de */
@@ -37,13 +48,8 @@ static void maxwell(double bulkm, double shearm, double viscosity, double dt,
     double f1 = 1 - tmp;
     double f2 = 1 / (1  + tmp);
 
-#ifdef THREED
-    double dev = (de[0] + de[1] + de[2]) / 3;
-    double s0 = (s[0] + s[1] + s[2]) / 3;
-#else
-    double dev = (de[0] + de[1]) / 2;
-    double s0 = (s[0] + s[1]) / 2;
-#endif
+    double dev = trace(de) / NDIMS;
+    double s0 = trace(s) / NDIMS;
 
     // istropic stress is elastic
     s0 += bulkm * dv;
@@ -61,11 +67,7 @@ static void viscous(double bulkm, double viscosity, double total_dv,
 {
     /* Viscous Model + incompressibility enforced by bulk modulus */
 
-#ifdef THREED
-    double dev = (edot[0] + edot[1] + edot[2]) / 3;
-#else
-    double dev = (edot[0] + edot[1]) / 2;
-#endif
+    double dev = trace(edot) / NDIMS;
 
     for (int i=0; i<NDIMS; ++i)
         s[i] = 2 * viscosity * (edot[i] - dev) + bulkm * total_dv;
@@ -119,11 +121,7 @@ void update_stress(const Variables& var, double2d& stress,
             {
                 double bulkm = var.mat->bulkm(e);
                 double viscosity = var.mat->visc(e);
-#ifdef THREED
-                double total_dv = es[0] + es[1] + es[2];
-#else
-                double total_dv = es[0] + es[1];
-#endif
+                double total_dv = trace(es);
                 viscous(bulkm, viscosity, total_dv, edot, s);
             }
             break;
