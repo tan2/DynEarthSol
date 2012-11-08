@@ -1,7 +1,10 @@
 
 #include <algorithm>
+#include <cmath>
 
+#include "constants.hpp"
 #include "matprops.hpp"
+
 
 MatProps::MatProps(int n, int rh) :
     nmat(n), rheol_type(rh)
@@ -22,6 +25,8 @@ MatProps::MatProps(int n, int rh) :
     std::fill_n(alpha.begin(), n, 3e-5);
     std::fill_n(heat_capacity.begin(), n,1000);
     std::fill_n(therm_cond.begin(), n, 3);
+
+    ten_off = 1e9;
 }
 
 
@@ -36,6 +41,34 @@ double MatProps::shearm(int e) const
 {
     // TODO: compute average shear modulus
     return shear_modulus[0];
+}
+
+
+double MatProps::visc(int e) const
+{
+    // TODO: compute average viscosity
+    return 1e20;
+}
+
+
+void MatProps::plastic_props(int e, double pls,
+                             double& amc, double& anphi, double& anpsi,
+                             double& hardn, double& ten_max) const
+{
+    // TODO: compute average plastic properties
+    double cohesion = 4e7;
+    double phi = 15;
+    double psi = 0;
+    hardn = 0;
+
+    double sphi = std::sin(phi * DEG2RAD);
+    double spsi = std::sin(psi * DEG2RAD);
+
+    anphi = (1 + sphi) / (1 - sphi);
+    anpsi = (1 + spsi) / (1 - spsi);
+    amc = 2 * cohesion * std::sqrt(anphi);
+
+    ten_max = (phi == 0)? ten_off : std::min(ten_off, cohesion/std::tan(phi*DEG2RAD));
 }
 
 
@@ -60,8 +93,3 @@ double MatProps::k(int e) const
 }
 
 
-double MatProps::visc(int e) const
-{
-    // TODO: compute average viscosity
-    return 1e20;
-}

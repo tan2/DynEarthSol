@@ -13,10 +13,15 @@ public:
 
     double bulkm(int e) const;
     double shearm(int e) const;
+    double visc(int e) const;
+
     double density(int e) const;
     double cp(int e) const;
     double k(int e) const;
-    double visc(int e) const;
+
+    void plastic_props(int e, double pls,
+                       double& amc, double& anphi, double& anpsi,
+                       double& hardn, double& ten_max) const;
 
     // XXX: take values from param
     const double visc_min = 1e21;
@@ -34,6 +39,7 @@ private:
     double_vec bulk_modulus, shear_modulus;
     double_vec rho0, alpha;
     double_vec heat_capacity, therm_cond;
+    double ten_off;
 };
 
 
