@@ -231,16 +231,17 @@ def first_invariant(t):
 
 
 def second_invariant(t):
-    '''The second invariant of a symmetric tensor t,
+    '''The second invariant of the deviatoric part of a symmetric tensor t,
     where t[:,0:ndims] are the diagonal components;
       and t[:,ndims:] are the off-diagonal components.'''
 
+    # second invariant: sqrt(0.5 * t_ij**2)
     if ndims == 2:
-        return 0.5 * np.sqrt((t[:,0] - t[:,1])**2 + 4 * t[:,2]**2)
+        return np.sqrt(0.25 * (t[:,0] - t[:,1])**2 + t[:,2]**2)
     else:
-        return np.sqrt(np.abs(1./3 * (t[:,0] + t[:,1] + t[:,2])**2
-                              - (t[:,0]*t[:,1] + t[:,0]*t[:,2] + t[:,1]*t[:,2])
-                              + t[:,3]**2 + t[:,4]**2 + t[:,5]**2))
+        a = (t[:,0] + t[:,1] + t[:,2]) / 3
+        return np.sqrt( 0.5 * ((t[:,0] - a)**2 + (t[:,1] - a)**2 + (t[:,2] - a)**2) +
+                        t[:,3]**2 + t[:,4]**2 + t[:,5]**2)
 
 
 if __name__ == '__main__':
