@@ -105,7 +105,7 @@ void update_stress(const Variables& var, double2d& stress,
         // strain increment
         double de[NSTR];
         for (int i=0; i<NSTR; ++i) {
-            de[i] = es[i] * var.dt;
+            de[i] = edot[i] * var.dt;
             es[i] += de[i];
         }
 
