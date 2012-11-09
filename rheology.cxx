@@ -22,21 +22,13 @@ double trace(const double* s)
 static void elastic(double bulkm, double shearm, const double* de, double* s)
 {
     /* increment the stress s according to the incremental strain de */
-    double a1 = bulkm + 4. /3 * shearm;
-    double a2 = bulkm - 2. /3 * shearm;
+    double lambda = bulkm - 2. /3 * shearm;
+    double dev = trace(de);
 
-#ifdef THREED
-    s[0] += a1 * de[0] + a2 * (de[1] + de[2]);
-    s[1] += a1 * de[1] + a2 * (de[0] + de[2]);
-    s[2] += a1 * de[2] + a2 * (de[0] + de[1]);
-    s[3] += 2 * shearm * de[3];
-    s[4] += 2 * shearm * de[4];
-    s[5] += 2 * shearm * de[5];
-#else
-    s[0] += a1 * de[0] + a2 * de[1];
-    s[1] += a1 * de[1] + a2 * de[0];
-    s[2] += 2 * shearm * de[2];
-#endif
+    for (int i=0; i<NDIMS; ++i)
+        s[i] += 2 * shearm * de[i] + lambda * dev;
+    for (int i=NDIMS; i<NSTR; ++i)
+        s[i] += 2 * shearm * de[i];
 }
 
 
