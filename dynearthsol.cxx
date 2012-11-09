@@ -258,7 +258,55 @@ void update_strain_rate(const Variables& var, double2d& strain_rate)
 }
 
 
-void update_force() {};
+void update_force(const Param& param, const Variables& var, double2d& force)
+{
+    std::fill_n(force.data(), var.nnode, 0);
+
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
+        const double *shpdx = &(*var.shpdx)[e][0];
+#ifdef THREED
+        const double *shpdy = &(*var.shpdy)[e][0];
+#endif
+        const double *shpdz = &(*var.shpdz)[e][0];
+        double *s = &(*var.stress)[e][0];
+        double vol = (*var.volume)[e];
+
+        double buoy = var.mat->density(e) * param.gravity / NODES_PER_ELEM;
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            double *f = &force[conn[i]][0];
+#ifdef THREED
+            f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+            f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+            f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+#else
+            f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+            f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+#endif
+        }
+
+        if (param.gravity != 0) {
+            // XXX: Wrinkler foundation
+        }
+
+    }
+
+    // damping
+    {
+        // flatten 2d arrays to simplify indexing
+        double* ff = force.data();
+        const double* v = var.vel->data();
+        const double small_vel = 1e-13;
+        const double damping_coeff = 0.8;
+        for (int i=0; i<var.nnode*NDIMS; ++i) {
+            if (std::fabs(v[i]) > small_vel) {
+                ff[i] -= damping_coeff * std::copysign(ff[i], v[i]);
+            }
+        }
+    }
+}
+
+
 void rotate_stress() {};
 
 
@@ -341,7 +389,7 @@ int main(int argc, const char* argv[])
         update_temperature(param, var, *var.temperature, *var.tmp0);
         update_strain_rate(var, *var.strain_rate);
         update_stress(var, *var.stress, *var.strain, *var.plstrain);
-        update_force();
+        update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel);
         update_mesh(param, var);
