@@ -2,6 +2,7 @@ syntax:glob
 dynearthsol2d
 dynearthsol3d
 snapshot.diff
+3x3-C/lib3x3.a
 *.o
 *.pyc
 *.vtu

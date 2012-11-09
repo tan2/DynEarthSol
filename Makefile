@@ -78,12 +78,15 @@ else
 	CXXFLAGS += -DTHREED
 endif
 
+C3X3_DIR = 3x3-C
+C3X3_LIBNAME = 3x3
+
 ## Action
 
 all: $(EXE)
 
-$(EXE): $(M_OBJS) $(OBJS)
-	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOSTLDFLAGS) -o $@
+$(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a
+	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOSTLDFLAGS) -L$(C3X3_DIR) -l$(C3X3_LIBNAME) -o $@
 	@# snapshot of the code for building the executable
 	@which hg 2>&1 > /dev/null && (hg summary; hg diff) > snapshot.diff
 
@@ -102,6 +105,9 @@ tetgen/predicates.o: tetgen/predicates.cxx $(TET_INCS)
 
 tetgen/tetgen.o: tetgen/tetgen.cxx $(TET_INCS)
 	$(CXX) $(CXXFLAGS) -DNDEBUG -DTETLIBRARY -Wno-unused-but-set-variable -Wno-int-to-pointer-cast -c $< -o $@
+
+$(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
+	(cd $(C3X3_DIR); make)
 
 clean:
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
