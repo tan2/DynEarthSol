@@ -264,7 +264,7 @@ void rotate_stress() {};
 
 void update_velocity(const Variables& var, double2d& vel)
 {
-    const double* m = &(*var.volume)[0];
+    const double* m = &(*var.mass)[0];
     // flatten 2d arrays to simplify indexing
     const double* f = var.force->data();
     double* v = vel.data();
