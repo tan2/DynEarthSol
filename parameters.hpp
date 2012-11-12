@@ -58,11 +58,20 @@ struct BC {
     double max_vbc_val;
 };
 
+struct Mat {
+    int rheol_type;
+    int nmat;
+    double visc_min;
+    double visc_max;
+    double therm_diff_max;
+};
+
 struct Param {
     Sim sim;
     Mesh mesh;
     Control control;
     BC bc;
+    Mat mat;
 };
 
 

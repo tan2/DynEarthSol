@@ -6,9 +6,15 @@
 #include "matprops.hpp"
 
 
-MatProps::MatProps(int n, int rh) :
-    nmat(n), rheol_type(rh)
+MatProps::MatProps(const Param& p) :
+  rheol_type(p.mat.rheol_type),
+  nmat(p.mat.nmat),
+  visc_min(p.mat.visc_min),
+  visc_max(p.mat.visc_max),
+  therm_diff_max(p.mat.therm_diff_max),
+  mat(p.mat)
 {
+    int n = nmat;
     bulk_modulus.resize(n);
     shear_modulus.resize(n);
 

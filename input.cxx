@@ -6,6 +6,7 @@
 namespace po = boost::program_options;
 
 #include "parameters.hpp"
+#include "matprops.hpp"
 
 
 static void declare_parameters(po::options_description &cfg,
@@ -77,6 +78,18 @@ static void declare_parameters(po::options_description &cfg,
          "Magnitude of boundary velocity (in m/s)")
         ;
 
+    cfg.add_options()
+        ("mat.rheology_type", po::value<std::string>()->required(),
+         "Type of rheology, either 'elastic', 'viscous', 'maxwell', 'elasto-plastic', or 'elasto-viscous-plastic'")
+        ("mat.num_material", po::value<int>(&p.mat.nmat)->default_value(1),
+         "Number of material types")
+        ("mat.max_viscosity", po::value<double>(&p.mat.visc_max)->default_value(1e24),
+         "Max. value of viscosity")
+        ("mat.min_viscosity", po::value<double>(&p.mat.visc_min)->default_value(1e18),
+         "Min. value of viscosity")
+        ("mat.max_thermal_diffusivity", po::value<double>(&p.mat.therm_diff_max)->default_value(5e-6),
+         "Max. value of thermal diffusivity")
+        ;
 }
 
 
@@ -99,6 +112,9 @@ static void read_parameters_from_file
 
 static void validate_parameters(const po::variables_map &vm, Param &p)
 {
+    //
+    // stopping condition and output interval are based on either model time or step
+    //
     if ( ! (vm.count("sim.max_steps") || vm.count("sim.max_time_in_yr")) ) {
         std::cerr << "Must provide either sim.max_steps or sim.max_time_in_yr\n";
         std::exit(1);
@@ -117,6 +133,10 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     if ( ! vm.count("sim.output_time_interval_in_yr") )
         p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();;
 
+
+    //
+    // these parameters are required in mesh.meshing_option == 2
+    //
     if (p.mesh.meshing_option == 2) {
         if ( ! vm.count("mesh.refined_zonex") ||
 #ifdef THREED
@@ -165,6 +185,28 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         p.mesh.refined_zonez.first = d0;
         p.mesh.refined_zonez.second = d1;
     }
+
+    //
+    // material properties
+    //
+    {
+        std::string str = vm["mat.rheology_type"].as<std::string>();
+        if (str == std::string("elastic"))
+            p.mat.rheol_type = MatProps::rh_elastic;
+        else if (str == std::string("viscous"))
+            p.mat.rheol_type = MatProps::rh_viscous;
+        else if (str == std::string("maxwell"))
+            p.mat.rheol_type = MatProps::rh_maxwell;
+        else if (str == std::string("elasto-plastic"))
+            p.mat.rheol_type = MatProps::rh_ep;
+        else if (str == std::string("elasto-viscous-plastic"))
+            p.mat.rheol_type = MatProps::rh_evp;
+        else {
+            std::cerr << "Error: unknown rheology: '" << str << "'\n";
+            std::exit(1);
+        }
+    }
+
 }
 
 
