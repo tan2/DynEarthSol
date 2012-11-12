@@ -355,6 +355,7 @@ int main(int argc, const char* argv[])
     //
     if (argc != 2) {
         std::cout << "Usage: " << argv[0] << " config_file\n";
+        std::cout << "       " << argv[0] << " -h or --help\n";
         return -1;
     }
 

@@ -216,6 +216,12 @@ void get_input_parameters(const char* filename, Param& p)
     po::variables_map vm;
 
     declare_parameters(cfg, p);
+    // print help message
+    if (std::strncmp(filename, "-h", 3) == 0 ||
+        std::strncmp(filename, "--help", 7) == 0) {
+        std::cout << cfg;
+        std::exit(0);
+    }
     read_parameters_from_file(filename, cfg, vm);
     validate_parameters(vm, p);
 }
