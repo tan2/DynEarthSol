@@ -49,6 +49,43 @@ static void create_matprops(const Param &par, Variables &var)
 }
 
 
+void compute_jacobian(const Variables &var, double_vec &tmp,
+                      double_vec &jacobian, double_vec &ejacobian)
+{
+    const double_vec& volume = *var.volume;
+    const double_vec& volume_n = *var.volume_n;
+    std::fill_n(tmp.begin(), var.nnode, 0);
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
+        const double* strain_rate = &(*var.strain_rate)[e][0];
+        double dj = trace(strain_rate);
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            int n = conn[i];
+            tmp[n] += dj * volume[e];
+        }
+    }
+    for (int n=0; n<var.nnode; ++n)
+         jacobian[n] = tmp[n] / volume_n[n];
+
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
+        double dj = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            int n = conn[i];
+            dj += jacobian[n];
+        }
+        ejacobian[e] = dj / NODES_PER_ELEM;
+    }
+
+    // std::cout << "jacobian:\n";
+    // print(std::cout, jacobian);
+    // std::cout << "\n";
+    // std::cout << "ejacobian:\n";
+    // print(std::cout, ejacobian);
+    // std::cout << "\n";
+}
+
+
 void initial_stress_state(const Param &param, const Variables &var,
                           double2d &stress, double2d &strain,
                           double &compensation_pressure)
@@ -137,12 +174,11 @@ void init(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
     *var.volume_old = *var.volume;
+    compute_jacobian(var, *var.tmp0, *var.jacobian, *var.ejacobian);
     compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
                      *var.shpdx, *var.shpdy, *var.shpdz);
-    // XXX
-    //create_jacobian();
 
     initial_stress_state(param, var, *var.stress, *var.strain, var.compensation_pressure);
     initial_temperature(param, var, *var.temperature);
@@ -341,6 +377,7 @@ void update_mesh(const Param& param, Variables& var)
 
     var.volume->swap(*var.volume_old);
     compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
+    compute_jacobian(var, *var.tmp0, *var.jacobian, *var.ejacobian);
     compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
