@@ -46,6 +46,11 @@ struct Mesh {
     double_pair refined_zonex, refined_zoney, refined_zonez;
 };
 
+struct Control {
+    double gravity;
+    double inertial_scaling;
+};
+
 struct BC {
     double surface_temperature;
     double mantle_temperature;
@@ -56,10 +61,8 @@ struct BC {
 struct Param {
     Sim sim;
     Mesh mesh;
+    Control control;
     BC bc;
-
-    double gravity;
-    double inertial_scaling;
 };
 
 

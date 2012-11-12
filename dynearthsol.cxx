@@ -53,7 +53,7 @@ void initial_stress_state(const Param &param, const Variables &var,
                           double2d &stress, double2d &strain,
                           double &compensation_pressure)
 {
-    if (param.gravity == 0) {
+    if (param.control.gravity == 0) {
         compensation_pressure = 0;
         return;
     }
@@ -62,7 +62,7 @@ void initial_stress_state(const Param &param, const Variables &var,
     // XXX: compute reference pressure correctly
     const double rho = var.mat->density(0);
     const double ks = var.mat->bulkm(0);
-    compensation_pressure = rho * param.gravity * param.mesh.zlength;
+    compensation_pressure = rho * param.control.gravity * param.mesh.zlength;
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = &(*var.connectivity)[e][0];
         double zcenter = 0;
@@ -72,8 +72,8 @@ void initial_stress_state(const Param &param, const Variables &var,
         zcenter /= NODES_PER_ELEM;
 
         for (int i=0; i<NDIMS; ++i) {
-            stress[e][i] = - rho * param.gravity * zcenter;
-            strain[e][i] = - rho * param.gravity * zcenter / ks / NDIMS;
+            stress[e][i] = - rho * param.control.gravity * zcenter;
+            strain[e][i] = - rho * param.control.gravity * zcenter / ks / NDIMS;
         }
     }
 }
@@ -272,7 +272,7 @@ void update_force(const Param& param, const Variables& var, double2d& force)
         double *s = &(*var.stress)[e][0];
         double vol = (*var.volume)[e];
 
-        double buoy = var.mat->density(e) * param.gravity / NODES_PER_ELEM;
+        double buoy = var.mat->density(e) * param.control.gravity / NODES_PER_ELEM;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             double *f = &force[conn[i]][0];
 #ifdef THREED
@@ -285,7 +285,7 @@ void update_force(const Param& param, const Variables& var, double2d& force)
 #endif
         }
 
-        if (param.gravity != 0) {
+        if (param.control.gravity != 0) {
             // XXX: Wrinkler foundation
         }
 

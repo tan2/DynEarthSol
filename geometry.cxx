@@ -164,7 +164,7 @@ double compute_dt(const Param& param, const Variables& var)
 	minl = std::min(minl, minh);
     }
 
-    double dt_elastic = 0.5 * minl / (param.bc.max_vbc_val * param.inertial_scaling);
+    double dt_elastic = 0.5 * minl / (param.bc.max_vbc_val * param.control.inertial_scaling);
 
     // std::cout << "dt: " << dt_maxwell << " " << dt_diffusion
     //           << " " << dt_elastic << "\n";
@@ -179,7 +179,7 @@ void compute_mass(const Param &param,
                   const double_vec &volume, const MatProps &mat,
                   double_vec &mass, double_vec &tmass)
 {
-    double pseudo_speed = param.bc.max_vbc_val * param.inertial_scaling;
+    double pseudo_speed = param.bc.max_vbc_val * param.control.inertial_scaling;
     const int nelem = connectivity.shape()[0];
     for (int e=0; e<nelem; ++e) {
         double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);

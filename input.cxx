@@ -61,20 +61,20 @@ static void declare_parameters(po::options_description &cfg,
         ;
 
     cfg.add_options()
+        ("control.gravity", po::value<double>(&p.control.gravity)->default_value(10),
+         "Magnitude of the gravity (in m/s^2)")
+
+        ("control.inertial_scaling", po::value<double>(&p.control.inertial_scaling)->default_value(1e5),
+         "Scaling factor for inertial (a large number)")
+        ;
+
+    cfg.add_options()
         ("bc.surface_temperature", po::value<double>(&p.bc.surface_temperature)->default_value(273),
          "Surface temperature (in Kelvin)")
         ("bc.mantle_temperature", po::value<double>(&p.bc.mantle_temperature)->default_value(1600),
          "Mantle temperature (in Kelvin)")
         ("bc.max_vbc_val", po::value<double>(&p.bc.max_vbc_val)->default_value(1e-9),
          "Magnitude of boundary velocity (in m/s)")
-        ;
-
-    cfg.add_options()
-        ("gravity", po::value<double>(&p.gravity)->default_value(10),
-         "Magnitude of the gravity (in m/s^2)")
-
-        ("inertial_scaling", po::value<double>(&p.inertial_scaling)->default_value(1e5),
-         "Scaling factor for inertial (a large number)")
         ;
 
 }
