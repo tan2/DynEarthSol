@@ -650,6 +650,81 @@ void create_support(Variables& var)
 }
 
 
+void create_elem_groups(Variables& var)
+{
+    /* Decompose the whole mesh into groups of elements, each element
+     * is the member of one and only one group. The elements in one group
+     * are disjoint, i.e. not sharing the same nodes, edges nor faces.
+     */
+
+    var.egroups = new std::vector<int_vec>;
+
+    // elements belonging to a egroup
+    std::vector<bool> elems_taken(var.nelem, 0);
+
+    int start = 0;
+    while (1) {
+        // gp is the current egroup
+        var.egroups->push_back(int_vec());
+        int_vec& gp = var.egroups->back();
+
+        // nodes taken by the current egroup so far
+        std::vector<bool> nodes_taken(var.nnode, 0);
+
+        for (int e=start; e<var.nelem; ++e) {
+            if (elems_taken[e]) continue;
+            std::cout << e << ": ";
+
+            const int *conn = &(*var.connectivity)[e][0];
+
+            // Is any node of this element is taken?
+            bool is_taken = 0;
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                int n = conn[i];
+                is_taken |= nodes_taken[n];
+                std::cout << n << ":" << nodes_taken[n] << "  ";
+            }
+            std::cout << '\n';
+
+            // None of the nodes are taken. This element belongs to this group
+            if (! is_taken) {
+                // mark nodes as taken
+                for (int i=0; i<NODES_PER_ELEM; ++i) {
+                    int n = conn[i];
+                    nodes_taken[n] = 1;
+                }
+                gp.push_back(e);
+                elems_taken[e] = 1;
+            }
+        }
+
+        std::cout << "eg:\n";
+        print(std::cout, gp);
+        std::cout << '\n';
+
+        std::cout << "nodes_taken:\n";
+        for (int k=0; k<nodes_taken.size(); k++)
+            std::cout << k << ": " << nodes_taken[k] << '\n';
+
+        start++;
+        bool found = 0;
+        for (int e=start; e<var.nelem; ++e) {
+            if (!elems_taken[e]) {
+                found = 1;
+                start = e;
+                break;
+            }
+        }
+        if (! found) break;
+    }
+
+    std::cout << "egroups:\n";
+    print(std::cout, *var.egroups);
+    std::cout << '\n';
+    std::exit(100);
+}
+
+
 void create_new_mesh(const Param& param, Variables& var)
 {
     switch (param.mesh.meshing_option) {
@@ -665,4 +740,5 @@ void create_new_mesh(const Param& param, Variables& var)
     }
     create_boundary_flags(var);
     create_support(var);
+    create_elem_groups(var);
 }
