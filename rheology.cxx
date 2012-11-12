@@ -10,17 +10,6 @@
 #include "utils.hpp"
 
 
-static inline
-double trace(const double* s)
-{
-#ifdef THREED
-    return s[0] + s[1] + s[2];
-#else
-    return s[0] + s[1];
-#endif
-}
-
-
 static void principal_stresses3(const double* s, double p[3], double v[3][3])
 {
     /* s is a flattened stress vector, with the components {XX, YY, ZZ, XY, XZ, YZ}.

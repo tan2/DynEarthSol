@@ -59,6 +59,16 @@ void print(std::ostream& os, const Array& A)
 }
 
 
+static double trace(const double* s)
+{
+#ifdef THREED
+    return s[0] + s[1] + s[2];
+#else
+    return s[0] + s[1];
+#endif
+}
+
+
 static double second_invariant2(const double* t)
 {
 #ifdef THREED
