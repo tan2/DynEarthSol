@@ -52,12 +52,16 @@ static void create_matprops(const Param &par, Variables &var)
 void compute_dvoldt(const Variables &var, double_vec &tmp,
                     double_vec &dvoldt, double_vec &edvoldt)
 {
+    /* dvoldt is the volumetric strain rate */
+    /* edvoldt is the averaged dvoldt on the element */
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(tmp.begin(), var.nnode, 0);
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = &(*var.connectivity)[e][0];
         const double* strain_rate = &(*var.strain_rate)[e][0];
+        // TODO: try another definition:
+        // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
