@@ -430,7 +430,7 @@ int main(int argc, const char* argv[])
 
         update_temperature(param, var, *var.temperature, *var.tmp0);
         update_strain_rate(var, *var.strain_rate);
-        update_stress(var, *var.stress, *var.strain, *var.plstrain);
+        update_stress(var, *var.stress, *var.strain, *var.plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel);

@@ -273,7 +273,8 @@ static void elasto_plastic(double bulkm, double shearm,
 
 
 void update_stress(const Variables& var, double2d& stress,
-                   double2d& strain, double_vec& plstrain)
+                   double2d& strain, double_vec& plstrain,
+                   double2d& strain_rate)
 {
     const int rheol_type = var.mat->rheol_type;
 
@@ -281,9 +282,15 @@ void update_stress(const Variables& var, double2d& stress,
         // stress, strain and strain_rate of this element
         double* s = &stress[e][0];
         double* es = &strain[e][0];
-        const double *edot = &(*var.strain_rate)[e][0];
+        double* edot = &strain_rate[e][0];
 
-        // TODO: strain correction
+        // anti-mesh locking correction on strain rate
+        {
+            double div = trace(edot);
+            for (int i=0; i<NDIMS; ++i) {
+                edot[i] += ((*var.edvoldt)[e] - div) / NDIMS;
+            }
+        }
 
         // strain increment
         double de[NSTR];
