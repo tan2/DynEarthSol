@@ -22,8 +22,8 @@ static void allocate_variables(Variables& var)
     var.mass = new double_vec(n);
     var.tmass = new double_vec(n);
 
-    var.jacobian = new double_vec(n);
-    var.ejacobian = new double_vec(e);
+    var.dvoldt = new double_vec(n);
+    var.edvoldt = new double_vec(e);
 
     var.temperature = new double_vec(n);
     var.plstrain = new double_vec(e);
@@ -49,8 +49,8 @@ static void create_matprops(const Param &par, Variables &var)
 }
 
 
-void compute_jacobian(const Variables &var, double_vec &tmp,
-                      double_vec &jacobian, double_vec &ejacobian)
+void compute_dvoldt(const Variables &var, double_vec &tmp,
+                    double_vec &dvoldt, double_vec &edvoldt)
 {
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
@@ -65,23 +65,23 @@ void compute_jacobian(const Variables &var, double_vec &tmp,
         }
     }
     for (int n=0; n<var.nnode; ++n)
-         jacobian[n] = tmp[n] / volume_n[n];
+         dvoldt[n] = tmp[n] / volume_n[n];
 
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = &(*var.connectivity)[e][0];
         double dj = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
-            dj += jacobian[n];
+            dj += dvoldt[n];
         }
-        ejacobian[e] = dj / NODES_PER_ELEM;
+        edvoldt[e] = dj / NODES_PER_ELEM;
     }
 
-    // std::cout << "jacobian:\n";
-    // print(std::cout, jacobian);
+    // std::cout << "dvoldt:\n";
+    // print(std::cout, dvoldt);
     // std::cout << "\n";
-    // std::cout << "ejacobian:\n";
-    // print(std::cout, ejacobian);
+    // std::cout << "edvoldt:\n";
+    // print(std::cout, edvoldt);
     // std::cout << "\n";
 }
 
@@ -174,7 +174,7 @@ void init(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
     *var.volume_old = *var.volume;
-    compute_jacobian(var, *var.tmp0, *var.jacobian, *var.ejacobian);
+    compute_dvoldt(var, *var.tmp0, *var.dvoldt, *var.edvoldt);
     compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
@@ -377,7 +377,7 @@ void update_mesh(const Param& param, Variables& var)
 
     var.volume->swap(*var.volume_old);
     compute_volume(*var.coord, *var.connectivity, *var.volume, *var.volume_n);
-    compute_jacobian(var, *var.tmp0, *var.jacobian, *var.ejacobian);
+    compute_dvoldt(var, *var.tmp0, *var.dvoldt, *var.edvoldt);
     compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume,

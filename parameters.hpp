@@ -103,7 +103,7 @@ struct Variables {
 
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;
-    double_vec *jacobian, *ejacobian;
+    double_vec *dvoldt, *edvoldt;
     double_vec *temperature, *plstrain;
     double_vec *tmp0;
 
