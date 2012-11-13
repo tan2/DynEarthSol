@@ -3,6 +3,8 @@
 #include <numeric>
 #include <vector>
 
+#include "sortindex.hpp"
+
 
 class RangeGenerator {
     int current;
@@ -10,25 +12,6 @@ public:
     RangeGenerator(int init=0) {current=init;}
     int operator()() {return current++;}
 };
-
-
-template< typename T >
-class idx_lt {
-    const std::vector<T>& _x;
-public:
-    idx_lt( const std::vector<T>& x ) : _x(x) {}
-    bool operator()( std::size_t left, std::size_t right ) const { return _x[left] < _x[right]; }
-};
-
-
-template< typename T >
-void sortindex(const std::vector<T>& x, std::vector<std::size_t>& idx)
-{
-    // fill idx = [0, 1, 2, ...]
-    std::iota(idx.begin(), idx.end(), 0);
-
-    std::sort(idx.begin(), idx.end(), idx_lt<T>(x));
-}
 
 
 void test_range()
