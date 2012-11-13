@@ -32,6 +32,12 @@ static void print(std::ostream& os, const int& x)
 }
 
 
+static void print(std::ostream& os, const std::size_t& x)
+{
+  os << x;
+}
+
+
 template <typename T>
 void print(std::ostream& os, const T& A, std::size_t size)
 {
