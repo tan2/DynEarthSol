@@ -23,6 +23,7 @@
 
 #include "constants.hpp"
 #include "parameters.hpp"
+#include "sortindex.hpp"
 #include "utils.hpp"
 #include "mesh.hpp"
 
@@ -659,10 +660,31 @@ void create_elem_groups(Variables& var)
 
     var.egroups = new std::vector<int_vec>;
 
-    // elements belonging to a egroup
-    std::vector<bool> elems_taken(var.nelem, 0);
+    // element # ordered by "crowdness" (see below)
+    std::vector<std::size_t> crowdest_elem(var.nelem);
+    {
+        // how many elements are sharing nodes with this element?
+        std::vector<std::size_t> crowdness(var.nelem);
+        for (int e=0; e<var.nelem; ++e) {
+            const int *conn = &(*var.connectivity)[e][0];
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                int n = conn[i];
+                crowdness[e] += (*var.support)[n].size();
+            }
+        }
+
+        sortindex_reversed(crowdness, crowdest_elem);
+        // print(std::cout, crowdness);
+        // std::cout << "\n\n";
+        // print(std::cout, crowdest_elem);
+        // std::cout << "\n\n";
+        // for (int e=0; e<var.nelem; ++e) {
+        //     std::cout << e << " : " << crowdness[crowdest_elem[e]] << ", " << crowdest_elem[e] << '\n';
+        // }
+    }
 
     int start = 0;
+    const std::size_t sentinel = crowdest_elem[0];
     while (1) {
         // gp is the current egroup
         var.egroups->push_back(int_vec());
@@ -671,57 +693,71 @@ void create_elem_groups(Variables& var)
         // nodes taken by the current egroup so far
         std::vector<bool> nodes_taken(var.nnode, 0);
 
-        for (int e=start; e<var.nelem; ++e) {
-            if (elems_taken[e]) continue;
-            std::cout << e << ": ";
+        // the starting element is always available to take
+        {
+            int e = crowdest_elem[start];
+            const int *conn = &(*var.connectivity)[e][0];
+            // mark nodes as taken
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                int n = conn[i];
+                nodes_taken[n] = 1;
+            }
+            gp.push_back(e);
+            // mark element as taken
+            crowdest_elem[start] = sentinel;
+        }
+        for (int ee=start+1; ee<var.nelem; ++ee) {
+            std::size_t e = crowdest_elem[ee];
+            // this element is taken, skip
+            if (e == sentinel) continue;
 
             const int *conn = &(*var.connectivity)[e][0];
 
-            // Is any node of this element is taken?
-            bool is_taken = 0;
+            // does this element share any node with other elements in the group?
+            bool is_sharing_node = 0;
             for (int i=0; i<NODES_PER_ELEM; ++i) {
                 int n = conn[i];
-                is_taken |= nodes_taken[n];
-                std::cout << n << ":" << nodes_taken[n] << "  ";
+                if (nodes_taken[n]) {
+                    is_sharing_node = 1;
+                    break;
+                }
             }
-            std::cout << '\n';
+            // skip this element
+            if (is_sharing_node) continue;
 
             // None of the nodes are taken. This element belongs to this group
-            if (! is_taken) {
-                // mark nodes as taken
-                for (int i=0; i<NODES_PER_ELEM; ++i) {
-                    int n = conn[i];
-                    nodes_taken[n] = 1;
-                }
-                gp.push_back(e);
-                elems_taken[e] = 1;
+            // mark nodes as taken
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                int n = conn[i];
+                nodes_taken[n] = 1;
             }
+            gp.push_back(e);
+            // mark element as taken
+            crowdest_elem[ee] = sentinel;
         }
 
-        std::cout << "eg:\n";
-        print(std::cout, gp);
-        std::cout << '\n';
-
-        std::cout << "nodes_taken:\n";
-        for (int k=0; k<nodes_taken.size(); k++)
-            std::cout << k << ": " << nodes_taken[k] << '\n';
-
+        // before starting over, find the first available element
         start++;
         bool found = 0;
-        for (int e=start; e<var.nelem; ++e) {
-            if (!elems_taken[e]) {
+        for (int ee=start; ee<var.nelem; ++ee) {
+            if (crowdest_elem[ee] != sentinel) {
                 found = 1;
-                start = e;
+                start = ee;
                 break;
             }
         }
+
+        // none of the elements are available, job is done
         if (! found) break;
     }
 
-    std::cout << "egroups:\n";
-    print(std::cout, *var.egroups);
-    std::cout << '\n';
-    std::exit(100);
+    // std::cout << "egroups:" << var.egroups->size() << " groups\n";
+    // for (int i=0; i<var.egroups->size(); i++) {
+    //     std::cout << (*var.egroups)[i].size() << '\n';
+    // }
+
+    // print(std::cout, *var.egroups);
+    // std::cout << '\n';
 }
 
 
