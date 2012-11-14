@@ -180,29 +180,30 @@ void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
         shared(param, var, vel)
     for (int i=0; i<var.nnode; ++i) {
         int flag = (*var.bcflag)[i];
+        double *v = &vel[i][0];
 
         // X
         if (flag & BOUNDX0) {
-            vel[i][0] = -param.bc.max_vbc_val;
+            v[0] = -param.bc.max_vbc_val;
         }
         else if (flag & BOUNDX1) {
-            vel[i][0] = param.bc.max_vbc_val;
+            v[0] = param.bc.max_vbc_val;
         }
 #ifdef THREED
         // Y
         if (flag & BOUNDY0) {
-            vel[i][1] = 0;
+            v[1] = 0;
         }
         else if (flag & BOUNDY1) {
-            vel[i][1] = 0;
+            v[1] = 0;
         }
 #endif
         // Z
         if (flag & BOUNDZ0) {
-            //vel[i][NDIMS-1] = 0;
+            //v[NDIMS-1] = 0;
         }
         else if (flag & BOUNDZ1) {
-            vel[i][NDIMS-1] = 0;
+            v[NDIMS-1] = 0;
         }
     }
 }
@@ -246,16 +247,19 @@ void update_temperature(const Param &param, const Variables &var,
     {
         const int *conn = &(*var.connectivity)[e][0];
         double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
+        const double *shpdx = &(*var.shpdx)[e][0];
+        const double *shpdy = &(*var.shpdy)[e][0];
+        const double *shpdz = &(*var.shpdz)[e][0];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             for (int j=0; j<NODES_PER_ELEM; ++j) {
                 if (NDIMS == 3) {
-                    D[i][j] = ((*var.shpdx)[e][i] * (*var.shpdx)[e][j] +
-                               (*var.shpdy)[e][i] * (*var.shpdy)[e][j] +
-                               (*var.shpdz)[e][i] * (*var.shpdz)[e][j]);
+                    D[i][j] = (shpdx[i] * shpdx[j] +
+                               shpdy[i] * shpdy[j] +
+                               shpdz[i] * shpdz[j]);
                 }
                 else {
-                    D[i][j] = ((*var.shpdx)[e][i] * (*var.shpdx)[e][j] +
-                               (*var.shpdz)[e][i] * (*var.shpdz)[e][j]);
+                    D[i][j] = (shpdx[i] * shpdx[j] +
+                               shpdz[i] * shpdz[j]);
                 }
             }
         }
