@@ -373,8 +373,8 @@ void update_stress(const Variables& var, double2d& stress,
             std::exit(1);
             break;
         }
-        std::cout << "stress " << e << ": ";
-        print(std::cout, s, NSTR);
-        std::cout << '\n';
+        // std::cout << "stress " << e << ": ";
+        // print(std::cout, s, NSTR);
+        // std::cout << '\n';
     }
 }
