@@ -29,6 +29,6 @@ $(BIN): Makefile $(OBJ)
 
 .PHONY: clean
 clean:
-	rm -f $(BIN) $(OBJ)
+	@rm -f $(BIN) $(OBJ)
 
 
