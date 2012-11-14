@@ -656,10 +656,14 @@ void create_elem_groups(Variables& var)
     /* Decompose the whole mesh into groups of elements, each element
      * is the member of one and only one group. The elements in one group
      * are disjoint, i.e. not sharing the same nodes, edges nor faces.
+     *
+     * These groups are the boundary of openmp parallelism. Within each
+     * group, it is safe to use openmp.
      */
 
     var.egroups = new std::vector<int_vec>;
 
+#ifdef USE_OMP
     // element # ordered by "crowdness" (see below)
     std::vector<std::size_t> crowdest_elem(var.nelem);
     {
@@ -750,6 +754,17 @@ void create_elem_groups(Variables& var)
         // none of the elements are available, job is done
         if (! found) break;
     }
+
+#else
+
+    // Not using openmp, only need one group for all elements
+    var.egroups->push_back(int_vec(var.nelem));
+    int_vec& gp = var.egroups->back();
+    for (int e=0; e<var.nelem; ++e) {
+        gp[e] = e;
+    }
+
+#endif
 
     // std::cout << "egroups:" << var.egroups->size() << " groups\n";
     // for (int i=0; i<var.egroups->size(); i++) {
