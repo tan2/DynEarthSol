@@ -77,10 +77,12 @@ static double triangle_area(const double *a,
 
 
 void compute_volume(const double2d &coord, const int2d &connectivity,
+                    const std::vector<int_vec> &egroups,
                     double_vec &volume, double_vec &volume_n)
 {
-    const int nelem = connectivity.shape()[0];
-    for (int e=0; e<nelem; ++e) {
+    #pragma omp parallel for default(none)      \
+        shared(coord, connectivity, volume)
+    for (int e=0; e<volume.size(); ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
         int n2 = connectivity[e][2];
@@ -104,13 +106,19 @@ void compute_volume(const double2d &coord, const int2d &connectivity,
 
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
     // volume_n[n] is init'd to 0 by resize()
-    for (int e=0; e<nelem; ++e) {
+    for (auto egroup : egroups) {
+        #pragma omp parallel for default(none)                  \
+            shared(egroup, connectivity, volume, volume_n)
+        for (int ee=0; ee<egroup.size(); ++ee) {
+            int e = egroup[ee];
+    {
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = connectivity[e][i];
             volume_n[n] += volume[e];
         }
     }
-
+        } // end of ee
+    }
     //for (int i=0; i<volume_n.size(); ++i)
     //    std::cout << i << ": volume_n = " << volume_n[i] << '\n';
 }

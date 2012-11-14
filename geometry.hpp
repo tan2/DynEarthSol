@@ -2,6 +2,7 @@
 #define DYNEARTHSOL3D_GEOMETRY_HPP
 
 void compute_volume(const double2d &coord, const int2d &connectivity,
+                    const std::vector<int_vec> &egroups,
                     double_vec &volume, double_vec &volume_n);
 
 double compute_dt(const Param& param, const Variables& var);
