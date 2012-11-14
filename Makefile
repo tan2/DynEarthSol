@@ -12,6 +12,8 @@
 
 ndims = 2
 debug = 0
+openmp = 0
+gprof = 0
 
 ## Select C++ compiler
 CXX = g++
@@ -25,13 +27,29 @@ BOOSTLDFLAGS = -lboost_program_options-mt
 ## (Usually you won't need to modify anything below)
 ########################################################################
 
-CXXFLAGS = -g -std=c++0x
-LDFLAGS = -lm
+ifeq ($(CXX), g++)
+	CXXFLAGS = -g -std=c++0x
+	LDFLAGS = -lm
 
-ifeq ($(debug), 0)
-	CXXFLAGS += -O2 -DBOOST_DISABLE_ASSERTS -DNDEBUG
+	ifeq ($(debug), 0)
+		CXXFLAGS += -O2 -DBOOST_DISABLE_ASSERTS -DNDEBUG
+	else
+		CXXFLAGS += -O0 -Wall -Wno-unused-function
+	endif
+
+	ifeq ($(openmp), 1)
+		CXXFLAGS += -fopenmp -DUSE_OMP
+		LDFLAGS += -fopenmp
+	endif
+
+	ifeq ($(gprof), 1)
+        	CXXFLAGS += -pg
+        	LDFLAGS += -pg
+	endif
 else
-	CXXFLAGS += -O0 -Wall -Wno-unused-function
+all:
+	@echo "Unknown compiler, check the definition of 'CXX' in the Makefile."
+	@false
 endif
 
 ##
