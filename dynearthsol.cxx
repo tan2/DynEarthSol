@@ -248,19 +248,20 @@ void update_temperature(const Param &param, const Variables &var,
         const int *conn = &(*var.connectivity)[e][0];
         double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
         const double *shpdx = &(*var.shpdx)[e][0];
+#ifdef THREED
         const double *shpdy = &(*var.shpdy)[e][0];
+#endif
         const double *shpdz = &(*var.shpdz)[e][0];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             for (int j=0; j<NODES_PER_ELEM; ++j) {
-                if (NDIMS == 3) {
-                    D[i][j] = (shpdx[i] * shpdx[j] +
-                               shpdy[i] * shpdy[j] +
-                               shpdz[i] * shpdz[j]);
-                }
-                else {
-                    D[i][j] = (shpdx[i] * shpdx[j] +
-                               shpdz[i] * shpdz[j]);
-                }
+#ifdef THREED
+                D[i][j] = (shpdx[i] * shpdx[j] +
+                           shpdy[i] * shpdy[j] +
+                           shpdz[i] * shpdz[j]);
+#else
+                D[i][j] = (shpdx[i] * shpdx[j] +
+                           shpdz[i] * shpdz[j]);
+#endif
             }
         }
         for (int i=0; i<NODES_PER_ELEM; ++i) {
