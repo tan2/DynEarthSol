@@ -175,13 +175,17 @@ double compute_dt(const Param& param, const Variables& var)
 
 
 void compute_mass(const Param &param,
-                  const double2d &coord, const int2d &connectivity,
+                  const std::vector<int_vec> &egroups, const int2d &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double_vec &mass, double_vec &tmass)
 {
     double pseudo_speed = param.bc.max_vbc_val * param.control.inertial_scaling;
-    const int nelem = connectivity.shape()[0];
-    for (int e=0; e<nelem; ++e) {
+    for (auto egroup : egroups) {
+        #pragma omp parallel for default(none)                          \
+            shared(egroup, pseudo_speed, mat, connectivity, volume, mass, tmass)
+        for (int ee=0; ee<egroup.size(); ++ee) {
+            int e = egroup[ee];
+    {
         double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
         double m = pseudo_rho * volume[e] / NODES_PER_ELEM;
         double tm = mat.density(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
@@ -190,6 +194,8 @@ void compute_mass(const Param &param,
             mass[conn[i]] += m;
             tmass[conn[i]] += tm;
         }
+    }
+        } // end of ee
     }
     //for (int i=0; i<mass.size(); ++i)
     //    std::cout << i << ": mass = " << mass[i] << '\n';
@@ -272,7 +278,7 @@ void compute_shape_fn(const double2d &coord, const int2d &connectivity,
             shpdz[e][2] = iv * (d1[0] - d0[0]);
         }
     }
-        } // end of egroup
+        } // end of ee
     }
 }
 

@@ -7,7 +7,7 @@ void compute_volume(const double2d &coord, const int2d &connectivity,
 double compute_dt(const Param& param, const Variables& var);
 
 void compute_mass(const Param &param,
-                  const double2d &coord, const int2d &connectivity,
+                  const std::vector<int_vec> &egroups, const int2d &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double_vec &mass, double_vec &tmass);
 
