@@ -222,7 +222,12 @@ void update_temperature(const Param &param, const Variables &var,
     double D[NODES_PER_ELEM][NODES_PER_ELEM];
 
     tdot.assign(var.nnode, 0);
-    for (int e=0; e<var.nelem; ++e) {
+    for (auto egroup : *var.egroups) {
+       #pragma omp parallel for default(none)                                  \
+           shared(egroup, var, param, temperature, tdot) private(D)
+       for (int ee=0; ee<egroup.size(); ++ee) {
+            int e = egroup[ee];
+    {
         const int *conn = &(*var.connectivity)[e][0];
         double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
         for (int i=0; i<NODES_PER_ELEM; ++i) {
@@ -246,8 +251,12 @@ void update_temperature(const Param &param, const Variables &var,
             tdot[conn[i]] += diffusion * kv;
         }
     }
+        }
+    }
 
-    for (int n=0; n<var.nnode; ++n) {
+     #pragma omp parallel for default(none)      \
+         shared(var, param, tdot, temperature)
+     for (int n=0; n<var.nnode; ++n) {
         if ((*var.bcflag)[n] & BOUNDZ1)
             temperature[n] = param.bc.surface_temperature;
         else
