@@ -354,7 +354,12 @@ void update_force(const Param& param, const Variables& var, double2d& force)
 {
     std::fill_n(force.data(), var.nnode, 0);
 
-    for (int e=0; e<var.nelem; ++e) {
+    for (auto egroup : *var.egroups) {
+        #pragma omp parallel for default(none)                  \
+            shared(egroup, param, var, force)
+        for (int ee=0; ee<egroup.size(); ++ee) {
+            int e = egroup[ee];
+    {
         const int *conn = &(*var.connectivity)[e][0];
         const double *shpdx = &(*var.shpdx)[e][0];
 #ifdef THREED
@@ -382,6 +387,8 @@ void update_force(const Param& param, const Variables& var, double2d& force)
         }
 
     }
+        } // end of ee
+    }
 
     // damping
     {
@@ -390,6 +397,8 @@ void update_force(const Param& param, const Variables& var, double2d& force)
         const double* v = var.vel->data();
         const double small_vel = 1e-13;
         const double damping_coeff = 0.8;
+        #pragma omp parallel for default(none)  \
+            shared(var, ff, v)
         for (int i=0; i<var.nnode*NDIMS; ++i) {
             if (std::fabs(v[i]) > small_vel) {
                 ff[i] -= damping_coeff * std::copysign(ff[i], v[i]);
