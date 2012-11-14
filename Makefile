@@ -13,7 +13,7 @@
 ndims = 2
 debug = 0
 openmp = 0
-gprof = 0
+gprof = 1
 
 ## Select C++ compiler
 CXX = g++
@@ -38,8 +38,7 @@ ifeq ($(CXX), g++)
 	endif
 
 	ifeq ($(openmp), 1)
-		# _GLIBCXX_PARALLEL will enable GNU libstd++ parallel mode
-		CXXFLAGS += -fopenmp -DUSE_OMP -D_GLIBCXX_PARALLEL
+		CXXFLAGS += -fopenmp -DUSE_OMP
 		LDFLAGS += -fopenmp
 	endif
 
