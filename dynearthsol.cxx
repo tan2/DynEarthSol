@@ -57,7 +57,13 @@ void compute_dvoldt(const Variables &var, double_vec &tmp,
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(tmp.begin(), var.nnode, 0);
-    for (int e=0; e<var.nelem; ++e) {
+
+    for (auto egroup : *var.egroups) {
+        #pragma omp parallel for default(none)                  \
+            shared(egroup, var, tmp, volume)
+        for (int ee=0; ee<egroup.size(); ++ee) {
+            int e = egroup[ee];
+    {
         const int *conn = &(*var.connectivity)[e][0];
         const double* strain_rate = &(*var.strain_rate)[e][0];
         // TODO: try another definition:
@@ -68,9 +74,17 @@ void compute_dvoldt(const Variables &var, double_vec &tmp,
             tmp[n] += dj * volume[e];
         }
     }
+        } // end of ee
+    }
+
+
+    #pragma omp parallel for default(none)      \
+        shared(var, dvoldt, tmp, volume_n)
     for (int n=0; n<var.nnode; ++n)
          dvoldt[n] = tmp[n] / volume_n[n];
 
+    #pragma omp parallel for default(none)      \
+        shared(var, dvoldt, edvoldt)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = &(*var.connectivity)[e][0];
         double dj = 0;
