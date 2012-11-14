@@ -162,6 +162,8 @@ void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
     // TODO: adding different types of vbcs later
 
     // diverging x-boundary
+    #pragma omp parallel for default(none) \
+        shared(param, var, vel)
     for (int i=0; i<var.nnode; ++i) {
         int flag = (*var.bcflag)[i];
 
@@ -269,6 +271,8 @@ void update_strain_rate(const Variables& var, double2d& strain_rate)
 {
     double *v[NODES_PER_ELEM];
 
+    #pragma omp parallel for default(none) \
+        shared(var, strain_rate) private(v)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = &(*var.connectivity)[e][0];
         const double *shpdx = &(*var.shpdx)[e][0];
@@ -390,6 +394,8 @@ void update_velocity(const Variables& var, double2d& vel)
     // flatten 2d arrays to simplify indexing
     const double* f = var.force->data();
     double* v = vel.data();
+    #pragma omp parallel for default(none) \
+        shared(var, m, f, v)
     for (int i=0; i<var.nnode*NDIMS; ++i) {
         int n = i / NDIMS;
         v[i] += var.dt * f[i] / m[n];
@@ -401,6 +407,9 @@ static void update_coordinate(const Variables& var, double2d_ref& coord)
 {
     double* x = var.coord->data();
     const double* v = var.vel->data();
+
+    #pragma omp parallel for default(none) \
+        shared(var, x, v)
     for (int i=0; i<var.nnode*NDIMS; ++i) {
         x[i] += v[i] * var.dt;
     }
