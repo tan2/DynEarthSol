@@ -38,7 +38,8 @@ ifeq ($(CXX), g++)
 	endif
 
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP
+		# _GLIBCXX_PARALLEL will enable GNU libstd++ parallel mode
+		CXXFLAGS += -fopenmp -DUSE_OMP -D_GLIBCXX_PARALLEL
 		LDFLAGS += -fopenmp
 	endif
 
