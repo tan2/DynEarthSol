@@ -13,6 +13,7 @@ void compute_mass(const Param &param,
 
 void compute_shape_fn(const double2d &coord, const int2d &connectivity,
                       const double_vec &volume,
+                      const std::vector<int_vec> &egroups,
                       double2d &shpdx, double2d &shpdy, double2d &shpdz);
 
 #endif

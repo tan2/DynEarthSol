@@ -200,11 +200,15 @@ void compute_mass(const Param &param,
 
 
 void compute_shape_fn(const double2d &coord, const int2d &connectivity,
-                      const double_vec &volume,
+                      const double_vec &volume, const std::vector<int_vec> &egroups,
                       double2d &shpdx, double2d &shpdy, double2d &shpdz)
 {
-    const int nelem = connectivity.shape()[0];
-    for (int e=0; e<nelem; ++e) {
+    for (auto egroup : egroups) {
+        #pragma omp parallel for default(none)                          \
+            shared(egroup, coord, connectivity, volume, shpdx, shpdy, shpdz)
+        for (int ee=0; ee<egroup.size(); ++ee) {
+            int e = egroup[ee];
+    {
 
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
@@ -267,6 +271,8 @@ void compute_shape_fn(const double2d &coord, const int2d &connectivity,
             shpdz[e][1] = iv * (d0[0] - d2[0]);
             shpdz[e][2] = iv * (d1[0] - d0[0]);
         }
+    }
+        } // end of egroup
     }
 }
 

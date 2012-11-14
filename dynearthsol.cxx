@@ -205,7 +205,7 @@ void init(const Param& param, Variables& var)
     compute_dvoldt(var, *var.tmp0, *var.dvoldt, *var.edvoldt);
     compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     initial_stress_state(param, var, *var.stress, *var.strain, var.compensation_pressure);
@@ -418,7 +418,7 @@ void update_mesh(const Param& param, Variables& var)
     compute_dvoldt(var, *var.tmp0, *var.dvoldt, *var.edvoldt);
     compute_mass(param, *var.coord, *var.connectivity, *var.volume, *var.mat,
                  *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume,
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 }
 
