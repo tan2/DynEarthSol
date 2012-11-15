@@ -58,11 +58,11 @@ void compute_dvoldt(const Variables &var, double_vec &tmp,
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(tmp.begin(), var.nnode, 0);
 
-    for (auto egroup : *var.egroups) {
+    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
         #pragma omp parallel for default(none)                  \
             shared(egroup, var, tmp, volume)
-        for (int ee=0; ee<egroup.size(); ++ee) {
-            int e = egroup[ee];
+        for (int ee=0; ee<egroup->size(); ++ee) {
+            int e = (*egroup)[ee];
     {
         const int *conn = &(*var.connectivity)[e][0];
         const double* strain_rate = &(*var.strain_rate)[e][0];
@@ -354,11 +354,11 @@ void update_force(const Param& param, const Variables& var, double2d& force)
 {
     std::fill_n(force.data(), var.nnode, 0);
 
-    for (auto egroup : *var.egroups) {
+    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
         #pragma omp parallel for default(none)                  \
             shared(egroup, param, var, force)
-        for (int ee=0; ee<egroup.size(); ++ee) {
-            int e = egroup[ee];
+        for (int ee=0; ee<egroup->size(); ++ee) {
+            int e = (*egroup)[ee];
     {
         const int *conn = &(*var.connectivity)[e][0];
         const double *shpdx = &(*var.shpdx)[e][0];

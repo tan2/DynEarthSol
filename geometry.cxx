@@ -106,11 +106,11 @@ void compute_volume(const double2d &coord, const int2d &connectivity,
 
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
     // volume_n[n] is init'd to 0 by resize()
-    for (auto egroup : egroups) {
+    for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                  \
             shared(egroup, connectivity, volume, volume_n)
-        for (int ee=0; ee<egroup.size(); ++ee) {
-            int e = egroup[ee];
+        for (int ee=0; ee<egroup->size(); ++ee) {
+            int e = (*egroup)[ee];
     {
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = connectivity[e][i];
@@ -188,11 +188,11 @@ void compute_mass(const Param &param,
                   double_vec &mass, double_vec &tmass)
 {
     double pseudo_speed = param.bc.max_vbc_val * param.control.inertial_scaling;
-    for (auto egroup : egroups) {
+    for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
             shared(egroup, pseudo_speed, mat, connectivity, volume, mass, tmass)
-        for (int ee=0; ee<egroup.size(); ++ee) {
-            int e = egroup[ee];
+        for (int ee=0; ee<egroup->size(); ++ee) {
+            int e = (*egroup)[ee];
     {
         double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
         double m = pseudo_rho * volume[e] / NODES_PER_ELEM;
@@ -217,11 +217,11 @@ void compute_shape_fn(const double2d &coord, const int2d &connectivity,
                       const double_vec &volume, const std::vector<int_vec> &egroups,
                       double2d &shpdx, double2d &shpdy, double2d &shpdz)
 {
-    for (auto egroup : egroups) {
+    for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
             shared(egroup, coord, connectivity, volume, shpdx, shpdy, shpdz)
-        for (int ee=0; ee<egroup.size(); ++ee) {
-            int e = egroup[ee];
+        for (int ee=0; ee<egroup->size(); ++ee) {
+            int e = (*egroup)[ee];
     {
 
         int n0 = connectivity[e][0];
