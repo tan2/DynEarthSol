@@ -284,6 +284,11 @@ void update_stress(const Variables& var, double2d& stress,
         double* es = &strain[e][0];
         double* edot = &strain_rate[e][0];
 
+        // update strain with true strain rate
+        for (int i=0; i<NSTR; ++i) {
+            es[i] += edot[i] * var.dt;
+        }
+
         // anti-mesh locking correction on strain rate
         {
             double div = trace(edot);
@@ -292,11 +297,10 @@ void update_stress(const Variables& var, double2d& stress,
             }
         }
 
-        // strain increment
+        // modified strain increment
         double de[NSTR];
         for (int i=0; i<NSTR; ++i) {
             de[i] = edot[i] * var.dt;
-            es[i] += de[i];
         }
 
         switch (rheol_type) {
