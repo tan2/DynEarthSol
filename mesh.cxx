@@ -626,8 +626,9 @@ void create_boundary(Variables& var)
     for (int i=0; i<var.nseg; ++i) {
         int flag = (*var.segflag)[i];
         int *n = &(*var.segment)[i][0];
-        bcflag[n[0]] |= flag;
-        bcflag[n[1]] |= flag;
+        for (int j=0; j<NDIMS; ++j) {
+            bcflag[n[j]] |= flag;
+        }
     }
 }
 
