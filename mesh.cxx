@@ -634,6 +634,45 @@ void create_boundary_flags(Variables& var)
 }
 
 
+void create_boundary_facets(Variables& var)
+{
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
+        for (int i=0; i<FACETS_PER_ELEM; ++i) {
+            // set all bits to 1
+            int flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
+            for (int j=0; j<NODES_PER_FACET; ++j) {
+                // find common flags
+                int n = NODE_OF_FACET[i][j];
+                flag &= (*var.bcflag)[conn[n]];
+            }
+            if (flag) {
+                // this facet belongs to a boundary
+                int n = bdry_order[flag];
+                var.bfacets[n].push_back(std::make_pair(e, i));
+            }
+        }
+    }
+
+    // for (int n=0; n<6; ++n) {
+    //     std::cout << "boundary facet " << n << ":\n";
+    //     print(std::cout, var.bfacets[n]);
+    //     std::cout << '\n';
+    //     for (int i=0; i<var.bfacets[n].size(); ++i) {
+    //         int e = var.bfacets[n][i].first;
+    //         int f = var.bfacets[n][i].second;
+    //         const int *conn = &(*var.connectivity)[e][0];
+    //         std::cout << i << ", " << e << ":";
+    //         for (int j=0; j<NODES_PER_FACET; ++j) {
+    //             std::cout << " " << conn[NODE_OF_FACET[f][j]];
+    //         }
+    //         std::cout << '\n';
+    //     }
+    //     std::cout << '\n';
+    // }
+}
+
+
 void create_support(Variables& var)
 {
     var.support = new std::vector<int_vec>(var.nnode);
@@ -789,7 +828,15 @@ void create_new_mesh(const Param& param, Variables& var)
         std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';
         std::exit(1);
     }
+    // std::cout << "segment:\n";
+    // print(std::cout, *var.segment);
+    // std::cout << '\n';
+    // std::cout << "segflag:\n";
+    // print(std::cout, *var.segflag);
+    // std::cout << '\n';
+
     create_boundary_flags(var);
+    create_boundary_facets(var);
     create_support(var);
     create_elem_groups(var);
 }

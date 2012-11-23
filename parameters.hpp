@@ -98,6 +98,7 @@ struct Variables {
     int1d_ref *segflag;
 
     int_vec *bcflag;
+    std::vector< std::pair<int,int> > bfacets[6];
 
     std::vector<int_vec> *support, *egroups;
 

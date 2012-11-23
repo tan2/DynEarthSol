@@ -38,6 +38,13 @@ static void print(std::ostream& os, const std::size_t& x)
 }
 
 
+template <typename T1, typename T2>
+void print(std::ostream& os, const std::pair<T1,T2>& x)
+{
+    os << x.first << ':' << x.second;
+}
+
+
 template <typename T>
 void print(std::ostream& os, const T& A, std::size_t size)
 {
