@@ -648,7 +648,7 @@ void create_boundary_facets(Variables& var)
             }
             if (flag) {
                 // this facet belongs to a boundary
-                int n = bdry_order[flag];
+                int n = bdry_order.find(flag)->second;
                 var.bfacets[n].push_back(std::make_pair(e, i));
             }
         }
