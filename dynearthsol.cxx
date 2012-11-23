@@ -120,6 +120,30 @@ void initial_stress_state(const Param &param, const Variables &var,
 }
 
 
+void initial_weak_zone(const Param &param, const Variables &var,
+                       double_vec &plstrain)
+{
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = &(*var.connectivity)[e][0];
+        // the coordinate of the center of this element
+        double center[3] = {0,0,0};
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            for (int d=0; d<NDIMS; ++d) {
+                center[d] += (*var.coord)[conn[i]][d];
+            }
+        }
+        for (int d=0; d<NDIMS; ++d) {
+            center[d] /= NODES_PER_ELEM;
+        }
+        // TODO: adding different types of weak zone
+        const double d = param.mesh.resolution;
+        if (std::fabs(center[0] - param.mesh.xlength * 0.5) < 2*d &&
+            std::fabs(center[NDIMS-1] + param.mesh.zlength) < 1.5*d)
+            plstrain[e] = 0.1;
+    }
+}
+
+
 void initial_temperature(const Param &param, const Variables &var, double_vec &temperature)
 {
     const double oceanic_plate_age = 1e6 * YEAR2SEC;
@@ -185,6 +209,7 @@ void init(const Param& param, Variables& var)
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     initial_stress_state(param, var, *var.stress, *var.strain, var.compensation_pressure);
+    initial_weak_zone(param, var, *var.plstrain);
     initial_temperature(param, var, *var.temperature);
     apply_vbcs(param, var, *var.vel);
 }
