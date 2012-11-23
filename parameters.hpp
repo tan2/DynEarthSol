@@ -56,6 +56,9 @@ struct BC {
     double mantle_temperature;
 
     double max_vbc_val;
+
+    double wrinkler_delta_rho;
+    int wrinkler_foundation;
 };
 
 struct Mat {

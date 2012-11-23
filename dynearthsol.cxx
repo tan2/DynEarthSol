@@ -203,7 +203,7 @@ void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
             //v[NDIMS-1] = 0;
         }
         else if (flag & BOUNDZ1) {
-            v[NDIMS-1] = 0;
+            //v[NDIMS-1] = 0;
         }
     }
 }
@@ -386,14 +386,70 @@ void update_force(const Param& param, const Variables& var, double2d& force)
             f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
 #endif
         }
-
-        if (param.control.gravity != 0) {
-            // XXX: Wrinkler foundation
-        }
-
     }
         } // end of ee
     }
+
+
+    // Wrinkler foundation
+    if (param.bc.wrinkler_foundation && param.control.gravity != 0) {
+        const int bottom_bdry = 4;
+        const auto bdry = var.bfacets[bottom_bdry];
+        const auto coord = *var.coord;
+        for (int i=0; i<bdry.size(); ++i) {
+            int e = bdry[i].first;
+            const int *conn = &(*var.connectivity)[e][0];
+            int facet = bdry[i].second;
+
+            int n0 = conn[NODE_OF_FACET[facet][0]];
+            int n1 = conn[NODE_OF_FACET[facet][1]];
+#ifdef THREED
+            int n2 = conn[NODE_OF_FACET[facet][2]];
+
+            // vectors: n0-n1 and n0-n2
+            double v01[NDIMS], v02[NDIMS];
+            for (int i=0; i<NDIMS; ++i) {
+                v01[i] = coord[n1][i] - coord[n0][i];
+                v02[i] = coord[n2][i] - coord[n0][i];
+            }
+
+            // the outward normal vector is parallel to the cross product
+            // of v01 and v02, with magnitude = area of the triangle
+            double normal[NDIMS];
+            normal[0] = (v01[1] * v02[2] - v01[2] * v02[1]) / 2;
+            normal[1] = (v01[2] * v02[0] - v01[0] * v02[2]) / 2;
+            normal[2] = (v01[0] * v02[1] - v01[1] * v02[0]) / 2;
+
+            double zcenter = (coord[n0][2] + coord[n1][2] + coord[n2][2]) / NODES_PER_FACET;
+#else
+            // the edge vector
+            double v01[NDIMS];
+            for (int i=0; i<NDIMS; ++i) {
+                v01[i] = coord[n1][i] - coord[n0][i];
+            }
+
+            // the normal vector to the edge, pointing outward
+            double normal[NDIMS];
+            normal[0] = v01[1];
+            normal[1] = -v01[0];
+
+            double zcenter = (coord[n0][1] + coord[n1][1]) / NODES_PER_FACET;
+#endif
+            double dz = zcenter - (-param.mesh.zlength);
+            double p = var.compensation_pressure -
+                (var.mat->density(e) + param.bc.wrinkler_delta_rho) * param.control.gravity * dz;
+
+            // bottom support - Archimed force (normal to the surface)
+            for (int i=0; i<NDIMS; ++i) {
+                force[n0][i] -= p * normal[i] / NODES_PER_FACET;
+                force[n1][i] -= p * normal[i] / NODES_PER_FACET;
+#ifdef THREED
+                force[n2][i] -= p * normal[i] / NODES_PER_FACET;
+#endif
+            }
+        }
+    }
+
 
     // damping
     {
