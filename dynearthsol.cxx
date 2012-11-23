@@ -113,8 +113,8 @@ void initial_stress_state(const Param &param, const Variables &var,
         zcenter /= NODES_PER_ELEM;
 
         for (int i=0; i<NDIMS; ++i) {
-            stress[e][i] = - rho * param.control.gravity * zcenter;
-            strain[e][i] = - rho * param.control.gravity * zcenter / ks / NDIMS;
+            stress[e][i] = rho * param.control.gravity * zcenter;
+            strain[e][i] = rho * param.control.gravity * zcenter / ks / NDIMS;
         }
     }
 }
