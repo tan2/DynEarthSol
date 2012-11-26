@@ -367,9 +367,10 @@ void update_stress(const Variables& var, double2d& stress,
                 // use the smaller as the final stress
                 if (svII < spII)
                     for (int i=0; i<NSTR; ++i) s[i] = sv[i];
-                else
+                else {
                     for (int i=0; i<NSTR; ++i) s[i] = sp[i];
-                plstrain[e] += depls;
+                    plstrain[e] += depls;
+                }
             }
             break;
         default:
