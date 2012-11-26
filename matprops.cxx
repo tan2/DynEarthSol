@@ -53,7 +53,7 @@ double MatProps::shearm(int e) const
 double MatProps::visc(int e) const
 {
     // TODO: compute average viscosity
-    return 1e20;
+    return 1e22;
 }
 
 
@@ -62,11 +62,45 @@ void MatProps::plastic_props(int e, double pls,
                              double& hardn, double& ten_max) const
 {
     // TODO: compute average plastic properties
-    double cohesion = 4e7;
-    double phi = 15;
-    double psi = 0;
-    hardn = 0;
 
+    // plastic properties due to strain weakening
+    double pls_seg[2] = {0.0, 0.1};
+    double coh_seg[2] = {4e7, 4e6};  // in Pa
+    double fric_seg[2] = {15, 1};  // in degree
+    double dilat_seg[2] = {0, 0};  // in degree
+
+    double c, f, d, h;
+
+    if (pls < pls_seg[0]) {
+        // no weakening yet
+        c = coh_seg[0];
+        f = fric_seg[0];
+        d = dilat_seg[0];
+        h = 0;
+    }
+    else if (pls < pls_seg[1]) {
+        // linear weakening
+        double p = (pls - pls_seg[0]) / (pls_seg[1] - pls_seg[0]);
+        c = coh_seg[0] + p * (coh_seg[1] - coh_seg[0]);
+        f = fric_seg[0] + p * (fric_seg[1] - fric_seg[0]);
+        d = dilat_seg[0] + p * (dilat_seg[1] - dilat_seg[0]);
+        h = (coh_seg[1] - coh_seg[0]) / (pls_seg[1] - pls_seg[0]);
+    }
+    else {
+        // saturated weakening
+        c = coh_seg[1];
+        f = fric_seg[1];
+        d = dilat_seg[1];
+        h = 0;
+    }
+
+    hardn = h;
+
+    double cohesion = c;
+    double phi = f;
+    double psi = d;
+
+    // derived variables
     double sphi = std::sin(phi * DEG2RAD);
     double spsi = std::sin(psi * DEG2RAD);
 
