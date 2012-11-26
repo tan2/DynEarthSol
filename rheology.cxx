@@ -31,7 +31,7 @@ static void principal_stresses3(const double* s, double p[3], double v[3][3])
 
 
 static void principal_stresses2(const double* s, double syy, double p[3],
-                                double& cos2t, double& sin2t, int& icase)
+                                double& cos2t, double& sin2t, int& n1, int& n2)
 {
     /* 's' is a flattened stress vector, with the components {XX, ZZ, XZ}.
      * The YY component is passed in in 'syy', assumed to be one of eigenvalue.
@@ -51,11 +51,11 @@ static void principal_stresses2(const double* s, double syy, double p[3],
     {
         // direction cosine and sine of 2*theta
         const double eps = 1e-15;
-        double a = s[0] - s[1];
-        double b = - 2 * rad; // always negative
+        double a = 0.5 * (s[0] - s[1]);
+        double b = - rad; // always negative
         if (b < -eps) {
             cos2t = a / b;
-            sin2t = 2 * s[2] / b;
+            sin2t = s[2] / b;
         }
         else {
             cos2t = 1;
@@ -66,21 +66,24 @@ static void principal_stresses2(const double* s, double syy, double p[3],
     // sort p.s.
     if (syy > sii) {
         // syy is minor p.s.
-        icase = 3;
+        n1 = 0;
+        n2 = 1;
         p[0] = si;
         p[1] = sii;
         p[2] = syy;
     }
     else if (syy < si) {
         // syy is major p.s.
-        icase = 2;
+        n1 = 1;
+        n2 = 2;
         p[0] = syy;
         p[1] = si;
         p[2] = sii;
     }
     else {
         // syy is intermediate
-        icase = 1;
+        n1 = 0;
+        n2 = 2;
         p[0] = si;
         p[1] = syy;
         p[2] = sii;
@@ -159,8 +162,8 @@ static void elasto_plastic(double bulkm, double shearm,
     // In 2D, we only construct the eigenvectors from
     // cos(2*theta) and sin(2*theta) of Mohr circle
     double cos2t, sin2t;
-    int icase;
-    principal_stresses2(s, syy, p, cos2t, sin2t, icase);
+    int n1, n2;
+    principal_stresses2(s, syy, p, cos2t, sin2t, n1, n2);
 #else
     // eigenvectors
     double v[3][3];
@@ -247,21 +250,6 @@ static void elasto_plastic(double bulkm, double shearm,
         s[4] = ss[0][2];
         s[5] = ss[1][2];
 #else
-        int n1, n2;
-        switch (icase) {
-        case 1:
-            n1 = 0;
-            n2 = 2;
-            break;
-        case 2:
-            n1 = 1;
-            n2 = 2;
-            break;
-        case 3:
-            n1 = 0;
-            n2 = 1;
-            break;
-        }
         double dc2 = (p[n1] - p[n2]) * cos2t;
         double dss = p[n1] + p[n2];
         s[0] = 0.5 * (dss + dc2);
