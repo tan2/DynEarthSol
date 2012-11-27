@@ -13,7 +13,7 @@
 ndims = 2
 debug = 0
 openmp = 0
-gprof = 1
+gprof = 0
 
 ## Select C++ compiler
 CXX = g++
@@ -43,8 +43,8 @@ ifeq ($(CXX), g++)
 	endif
 
 	ifeq ($(gprof), 1)
-        	CXXFLAGS += -pg
-        	LDFLAGS += -pg
+		CXXFLAGS += -pg
+		LDFLAGS += -pg
 	endif
 else
 all:
