@@ -185,9 +185,13 @@ void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
         // X
         if (flag & BOUNDX0) {
             v[0] = -param.bc.max_vbc_val;
+            v[1] = 0;
+            v[NDIMS-1] = 0;
         }
         else if (flag & BOUNDX1) {
             v[0] = param.bc.max_vbc_val;
+            v[1] = 0;
+            v[NDIMS-1] = 0;
         }
 #ifdef THREED
         // Y
