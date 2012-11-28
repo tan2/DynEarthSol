@@ -295,7 +295,6 @@ void update_strain_rate(const Variables& var, double2d& strain_rate)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = &(*var.connectivity)[e][0];
         const double *shpdx = &(*var.shpdx)[e][0];
-        const double *shpdy = &(*var.shpdy)[e][0];
         const double *shpdz = &(*var.shpdz)[e][0];
         double *s = &(*var.strain_rate)[e][0];
 
@@ -309,6 +308,7 @@ void update_strain_rate(const Variables& var, double2d& strain_rate)
             s[n] += v[i][0] * shpdx[i];
 
 #ifdef THREED
+        const double *shpdy = &(*var.shpdy)[e][0];
         // YY component
         n = 1;
         s[n] = 0;
