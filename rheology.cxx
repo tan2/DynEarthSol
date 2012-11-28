@@ -27,6 +27,44 @@ static void principal_stresses3(const double* s, double p[3], double v[3][3])
     a[1][2] = s[5];
 
     dsyevh3(a, v, p);
+
+    // reorder p and v
+    if (p[0] > p[1]) {
+        double tmp, b[3];
+        tmp = p[0];
+        p[0] = p[1];
+        p[1] = tmp;
+        for (int i=0; i<3; ++i)
+            b[i] = v[0][i];
+        for (int i=0; i<3; ++i)
+            v[0][i] = v[1][i];
+        for (int i=0; i<3; ++i)
+            v[1][i] = b[i];
+    }
+    if (p[1] > p[2]) {
+        double tmp, b[3];
+        tmp = p[1];
+        p[1] = p[2];
+        p[2] = tmp;
+        for (int i=0; i<3; ++i)
+            b[i] = v[1][i];
+        for (int i=0; i<3; ++i)
+            v[1][i] = v[2][i];
+        for (int i=0; i<3; ++i)
+            v[2][i] = b[i];
+    }
+    if (p[0] > p[1]) {
+        double tmp, b[3];
+        tmp = p[0];
+        p[0] = p[1];
+        p[1] = tmp;
+        for (int i=0; i<3; ++i)
+            b[i] = v[0][i];
+        for (int i=0; i<3; ++i)
+            v[0][i] = v[1][i];
+        for (int i=0; i<3; ++i)
+            v[1][i] = b[i];
+    }
 }
 
 
