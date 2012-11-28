@@ -61,7 +61,7 @@ void compute_dvoldt(const Variables &var, double_vec &tmp,
     for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
         #pragma omp parallel for default(none)                  \
             shared(egroup, var, tmp, volume)
-        for (int ee=0; ee<egroup->size(); ++ee) {
+        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
         const int *conn = &(*var.connectivity)[e][0];
@@ -357,7 +357,7 @@ void update_force(const Param& param, const Variables& var, double2d& force)
     for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
         #pragma omp parallel for default(none)                  \
             shared(egroup, param, var, force)
-        for (int ee=0; ee<egroup->size(); ++ee) {
+        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
         const int *conn = &(*var.connectivity)[e][0];

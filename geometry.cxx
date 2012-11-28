@@ -82,7 +82,7 @@ void compute_volume(const double2d &coord, const int2d &connectivity,
 {
     #pragma omp parallel for default(none)      \
         shared(coord, connectivity, volume)
-    for (int e=0; e<volume.size(); ++e) {
+    for (std::size_t e=0; e<volume.size(); ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
         int n2 = connectivity[e][2];
@@ -109,7 +109,7 @@ void compute_volume(const double2d &coord, const int2d &connectivity,
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                  \
             shared(egroup, connectivity, volume, volume_n)
-        for (int ee=0; ee<egroup->size(); ++ee) {
+        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
         for (int i=0; i<NODES_PER_ELEM; ++i) {
@@ -191,7 +191,7 @@ void compute_mass(const Param &param,
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
             shared(egroup, pseudo_speed, mat, connectivity, volume, mass, tmass)
-        for (int ee=0; ee<egroup->size(); ++ee) {
+        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
         double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
@@ -220,7 +220,7 @@ void compute_shape_fn(const double2d &coord, const int2d &connectivity,
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
             shared(egroup, coord, connectivity, volume, shpdx, shpdy, shpdz)
-        for (int ee=0; ee<egroup->size(); ++ee) {
+        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
 
