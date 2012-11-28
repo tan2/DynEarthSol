@@ -91,17 +91,13 @@ void compute_volume(const double2d &coord, const int2d &connectivity,
         const double *b = &coord[n1][0];
         const double *c = &coord[n2][0];
 
-        double vol;
-        if (NDIMS == 3) {
-            int n3 = connectivity[e][3];
-            const double *d = &coord[n3][0];
-            vol = tetrahedron_volume(a, b, c, d);
-        }
-        else {
-            vol = triangle_area(a, b, c);
-        }
-        volume[e] = vol;
-        //std::cout << e << ": volume =" << vol << '\n';
+#ifdef THREED
+        int n3 = connectivity[e][3];
+        const double *d = &coord[n3][0];
+        volume[e] = tetrahedron_volume(a, b, c, d);
+#else
+        volume[e] = triangle_area(a, b, c);
+#endif
     }
 
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
@@ -146,7 +142,8 @@ double compute_dt(const Param& param, const Variables& var)
 
         // min height of this element
         double minh;
-        if (NDIMS == 3) {
+#ifdef THREED
+        {
             int n3 = connectivity[e][3];
             const double *d = &coord[n3][0];
 
@@ -157,14 +154,15 @@ double compute_dt(const Param& param, const Variables& var)
                                             triangle_area(c, d, b)));
             minh = 3 * volume[e] / maxa;
         }
-        else {
+#else
+        {
             // max edge length of this triangle
             double maxl = std::sqrt(std::max(std::max(dist2(a, b),
                                                       dist2(b, c)),
                                              dist2(a, c)));
             minh = 2 * volume[e] / maxl;
-
         }
+#endif
         dt_maxwell = std::min(dt_maxwell,
                               0.5 * var.mat->visc_min / (1e-40 + var.mat->shearm(e)));
         dt_diffusion = std::min(dt_diffusion,
@@ -232,7 +230,8 @@ void compute_shape_fn(const double2d &coord, const int2d &connectivity,
         const double *d1 = &coord[n1][0];
         const double *d2 = &coord[n2][0];
 
-        if (NDIMS == 3) {
+#ifdef THREED
+        {
             int n3 = connectivity[e][3];
             const double *d3 = &coord[n3][0];
 
@@ -274,7 +273,8 @@ void compute_shape_fn(const double2d &coord, const int2d &connectivity,
             shpdz[e][2] = iv * (x13*y03 - x03*y13);
             shpdz[e][3] = iv * (x01*y02 - x02*y01);
         }
-        else {
+#else
+        {
             double iv = 1 / (2 * volume[e]);
 
             shpdx[e][0] = iv * (d1[1] - d2[1]);
@@ -285,6 +285,7 @@ void compute_shape_fn(const double2d &coord, const int2d &connectivity,
             shpdz[e][1] = iv * (d0[0] - d2[0]);
             shpdz[e][2] = iv * (d1[0] - d0[0]);
         }
+#endif
     }
         } // end of ee
     }
