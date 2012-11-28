@@ -53,7 +53,7 @@ double MatProps::shearm(int e) const
 double MatProps::visc(int e) const
 {
     // TODO: compute average viscosity
-    return 1e22;
+    return visc_max;
 }
 
 
@@ -65,7 +65,7 @@ void MatProps::plastic_props(int e, double pls,
 
     // plastic properties due to strain weakening
     double pls_seg[2] = {0.0, 0.1};
-    double coh_seg[2] = {4e7, 4e6};  // in Pa
+    double coh_seg[2] = {4e7, 4e5};  // in Pa
     double fric_seg[2] = {15, 1};  // in degree
     double dilat_seg[2] = {0, 0};  // in degree
 
