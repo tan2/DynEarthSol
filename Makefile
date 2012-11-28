@@ -5,14 +5,16 @@
 # Author: Eh Tan <tan2@earth.sinica.edu.tw>
 #
 
-## Execute "make" if making production run. Or "make debug=1" for debugging run.
+## Execute "make" if making production run. Or "make opt=0 openmp=0" for debugging run.
 ##
 ## ndims = 3: 3D code; 2: 2D code
-## debug = 0: optimized build; 1: debugging build
+## opt = 1 ~ 3: optimized build; others: debugging build
+## openmp = 1: enable OpenMP
+## gprof = 1: enable instrumentation for GNU profiler
 
 ndims = 2
-debug = 0
-openmp = 0
+opt = 2
+openmp = 1
 gprof = 0
 
 ## Select C++ compiler
@@ -31,10 +33,16 @@ ifeq ($(CXX), g++)
 	CXXFLAGS = -g -std=c++0x -march=native
 	LDFLAGS = -lm
 
-	ifeq ($(debug), 0)
+	ifeq ($(opt), 1)
+		CXXFLAGS += -O1 -DBOOST_DISABLE_ASSERTS -DNDEBUG
+	else ifeq ($(opt), 2)
 		CXXFLAGS += -O2 -DBOOST_DISABLE_ASSERTS -DNDEBUG
+	else ifeq ($(opt), 3) # experimental, use at your own risk :)
+		CXXFLAGS = -std=c++0x -march=native ## -g is incompatible with -flto
+		CXXFLAGS += -Ofast -DBOOST_DISABLE_ASSERTS -DNDEBUG -funroll-loops -fwhole-program -flto
+		LDFLAGS += -flto
 	else
-		CXXFLAGS += -O0 -Wall -Wno-unused-function
+		CXXFLAGS += -O0 -Wall -Wno-unused-function -Wno-unknown-pragmas -fbounds-check -ftrapv
 	endif
 
 	ifeq ($(openmp), 1)
@@ -47,6 +55,7 @@ ifeq ($(CXX), g++)
 		LDFLAGS += -pg
 	endif
 else
+# the only way to display the error message in Makefile ...
 all:
 	@echo "Unknown compiler, check the definition of 'CXX' in the Makefile."
 	@false
