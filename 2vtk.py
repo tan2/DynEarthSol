@@ -76,6 +76,15 @@ def main(modelname, start, end):
             tmp = vel
         vtk_dataarray(fvtu, tmp, 'velocity', 3)
 
+        force = np.fromfile(prefix+'.force.'+suffix, dtype=np.float64, count=ndims*nnode)
+        force.shape = (nnode, ndims)
+        if ndims == 2:
+            tmp = np.zeros((nnode, 3), dtype=force.dtype)
+            tmp[:,:ndims] = force
+        else:
+            tmp = force
+        vtk_dataarray(fvtu, tmp, 'force', 3)
+
         temperature = np.fromfile(prefix+'.temperature.'+suffix, dtype=np.float64, count=nnode)
         vtk_dataarray(fvtu, temperature, 'temperature')
 
@@ -122,6 +131,12 @@ def main(modelname, start, end):
 
         effvisc = tII / (srII + 1e-45)
         vtk_dataarray(fvtu, effvisc, 'effective viscosity')
+
+        volume = np.fromfile(prefix+'.volume.'+suffix, dtype=np.float64, count=nelem)
+        vtk_dataarray(fvtu, volume, 'volume')
+
+        volume_old = np.fromfile(prefix+'.volume_old.'+suffix, dtype=np.float64, count=nelem)
+        vtk_dataarray(fvtu, 1 - volume_old/volume, 'dvol')
 
         # element number for debugging
         vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem#')

@@ -79,6 +79,18 @@ void output(const Param& param, const Variables& var)
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "stress", var.frame);
     write_array(buffer, *var.stress);
 
+    // volume
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "volume", var.frame);
+    write_array(buffer, *var.volume);
+
+    // volume_old
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "volume_old", var.frame);
+    write_array(buffer, *var.volume_old);
+
+    // force with boundary removed
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "force", var.frame);
+    write_array(buffer, *var.force);
+
     std::cout << "  Output # " << var.frame
               << ", step = " << var.steps
               << ", time = " << var.time / YEAR2SEC << " yr"
