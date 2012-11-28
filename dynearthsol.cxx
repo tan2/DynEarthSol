@@ -160,7 +160,7 @@ void initial_weak_zone(const Param &param, const Variables &var,
 
 void initial_temperature(const Param &param, const Variables &var, double_vec &temperature)
 {
-    const double oceanic_plate_age = 1e6 * YEAR2SEC;
+    const double oceanic_plate_age = 60e6 * YEAR2SEC;
     const double diffusivity = 1e-6;
 
     for (int i=0; i<var.nnode; ++i) {
