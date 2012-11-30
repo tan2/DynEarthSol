@@ -398,8 +398,8 @@ void update_force(const Param& param, const Variables& var, double2d& force)
     // Wrinkler foundation
     if (param.bc.wrinkler_foundation && param.control.gravity != 0) {
         const int bottom_bdry = bdry_order.find(BOUNDZ0)->second;
-        const auto bdry = var.bfacets[bottom_bdry];
-        const auto coord = *var.coord;
+        const auto& bdry = var.bfacets[bottom_bdry];
+        const auto& coord = *var.coord;
         for (int i=0; i<bdry.size(); ++i) {
             int e = bdry[i].first;
             const int *conn = &(*var.connectivity)[e][0];
