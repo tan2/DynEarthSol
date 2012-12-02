@@ -4,7 +4,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <boost/multi_array.hpp>
 
 #include "constants.hpp"
 #include "array2d.hpp"
