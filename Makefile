@@ -30,7 +30,7 @@ BOOSTLDFLAGS = -lboost_program_options-mt
 ########################################################################
 
 ifeq ($(CXX), g++)
-	CXXFLAGS = -g -std=c++0x -march=native
+	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
 
 	ifeq ($(opt), 1)
