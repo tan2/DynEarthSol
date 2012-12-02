@@ -76,7 +76,7 @@ static double triangle_area(const double *a,
 }
 
 
-void compute_volume(const double2d &coord, const int2d &connectivity,
+void compute_volume(const arrayd2 &coord, const conn_t &connectivity,
                     const std::vector<int_vec> &egroups,
                     double_vec &volume, double_vec &volume_n)
 {
@@ -87,13 +87,13 @@ void compute_volume(const double2d &coord, const int2d &connectivity,
         int n1 = connectivity[e][1];
         int n2 = connectivity[e][2];
 
-        const double *a = &coord[n0][0];
-        const double *b = &coord[n1][0];
-        const double *c = &coord[n2][0];
+        const double *a = coord[n0];
+        const double *b = coord[n1];
+        const double *c = coord[n2];
 
 #ifdef THREED
         int n3 = connectivity[e][3];
-        const double *d = &coord[n3][0];
+        const double *d = coord[n3];
         volume[e] = tetrahedron_volume(a, b, c, d);
 #else
         volume[e] = triangle_area(a, b, c);
@@ -123,8 +123,8 @@ void compute_volume(const double2d &coord, const int2d &connectivity,
 double compute_dt(const Param& param, const Variables& var)
 {
     const int nelem = var.nelem;
-    const int2d_ref& connectivity = *var.connectivity;
-    const double2d_ref& coord = *var.coord;
+    const conn_t& connectivity = *var.connectivity;
+    const arrayd2& coord = *var.coord;
     const double_vec& volume = *var.volume;
 
     double dt_maxwell = std::numeric_limits<double>::max();
@@ -136,16 +136,16 @@ double compute_dt(const Param& param, const Variables& var)
         int n1 = connectivity[e][1];
         int n2 = connectivity[e][2];
 
-        const double *a = &coord[n0][0];
-        const double *b = &coord[n1][0];
-        const double *c = &coord[n2][0];
+        const double *a = coord[n0];
+        const double *b = coord[n1];
+        const double *c = coord[n2];
 
         // min height of this element
         double minh;
 #ifdef THREED
         {
             int n3 = connectivity[e][3];
-            const double *d = &coord[n3][0];
+            const double *d = coord[n3];
 
             // max facet area of this tet
             double maxa = std::max(std::max(triangle_area(a, b, c),
@@ -181,7 +181,7 @@ double compute_dt(const Param& param, const Variables& var)
 
 
 void compute_mass(const Param &param,
-                  const std::vector<int_vec> &egroups, const int2d &connectivity,
+                  const std::vector<int_vec> &egroups, const conn_t &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double_vec &mass, double_vec &tmass)
 {
@@ -195,7 +195,7 @@ void compute_mass(const Param &param,
         double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
         double m = pseudo_rho * volume[e] / NODES_PER_ELEM;
         double tm = mat.density(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
-        const int *conn = &connectivity[e][0];
+        const int *conn = connectivity[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             mass[conn[i]] += m;
             tmass[conn[i]] += tm;
@@ -211,9 +211,9 @@ void compute_mass(const Param &param,
 }
 
 
-void compute_shape_fn(const double2d &coord, const int2d &connectivity,
+void compute_shape_fn(const arrayd2 &coord, const conn_t &connectivity,
                       const double_vec &volume, const std::vector<int_vec> &egroups,
-                      double2d &shpdx, double2d &shpdy, double2d &shpdz)
+                      shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
 {
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
@@ -226,14 +226,14 @@ void compute_shape_fn(const double2d &coord, const int2d &connectivity,
         int n1 = connectivity[e][1];
         int n2 = connectivity[e][2];
 
-        const double *d0 = &coord[n0][0];
-        const double *d1 = &coord[n1][0];
-        const double *d2 = &coord[n2][0];
+        const double *d0 = coord[n0];
+        const double *d1 = coord[n1];
+        const double *d2 = coord[n2];
 
 #ifdef THREED
         {
             int n3 = connectivity[e][3];
-            const double *d3 = &coord[n3][0];
+            const double *d3 = coord[n3];
 
             double iv = 1 / (6 * volume[e]);
 

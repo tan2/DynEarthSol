@@ -298,9 +298,9 @@ static void elasto_plastic(double bulkm, double shearm,
 }
 
 
-void update_stress(const Variables& var, double2d& stress,
-                   double2d& strain, double_vec& plstrain,
-                   double2d& strain_rate)
+void update_stress(const Variables& var, tensord2& stress,
+                   tensord2& strain, double_vec& plstrain,
+                   tensord2& strain_rate)
 {
     const int rheol_type = var.mat->rheol_type;
 
@@ -308,9 +308,9 @@ void update_stress(const Variables& var, double2d& stress,
         shared(var, stress, strain, plstrain, strain_rate, std::cerr)
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
-        double* s = &stress[e][0];
-        double* es = &strain[e][0];
-        double* edot = &strain_rate[e][0];
+        double* s = stress[e];
+        double* es = strain[e];
+        double* edot = strain_rate[e];
 
         // update strain with true strain rate
         for (int i=0; i<NSTR; ++i) {

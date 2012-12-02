@@ -365,10 +365,10 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
     var.nnode = nnode;
     var.nelem = nelem;
     var.nseg = nseg;
-    var.coord = new double2d_ref(pcoord, boost::extents[nnode][NDIMS]);
-    var.connectivity = new int2d_ref(pconnectivity, boost::extents[nelem][NODES_PER_ELEM]);
-    var.segment = new int2d_ref(psegment, boost::extents[nseg][NDIMS]);
-    var.segflag = new int1d_ref(psegflag, boost::extents[nseg]);
+    var.coord = new arrayd2(pcoord, nnode);
+    var.connectivity = new conn_t(pconnectivity, nelem);
+    var.segment = new segment_t(psegment, nseg);
+    var.segflag = new segflag_t(psegflag, nseg);
 }
 
 
@@ -610,10 +610,10 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
     var.nnode = nnode;
     var.nelem = nelem;
     var.nseg = nseg;
-    var.coord = new double2d_ref(pcoord, boost::extents[nnode][NDIMS]);
-    var.connectivity = new int2d_ref(pconnectivity, boost::extents[nelem][NODES_PER_ELEM]);
-    var.segment = new int2d_ref(psegment, boost::extents[nseg][NDIMS]);
-    var.segflag = new int1d_ref(psegflag, boost::extents[nseg]);
+    var.coord = new arrayd2(pcoord, nnode);
+    var.connectivity = new conn_t(pconnectivity, nelem);
+    var.segment = new segment_t(psegment, nseg);
+    var.segflag = new segflag_t(psegflag, nseg);
 }
 
 
@@ -625,8 +625,8 @@ void create_boundary_flags(Variables& var)
     // alias for convienence
     int_vec &bcflag = *var.bcflag;
     for (int i=0; i<var.nseg; ++i) {
-        int flag = (*var.segflag)[i];
-        int *n = &(*var.segment)[i][0];
+        int flag = (*var.segflag)[i][0];
+        int *n = (*var.segment)[i];
         for (int j=0; j<NDIMS; ++j) {
             bcflag[n[j]] |= flag;
         }
@@ -637,7 +637,7 @@ void create_boundary_flags(Variables& var)
 void create_boundary_facets(Variables& var)
 {
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = &(*var.connectivity)[e][0];
+        const int *conn = (*var.connectivity)[e];
         for (int i=0; i<FACETS_PER_ELEM; ++i) {
             // set all bits to 1
             int flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
@@ -679,7 +679,7 @@ void create_support(Variables& var)
 
     // create the inverse mapping of connectivity
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = &(*var.connectivity)[e][0];
+        const int *conn = (*var.connectivity)[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             (*var.support)[conn[i]].push_back(e);
         }
@@ -709,7 +709,7 @@ void create_elem_groups(Variables& var)
         // how many elements are sharing nodes with this element?
         std::vector<std::size_t> crowdness(var.nelem);
         for (int e=0; e<var.nelem; ++e) {
-            const int *conn = &(*var.connectivity)[e][0];
+            const int *conn = (*var.connectivity)[e];
             for (int i=0; i<NODES_PER_ELEM; ++i) {
                 int n = conn[i];
                 crowdness[e] += (*var.support)[n].size();
@@ -739,7 +739,7 @@ void create_elem_groups(Variables& var)
         // the starting element is always available to take
         {
             int e = crowdest_elem[start];
-            const int *conn = &(*var.connectivity)[e][0];
+            const int *conn = (*var.connectivity)[e];
             // mark nodes as taken
             for (int i=0; i<NODES_PER_ELEM; ++i) {
                 int n = conn[i];
@@ -754,7 +754,7 @@ void create_elem_groups(Variables& var)
             // this element is taken, skip
             if (e == sentinel) continue;
 
-            const int *conn = &(*var.connectivity)[e][0];
+            const int *conn = (*var.connectivity)[e];
 
             // does this element share any node with other elements in the group?
             bool is_sharing_node = 0;

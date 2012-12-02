@@ -29,16 +29,16 @@ static void allocate_variables(Variables& var)
     var.plstrain = new double_vec(e);
     var.tmp0 = new double_vec(std::max(n,e));
 
-    var.vel = new double2d(boost::extents[n][NDIMS]);
-    var.force = new double2d(boost::extents[n][NDIMS]);
+    var.vel = new arrayd2(n, 0);
+    var.force = new arrayd2(n, 0);
 
-    var.strain_rate = new double2d(boost::extents[e][NSTR]);
-    var.strain = new double2d(boost::extents[e][NSTR]);
-    var.stress = new double2d(boost::extents[e][NSTR]);
+    var.strain_rate = new tensord2(e, 0);
+    var.strain = new tensord2(e, 0);
+    var.stress = new tensord2(e, 0);
 
-    var.shpdx = new double2d(boost::extents[e][NODES_PER_ELEM]);
-    if (NDIMS == 3) var.shpdy = new double2d(boost::extents[e][NODES_PER_ELEM]);
-    var.shpdz = new double2d(boost::extents[e][NODES_PER_ELEM]);
+    var.shpdx = new shapefn(e);
+    if (NDIMS == 3) var.shpdy = new shapefn(e);
+    var.shpdz = new shapefn(e);
 }
 
 
@@ -64,8 +64,8 @@ void compute_dvoldt(const Variables &var, double_vec &tmp,
         for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
-        const int *conn = &(*var.connectivity)[e][0];
-        const double* strain_rate = &(*var.strain_rate)[e][0];
+        const int *conn = (*var.connectivity)[e];
+        const double* strain_rate = (*var.strain_rate)[e];
         // TODO: try another definition:
         // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
@@ -86,7 +86,7 @@ void compute_dvoldt(const Variables &var, double_vec &tmp,
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, edvoldt)
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = &(*var.connectivity)[e][0];
+        const int *conn = (*var.connectivity)[e];
         double dj = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
@@ -105,7 +105,7 @@ void compute_dvoldt(const Variables &var, double_vec &tmp,
 
 
 void initial_stress_state(const Param &param, const Variables &var,
-                          double2d &stress, double2d &strain,
+                          tensord2 &stress, tensord2 &strain,
                           double &compensation_pressure)
 {
     if (param.control.gravity == 0) {
@@ -119,7 +119,7 @@ void initial_stress_state(const Param &param, const Variables &var,
     const double ks = var.mat->bulkm(0);
     compensation_pressure = rho * param.control.gravity * param.mesh.zlength;
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = &(*var.connectivity)[e][0];
+        const int *conn = (*var.connectivity)[e];
         double zcenter = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             zcenter += (*var.coord)[conn[i]][NDIMS-1];
@@ -138,7 +138,7 @@ void initial_weak_zone(const Param &param, const Variables &var,
                        double_vec &plstrain)
 {
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = &(*var.connectivity)[e][0];
+        const int *conn = (*var.connectivity)[e];
         // the coordinate of the center of this element
         double center[3] = {0,0,0};
         for (int i=0; i<NODES_PER_ELEM; ++i) {
@@ -171,7 +171,7 @@ void initial_temperature(const Param &param, const Variables &var, double_vec &t
 }
 
 
-void apply_vbcs(const Param &param, const Variables &var, double2d &vel)
+void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
 {
     // TODO: adding different types of vbcs later
 
@@ -249,13 +249,13 @@ void update_temperature(const Param &param, const Variables &var,
        for (int ee=0; ee<egroup.size(); ++ee) {
             int e = egroup[ee];
     {
-        const int *conn = &(*var.connectivity)[e][0];
+        const int *conn = (*var.connectivity)[e];
         double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
-        const double *shpdx = &(*var.shpdx)[e][0];
+        const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
-        const double *shpdy = &(*var.shpdy)[e][0];
+        const double *shpdy = (*var.shpdy)[e];
 #endif
-        const double *shpdz = &(*var.shpdz)[e][0];
+        const double *shpdz = (*var.shpdz)[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             for (int j=0; j<NODES_PER_ELEM; ++j) {
 #ifdef THREED
@@ -290,17 +290,17 @@ void update_temperature(const Param &param, const Variables &var,
 }
 
 
-void update_strain_rate(const Variables& var, double2d& strain_rate)
+void update_strain_rate(const Variables& var, tensord2& strain_rate)
 {
     double *v[NODES_PER_ELEM];
 
     #pragma omp parallel for default(none) \
         shared(var, strain_rate) private(v)
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = &(*var.connectivity)[e][0];
-        const double *shpdx = &(*var.shpdx)[e][0];
-        const double *shpdz = &(*var.shpdz)[e][0];
-        double *s = &(*var.strain_rate)[e][0];
+        const int *conn = (*var.connectivity)[e];
+        const double *shpdx = (*var.shpdx)[e];
+        const double *shpdz = (*var.shpdz)[e];
+        double *s = (*var.strain_rate)[e];
 
         for (int i=0; i<NODES_PER_ELEM; ++i)
             v[i] = &(*var.vel)[conn[i]][0];
@@ -312,7 +312,7 @@ void update_strain_rate(const Variables& var, double2d& strain_rate)
             s[n] += v[i][0] * shpdx[i];
 
 #ifdef THREED
-        const double *shpdy = &(*var.shpdy)[e][0];
+        const double *shpdy = (*var.shpdy)[e];
         // YY component
         n = 1;
         s[n] = 0;
@@ -359,7 +359,7 @@ void update_strain_rate(const Variables& var, double2d& strain_rate)
 }
 
 
-void update_force(const Param& param, const Variables& var, double2d& force)
+void update_force(const Param& param, const Variables& var, arrayd2& force)
 {
     std::fill_n(force.data(), var.nnode, 0);
 
@@ -369,18 +369,18 @@ void update_force(const Param& param, const Variables& var, double2d& force)
         for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
-        const int *conn = &(*var.connectivity)[e][0];
-        const double *shpdx = &(*var.shpdx)[e][0];
+        const int *conn = (*var.connectivity)[e];
+        const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
-        const double *shpdy = &(*var.shpdy)[e][0];
+        const double *shpdy = (*var.shpdy)[e];
 #endif
-        const double *shpdz = &(*var.shpdz)[e][0];
-        double *s = &(*var.stress)[e][0];
+        const double *shpdz = (*var.shpdz)[e];
+        double *s = (*var.stress)[e];
         double vol = (*var.volume)[e];
 
         double buoy = var.mat->density(e) * param.control.gravity / NODES_PER_ELEM;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
-            double *f = &force[conn[i]][0];
+            double *f = force[conn[i]];
 #ifdef THREED
             f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
             f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
@@ -402,7 +402,7 @@ void update_force(const Param& param, const Variables& var, double2d& force)
         const auto& coord = *var.coord;
         for (int i=0; i<bdry.size(); ++i) {
             int e = bdry[i].first;
-            const int *conn = &(*var.connectivity)[e][0];
+            const int *conn = (*var.connectivity)[e];
             int facet = bdry[i].second;
 
             int n0 = conn[NODE_OF_FACET[facet][0]];
@@ -476,7 +476,7 @@ void update_force(const Param& param, const Variables& var, double2d& force)
 void rotate_stress() {};
 
 
-void update_velocity(const Variables& var, double2d& vel)
+void update_velocity(const Variables& var, arrayd2& vel)
 {
     const double* m = &(*var.mass)[0];
     // flatten 2d arrays to simplify indexing
@@ -491,7 +491,7 @@ void update_velocity(const Variables& var, double2d& vel)
 }
 
 
-static void update_coordinate(const Variables& var, double2d_ref& coord)
+static void update_coordinate(const Variables& var, arrayd2& coord)
 {
     double* x = var.coord->data();
     const double* v = var.vel->data();

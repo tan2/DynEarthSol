@@ -74,6 +74,7 @@ SRCS =	\
 	sortindex.cxx
 
 INCS =	\
+	array2d.hpp \
 	constants.hpp \
 	parameters.hpp \
 	matprops.hpp \

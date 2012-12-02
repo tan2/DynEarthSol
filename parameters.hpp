@@ -6,19 +6,21 @@
 #include <vector>
 #include <boost/multi_array.hpp>
 
+#include "constants.hpp"
+#include "array2d.hpp"
+
 typedef std::pair<double,double> double_pair;
 
 typedef std::vector<double> double_vec;
 typedef std::vector<int> int_vec;
 
-typedef boost::multi_array<double,2> double2d;
-typedef boost::multi_array<double,1> double1d;
-typedef boost::multi_array<int,2> int2d;
-typedef boost::multi_array<int,1> int1d;
+typedef Array2D<double,NDIMS> arrayd2;
+typedef Array2D<double,NSTR> tensord2;
+typedef Array2D<double,NODES_PER_ELEM> shapefn;
 
-typedef boost::multi_array_ref<double,2> double2d_ref;
-typedef boost::multi_array_ref<int,2> int2d_ref;
-typedef boost::multi_array_ref<int,1> int1d_ref;
+typedef Array2D<int,NODES_PER_ELEM> conn_t;
+typedef Array2D<int,NDIMS> segment_t;
+typedef Array2D<int,1> segflag_t;
 
 //
 // Structures for input parameters
@@ -95,10 +97,10 @@ struct Variables {
     double compensation_pressure;
 
     // These 4 arrays are allocated by external library
-    double2d_ref *coord;
-    int2d_ref *connectivity;
-    int2d_ref *segment;
-    int1d_ref *segflag;
+    arrayd2 *coord;
+    conn_t *connectivity;
+    segment_t *segment;
+    segflag_t *segflag;
 
     int_vec *bcflag;
     std::vector< std::pair<int,int> > bfacets[6];
@@ -111,9 +113,9 @@ struct Variables {
     double_vec *temperature, *plstrain;
     double_vec *tmp0;
 
-    double2d *vel, *force;
-    double2d *strain_rate, *strain, *stress;
-    double2d *shpdx, *shpdy, *shpdz;
+    arrayd2 *vel, *force;
+    tensord2 *strain_rate, *strain, *stress;
+    shapefn *shpdx, *shpdy, *shpdz;
 
     MatProps *mat;
 };
