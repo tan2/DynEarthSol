@@ -98,6 +98,10 @@ void output(const Param& param, const Variables& var)
 }
 
 
-void restart() {}
+void restart()
+{
+    std::cerr << "Error: restarting not implemented.\n";
+    std::exit(1);
+}
 
 
