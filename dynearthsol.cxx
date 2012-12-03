@@ -361,7 +361,7 @@ void update_strain_rate(const Variables& var, tensord2& strain_rate)
 
 void update_force(const Param& param, const Variables& var, arrayd2& force)
 {
-    std::fill_n(force.data(), var.nnode, 0);
+    std::fill_n(force.data(), var.nnode*NDIMS, 0);
 
     for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
         #pragma omp parallel for default(none)                  \
