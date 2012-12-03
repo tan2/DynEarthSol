@@ -661,7 +661,7 @@ void create_boundary_facets(Variables& var)
     //     for (int i=0; i<var.bfacets[n].size(); ++i) {
     //         int e = var.bfacets[n][i].first;
     //         int f = var.bfacets[n][i].second;
-    //         const int *conn = &(*var.connectivity)[e][0];
+    //         const int *conn = (*var.connectivity)[e];
     //         std::cout << i << ", " << e << ":";
     //         for (int j=0; j<NODES_PER_FACET; ++j) {
     //             std::cout << " " << conn[NODE_OF_FACET[f][j]];

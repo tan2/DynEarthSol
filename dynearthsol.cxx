@@ -180,7 +180,7 @@ void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
         shared(param, var, vel)
     for (int i=0; i<var.nnode; ++i) {
         int flag = (*var.bcflag)[i];
-        double *v = &vel[i][0];
+        double *v = vel[i];
 
         // X
         if (flag & BOUNDX0) {
@@ -303,7 +303,7 @@ void update_strain_rate(const Variables& var, tensord2& strain_rate)
         double *s = (*var.strain_rate)[e];
 
         for (int i=0; i<NODES_PER_ELEM; ++i)
-            v[i] = &(*var.vel)[conn[i]][0];
+            v[i] = (*var.vel)[conn[i]];
 
         // XX component
         int n = 0;
