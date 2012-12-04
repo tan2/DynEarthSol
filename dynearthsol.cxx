@@ -244,9 +244,9 @@ void update_temperature(const Param &param, const Variables &var,
 
     tdot.assign(var.nnode, 0);
     for (auto egroup : *var.egroups) {
-       #pragma omp parallel for default(none)                                  \
-           shared(egroup, var, param, temperature, tdot) private(D)
-       for (int ee=0; ee<egroup.size(); ++ee) {
+        #pragma omp parallel for default(none)                                  \
+            shared(egroup, var, param, temperature, tdot) private(D)
+        for (std::size_t ee=0; ee<egroup.size(); ++ee) {
             int e = egroup[ee];
     {
         const int *conn = (*var.connectivity)[e];
@@ -400,7 +400,7 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
         const int bottom_bdry = bdry_order.find(BOUNDZ0)->second;
         const auto& bdry = var.bfacets[bottom_bdry];
         const auto& coord = *var.coord;
-        for (int i=0; i<bdry.size(); ++i) {
+        for (std::size_t i=0; i<bdry.size(); ++i) {
             int e = bdry[i].first;
             const int *conn = (*var.connectivity)[e];
             int facet = bdry[i].second;
