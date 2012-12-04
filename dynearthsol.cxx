@@ -456,7 +456,7 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
 
 
     // damping
-    {
+    if (param.control.damping_factor != 0) {
         // flatten 2d arrays to simplify indexing
         double* ff = force.data();
         const double* v = var.vel->data();
