@@ -97,6 +97,22 @@ static void declare_parameters(po::options_description &cfg,
          "Min. value of viscosity")
         ("mat.max_thermal_diffusivity", po::value<double>(&p.mat.therm_diff_max)->default_value(5e-6),
          "Max. value of thermal diffusivity")
+
+        // these parameters need to parsed later
+        ("mat.rho0", po::value<std::string>(),
+         "Density of the materials at 0 Pa and 273 K '[d0, d1, d2, ...]' (in kg/m^3)")
+        ("mat.alpha", po::value<std::string>(),
+         "Volumetic thermal expansion of the materials '[d0, d1, d2, ...]' (in 1/Kelvin)")
+
+        ("mat.bulk_modulus", po::value<std::string>(),
+         "Bulk modulus of the materials '[d0, d1, d2, ...]' (in Pa)")
+        ("mat.shear_modulus", po::value<std::string>(),
+         "Shear modulus of the materials '[d0, d1, d2, ...]' (in Pa)")
+
+        ("mat.heat_capacity", po::value<std::string>(),
+         "Heat capacity (isobaric) of the materials '[d0, d1, d2, ...]' (in J/kg/Kelvin)")
+        ("mat.therm_cond", po::value<std::string>(),
+         "Thermal conductivity of the materials '[d0, d1, d2, ...]' (in W/m/Kelvin)")
         ;
 }
 
@@ -153,6 +169,24 @@ static int read_numbers(const std::string input, double_vec &vec, int len)
 
     // success
     return 0;
+}
+
+
+static void get_numbers(const po::variables_map &vm, const char *name,
+                        double_vec &values, int len)
+{
+    if ( ! vm.count(name) ) {
+        std::cerr << "Error: " << name << " is not provided.\n";
+        std::exit(1);
+    }
+
+    std::string str = vm[name].as<std::string>();
+    int err = read_numbers(str, values, len);
+    if (err) {
+        std::cerr << "Error: incorrect format for " << name << ",\n"
+                  << "       must be '[d0, d1, d2, ...]'\n";
+        std::exit(1);
+    }
 }
 
 
@@ -272,6 +306,13 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Error: unknown rheology: '" << str << "'\n";
             std::exit(1);
         }
+
+        get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat);
+        get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat);
+        get_numbers(vm, "mat.bulk_modulus", p.mat.bulk_modulus, p.mat.nmat);
+        get_numbers(vm, "mat.shear_modulus", p.mat.shear_modulus, p.mat.nmat);
+        get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat);
+        get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat);
     }
 
 }

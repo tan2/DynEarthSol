@@ -36,10 +36,9 @@ public:
 
 private:
 
-    const Mat& mat;
-    double_vec bulk_modulus, shear_modulus;
-    double_vec rho0, alpha;
-    double_vec heat_capacity, therm_cond;
+    const double_vec &rho0, &alpha;
+    const double_vec &bulk_modulus, &shear_modulus;
+    const double_vec &heat_capacity, &therm_cond;
     double ten_off;
 };
 

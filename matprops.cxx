@@ -12,26 +12,14 @@ MatProps::MatProps(const Param& p) :
   visc_min(p.mat.visc_min),
   visc_max(p.mat.visc_max),
   therm_diff_max(p.mat.therm_diff_max),
-  mat(p.mat)
+  rho0(p.mat.rho0),
+  alpha(p.mat.alpha),
+  bulk_modulus(p.mat.bulk_modulus),
+  shear_modulus(p.mat.shear_modulus),
+  heat_capacity(p.mat.heat_capacity),
+  therm_cond(p.mat.therm_cond)
 {
-    int n = nmat;
-    bulk_modulus.resize(n);
-    shear_modulus.resize(n);
-
-    rho0.resize(n);
-    alpha.resize(n);
-    heat_capacity.resize(n);
-    therm_cond.resize(n);
-
     // TODO: get material properties from cfg file
-    std::fill_n(bulk_modulus.begin(), n, 128.2e9);
-    std::fill_n(shear_modulus.begin(), n, 80.5e9);
-
-    std::fill_n(rho0.begin(), n, 3210);
-    std::fill_n(alpha.begin(), n, 3e-5);
-    std::fill_n(heat_capacity.begin(), n,1000);
-    std::fill_n(therm_cond.begin(), n, 3);
-
     ten_off = 1e9;
 }
 

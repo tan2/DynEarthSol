@@ -69,6 +69,16 @@ struct Mat {
     double visc_min;
     double visc_max;
     double therm_diff_max;
+
+    double_vec rho0;
+    double_vec alpha;
+
+    double_vec bulk_modulus;
+    double_vec shear_modulus;
+
+    double_vec heat_capacity;
+    double_vec therm_cond;
+
 };
 
 struct Param {
