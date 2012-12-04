@@ -1,12 +1,14 @@
 #include <cstdio>
 #include <iostream>
 #include <limits>
+#include <sstream>
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
 #include "parameters.hpp"
 #include "matprops.hpp"
+#include "utils.hpp"
 
 
 static void declare_parameters(po::options_description &cfg,
@@ -116,6 +118,44 @@ static void read_parameters_from_file
 }
 
 
+static int read_numbers(const std::string input, double_vec &vec, int len)
+{
+    /* Read 'len' numbers from input.
+     * The format of input must be '[n0, n1, n2]' or '[n0, n1, n2,]' (with a trailing ,),
+     * for len=3.
+     */
+
+    std::istringstream stream(input);
+    vec.reserve(len);
+
+    char sentinel;
+
+    stream >> sentinel;
+    if (sentinel != '[') return 1;
+
+    for (int i=0; i<len; ++i) {
+        double a;
+        stream >> a;
+        vec.push_back(a);
+
+        if (i == len-1) break;
+
+        char sep;
+        stream >> sep;
+        if (sep != ',') return 1;
+    }
+
+    stream >> sentinel;
+    if (sentinel == ',') stream >> sentinel;
+    if (sentinel != ']') return 1;
+
+    if (! stream.good()) return 1;
+
+    // success
+    return 0;
+}
+
+
 static void validate_parameters(const po::variables_map &vm, Param &p)
 {
     //
@@ -158,38 +198,38 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         }
 
         /* get 2 numbers from the string */
-        double d0, d1;
-        int n;
+        double_vec tmp;
+        int err;
         std::string str;
         str = vm["mesh.refined_zonex"].as<std::string>();
-        n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
-        if (n != 2 || d0 < 0 || d1 > 1 || d0 > d1) {
+        err = read_numbers(str, tmp, 2);
+        if (err || tmp[0] < 0 || tmp[1] > 1 || tmp[0] > tmp[1]) {
             std::cerr << "Error: incorrect value for mesh.refine_zonex,\n"
                       << "       must in this format '[d0, d1]', 0 <= d0 <= d1 <= 1.\n";
             std::exit(1);
         }
-        p.mesh.refined_zonex.first = d0;
-        p.mesh.refined_zonex.second = d1;
+        p.mesh.refined_zonex.first = tmp[0];
+        p.mesh.refined_zonex.second = tmp[1];
 #ifdef THREED
         str = vm["mesh.refined_zoney"].as<std::string>();
-        n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
-        if (n != 2 || d0 < 0 || d1 > 1 || d0 > d1) {
+        err = read_numbers(str, tmp, 2);
+        if (err || tmp[0] < 0 || tmp[1] > 1 || tmp[0] > tmp[1]) {
             std::cerr << "Error: incorrect value for mesh.refine_zoney,\n"
                       << "       must in this format '[d0, d1]', 0 <= d0 <= d1 <= 1.\n";
             std::exit(1);
         }
-        p.mesh.refined_zoney.first = d0;
-        p.mesh.refined_zoney.second = d1;
+        p.mesh.refined_zoney.first = tmp[0];
+        p.mesh.refined_zoney.second = tmp[1];
 #endif
         str = vm["mesh.refined_zonez"].as<std::string>();
-        n = std::sscanf(str.c_str(), "[%lf, %lf]", &d0, &d1);
-        if (n != 2 || d0 < 0 || d1 > 1 || d0 > d1) {
+        err = read_numbers(str, tmp, 2);
+        if (err || tmp[0] < 0 || tmp[1] > 1 || tmp[0] > tmp[1]) {
             std::cerr << "Error: incorrect value for mesh.refine_zonez,\n"
                       << "       must in this format '[d0, d1]', 0 <= d0 <= d1 <= 1.\n";
             std::exit(1);
         }
-        p.mesh.refined_zonez.first = d0;
-        p.mesh.refined_zonez.second = d1;
+        p.mesh.refined_zonez.first = tmp[0];
+        p.mesh.refined_zonez.second = tmp[1];
     }
 
     //
