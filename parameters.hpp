@@ -50,6 +50,7 @@ struct Mesh {
 struct Control {
     double gravity;
     double inertial_scaling;
+    double damping_factor;
 };
 
 struct BC {

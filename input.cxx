@@ -67,6 +67,8 @@ static void declare_parameters(po::options_description &cfg,
 
         ("control.inertial_scaling", po::value<double>(&p.control.inertial_scaling)->default_value(1e5),
          "Scaling factor for inertial (a large number)")
+        ("control.damping_factor", po::value<double>(&p.control.damping_factor)->default_value(0.8),
+         "A factor for force damping (0-1)")
         ;
 
     cfg.add_options()
@@ -188,6 +190,17 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         }
         p.mesh.refined_zonez.first = d0;
         p.mesh.refined_zonez.second = d1;
+    }
+
+    //
+    // control
+    //
+    {
+        if ( p.control.damping_factor < 0 || p.control.damping_factor > 1 ) {
+            std::cerr << "Error: control.damping_factor must be between 0 and 1.\n";
+            std::exit(1);
+        }
+
     }
 
     //

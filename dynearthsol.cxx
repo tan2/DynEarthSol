@@ -461,12 +461,11 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
         double* ff = force.data();
         const double* v = var.vel->data();
         const double small_vel = 1e-13;
-        const double damping_coeff = 0.8;
         #pragma omp parallel for default(none)  \
-            shared(var, ff, v)
+            shared(var, param, ff, v)
         for (int i=0; i<var.nnode*NDIMS; ++i) {
             if (std::fabs(v[i]) > small_vel) {
-                ff[i] -= damping_coeff * std::copysign(ff[i], v[i]);
+                ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
             }
         }
     }
