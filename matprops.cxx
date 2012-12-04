@@ -6,7 +6,7 @@
 #include "matprops.hpp"
 
 
-MatProps::MatProps(const Param& p) :
+MatProps::MatProps(const Param& p, const Variables& var) :
   rheol_type(p.mat.rheol_type),
   nmat(p.mat.nmat),
   visc_min(p.mat.visc_min),
@@ -17,7 +17,11 @@ MatProps::MatProps(const Param& p) :
   bulk_modulus(p.mat.bulk_modulus),
   shear_modulus(p.mat.shear_modulus),
   heat_capacity(p.mat.heat_capacity),
-  therm_cond(p.mat.therm_cond)
+  therm_cond(p.mat.therm_cond),
+  coord(*var.coord),
+  connectivity(*var.connectivity),
+  temperature(*var.temperature),
+  stress(*var.stress)
 {
     // TODO: get material properties from cfg file
     ten_off = 1e9;

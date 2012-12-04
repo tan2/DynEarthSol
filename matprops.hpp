@@ -6,7 +6,7 @@
 class MatProps
 {
 public:
-    MatProps(const Param& param);
+    MatProps(const Param& param, const Variables& var);
 
     const int rheol_type;
     const int nmat;
@@ -40,6 +40,13 @@ private:
     const double_vec &bulk_modulus, &shear_modulus;
     const double_vec &heat_capacity, &therm_cond;
     double ten_off;
+
+    // alias to field variables in var
+    // ie. var.mat.temperature == var.temperature
+    const arrayd2 &coord;
+    const conn_t &connectivity;
+    const double_vec &temperature;
+    const tensord2 &stress;
 };
 
 

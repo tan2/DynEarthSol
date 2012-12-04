@@ -45,7 +45,7 @@ static void allocate_variables(Variables& var)
 static void create_matprops(const Param &par, Variables &var)
 {
     // TODO: get material properties from cfg file
-    var.mat = new MatProps(par);
+    var.mat = new MatProps(par, var);
 }
 
 
@@ -215,8 +215,6 @@ void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
 
 void init(const Param& param, Variables& var)
 {
-    void create_matprops(const Param&, Variables&);
-
     create_new_mesh(param, var);
     allocate_variables(var);
     create_matprops(param, var);
