@@ -136,7 +136,7 @@ static void read_parameters_from_file
 }
 
 
-static int read_numbers(const std::string input, double_vec &vec, int len)
+static int read_numbers(const std::string &input, double_vec &vec, int len)
 {
     /* Read 'len' numbers from input.
      * The format of input must be '[n0, n1, n2]' or '[n0, n1, n2,]' (with a trailing ,),
@@ -144,7 +144,7 @@ static int read_numbers(const std::string input, double_vec &vec, int len)
      */
 
     std::istringstream stream(input);
-    vec.reserve(len);
+    vec.resize(len);
 
     char sentinel;
 
@@ -152,12 +152,11 @@ static int read_numbers(const std::string input, double_vec &vec, int len)
     if (sentinel != '[') return 1;
 
     for (int i=0; i<len; ++i) {
-        double a;
-        stream >> a;
-        vec.push_back(a);
+        stream >> vec[i];
 
         if (i == len-1) break;
 
+        // consume ','
         char sep;
         stream >> sep;
         if (sep != ',') return 1;
