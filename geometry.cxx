@@ -8,7 +8,7 @@
 #include "matprops.hpp"
 
 
-/* Give two points, return square of the distance */
+/* Given two points, returns the distance^2 */
 static double dist2(const double* a, const double* b)
 {
     double sum = 0;;
@@ -20,6 +20,8 @@ static double dist2(const double* a, const double* b)
 }
 
 
+/* Given four 3D points, returns the (signed) volume of the enclosed
+   tetrahedron */
 static double tetrahedron_volume(const double *d0,
                                  const double *d1,
                                  const double *d2,
@@ -43,6 +45,7 @@ static double tetrahedron_volume(const double *d0,
 }
 
 
+/* Given two points, returns the area of the enclosed triangle */
 static double triangle_area(const double *a,
                             const double *b,
                             const double *c)
@@ -115,8 +118,6 @@ void compute_volume(const arrayd2 &coord, const conn_t &connectivity,
     }
         } // end of ee
     }
-    //for (int i=0; i<volume_n.size(); ++i)
-    //    std::cout << i << ": volume_n = " << volume_n[i] << '\n';
 }
 
 
