@@ -70,14 +70,14 @@ SRCS =	\
 	matprops.cxx \
 	mesh.cxx \
 	output.cxx \
-	rheology.cxx \
-	sortindex.cxx
+	rheology.cxx
 
 INCS =	\
 	array2d.hpp \
 	constants.hpp \
 	parameters.hpp \
 	matprops.hpp \
+	sortindex.hpp \
 	utils.hpp
 
 OBJS = $(SRCS:.cxx=.$(ndims)d.o)
