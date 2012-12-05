@@ -186,10 +186,10 @@ void compute_mass(const Param &param,
                   const double_vec &volume, const MatProps &mat,
                   double_vec &mass, double_vec &tmass)
 {
-    double pseudo_speed = param.bc.max_vbc_val * param.control.inertial_scaling;
+    const double pseudo_speed = param.bc.max_vbc_val * param.control.inertial_scaling;
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
-            shared(egroup, pseudo_speed, mat, connectivity, volume, mass, tmass)
+            shared(egroup, mat, connectivity, volume, mass, tmass)
         for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
@@ -204,11 +204,6 @@ void compute_mass(const Param &param,
     }
         } // end of ee
     }
-    //for (int i=0; i<mass.size(); ++i)
-    //    std::cout << i << ": mass = " << mass[i] << '\n';
-
-    //for (int i=0; i<tmass.size(); ++i)
-    //    std::cout << i << ": tmass = " << tmass[i] << '\n';
 }
 
 
