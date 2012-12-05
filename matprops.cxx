@@ -104,7 +104,7 @@ void MatProps::plastic_props(int e, double pls,
 }
 
 
-double MatProps::density(int e) const
+double MatProps::rho(int e) const
 {
     // TODO: compute average density with thermal expansion
     return rho0[0];

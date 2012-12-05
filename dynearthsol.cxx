@@ -115,7 +115,7 @@ void initial_stress_state(const Param &param, const Variables &var,
 
     // lithostatic condition for stress and strain
     // XXX: compute reference pressure correctly
-    const double rho = var.mat->density(0);
+    const double rho = var.mat->rho(0);
     const double ks = var.mat->bulkm(0);
     compensation_pressure = rho * param.control.gravity * param.mesh.zlength;
     for (int e=0; e<var.nelem; ++e) {
@@ -376,7 +376,7 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
         double *s = (*var.stress)[e];
         double vol = (*var.volume)[e];
 
-        double buoy = var.mat->density(e) * param.control.gravity / NODES_PER_ELEM;
+        double buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             double *f = force[conn[i]];
 #ifdef THREED
@@ -439,7 +439,7 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
 #endif
             double dz = zcenter - (-param.mesh.zlength);
             double p = var.compensation_pressure -
-                (var.mat->density(e) + param.bc.wrinkler_delta_rho) * param.control.gravity * dz;
+                (var.mat->rho(e) + param.bc.wrinkler_delta_rho) * param.control.gravity * dz;
 
             // bottom support - Archimed force (normal to the surface)
             for (int i=0; i<NDIMS; ++i) {

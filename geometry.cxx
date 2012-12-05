@@ -194,7 +194,7 @@ void compute_mass(const Param &param,
     {
         double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
         double m = pseudo_rho * volume[e] / NODES_PER_ELEM;
-        double tm = mat.density(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
+        double tm = mat.rho(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
         const int *conn = connectivity[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             mass[conn[i]] += m;

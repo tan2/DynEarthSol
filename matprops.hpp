@@ -15,7 +15,7 @@ public:
     double shearm(int e) const;
     double visc(int e) const;
 
-    double density(int e) const;
+    double rho(int e) const;
     double cp(int e) const;
     double k(int e) const;
 
