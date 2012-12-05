@@ -92,11 +92,13 @@ static void declare_parameters(po::options_description &cfg,
         ("mat.num_material", po::value<int>(&p.mat.nmat)->default_value(1),
          "Number of material types")
         ("mat.max_viscosity", po::value<double>(&p.mat.visc_max)->default_value(1e24),
-         "Max. value of viscosity")
+         "Max. value of viscosity (in Pa.s)")
         ("mat.min_viscosity", po::value<double>(&p.mat.visc_min)->default_value(1e18),
-         "Min. value of viscosity")
+         "Min. value of viscosity (in Pa.s)")
+        ("mat.max_tension", po::value<double>(&p.mat.tension_max)->default_value(1e9),
+         "Max. value of tensile stress (in Pa)")
         ("mat.max_thermal_diffusivity", po::value<double>(&p.mat.therm_diff_max)->default_value(5e-6),
-         "Max. value of thermal diffusivity")
+         "Max. value of thermal diffusivity (in m/s^2)")
 
         // these parameters need to parsed later
         ("mat.rho0", po::value<std::string>(),

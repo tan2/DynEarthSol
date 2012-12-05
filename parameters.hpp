@@ -68,6 +68,7 @@ struct Mat {
     int nmat;
     double visc_min;
     double visc_max;
+    double tension_max;
     double therm_diff_max;
 
     double_vec rho0;

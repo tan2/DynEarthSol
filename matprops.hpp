@@ -25,6 +25,7 @@ public:
 
     const double visc_min;
     const double visc_max;
+    const double tension_max;
     const double therm_diff_max;
 
     const static int rh_elastic = 1 << 0;
@@ -39,7 +40,6 @@ private:
     const double_vec &rho0, &alpha;
     const double_vec &bulk_modulus, &shear_modulus;
     const double_vec &heat_capacity, &therm_cond;
-    double ten_off;
 
     // alias to field variables in var
     // ie. var.mat.temperature == var.temperature

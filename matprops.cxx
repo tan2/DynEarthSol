@@ -12,6 +12,7 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   visc_min(p.mat.visc_min),
   visc_max(p.mat.visc_max),
   therm_diff_max(p.mat.therm_diff_max),
+  tension_max(p.mat.tension_max),
   rho0(p.mat.rho0),
   alpha(p.mat.alpha),
   bulk_modulus(p.mat.bulk_modulus),
@@ -22,10 +23,7 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   connectivity(*var.connectivity),
   temperature(*var.temperature),
   stress(*var.stress)
-{
-    // TODO: get material properties from cfg file
-    ten_off = 1e9;
-}
+{}
 
 
 double MatProps::bulkm(int e) const
@@ -100,7 +98,7 @@ void MatProps::plastic_props(int e, double pls,
     anpsi = (1 + spsi) / (1 - spsi);
     amc = 2 * cohesion * std::sqrt(anphi);
 
-    ten_max = (phi == 0)? ten_off : std::min(ten_off, cohesion/std::tan(phi*DEG2RAD));
+    ten_max = (phi == 0)? tension_max : std::min(tension_max, cohesion/std::tan(phi*DEG2RAD));
 }
 
 
