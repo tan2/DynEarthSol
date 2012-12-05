@@ -104,7 +104,7 @@ void compute_volume(const arrayd2 &coord, const conn_t &connectivity,
     }
 
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
-    // volume_n[n] is init'd to 0 by resize()
+    volume_n.assign(volume_n.size(), 0);
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                  \
             shared(egroup, connectivity, volume, volume_n)
