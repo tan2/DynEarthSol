@@ -115,6 +115,23 @@ static void declare_parameters(po::options_description &cfg,
          "Heat capacity (isobaric) of the materials '[d0, d1, d2, ...]' (in J/kg/Kelvin)")
         ("mat.therm_cond", po::value<std::string>(),
          "Thermal conductivity of the materials '[d0, d1, d2, ...]' (in W/m/Kelvin)")
+
+        ("mat.pls0", po::value<std::string>(),
+         "Plastic strain of the materials where weakening starts '[d0, d1, d2, ...]' (no unit)")
+        ("mat.pls1", po::value<std::string>(),
+         "Plastic strain of the materials where weakening saturates '[d0, d1, d2, ...]' (no unit)")
+        ("mat.cohesion0", po::value<std::string>(),
+         "Cohesion of the materials when weakening starts '[d0, d1, d2, ...]' (in Pa)")
+        ("mat.cohesion1", po::value<std::string>(),
+         "Cohesion of the materials when weakening saturates '[d0, d1, d2, ...]' (in Pa)")
+        ("mat.friction_angle0", po::value<std::string>(),
+         "Friction angle of the materials when weakening starts '[d0, d1, d2, ...]' (in degree)")
+        ("mat.friction_angle1", po::value<std::string>(),
+         "Friction angle of the materials when weakening saturates '[d0, d1, d2, ...]' (in degree)")
+        ("mat.dilation_angle0", po::value<std::string>(),
+         "Dilation angle of the materials when weakening starts '[d0, d1, d2, ...]' (in degree)")
+        ("mat.dilation_angle1", po::value<std::string>(),
+         "Dilation angle of the materials when weakening saturates '[d0, d1, d2, ...]' (in degree)")
         ;
 }
 
@@ -314,6 +331,15 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         get_numbers(vm, "mat.shear_modulus", p.mat.shear_modulus, p.mat.nmat);
         get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat);
         get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat);
+
+        get_numbers(vm, "mat.pls0", p.mat.pls0, p.mat.nmat);
+        get_numbers(vm, "mat.pls1", p.mat.pls1, p.mat.nmat);
+        get_numbers(vm, "mat.cohesion0", p.mat.cohesion0, p.mat.nmat);
+        get_numbers(vm, "mat.cohesion1", p.mat.cohesion1, p.mat.nmat);
+        get_numbers(vm, "mat.friction_angle0", p.mat.friction_angle0, p.mat.nmat);
+        get_numbers(vm, "mat.friction_angle1", p.mat.friction_angle1, p.mat.nmat);
+        get_numbers(vm, "mat.dilation_angle0", p.mat.dilation_angle0, p.mat.nmat);
+        get_numbers(vm, "mat.dilation_angle1", p.mat.dilation_angle1, p.mat.nmat);
     }
 
 }

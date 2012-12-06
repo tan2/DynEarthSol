@@ -19,6 +19,14 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   shear_modulus(p.mat.shear_modulus),
   heat_capacity(p.mat.heat_capacity),
   therm_cond(p.mat.therm_cond),
+  pls0(p.mat.pls0),
+  pls1(p.mat.pls1),
+  cohesion0(p.mat.cohesion0),
+  cohesion1(p.mat.cohesion1),
+  friction_angle0(p.mat.friction_angle0),
+  friction_angle1(p.mat.friction_angle1),
+  dilation_angle0(p.mat.dilation_angle0),
+  dilation_angle1(p.mat.dilation_angle1),
   coord(*var.coord),
   connectivity(*var.connectivity),
   temperature(*var.temperature),
@@ -52,35 +60,28 @@ void MatProps::plastic_weakening(int e, double pls,
                                  double &dilation_angle, double &hardening) const
 {
     // TODO: compute average plastic properties
-
-    // plastic properties due to strain weakening
-    double pls_seg[2] = {0.0, 0.1};
-    double coh_seg[2] = {4e7, 4e5};  // in Pa
-    double fric_seg[2] = {15, 1};  // in degree
-    double dilat_seg[2] = {0, 0};  // in degree
-
+    const int mat = 0;
     double c, f, d, h;
-
-    if (pls < pls_seg[0]) {
+    if (pls < pls0[mat]) {
         // no weakening yet
-        c = coh_seg[0];
-        f = fric_seg[0];
-        d = dilat_seg[0];
+        c = cohesion0[mat];
+        f = friction_angle0[mat];
+        d = dilation_angle0[mat];
         h = 0;
     }
-    else if (pls < pls_seg[1]) {
+    else if (pls < pls1[mat]) {
         // linear weakening
-        double p = (pls - pls_seg[0]) / (pls_seg[1] - pls_seg[0]);
-        c = coh_seg[0] + p * (coh_seg[1] - coh_seg[0]);
-        f = fric_seg[0] + p * (fric_seg[1] - fric_seg[0]);
-        d = dilat_seg[0] + p * (dilat_seg[1] - dilat_seg[0]);
-        h = (coh_seg[1] - coh_seg[0]) / (pls_seg[1] - pls_seg[0]);
+        double p = (pls - pls0[mat]) / (pls1[mat] - pls0[mat]);
+        c = cohesion0[mat] + p * (cohesion1[mat] - cohesion0[mat]);
+        f = friction_angle0[mat] + p * (friction_angle1[mat] - friction_angle0[mat]);
+        d = dilation_angle0[mat] + p * (dilation_angle1[mat] - dilation_angle0[mat]);
+        h = (cohesion1[mat] - cohesion0[mat]) / (pls1[mat] - pls0[mat]);
     }
     else {
         // saturated weakening
-        c = coh_seg[1];
-        f = fric_seg[1];
-        d = dilat_seg[1];
+        c = cohesion1[mat];
+        f = friction_angle1[mat];
+        d = dilation_angle1[mat];
         h = 0;
     }
 

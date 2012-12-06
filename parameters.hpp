@@ -80,6 +80,11 @@ struct Mat {
     double_vec heat_capacity;
     double_vec therm_cond;
 
+    // plastic parameters
+    double_vec pls0, pls1;
+    double_vec cohesion0, cohesion1;
+    double_vec friction_angle0, friction_angle1;
+    double_vec dilation_angle0, dilation_angle1;
 };
 
 struct Param {

@@ -40,6 +40,10 @@ private:
     const double_vec &rho0, &alpha;
     const double_vec &bulk_modulus, &shear_modulus;
     const double_vec &heat_capacity, &therm_cond;
+    const double_vec &pls0, &pls1;
+    const double_vec &cohesion0, &cohesion1;
+    const double_vec &friction_angle0, &friction_angle1;
+    const double_vec &dilation_angle0, &dilation_angle1;
 
     // alias to field variables in var
     // ie. var.mat.temperature == var.temperature
