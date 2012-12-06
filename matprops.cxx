@@ -62,7 +62,7 @@ void MatProps::plastic_weakening(int e, double pls,
     // TODO: compute average plastic properties
     const int mat = 0;
     double c, f, d, h;
-    if (pls < pls0[mat]) {
+    if (pls <= pls0[mat]) {
         // no weakening yet
         c = cohesion0[mat];
         f = friction_angle0[mat];
