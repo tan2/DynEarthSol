@@ -47,9 +47,9 @@ double MatProps::visc(int e) const
 }
 
 
-void MatProps::plastic_props(int e, double pls,
-                             double& amc, double& anphi, double& anpsi,
-                             double& hardn, double& ten_max) const
+void MatProps::plastic_weakening(int e, double pls,
+                                 double &cohesion, double &friction_angle,
+                                 double &dilation_angle, double &hardening) const
 {
     // TODO: compute average plastic properties
 
@@ -84,11 +84,20 @@ void MatProps::plastic_props(int e, double pls,
         h = 0;
     }
 
-    hardn = h;
+    cohesion = c;
+    friction_angle = f;
+    dilation_angle = d;
+    hardening = h;
+}
 
-    double cohesion = c;
-    double phi = f;
-    double psi = d;
+
+void MatProps::plastic_props(int e, double pls,
+                             double& amc, double& anphi, double& anpsi,
+                             double& hardn, double& ten_max) const
+{
+    double cohesion, phi, psi;
+
+    plastic_weakening(e, pls, cohesion, phi, psi, hardn);
 
     // derived variables
     double sphi = std::sin(phi * DEG2RAD);

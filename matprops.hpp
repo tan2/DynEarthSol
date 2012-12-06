@@ -47,6 +47,10 @@ private:
     const conn_t &connectivity;
     const double_vec &temperature;
     const tensord2 &stress;
+
+    void plastic_weakening(int e, double pls,
+                           double &cohesion, double &friction_angle,
+                           double &dilation_angle, double &hardening) const;
 };
 
 
