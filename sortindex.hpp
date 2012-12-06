@@ -1,6 +1,7 @@
 #ifndef DYNEARTHSOL3D_SORTINDEX_HPP
 #define DYNEARTHSOL3D_SORTINDEX_HPP
 
+#include <numeric>
 
 template< typename T >
 class idx_lt {
