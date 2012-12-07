@@ -20,14 +20,19 @@ gprof = 0
 ## Select C++ compiler
 CXX = g++
 
-## Boost
-BOOSTCXXFLAGS =
-BOOSTLDFLAGS = -lboost_program_options-mt
+## Boost location and library name
+BOOST_ROOT_DIR =
+BOOST_LDFLAGS = -lboost_program_options
 
 ########################################################################
 ## Select compiler and linker flags
 ## (Usually you won't need to modify anything below)
 ########################################################################
+
+ifdef BOOST_ROOT_DIR
+	BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
+	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,--rpath=$(BOOST_ROOT_DIR)/lib
+endif
 
 ifeq ($(CXX), g++)
 	CXXFLAGS = -g -std=c++0x
@@ -114,12 +119,12 @@ C3X3_LIBNAME = 3x3
 all: $(EXE)
 
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a
-	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOSTLDFLAGS) -L$(C3X3_DIR) -l$(C3X3_LIBNAME) -o $@
+	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) -L$(C3X3_DIR) -l$(C3X3_LIBNAME) -o $@
 	@# snapshot of the code for building the executable
 	@which hg 2>&1 > /dev/null && (hg summary; hg diff) > snapshot.diff
 
 $(OBJS): %.$(ndims)d.o : %.cxx $(INCS)
-	$(CXX) $(CXXFLAGS) $(BOOSTCXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(BOOST_CXXFLAGS) -c $< -o $@
 
 $(TRI_OBJS): %.o : %.c $(TRI_INCS)
 	@# Triangle cannot be compiled with -O2
