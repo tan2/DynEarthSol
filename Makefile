@@ -39,12 +39,12 @@ ifeq ($(CXX), g++)
 	LDFLAGS = -lm
 
 	ifeq ($(opt), 1)
-		CXXFLAGS += -O1 -DBOOST_DISABLE_ASSERTS -DNDEBUG
+		CXXFLAGS += -O1
 	else ifeq ($(opt), 2)
-		CXXFLAGS += -O2 -DBOOST_DISABLE_ASSERTS -DNDEBUG
+		CXXFLAGS += -O2
 	else ifeq ($(opt), 3) # experimental, use at your own risk :)
 		CXXFLAGS = -std=c++0x -march=native ## -g is incompatible with -flto
-		CXXFLAGS += -Ofast -DBOOST_DISABLE_ASSERTS -DNDEBUG -funroll-loops -fwhole-program -flto
+		CXXFLAGS += -Ofast -funroll-loops -fwhole-program -flto
 		LDFLAGS += -flto
 	else
 		CXXFLAGS += -O0 -Wall -Wno-unused-function -Wno-unknown-pragmas -fbounds-check -ftrapv
