@@ -52,11 +52,11 @@ def main(modelname, start, end):
         # convert from numpy.int to python int
         rec = int(rec)
         suffix = '{0:0=6}'.format(rec)
-        print 'Converting frame #{}'.format(suffix)
+        print 'Converting frame #{0}'.format(suffix)
         nnode = nnode_list[i+start]
         nelem = nelem_list[i+start]
 
-        fvtu = open('{}.{}.vtu'.format(prefix, suffix, rec), 'w')
+        fvtu = open('{0}.{1}.vtu'.format(prefix, suffix), 'w')
         vtu_header(fvtu, nnode, nelem)
 
 
