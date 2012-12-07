@@ -1,5 +1,9 @@
 #include <iostream>
 
+#ifdef USE_OMP
+#include <omp.h>
+#endif
+
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "geometry.hpp"
@@ -540,9 +544,14 @@ int main(int argc, const char* argv[])
     var.steps = 0;
     var.frame = 0;
 
+    double start_time = 0;
+#ifdef USE_OMP
+    start_time = omp_get_wtime();
+#endif
+
     if (! param.sim.is_restarting) {
         init(param, var);
-        output(param, var);
+        output(param, var, start_time);
         var.frame ++;
     }
     else {
@@ -570,7 +579,7 @@ int main(int argc, const char* argv[])
 
         if ( (var.steps == var.frame * param.sim.output_step_interval) ||
              (var.time > var.frame * param.sim.output_time_interval_in_yr * YEAR2SEC) ) {
-            output(param, var);
+            output(param, var, start_time);
             var.frame ++;
         }
 

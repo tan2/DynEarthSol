@@ -1,6 +1,11 @@
 #include <cstdio>
-#include <ctime>
 #include <iostream>
+
+#ifdef USE_OMP
+#include <omp.h>
+#else
+#include <ctime>
+#endif
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -24,7 +29,7 @@ static void write_array(const char* filename, const std::vector<T>& A)
 }
 
 
-void output(const Param& param, const Variables& var)
+void output(const Param& param, const Variables& var, double start_time)
 {
     /* Not using C++ stream IO here since it can be much slower than C stdio. */
 
@@ -32,7 +37,11 @@ void output(const Param& param, const Variables& var)
     char buffer[255];
     std::FILE* f;
 
+#ifdef USE_OMP
+    double run_time = omp_get_wtime() - start_time;
+#else
     double run_time = double(std::clock()) / CLOCKS_PER_SEC;
+#endif
 
     // info
     snprintf(buffer, 255, "%s.%s", param.sim.modelname.c_str(), "info");

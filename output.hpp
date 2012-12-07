@@ -1,7 +1,7 @@
 #ifndef DYNEARTHSOL3D_OUTPUT_HPP
 #define DYNEARTHSOL3D_OUTPUT_HPP
 
-void output(const Param& param, const Variables& var);
+void output(const Param& param, const Variables& var, double start_time);
 
 void restart();
 
