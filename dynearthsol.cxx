@@ -241,11 +241,11 @@ void update_temperature(const Param &param, const Variables &var,
     double D[NODES_PER_ELEM][NODES_PER_ELEM];
 
     tdot.assign(var.nnode, 0);
-    for (auto egroup : *var.egroups) {
+    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
         #pragma omp parallel for default(none)                                  \
             shared(egroup, var, param, temperature, tdot) private(D)
-        for (std::size_t ee=0; ee<egroup.size(); ++ee) {
-            int e = egroup[ee];
+        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
+            int e = (*egroup)[ee];
     {
         const int *conn = (*var.connectivity)[e];
         double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
