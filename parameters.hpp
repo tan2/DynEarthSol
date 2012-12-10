@@ -36,6 +36,7 @@ struct Sim {
 
 struct Mesh {
     int meshing_option;
+    int meshing_verbosity;
     int tetgen_optlevel;
 
     double xlength, ylength, zlength;

@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 #ifdef THREED
 
@@ -30,6 +31,7 @@
 
 void triangulate_polygon
 (double min_angle, double max_area,
+ int meshing_verbosity,
  int npoints, int nsegments,
  double *points, int *segments, int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
@@ -40,9 +42,28 @@ void triangulate_polygon
     char options[255];
     triangulateio in, out;
 
-    // add 'Q' for no output; add multiple 'V's for verbose output
-    char verbosity[] = "V";
-    std::sprintf(options, "%spq%fjza%f", verbosity, min_angle, max_area);
+    std::string verbosity;
+    switch (meshing_verbosity) {
+    case -1:
+        verbosity = "Q";
+        break;
+    case 0:
+        verbosity = "";
+        break;
+    case 1:
+        verbosity = "V";
+        break;
+    case 2:
+        verbosity = "VV";
+        break;
+    case 3:
+        verbosity = "VVV";
+        break;
+    default:
+        verbosity = "";
+        break;
+    }
+    std::sprintf(options, "%spq%fjza%f", verbosity.c_str(), min_angle, max_area);
     //std::puts(options);
 
     in.pointlist = points;
@@ -100,7 +121,7 @@ void triangulate_polygon
 
 void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
- int optlevel,
+ int meshing_verbosity, int optlevel,
  int npoints, int nsegments,
  double *points, int *segments, int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
@@ -114,9 +135,28 @@ void tetrahedralize_polyhedron
     char options[255];
     double max_dihedral_angle = 180 - 3 * min_dihedral_angle;
 
-    // add 'Q' for no output; add multiple 'V's for verbose output
-    char verbosity[] = "V";
-    std::sprintf(options, "%spzs%dq%fqq%fqqq%fa%f", verbosity, optlevel, max_ratio,
+    std::string verbosity;
+    switch (meshing_verbosity) {
+    case -1:
+        verbosity = "Q";
+        break;
+    case 0:
+        verbosity = "";
+        break;
+    case 1:
+        verbosity = "V";
+        break;
+    case 2:
+        verbosity = "VV";
+        break;
+    case 3:
+        verbosity = "VVV";
+        break;
+    default:
+        verbosity = "";
+        break;
+    }
+    std::sprintf(options, "%spzs%dq%fqq%fqqq%fa%f", verbosity.c_str(), optlevel, max_ratio,
                  min_dihedral_angle, max_dihedral_angle, max_volume);
     //std::puts(options);
 
@@ -239,6 +279,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 
         /********************************************************/
 	triangulate_polygon(param.mesh.min_angle, max_triangle_size,
+                            param.mesh.meshing_verbosity,
 			    npoints, n_init_segments, points,
 			    init_segments, init_segflags,
 			    &nnode, &nelem, &nseg,
@@ -349,6 +390,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
         /***************************************************************/
 	tetrahedralize_polyhedron(param.mesh.max_ratio,
                                   param.mesh.min_tet_angle, max_tet_size,
+                                  param.mesh.meshing_verbosity,
                                   param.mesh.tetgen_optlevel,
                                   npoints, n_init_segments, points,
                                   init_segments, init_segflags,
@@ -472,6 +514,7 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
 
         /********************************************************/
 	triangulate_polygon(param.mesh.min_angle, 40*d*d,
+                            param.mesh.meshing_verbosity,
 			    npoints, n_init_segments, points,
 			    init_segments, init_segflags,
 			    &nnode, &nelem, &nseg,
@@ -596,6 +639,7 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
 	tetrahedralize_polyhedron(param.mesh.max_ratio,
                                   param.mesh.min_tet_angle,
                                   40*d*d*d,
+                                  param.mesh.meshing_verbosity,
                                   param.mesh.tetgen_optlevel,
                                   npoints, n_init_segments, points,
                                   init_segments, init_segflags,
