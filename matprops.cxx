@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "constants.hpp"
+#include "utils.hpp"
 #include "matprops.hpp"
 
 
@@ -17,6 +18,9 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   alpha(p.mat.alpha),
   bulk_modulus(p.mat.bulk_modulus),
   shear_modulus(p.mat.shear_modulus),
+  pln(p.mat.pln),
+  acoeff(p.mat.acoeff),
+  eactiv(p.mat.eactiv),
   heat_capacity(p.mat.heat_capacity),
   therm_cond(p.mat.therm_cond),
   pls0(p.mat.pls0),
@@ -30,7 +34,8 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   coord(*var.coord),
   connectivity(*var.connectivity),
   temperature(*var.temperature),
-  stress(*var.stress)
+  stress(*var.stress),
+  strain_rate(*var.strain_rate)
 {}
 
 
@@ -50,8 +55,35 @@ double MatProps::shearm(int e) const
 
 double MatProps::visc(int e) const
 {
+    const double gas_constant = 8.3144;
+    const double min_strain_rate = 1e-30;
+
     // TODO: compute average viscosity
-    return visc_max;
+    const int m = 0;
+
+    // average temperature of this element
+    double T = 0;
+    const int *conn = connectivity[e];
+    for (int i=0; i<NODES_PER_ELEM; ++i) {
+        T += temperature[conn[i]];
+    }
+    T /= NODES_PER_ELEM;
+
+    // strain-rate
+    double edot = second_invariant(strain_rate[e]);
+    // min strain rate to prevent viscosity -> inf
+    edot = std::max(edot, min_strain_rate);
+
+    // viscosity law from Chen and Morgan, JGR, 1990
+    double pow = 1 / pln[m] - 1;
+    double pow1 = -1 / pln[m];
+    double visc = 0.25 * std::pow(edot, pow) * std::pow(0.75 * acoeff[m], pow1)
+        * std::exp(eactiv[m] / (pln[m] * gas_constant * T)) * 1e6;
+
+    // applying min & max limits
+    visc = std::min(std::max(visc, visc_min), visc_max);
+
+    return visc;
 }
 
 

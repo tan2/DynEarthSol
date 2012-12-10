@@ -115,6 +115,13 @@ static void declare_parameters(po::options_description &cfg,
         ("mat.shear_modulus", po::value<std::string>(),
          "Shear modulus of the materials '[d0, d1, d2, ...]' (in Pa)")
 
+        ("mat.pln", po::value<std::string>(),
+         "Exponents of non-linear viscosity of the materials'[d0, d1, d2, ...]'")
+        ("mat.acoeff", po::value<std::string>(),
+         "Pre-exponent coefficient of non-linear viscosity of the materials '[d0, d1, d2, ...]'")
+        ("mat.eactiv", po::value<std::string>(),
+         "Activation energy of non-linear viscosity of the materials '[d0, d1, d2, ...]' (in J/mol)")
+
         ("mat.heat_capacity", po::value<std::string>(),
          "Heat capacity (isobaric) of the materials '[d0, d1, d2, ...]' (in J/kg/Kelvin)")
         ("mat.therm_cond", po::value<std::string>(),
@@ -331,8 +338,14 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
 
         get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat);
         get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat);
+
         get_numbers(vm, "mat.bulk_modulus", p.mat.bulk_modulus, p.mat.nmat);
         get_numbers(vm, "mat.shear_modulus", p.mat.shear_modulus, p.mat.nmat);
+
+        get_numbers(vm, "mat.pln", p.mat.pln, p.mat.nmat);
+        get_numbers(vm, "mat.acoeff", p.mat.acoeff, p.mat.nmat);
+        get_numbers(vm, "mat.eactiv", p.mat.eactiv, p.mat.nmat);
+
         get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat);
         get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat);
 

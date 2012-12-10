@@ -39,6 +39,7 @@ private:
 
     const double_vec &rho0, &alpha;
     const double_vec &bulk_modulus, &shear_modulus;
+    const double_vec &pln, &acoeff, &eactiv;
     const double_vec &heat_capacity, &therm_cond;
     const double_vec &pls0, &pls1;
     const double_vec &cohesion0, &cohesion1;
@@ -51,6 +52,7 @@ private:
     const conn_t &connectivity;
     const double_vec &temperature;
     const tensord2 &stress;
+    const tensord2 &strain_rate;
 
     void plastic_weakening(int e, double pls,
                            double &cohesion, double &friction_angle,

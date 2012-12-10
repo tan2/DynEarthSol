@@ -135,6 +135,9 @@ def main(modelname, start, end):
         density = np.fromfile(prefix+'.density.'+suffix, dtype=np.float64, count=nelem)
         vtk_dataarray(fvtu, density, 'density')
 
+        viscosity = np.fromfile(prefix+'.viscosity.'+suffix, dtype=np.float64, count=nelem)
+        vtk_dataarray(fvtu, density, 'viscosity')
+
         volume = np.fromfile(prefix+'.volume.'+suffix, dtype=np.float64, count=nelem)
         vtk_dataarray(fvtu, volume, 'volume')
 
