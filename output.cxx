@@ -9,6 +9,7 @@
 
 #include "constants.hpp"
 #include "parameters.hpp"
+#include "matprops.hpp"
 
 
 template <typename Array>
@@ -87,6 +88,14 @@ void output(const Param& param, const Variables& var, double start_time)
     // stress
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "stress", var.frame);
     write_array(buffer, *var.stress);
+
+    // density
+    double_vec tmp(var.nelem);
+    for (int e=0; e<var.nelem; ++e) {
+        tmp[e] = var.mat->rho(e);
+    }
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "density", var.frame);
+    write_array(buffer, tmp);
 
     // volume
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "volume", var.frame);

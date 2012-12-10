@@ -114,8 +114,20 @@ void MatProps::plastic_props(int e, double pls,
 
 double MatProps::rho(int e) const
 {
+    const double celsius0 = 273;
+
     // TODO: compute average density with thermal expansion
-    return rho0[0];
+    const int m = 0;
+
+    // average temperature of this element
+    double T = 0;
+    const int *conn = connectivity[e];
+    for (int i=0; i<NODES_PER_ELEM; ++i) {
+        T += temperature[conn[i]];
+    }
+    T /= NODES_PER_ELEM;
+
+    return rho0[m] - alpha[m] * (T - celsius0);
 }
 
 

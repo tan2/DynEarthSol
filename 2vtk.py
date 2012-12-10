@@ -132,6 +132,9 @@ def main(modelname, start, end):
         effvisc = tII / (srII + 1e-45)
         vtk_dataarray(fvtu, effvisc, 'effective viscosity')
 
+        density = np.fromfile(prefix+'.density.'+suffix, dtype=np.float64, count=nelem)
+        vtk_dataarray(fvtu, density, 'density')
+
         volume = np.fromfile(prefix+'.volume.'+suffix, dtype=np.float64, count=nelem)
         vtk_dataarray(fvtu, volume, 'volume')
 
