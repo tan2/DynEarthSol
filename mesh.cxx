@@ -100,6 +100,7 @@ void triangulate_polygon
 
 void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
+ int optlevel,
  int npoints, int nsegments,
  double *points, int *segments, int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
@@ -115,7 +116,7 @@ void tetrahedralize_polyhedron
 
     // add 'Q' for no output; add multiple 'V's for verbose output
     char verbosity[] = "V";
-    std::sprintf(options, "%spzq%fqq%fqqq%fa%f", verbosity, max_ratio,
+    std::sprintf(options, "%spzs%dq%fqq%fqqq%fa%f", verbosity, optlevel, max_ratio,
                  min_dihedral_angle, max_dihedral_angle, max_volume);
     //std::puts(options);
 
@@ -348,6 +349,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
         /***************************************************************/
 	tetrahedralize_polyhedron(param.mesh.max_ratio,
                                   param.mesh.min_tet_angle, max_tet_size,
+                                  param.mesh.tetgen_optlevel,
                                   npoints, n_init_segments, points,
                                   init_segments, init_segflags,
                                   &nnode, &nelem, &nseg,
@@ -592,7 +594,9 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
 
         /***************************************************************/
 	tetrahedralize_polyhedron(param.mesh.max_ratio,
-                                  param.mesh.min_tet_angle, 40*d*d*d,
+                                  param.mesh.min_tet_angle,
+                                  40*d*d*d,
+                                  param.mesh.tetgen_optlevel,
                                   npoints, n_init_segments, points,
                                   init_segments, init_segflags,
                                   &nnode, &nelem, &nseg,

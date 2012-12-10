@@ -34,6 +34,8 @@ static void declare_parameters(po::options_description &cfg,
     cfg.add_options()
         ("mesh.meshing_option", po::value<int>(&p.mesh.meshing_option)->default_value(1),
          "How to create the new mesh?")
+        ("mesh.tetgen_optlevel", po::value<int>(&p.mesh.tetgen_optlevel)->default_value(3),
+         "Optimization level for tetgen. 0: no optimization; 1: multiple edge filps; 2: 1 & free vertex deletion; 3: 2 & new vertex insertion. High optimization level could slow down the speed of mesh generation. For 3D only.")
 
         ("mesh.xlength", po::value<double>(&p.mesh.xlength)->required(),
          "Length of x (in meters)")
