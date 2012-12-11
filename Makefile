@@ -140,11 +140,11 @@ tetgen/tetgen.o: tetgen/tetgen.cxx $(TET_INCS)
 	$(CXX) $(CXXFLAGS) -DNDEBUG -DTETLIBRARY -Wno-unused-but-set-variable -Wno-int-to-pointer-cast -c $< -o $@
 
 $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
-	(cd $(C3X3_DIR); make)
+	@+$(MAKE) -C $(C3X3_DIR)
 
 deepclean:
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
-	(cd $(C3X3_DIR); make clean)
+	@+$(MAKE) -C $(C3X3_DIR) clean
 
 clean:
 	@rm -f $(OBJS) $(EXE)
