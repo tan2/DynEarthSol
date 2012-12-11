@@ -464,7 +464,10 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
         double *s = (*var.stress)[e];
         double vol = (*var.volume)[e];
 
-        double buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+        double buoy = 0;
+        if (param.control.gravity != 0)
+            buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             double *f = force[conn[i]];
 #ifdef THREED
