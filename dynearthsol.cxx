@@ -361,58 +361,8 @@ void update_strain_rate(const Variables& var, tensord2& strain_rate)
 }
 
 
-void apply_damping(const Param& param, const Variables& var, arrayd2& force)
+static void apply_stress_bcs(const Param& param, const Variables& var, arrayd2& force)
 {
-    // flatten 2d arrays to simplify indexing
-    double* ff = force.data();
-    const double* v = var.vel->data();
-    const double small_vel = 1e-13;
-    #pragma omp parallel for default(none)          \
-        shared(var, param, ff, v)
-    for (int i=0; i<var.nnode*NDIMS; ++i) {
-        if (std::fabs(v[i]) > small_vel) {
-            ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
-        }
-    }
-}
-
-
-void update_force(const Param& param, const Variables& var, arrayd2& force)
-{
-    std::fill_n(force.data(), var.nnode*NDIMS, 0);
-
-    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
-        #pragma omp parallel for default(none)                  \
-            shared(egroup, param, var, force)
-        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
-            int e = (*egroup)[ee];
-    {
-        const int *conn = (*var.connectivity)[e];
-        const double *shpdx = (*var.shpdx)[e];
-#ifdef THREED
-        const double *shpdy = (*var.shpdy)[e];
-#endif
-        const double *shpdz = (*var.shpdz)[e];
-        double *s = (*var.stress)[e];
-        double vol = (*var.volume)[e];
-
-        double buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            double *f = force[conn[i]];
-#ifdef THREED
-            f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-            f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-            f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
-#else
-            f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-            f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
-#endif
-        }
-    }
-        } // end of ee
-    }
-
-
     // Wrinkler foundation
     if (param.bc.wrinkler_foundation && param.control.gravity != 0) {
         const int bottom_bdry = bdry_order.find(BOUNDZ0)->second;
@@ -471,6 +421,61 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
             }
         }
     }
+}
+
+
+static void apply_damping(const Param& param, const Variables& var, arrayd2& force)
+{
+    // flatten 2d arrays to simplify indexing
+    double* ff = force.data();
+    const double* v = var.vel->data();
+    const double small_vel = 1e-13;
+    #pragma omp parallel for default(none)          \
+        shared(var, param, ff, v)
+    for (int i=0; i<var.nnode*NDIMS; ++i) {
+        if (std::fabs(v[i]) > small_vel) {
+            ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
+        }
+    }
+}
+
+
+void update_force(const Param& param, const Variables& var, arrayd2& force)
+{
+    std::fill_n(force.data(), var.nnode*NDIMS, 0);
+
+    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
+        #pragma omp parallel for default(none)                  \
+            shared(egroup, param, var, force)
+        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
+            int e = (*egroup)[ee];
+    {
+        const int *conn = (*var.connectivity)[e];
+        const double *shpdx = (*var.shpdx)[e];
+#ifdef THREED
+        const double *shpdy = (*var.shpdy)[e];
+#endif
+        const double *shpdz = (*var.shpdz)[e];
+        double *s = (*var.stress)[e];
+        double vol = (*var.volume)[e];
+
+        double buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            double *f = force[conn[i]];
+#ifdef THREED
+            f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+            f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+            f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+#else
+            f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+            f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+#endif
+        }
+    }
+        } // end of ee
+    }
+
+    apply_stress_bcs(param, var, force);
 
     if (param.control.damping_factor != 0) {
         apply_damping(param, var, force);
