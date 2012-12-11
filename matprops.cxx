@@ -18,9 +18,9 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   alpha(p.mat.alpha),
   bulk_modulus(p.mat.bulk_modulus),
   shear_modulus(p.mat.shear_modulus),
-  pln(p.mat.pln),
-  acoeff(p.mat.acoeff),
-  eactiv(p.mat.eactiv),
+  visc_exponent(p.mat.visc_exponent),
+  visc_coefficient(p.mat.visc_coefficient),
+  visc_activation_energy(p.mat.visc_activation_energy),
   heat_capacity(p.mat.heat_capacity),
   therm_cond(p.mat.therm_cond),
   pls0(p.mat.pls0),
@@ -75,10 +75,10 @@ double MatProps::visc(int e) const
     edot = std::max(edot, min_strain_rate);
 
     // viscosity law from Chen and Morgan, JGR, 1990
-    double pow = 1 / pln[m] - 1;
-    double pow1 = -1 / pln[m];
-    double visc = 0.25 * std::pow(edot, pow) * std::pow(0.75 * acoeff[m], pow1)
-        * std::exp(eactiv[m] / (pln[m] * gas_constant * T)) * 1e6;
+    double pow = 1 / visc_exponent[m] - 1;
+    double pow1 = -1 / visc_exponent[m];
+    double visc = 0.25 * std::pow(edot, pow) * std::pow(0.75 * visc_coefficient[m], pow1)
+        * std::exp(visc_activation_energy[m] / (visc_exponent[m] * gas_constant * T)) * 1e6;
 
     // applying min & max limits
     visc = std::min(std::max(visc, visc_min), visc_max);

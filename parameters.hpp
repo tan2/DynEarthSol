@@ -79,9 +79,9 @@ struct Mat {
     double_vec bulk_modulus;
     double_vec shear_modulus;
 
-    double_vec pln;
-    double_vec acoeff;
-    double_vec eactiv;
+    double_vec visc_exponent;
+    double_vec visc_coefficient;
+    double_vec visc_activation_energy;
 
     double_vec heat_capacity;
     double_vec therm_cond;

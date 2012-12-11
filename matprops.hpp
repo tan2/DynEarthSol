@@ -39,7 +39,7 @@ private:
 
     const double_vec &rho0, &alpha;
     const double_vec &bulk_modulus, &shear_modulus;
-    const double_vec &pln, &acoeff, &eactiv;
+    const double_vec &visc_exponent, &visc_coefficient, &visc_activation_energy;
     const double_vec &heat_capacity, &therm_cond;
     const double_vec &pls0, &pls1;
     const double_vec &cohesion0, &cohesion1;
