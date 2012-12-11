@@ -363,20 +363,25 @@ void update_strain_rate(const Variables& var, tensord2& strain_rate)
 
 static void apply_stress_bcs(const Param& param, const Variables& var, arrayd2& force)
 {
-    // Wrinkler foundation
+    // TODO: add water loading from the surface boundary
+
+    // Wrinkler foundation for the bottom boundary
     if (param.bc.wrinkler_foundation && param.control.gravity != 0) {
         const int bottom_bdry = bdry_order.find(BOUNDZ0)->second;
-        const auto& bdry = var.bfacets[bottom_bdry];
+        const auto& bottom = var.bfacets[bottom_bdry];
         const auto& coord = *var.coord;
-        for (std::size_t i=0; i<bdry.size(); ++i) {
-            int e = bdry[i].first;
+        // loops over all bottom facets
+        for (std::size_t i=0; i<bottom.size(); ++i) {
+            // this facet belongs to element e
+            int e = bottom[i].first;
+            // this facet is the f-th facet of e
+            int f = bottom[i].second;
             const int *conn = (*var.connectivity)[e];
-            int facet = bdry[i].second;
 
-            int n0 = conn[NODE_OF_FACET[facet][0]];
-            int n1 = conn[NODE_OF_FACET[facet][1]];
+            int n0 = conn[NODE_OF_FACET[f][0]];
+            int n1 = conn[NODE_OF_FACET[f][1]];
 #ifdef THREED
-            int n2 = conn[NODE_OF_FACET[facet][2]];
+            int n2 = conn[NODE_OF_FACET[f][2]];
 
             // vectors: n0-n1 and n0-n2
             double v01[NDIMS], v02[NDIMS];
