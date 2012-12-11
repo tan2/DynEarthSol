@@ -48,7 +48,6 @@ static void allocate_variables(Variables& var)
 
 static void create_matprops(const Param &par, Variables &var)
 {
-    // TODO: get material properties from cfg file
     var.mat = new MatProps(par, var);
 }
 
@@ -363,6 +362,8 @@ void update_strain_rate(const Variables& var, tensord2& strain_rate)
 
 static void apply_stress_bcs(const Param& param, const Variables& var, arrayd2& force)
 {
+    // TODO: add general stress (Neumann) bcs
+
     // TODO: add water loading from the surface boundary
 
     // Wrinkler foundation for the bottom boundary
