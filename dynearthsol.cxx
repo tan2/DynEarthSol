@@ -361,6 +361,22 @@ void update_strain_rate(const Variables& var, tensord2& strain_rate)
 }
 
 
+void apply_damping(const Param& param, const Variables& var, arrayd2& force)
+{
+    // flatten 2d arrays to simplify indexing
+    double* ff = force.data();
+    const double* v = var.vel->data();
+    const double small_vel = 1e-13;
+    #pragma omp parallel for default(none)          \
+        shared(var, param, ff, v)
+    for (int i=0; i<var.nnode*NDIMS; ++i) {
+        if (std::fabs(v[i]) > small_vel) {
+            ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
+        }
+    }
+}
+
+
 void update_force(const Param& param, const Variables& var, arrayd2& force)
 {
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
@@ -456,20 +472,8 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
         }
     }
 
-
-    // damping
     if (param.control.damping_factor != 0) {
-        // flatten 2d arrays to simplify indexing
-        double* ff = force.data();
-        const double* v = var.vel->data();
-        const double small_vel = 1e-13;
-        #pragma omp parallel for default(none)  \
-            shared(var, param, ff, v)
-        for (int i=0; i<var.nnode*NDIMS; ++i) {
-            if (std::fabs(v[i]) > small_vel) {
-                ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
-            }
-        }
+        apply_damping(param, var, force);
     }
 }
 
