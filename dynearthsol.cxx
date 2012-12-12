@@ -107,6 +107,46 @@ void compute_dvoldt(const Variables &var, double_vec &tmp,
 }
 
 
+double get_prem_pressure(double depth)
+{
+    // reference pressure profile from isotropic PREM model
+    const int nlayers = 46;
+    const double ref_depth[] = { 0e3,    3e3,    15e3,   24.4e3, 40e3,
+                                 60e3,   80e3,   115e3,  150e3,  185e3,
+                                 220e3,  265e3,  310e3,  355e3,  400e3,
+                                 450e3,  500e3,  550e3,  600e3,  635e3,
+                                 670e3,  721e3,  771e3,  871e3,  971e3,
+                                 1071e3, 1171e3, 1271e3, 1371e3, 1471e3,
+                                 1571e3, 1671e3, 1771e3, 1871e3, 1971e3,
+                                 2071e3, 2171e3, 2271e3, 2371e3, 2471e3,
+                                 2571e3, 2671e3, 2741e3, 2771e3, 2871e3,
+                                 2891e3 };
+
+    // pressure in PREM table is given in kilobar, convert to 10^8 Pa
+    const double ref_pressure[] = { 0e8,      0.3e8,    3.3e8,    6.0e8,    11.2e8,
+                                    17.8e8,   24.5e8,   36.1e8,   47.8e8,   59.4e8,
+                                    71.1e8,   86.4e8,   102.0e8,  117.7e8,  133.5e8,
+                                    152.2e8,  171.3e8,  190.7e8,  210.4e8,  224.3e8,
+                                    238.3e8,  260.7e8,  282.9e8,  327.6e8,  372.8e8,
+                                    418.6e8,  464.8e8,  511.6e8,  558.9e8,  606.8e8,
+                                    655.2e8,  704.1e8,  753.5e8,  803.6e8,  854.3e8,
+                                    905.6e8,  957.6e8,  1010.3e8, 1063.8e8, 1118.2e8,
+                                    1173.4e8, 1229.7e8, 1269.7e8, 1287.0e8, 1345.6e8,
+                                    1357.5e8 };
+
+    int n;
+    for (n=1; n<nlayers; n++) {
+        if (depth <= ref_depth[n]) break;
+    }
+
+    // linear interpolation
+    double pressure = ref_pressure[n-1] + depth *
+        (ref_pressure[n] - ref_pressure[n-1]) / (ref_depth[n] - ref_depth[n-1]);
+
+    return std::max(pressure, 0.0);
+}
+
+
 void initial_stress_state(const Param &param, const Variables &var,
                           tensord2 &stress, tensord2 &strain,
                           double &compensation_pressure)
@@ -117,10 +157,10 @@ void initial_stress_state(const Param &param, const Variables &var,
     }
 
     // lithostatic condition for stress and strain
-    // XXX: compute reference pressure correctly
-    const double rho = var.mat->rho(0);
-    const double ks = var.mat->bulkm(0);
-    compensation_pressure = rho * param.control.gravity * param.mesh.zlength;
+    int earthlike_reference_pressure = 0;
+    double rho = var.mat->rho(0);
+    double ks = var.mat->bulkm(0);
+
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
         double zcenter = 0;
@@ -129,11 +169,26 @@ void initial_stress_state(const Param &param, const Variables &var,
         }
         zcenter /= NODES_PER_ELEM;
 
-        for (int i=0; i<NDIMS; ++i) {
-            stress[e][i] = rho * param.control.gravity * zcenter;
-            strain[e][i] = rho * param.control.gravity * zcenter / ks / NDIMS;
+        if (earthlike_reference_pressure) {
+            ks = var.mat->bulkm(e);
+            double p = get_prem_pressure(-zcenter);
+            for (int i=0; i<NDIMS; ++i) {
+                stress[e][i] = -p;
+                strain[e][i] = -p / ks / NDIMS;
+            }
+        }
+        else {
+            for (int i=0; i<NDIMS; ++i) {
+                stress[e][i] = rho * param.control.gravity * zcenter;
+                strain[e][i] = rho * param.control.gravity * zcenter / ks / NDIMS;
+            }
         }
     }
+
+    if (earthlike_reference_pressure)
+        compensation_pressure = get_prem_pressure(param.mesh.zlength);
+    else
+        compensation_pressure = rho * param.control.gravity * param.mesh.zlength;
 }
 
 
@@ -187,14 +242,14 @@ void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
 
         // X
         if (flag & BOUNDX0) {
-            v[0] = -param.bc.max_vbc_val;
-            v[1] = 0;
-            v[NDIMS-1] = 0;
+            v[0] = 0;//-param.bc.max_vbc_val;
+            // v[1] = 0;
+            // v[NDIMS-1] = 0;
         }
         else if (flag & BOUNDX1) {
-            v[0] = param.bc.max_vbc_val;
-            v[1] = 0;
-            v[NDIMS-1] = 0;
+            v[0] = 0;//param.bc.max_vbc_val;
+            // v[1] = 0;
+            // v[NDIMS-1] = 0;
         }
 #ifdef THREED
         // Y
@@ -207,7 +262,7 @@ void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
 #endif
         // Z
         if (flag & BOUNDZ0) {
-            //v[NDIMS-1] = 0;
+            v[NDIMS-1] = 0;
         }
         else if (flag & BOUNDZ1) {
             //v[NDIMS-1] = 0;
