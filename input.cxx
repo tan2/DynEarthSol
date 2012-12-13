@@ -75,6 +75,10 @@ static void declare_parameters(po::options_description &cfg,
          "Scaling factor for inertial (a large number)")
         ("control.damping_factor", po::value<double>(&p.control.damping_factor)->default_value(0.8),
          "A factor for force damping (0-1)")
+
+        ("control.ref_pressure_option", po::value<int>(&p.control.ref_pressure_option)->default_value(0),
+         "How to define reference pressure? 0: using density of the 0-th element to compute lithostatic pressure; 1: computing rerence pressure from the PREM model.")
+
         ;
 
     cfg.add_options()

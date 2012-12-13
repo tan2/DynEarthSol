@@ -169,7 +169,7 @@ void initial_stress_state(const Param &param, const Variables &var,
         }
         zcenter /= NODES_PER_ELEM;
 
-        if (earthlike_reference_pressure) {
+        if (param.control.ref_pressure_option == 1) {
             ks = var.mat->bulkm(e);
             double p = get_prem_pressure(-zcenter);
             for (int i=0; i<NDIMS; ++i) {
@@ -177,7 +177,7 @@ void initial_stress_state(const Param &param, const Variables &var,
                 strain[e][i] = -p / ks / NDIMS;
             }
         }
-        else {
+        else if (param.control.ref_pressure_option == 0) {
             for (int i=0; i<NDIMS; ++i) {
                 stress[e][i] = rho * param.control.gravity * zcenter;
                 strain[e][i] = rho * param.control.gravity * zcenter / ks / NDIMS;
@@ -185,10 +185,17 @@ void initial_stress_state(const Param &param, const Variables &var,
         }
     }
 
-    if (earthlike_reference_pressure)
-        compensation_pressure = get_prem_pressure(param.mesh.zlength);
-    else
+    switch (param.control.ref_pressure_option) {
+    case 0:
         compensation_pressure = rho * param.control.gravity * param.mesh.zlength;
+        break;
+    case 1:
+        compensation_pressure = get_prem_pressure(param.mesh.zlength);
+        break;
+    default:
+        std::cerr << "Error: unknown option for control.ref_pressure_option: " << param.control.ref_pressure_option << '\n';
+        std::exit(1);
+    }
 }
 
 

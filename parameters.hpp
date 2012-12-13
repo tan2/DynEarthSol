@@ -53,6 +53,7 @@ struct Control {
     double gravity;
     double inertial_scaling;
     double damping_factor;
+    int ref_pressure_option;
 };
 
 struct BC {
