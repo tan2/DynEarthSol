@@ -238,7 +238,27 @@ void initial_temperature(const Param &param, const Variables &var, double_vec &t
 
 void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
 {
-    // TODO: adding different types of vbcs later
+    // flags for vbcs
+    // 0: all components free
+    // 1: normal component fixed, shear components free
+    // 2: normal component free, shear components fixed at 0
+    // 3: normal component fixed, shear components fixed at 0
+    // 4: normal component free, shear component (not z) fixed, only in 3D
+    // 5: normal component fixed at 0, shear component (not z) fixed, only in 3D
+    const int vbc_x0 = 1;
+    const int vbc_x1 = 1;
+    const int vbc_y0 = 3;
+    const int vbc_y1 = 3;
+    const int vbc_z0 = 0;
+    const int vbc_z1 = 0;
+
+    const double vbc_val_x0 = -param.bc.max_vbc_val;
+    const double vbc_val_x1 = param.bc.max_vbc_val;
+    const double vbc_val_y0 = 0;
+    const double vbc_val_y1 = 0;
+    const double vbc_val_z0 = 0;
+    const double vbc_val_z1 = 0;
+
 
     // diverging x-boundary
     #pragma omp parallel for default(none) \
@@ -249,30 +269,198 @@ void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
 
         // X
         if (flag & BOUNDX0) {
-            v[0] = 0;//-param.bc.max_vbc_val;
-            // v[1] = 0;
-            // v[NDIMS-1] = 0;
+            switch (vbc_x0) {
+            case 0:
+                break;
+            case 1:
+                v[0] = vbc_val_x0;
+                break;
+            case 2:
+                v[1] = 0;
+#ifdef THREED
+                v[2] = 0;
+#endif
+                break;
+            case 3:
+                v[0] = vbc_val_x0;
+                v[1] = 0;
+#ifdef THREED
+                v[2] = 0;
+#endif
+                break;
+#ifdef THREED
+            case 4:
+                v[1] = vbc_val_x0;
+                v[2] = 0;
+                break;
+            case 5:
+                v[0] = 0;
+                v[1] = vbc_val_x0;
+                v[2] = 0;
+                break;
+#endif
+            }
         }
         else if (flag & BOUNDX1) {
-            v[0] = 0;//param.bc.max_vbc_val;
-            // v[1] = 0;
-            // v[NDIMS-1] = 0;
+            switch (vbc_x1) {
+            case 0:
+                break;
+            case 1:
+                v[0] = vbc_val_x1;
+                break;
+            case 2:
+                v[1] = 0;
+#ifdef THREED
+                v[2] = 0;
+#endif
+                break;
+            case 3:
+                v[0] = vbc_val_x1;
+                v[1] = 0;
+#ifdef THREED
+                v[2] = 0;
+#endif
+                break;
+#ifdef THREED
+            case 4:
+                v[1] = vbc_val_x1;
+                v[2] = 0;
+                break;
+            case 5:
+                v[0] = 0;
+                v[1] = vbc_val_x1;
+                v[2] = 0;
+                break;
+#endif
+            }
         }
 #ifdef THREED
         // Y
         if (flag & BOUNDY0) {
-            v[1] = 0;
+            switch (vbc_y0) {
+            case 0:
+                break;
+            case 1:
+                v[1] = vbc_val_y0;
+                break;
+            case 2:
+                v[0] = 0;
+                v[2] = 0;
+                break;
+            case 3:
+                v[1] = vbc_val_y0;
+                v[1] = 0;
+                v[2] = 0;
+                break;
+            case 4:
+                v[0] = vbc_val_y0;
+                v[2] = 0;
+                break;
+            case 5:
+                v[1] = 0;
+                v[0] = vbc_val_y0;
+                v[2] = 0;
+                break;
+            }
         }
         else if (flag & BOUNDY1) {
-            v[1] = 0;
+            switch (vbc_y1) {
+            case 0:
+                break;
+            case 1:
+                v[1] = vbc_val_y1;
+                break;
+            case 2:
+                v[0] = 0;
+                v[2] = 0;
+                break;
+            case 3:
+                v[1] = vbc_val_y1;
+                v[1] = 0;
+                v[2] = 0;
+                break;
+            case 4:
+                v[0] = vbc_val_y1;
+                v[2] = 0;
+                break;
+            case 5:
+                v[1] = 0;
+                v[0] = vbc_val_y1;
+                v[2] = 0;
+                break;
+            }
         }
 #endif
         // Z
         if (flag & BOUNDZ0) {
-            v[NDIMS-1] = 0;
+            switch (vbc_z0) {
+            case 0:
+                break;
+            case 1:
+                v[NDIMS-1] = vbc_val_z0;
+                break;
+            case 2:
+                v[0] = 0;
+#ifdef THREED
+                v[1] = 0;
+#endif
+                break;
+            case 3:
+                v[0] = 0;
+#ifdef THREED
+                v[1] = 0;
+#endif
+                v[NDIMS-1] = vbc_val_z0;
+                break;
+            case 4:
+                v[0] = vbc_val_z0;
+#ifdef THREED
+                v[1] = vbc_val_z0;
+#endif
+                break;
+            case 5:
+                v[0] = vbc_val_z0;
+#ifdef THREED
+                v[1] = vbc_val_z0;
+#endif
+                v[NDIMS-1] = 0;
+                break;
+            }
         }
         else if (flag & BOUNDZ1) {
-            //v[NDIMS-1] = 0;
+            switch (vbc_z1) {
+            case 0:
+                break;
+            case 1:
+                v[NDIMS-1] = vbc_val_z1;
+                break;
+            case 2:
+                v[0] = 0;
+#ifdef THREED
+                v[1] = 0;
+#endif
+                break;
+            case 3:
+                v[0] = 0;
+#ifdef THREED
+                v[1] = 0;
+#endif
+                v[NDIMS-1] = vbc_val_z1;
+                break;
+            case 4:
+                v[0] = vbc_val_z1;
+#ifdef THREED
+                v[1] = vbc_val_z1;
+#endif
+                break;
+            case 5:
+                v[0] = vbc_val_z1;
+#ifdef THREED
+                v[1] = vbc_val_z1;
+#endif
+                v[NDIMS-1] = 0;
+                break;
+            }
         }
     }
 }
