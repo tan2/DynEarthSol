@@ -59,11 +59,11 @@ static void declare_parameters(po::options_description &cfg,
 
         // for meshing_option = 2 only
         /* read the value as string, then parse as two numbers later */
-        ("mesh.refined_zonex", po::value<std::string>(),
+        ("mesh.refined_zonex", po::value<std::string>()->default_value("[0.4, 0,6]"),
          "Refining portion of xlength ([d0,d1]; 0<=d0<=d1<=1), for meshing_option=2 only")
-        ("mesh.refined_zoney", po::value<std::string>(),
+        ("mesh.refined_zoney", po::value<std::string>()->default_value("[0.4, 0.6]"),
          "Refining portion of ylength ([d0,d1]; 0<=d0<=d1<=1), for meshing_option=2 only, for 3D only")
-        ("mesh.refined_zonez", po::value<std::string>(),
+        ("mesh.refined_zonez", po::value<std::string>()->default_value("[0.8, 1]"),
          "Refining portion of zlength ([d0,d1]; 0<=d0<=d1<=1), for meshing_option=2 only")
         ;
 
@@ -109,43 +109,43 @@ static void declare_parameters(po::options_description &cfg,
          "Max. value of thermal diffusivity (in m/s^2)")
 
         // these parameters need to parsed later
-        ("mat.rho0", po::value<std::string>(),
+        ("mat.rho0", po::value<std::string>()->default_value("[3210]"),
          "Density of the materials at 0 Pa and 273 K '[d0, d1, d2, ...]' (in kg/m^3)")
-        ("mat.alpha", po::value<std::string>(),
+        ("mat.alpha", po::value<std::string>()->default_value("[3e-5]"),
          "Volumetic thermal expansion of the materials '[d0, d1, d2, ...]' (in 1/Kelvin)")
 
-        ("mat.bulk_modulus", po::value<std::string>(),
+        ("mat.bulk_modulus", po::value<std::string>()->default_value("[128.2e9]"),
          "Bulk modulus of the materials '[d0, d1, d2, ...]' (in Pa)")
-        ("mat.shear_modulus", po::value<std::string>(),
+        ("mat.shear_modulus", po::value<std::string>()->default_value("[80.5e9]"),
          "Shear modulus of the materials '[d0, d1, d2, ...]' (in Pa)")
 
-        ("mat.visc_exponent", po::value<std::string>(),
+        ("mat.visc_exponent", po::value<std::string>()->default_value("[3.05]"),
          "Exponents of non-linear viscosity of the materials'[d0, d1, d2, ...]'")
-        ("mat.visc_coefficient", po::value<std::string>(),
+        ("mat.visc_coefficient", po::value<std::string>()->default_value("[1.25e-1]"),
          "Pre-exponent coefficient of non-linear viscosity of the materials '[d0, d1, d2, ...]'")
-        ("mat.visc_activation_energy", po::value<std::string>(),
+        ("mat.visc_activation_energy", po::value<std::string>()->default_value("[3.76e5]"),
          "Activation energy of non-linear viscosity of the materials '[d0, d1, d2, ...]' (in J/mol)")
 
-        ("mat.heat_capacity", po::value<std::string>(),
+        ("mat.heat_capacity", po::value<std::string>()->default_value("[1e3]"),
          "Heat capacity (isobaric) of the materials '[d0, d1, d2, ...]' (in J/kg/Kelvin)")
-        ("mat.therm_cond", po::value<std::string>(),
+        ("mat.therm_cond", po::value<std::string>()->default_value("[3]"),
          "Thermal conductivity of the materials '[d0, d1, d2, ...]' (in W/m/Kelvin)")
 
-        ("mat.pls0", po::value<std::string>(),
+        ("mat.pls0", po::value<std::string>()->default_value("[0]"),
          "Plastic strain of the materials where weakening starts '[d0, d1, d2, ...]' (no unit)")
-        ("mat.pls1", po::value<std::string>(),
+        ("mat.pls1", po::value<std::string>()->default_value("[0.1]"),
          "Plastic strain of the materials where weakening saturates '[d0, d1, d2, ...]' (no unit)")
-        ("mat.cohesion0", po::value<std::string>(),
+        ("mat.cohesion0", po::value<std::string>()->default_value("[4e7]"),
          "Cohesion of the materials when weakening starts '[d0, d1, d2, ...]' (in Pa)")
-        ("mat.cohesion1", po::value<std::string>(),
+        ("mat.cohesion1", po::value<std::string>()->default_value("[4e6]"),
          "Cohesion of the materials when weakening saturates '[d0, d1, d2, ...]' (in Pa)")
-        ("mat.friction_angle0", po::value<std::string>(),
+        ("mat.friction_angle0", po::value<std::string>()->default_value("[30]"),
          "Friction angle of the materials when weakening starts '[d0, d1, d2, ...]' (in degree)")
-        ("mat.friction_angle1", po::value<std::string>(),
+        ("mat.friction_angle1", po::value<std::string>()->default_value("[5]"),
          "Friction angle of the materials when weakening saturates '[d0, d1, d2, ...]' (in degree)")
-        ("mat.dilation_angle0", po::value<std::string>(),
+        ("mat.dilation_angle0", po::value<std::string>()->default_value("[0]"),
          "Dilation angle of the materials when weakening starts '[d0, d1, d2, ...]' (in degree)")
-        ("mat.dilation_angle1", po::value<std::string>(),
+        ("mat.dilation_angle1", po::value<std::string>()->default_value("[0]"),
          "Dilation angle of the materials when weakening saturates '[d0, d1, d2, ...]' (in degree)")
         ;
 }
