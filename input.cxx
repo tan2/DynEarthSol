@@ -106,7 +106,7 @@ static void declare_parameters(po::options_description &cfg,
         ("mat.max_tension", po::value<double>(&p.mat.tension_max)->default_value(1e9),
          "Max. value of tensile stress (in Pa)")
         ("mat.max_thermal_diffusivity", po::value<double>(&p.mat.therm_diff_max)->default_value(5e-6),
-         "Max. value of thermal diffusivity (in m/s^2)")
+         "Max. value of thermal diffusivity (in m^2/s)")
 
         // these parameters need to parsed later
         ("mat.rho0", po::value<std::string>()->default_value("[3210]"),
