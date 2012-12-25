@@ -96,7 +96,7 @@ static void declare_parameters(po::options_description &cfg,
 
     cfg.add_options()
         ("mat.rheology_type", po::value<std::string>()->required(),
-         "Type of rheology, either 'elastic', 'viscous', 'maxwell', 'elasto-plastic', or 'elasto-viscous-plastic'")
+         "Type of rheology, either 'elastic', 'viscous', 'maxwell', 'elasto-plastic', or 'elasto-visco-plastic'")
         ("mat.num_material", po::value<int>(&p.mat.nmat)->default_value(1),
          "Number of material types")
         ("mat.max_viscosity", po::value<double>(&p.mat.visc_max)->default_value(1e24),
@@ -333,7 +333,7 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             p.mat.rheol_type = MatProps::rh_maxwell;
         else if (str == std::string("elasto-plastic"))
             p.mat.rheol_type = MatProps::rh_ep;
-        else if (str == std::string("elasto-viscous-plastic"))
+        else if (str == std::string("elasto-visco-plastic"))
             p.mat.rheol_type = MatProps::rh_evp;
         else {
             std::cerr << "Error: unknown rheology: '" << str << "'\n";
