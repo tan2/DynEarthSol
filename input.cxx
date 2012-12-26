@@ -92,6 +92,40 @@ static void declare_parameters(po::options_description &cfg,
          "Using Wrinkler foundation for the bottom boundary?")
         ("bc.wrinkler_delta_rho", po::value<double>(&p.bc.wrinkler_delta_rho)->default_value(0),
          "Excess density of the bottom Wrinkler foundation (in kg/m^3)")
+
+        ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
+         "Type of boundary condtition for left side. Possible type is \n"
+         "0: all components free;\n"
+         "1: normal component fixed, shear components free;\n"
+         "2: normal component free, shear components fixed at 0;\n"
+         "3: normal component fixed, shear components fixed at 0;\n"
+         "4: normal component free, shear component (not z) fixed, only in 3D;\n"
+         "5: normal component fixed at 0, shear component (not z) fixed, only in 3D;\n")
+        ("bc.vbc_x1", po::value<int>(&p.bc.vbc_x1)->default_value(1),
+         "Type of boundary condtition for right side")
+        ("bc.vbc_val_x0", po::value<double>(&p.bc.vbc_val_x0)->default_value(-1e-9),
+         "Value of boundary condtition for left side (if velocity, unit is m/s; if stress, unit is Pa)")
+        ("bc.vbc_val_x1", po::value<double>(&p.bc.vbc_val_x1)->default_value(1e-9),
+         "Value of boundary condtition for right side (if velocity, unit is m/s; if stress, unit is Pa)")
+
+        ("bc.vbc_y0", po::value<int>(&p.bc.vbc_y0)->default_value(0),
+         "Type of boundary condtition for back side")
+        ("bc.vbc_y1", po::value<int>(&p.bc.vbc_y1)->default_value(0),
+         "Type of boundary condtition for front side")
+        ("bc.vbc_val_y0", po::value<double>(&p.bc.vbc_val_y0)->default_value(0),
+         "Value of boundary condtition for back side (if velocity, unit is m/s; if stress, unit is Pa)")
+        ("bc.vbc_val_y1", po::value<double>(&p.bc.vbc_val_y1)->default_value(0),
+         "Value of boundary condtition for front side (if velocity, unit is m/s; if stress, unit is Pa)")
+
+        ("bc.vbc_z0", po::value<int>(&p.bc.vbc_z0)->default_value(0),
+         "Type of boundary condtition for bottom side")
+        ("bc.vbc_z1", po::value<int>(&p.bc.vbc_z1)->default_value(0),
+         "Type of boundary condtition for top side")
+        ("bc.vbc_val_z0", po::value<double>(&p.bc.vbc_val_z0)->default_value(0),
+         "Value of boundary condtition for bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
+        ("bc.vbc_val_z1", po::value<double>(&p.bc.vbc_val_z1)->default_value(0),
+         "Value of boundary condtition for top side (if velocity, unit is m/s; if stress, unit is Pa)")
+
         ;
 
     cfg.add_options()

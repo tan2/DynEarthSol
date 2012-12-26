@@ -64,6 +64,20 @@ struct BC {
 
     double wrinkler_delta_rho;
     int wrinkler_foundation;
+
+    int vbc_x0;
+    int vbc_x1;
+    int vbc_y0;
+    int vbc_y1;
+    int vbc_z0;
+    int vbc_z1;
+
+    double vbc_val_x0;
+    double vbc_val_x1;
+    double vbc_val_y0;
+    double vbc_val_y1;
+    double vbc_val_z0;
+    double vbc_val_z1;
 };
 
 struct Mat {
