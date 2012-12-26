@@ -236,6 +236,13 @@ void initial_temperature(const Param &param, const Variables &var, double_vec &t
 }
 
 
+static bool is_on_boundary(const Variables &var, int node)
+{
+    int flag = (*var.bcflag)[node];
+    return flag & (BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1);
+}
+
+
 void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
 {
     // flags for vbcs
@@ -264,6 +271,10 @@ void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
     #pragma omp parallel for default(none) \
         shared(param, var, vel)
     for (int i=0; i<var.nnode; ++i) {
+
+        // fast path: skip nodes not on boundary
+        if (! is_on_boundary(var, i)) continue;
+
         int flag = (*var.bcflag)[i];
         double *v = vel[i];
 
