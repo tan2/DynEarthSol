@@ -86,8 +86,6 @@ static void declare_parameters(po::options_description &cfg,
          "Surface temperature (in Kelvin)")
         ("bc.mantle_temperature", po::value<double>(&p.bc.mantle_temperature)->default_value(1600),
          "Mantle temperature (in Kelvin)")
-        ("bc.max_vbc_val", po::value<double>(&p.bc.max_vbc_val)->default_value(1e-9),
-         "Magnitude of boundary velocity (in m/s)")
         ("bc.wrinkler_foundation", po::value<int>(&p.bc.wrinkler_foundation)->default_value(1),
          "Using Wrinkler foundation for the bottom boundary?")
         ("bc.wrinkler_delta_rho", po::value<double>(&p.bc.wrinkler_delta_rho)->default_value(0),

@@ -479,7 +479,7 @@ void init(const Param& param, Variables& var)
     *var.volume_old = *var.volume;
     compute_dvoldt(var, *var.tmp0, *var.dvoldt, *var.edvoldt);
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
-                 *var.mass, *var.tmass);
+                 var.max_vbc_val, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
@@ -786,7 +786,7 @@ void update_mesh(const Param& param, Variables& var)
     compute_volume(*var.coord, *var.connectivity, *var.egroups, *var.volume, *var.volume_n);
     compute_dvoldt(var, *var.tmp0, *var.dvoldt, *var.edvoldt);
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
-                 *var.mass, *var.tmass);
+                 var.max_vbc_val, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 }
@@ -814,6 +814,9 @@ int main(int argc, const char* argv[])
     var.time = 0;
     var.steps = 0;
     var.frame = 0;
+
+    // XXX: need to find max_vbc_val in a better way, fix it later...
+    var.max_vbc_val = std::max(std::fabs(param.bc.vbc_val_x0), std::fabs(param.bc.vbc_val_x1));
 
     double start_time = 0;
 #ifdef USE_OMP

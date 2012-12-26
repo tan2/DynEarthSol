@@ -171,7 +171,7 @@ double compute_dt(const Param& param, const Variables& var)
 	minl = std::min(minl, minh);
     }
 
-    double dt_elastic = 0.5 * minl / (param.bc.max_vbc_val * param.control.inertial_scaling);
+    double dt_elastic = 0.5 * minl / (var.max_vbc_val * param.control.inertial_scaling);
 
     // std::cout << "dt: " << dt_maxwell << " " << dt_diffusion
     //           << " " << dt_elastic << "\n";
@@ -184,9 +184,10 @@ double compute_dt(const Param& param, const Variables& var)
 void compute_mass(const Param &param,
                   const std::vector<int_vec> &egroups, const conn_t &connectivity,
                   const double_vec &volume, const MatProps &mat,
+                  double max_vbc_val,
                   double_vec &mass, double_vec &tmass)
 {
-    const double pseudo_speed = param.bc.max_vbc_val * param.control.inertial_scaling;
+    const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
             shared(egroup, mat, connectivity, volume, mass, tmass)

@@ -60,8 +60,6 @@ struct BC {
     double surface_temperature;
     double mantle_temperature;
 
-    double max_vbc_val;
-
     double wrinkler_delta_rho;
     int wrinkler_foundation;
 
@@ -131,6 +129,7 @@ struct Variables {
     int nelem;
     int nseg;
 
+    double max_vbc_val;
     double compensation_pressure;
 
     // These 4 arrays are allocated by external library
