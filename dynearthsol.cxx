@@ -403,6 +403,10 @@ void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
         }
 #endif
         // Z
+
+        // fast path: vz is usually free in the models
+        if (vbc_z0==0 && vbc_z1==0) continue;
+
         if (flag & BOUNDZ0) {
             switch (vbc_z0) {
             case 0:
