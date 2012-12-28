@@ -69,6 +69,7 @@ endif
 ##
 
 SRCS =	\
+	bc.cxx \
 	dynearthsol.cxx \
 	geometry.cxx \
 	ic.cxx \
