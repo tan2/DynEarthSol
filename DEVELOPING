@@ -1,0 +1,38 @@
+The main repository is on:
+  http://www.bitbucket.org/tan2/dynearthsol3d
+
+To get the most timely progress, using Mercurial:
+  hg clone http://www.bitbucket.org/tan2/dynearthsol3d
+
+=============================================================================
+
+To-do list:
+
+High priority:
+* Simple benchmark for rheology
+* Scaling test
+* See TODO in elastio_plastic(), rheology.cxx
+* Read/write .poly file
+* Remesh
+* Interpolation
+* Multi-material
+
+Low priority:
+* Restart
+* Stress BC
+* Water loading
+* Heatflux BC
+* Frictional heating
+* Adiabatic cooling (adiabatic temperature profile)
+* Internal heating
+
+
+=============================================================================
+
+Desing notes:
+
+* Avoid C++ stream for bulk ouput, as stream is slower than C-style IO.
+* Avoid creating/destroying objects in inner for-loops.
+* Avoid static variables and global variables.
+
+
