@@ -814,6 +814,11 @@ void update_mesh(const Param& param, Variables& var)
 
 int main(int argc, const char* argv[])
 {
+    double start_time = 0;
+#ifdef USE_OMP
+    start_time = omp_get_wtime();
+#endif
+
     //
     // read command line
     //
@@ -836,11 +841,6 @@ int main(int argc, const char* argv[])
     var.frame = 0;
 
     var.max_vbc_val = find_max_vbc(param.bc);
-
-    double start_time = 0;
-#ifdef USE_OMP
-    start_time = omp_get_wtime();
-#endif
 
     if (! param.sim.is_restarting) {
         init(param, var);
