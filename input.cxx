@@ -339,6 +339,10 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             p.bc.wrinkler_foundation = 0;
             std::cerr << "Warning: no gravity, Wrinkler foundation is turned off.\n";
         }
+        if ( p.bc.wrinkler_foundation && p.bc.vbc_z0 != 0 ) {
+            std::cerr << "Error: vbc_z0 is not 0, but Wrinkler foundation is turned on.\n";
+            std::exit(1);
+        }
     }
 
     //
