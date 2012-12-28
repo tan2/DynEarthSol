@@ -134,6 +134,9 @@ double get_prem_pressure(double depth)
                                     1173.4e8, 1229.7e8, 1269.7e8, 1287.0e8, 1345.6e8,
                                     1357.5e8 };
 
+    // PREM model doesn't work if depth is above sea level, always returns 0 pressure
+    if (depth <= 0) return 0;
+
     int n;
     for (n=1; n<nlayers; n++) {
         if (depth <= ref_depth[n]) break;
@@ -143,7 +146,7 @@ double get_prem_pressure(double depth)
     double pressure = ref_pressure[n-1] + depth *
         (ref_pressure[n] - ref_pressure[n-1]) / (ref_depth[n] - ref_depth[n-1]);
 
-    return std::max(pressure, 0.0);
+    return pressure;
 }
 
 
