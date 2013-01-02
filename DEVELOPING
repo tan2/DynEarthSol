@@ -12,6 +12,7 @@ High priority:
 * Simple benchmark for rheology
 * Scaling test
 * See TODO in elastio_plastic(), rheology.cxx
+* Rotating stress
 * Read/write .poly file
 * Remesh
 * Interpolation
