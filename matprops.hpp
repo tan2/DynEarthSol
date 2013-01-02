@@ -48,11 +48,11 @@ private:
 
     // alias to field variables in var
     // ie. var.mat.temperature == var.temperature
-    const arrayd2 &coord;
+    const array_t &coord;
     const conn_t &connectivity;
     const double_vec &temperature;
-    const tensord2 &stress;
-    const tensord2 &strain_rate;
+    const tensor_t &stress;
+    const tensor_t &strain_rate;
 
     void plastic_weakening(int e, double pls,
                            double &cohesion, double &friction_angle,

@@ -32,7 +32,7 @@ double find_max_vbc(const BC &bc)
 }
 
 
-void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
+void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 {
     // meaning of vbc flags (odd: free; even: fixed) --
     // 0: all components free
@@ -258,7 +258,7 @@ void apply_vbcs(const Param &param, const Variables &var, arrayd2 &vel)
 }
 
 
-void apply_stress_bcs(const Param& param, const Variables& var, arrayd2& force)
+void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 {
     // TODO: add general stress (Neumann) bcs
 

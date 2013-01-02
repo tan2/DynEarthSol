@@ -35,12 +35,12 @@ static void allocate_variables(Variables& var)
     var.plstrain = new double_vec(e);
     var.tmp0 = new double_vec(std::max(n,e));
 
-    var.vel = new arrayd2(n, 0);
-    var.force = new arrayd2(n, 0);
+    var.vel = new array_t(n, 0);
+    var.force = new array_t(n, 0);
 
-    var.strain_rate = new tensord2(e, 0);
-    var.strain = new tensord2(e, 0);
-    var.stress = new tensord2(e, 0);
+    var.strain_rate = new tensor_t(e, 0);
+    var.strain = new tensor_t(e, 0);
+    var.stress = new tensor_t(e, 0);
 
     var.shpdx = new shapefn(e);
     if (NDIMS == 3) var.shpdy = new shapefn(e);
@@ -184,7 +184,7 @@ void update_temperature(const Param &param, const Variables &var,
 }
 
 
-void update_strain_rate(const Variables& var, tensord2& strain_rate)
+void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 {
     double *v[NODES_PER_ELEM];
 
@@ -253,7 +253,7 @@ void update_strain_rate(const Variables& var, tensord2& strain_rate)
 }
 
 
-static void apply_damping(const Param& param, const Variables& var, arrayd2& force)
+static void apply_damping(const Param& param, const Variables& var, array_t& force)
 {
     // flatten 2d arrays to simplify indexing
     double* ff = force.data();
@@ -269,7 +269,7 @@ static void apply_damping(const Param& param, const Variables& var, arrayd2& for
 }
 
 
-void update_force(const Param& param, const Variables& var, arrayd2& force)
+void update_force(const Param& param, const Variables& var, array_t& force)
 {
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
 
@@ -318,7 +318,7 @@ void update_force(const Param& param, const Variables& var, arrayd2& force)
 void rotate_stress() {};
 
 
-void update_velocity(const Variables& var, arrayd2& vel)
+void update_velocity(const Variables& var, array_t& vel)
 {
     const double* m = &(*var.mass)[0];
     // flatten 2d arrays to simplify indexing
@@ -333,7 +333,7 @@ void update_velocity(const Variables& var, arrayd2& vel)
 }
 
 
-static void update_coordinate(const Variables& var, arrayd2& coord)
+static void update_coordinate(const Variables& var, array_t& coord)
 {
     double* x = var.coord->data();
     const double* v = var.vel->data();

@@ -409,7 +409,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
     var.nnode = nnode;
     var.nelem = nelem;
     var.nseg = nseg;
-    var.coord = new arrayd2(pcoord, nnode);
+    var.coord = new array_t(pcoord, nnode);
     var.connectivity = new conn_t(pconnectivity, nelem);
     var.segment = new segment_t(psegment, nseg);
     var.segflag = new segflag_t(psegflag, nseg);
@@ -658,7 +658,7 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
     var.nnode = nnode;
     var.nelem = nelem;
     var.nseg = nseg;
-    var.coord = new arrayd2(pcoord, nnode);
+    var.coord = new array_t(pcoord, nnode);
     var.connectivity = new conn_t(pconnectivity, nelem);
     var.segment = new segment_t(psegment, nseg);
     var.segflag = new segflag_t(psegflag, nseg);

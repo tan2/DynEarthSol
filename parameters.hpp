@@ -13,8 +13,8 @@ typedef std::pair<double,double> double_pair;
 typedef std::vector<double> double_vec;
 typedef std::vector<int> int_vec;
 
-typedef Array2D<double,NDIMS> arrayd2;
-typedef Array2D<double,NSTR> tensord2;
+typedef Array2D<double,NDIMS> array_t;
+typedef Array2D<double,NSTR> tensor_t;
 typedef Array2D<double,NODES_PER_ELEM> shapefn;
 
 typedef Array2D<int,NODES_PER_ELEM> conn_t;
@@ -133,7 +133,7 @@ struct Variables {
     double compensation_pressure;
 
     // These 4 arrays are allocated by external library
-    arrayd2 *coord;
+    array_t *coord;
     conn_t *connectivity;
     segment_t *segment;
     segflag_t *segflag;
@@ -149,8 +149,8 @@ struct Variables {
     double_vec *temperature, *plstrain;
     double_vec *tmp0;
 
-    arrayd2 *vel, *force;
-    tensord2 *strain_rate, *strain, *stress;
+    array_t *vel, *force;
+    tensor_t *strain_rate, *strain, *stress;
     shapefn *shpdx, *shpdy, *shpdz;
 
     MatProps *mat;

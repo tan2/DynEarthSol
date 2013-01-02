@@ -298,9 +298,9 @@ static void elasto_plastic(double bulkm, double shearm,
 }
 
 
-void update_stress(const Variables& var, tensord2& stress,
-                   tensord2& strain, double_vec& plstrain,
-                   tensord2& strain_rate)
+void update_stress(const Variables& var, tensor_t& stress,
+                   tensor_t& strain, double_vec& plstrain,
+                   tensor_t& strain_rate)
 {
     const int rheol_type = var.mat->rheol_type;
 

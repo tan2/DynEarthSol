@@ -1,7 +1,7 @@
 #ifndef DYNEARTHSOL3D_GEOMETRY_HPP
 #define DYNEARTHSOL3D_GEOMETRY_HPP
 
-void compute_volume(const arrayd2 &coord, const conn_t &connectivity,
+void compute_volume(const array_t &coord, const conn_t &connectivity,
                     const std::vector<int_vec> &egroups,
                     double_vec &volume, double_vec &volume_n);
 
@@ -13,7 +13,7 @@ void compute_mass(const Param &param,
                   double max_vbc_val,
                   double_vec &mass, double_vec &tmass);
 
-void compute_shape_fn(const arrayd2 &coord, const conn_t &connectivity,
+void compute_shape_fn(const array_t &coord, const conn_t &connectivity,
                       const double_vec &volume,
                       const std::vector<int_vec> &egroups,
                       shapefn &shpdx, shapefn &shpdy, shapefn &shpdz);
