@@ -4,8 +4,9 @@
 
 #include "constants.hpp"
 #include "parameters.hpp"
-#include "geometry.hpp"
 #include "matprops.hpp"
+#include "utils.hpp"
+#include "geometry.hpp"
 
 
 /* Given two points, returns the distance^2 */
@@ -118,6 +119,61 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
     }
         } // end of ee
     }
+}
+
+
+void compute_dvoldt(const Variables &var, double_vec &tmp,
+                    double_vec &dvoldt, double_vec &edvoldt)
+{
+    /* dvoldt is the volumetric strain rate */
+    /* edvoldt is the averaged dvoldt on the element */
+    const double_vec& volume = *var.volume;
+    const double_vec& volume_n = *var.volume_n;
+    std::fill_n(tmp.begin(), var.nnode, 0);
+
+    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
+        #pragma omp parallel for default(none)                  \
+            shared(egroup, var, tmp, volume)
+        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
+            int e = (*egroup)[ee];
+    {
+        const int *conn = (*var.connectivity)[e];
+        const double* strain_rate = (*var.strain_rate)[e];
+        // TODO: try another definition:
+        // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
+        double dj = trace(strain_rate);
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            int n = conn[i];
+            tmp[n] += dj * volume[e];
+        }
+    }
+        } // end of ee
+    }
+
+
+    #pragma omp parallel for default(none)      \
+        shared(var, dvoldt, tmp, volume_n)
+    for (int n=0; n<var.nnode; ++n)
+         dvoldt[n] = tmp[n] / volume_n[n];
+
+    #pragma omp parallel for default(none)      \
+        shared(var, dvoldt, edvoldt)
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = (*var.connectivity)[e];
+        double dj = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            int n = conn[i];
+            dj += dvoldt[n];
+        }
+        edvoldt[e] = dj / NODES_PER_ELEM;
+    }
+
+    // std::cout << "dvoldt:\n";
+    // print(std::cout, dvoldt);
+    // std::cout << "\n";
+    // std::cout << "edvoldt:\n";
+    // print(std::cout, edvoldt);
+    // std::cout << "\n";
 }
 
 
