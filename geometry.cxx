@@ -122,11 +122,13 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 }
 
 
-void compute_dvoldt(const Variables &var, double_vec &tmp,
-                    double_vec &dvoldt, double_vec &edvoldt)
+void update_dvoldt(const Variables &var, double_vec &tmp,
+                   double_vec &dvoldt, double_vec &edvoldt)
 {
-    /* dvoldt is the volumetric strain rate */
-    /* edvoldt is the averaged dvoldt on the element */
+    /* dvoldt is the volumetric strain rate;
+     * edvoldt is the averaged (i.e. smoothed) dvoldt on the element.
+     * edvoldt is used in update_stress() to prevent mesh locking.
+     */
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(tmp.begin(), var.nnode, 0);
