@@ -82,7 +82,6 @@ void update_mesh(const Param& param, Variables& var)
 
     var.volume->swap(*var.volume_old);
     compute_volume(*var.coord, *var.connectivity, *var.egroups, *var.volume, *var.volume_n);
-    compute_dvoldt(var, *var.tmp0, *var.dvoldt, *var.edvoldt);
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
@@ -138,6 +137,7 @@ int main(int argc, const char* argv[])
 
         update_temperature(param, var, *var.temperature, *var.tmp0);
         update_strain_rate(var, *var.strain_rate);
+        compute_dvoldt(var, *var.tmp0, *var.dvoldt, *var.edvoldt);
         update_stress(var, *var.stress, *var.strain, *var.plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
