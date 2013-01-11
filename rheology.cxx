@@ -68,14 +68,13 @@ static void principal_stresses3(const double* s, double p[3], double v[3][3])
 }
 
 
-static void principal_stresses2(const double* s, double syy, double p[3],
-                                double& cos2t, double& sin2t, int& n1, int& n2)
+static void principal_stresses2(const double* s, double p[2],
+                                double& cos2t, double& sin2t)
 {
     /* 's' is a flattened stress vector, with the components {XX, ZZ, XZ}.
-     * The YY component is passed in in 'syy', assumed to be one of eigenvalue.
      * Returns the eigenvalues 'p', and the direction cosine of the
      * eigenvectors in the X-Z plane.
-     * The eigenvalues are ordered such that p[0] <= p[1] <= p[2].
+     * The eigenvalues are ordered such that p[0] <= p[1].
      */
 
     // center and radius of Mohr circle
@@ -83,8 +82,8 @@ static void principal_stresses2(const double* s, double syy, double p[3],
     double rad = second_invariant(s);
 
     // principal stresses in the X-Z plane
-    double si = s0 - rad;
-    double sii = s0 + rad;
+    p[0] = s0 - rad;
+    p[1] = s0 + rad;
 
     {
         // direction cosine and sine of 2*theta
@@ -99,32 +98,6 @@ static void principal_stresses2(const double* s, double syy, double p[3],
             cos2t = 1;
             sin2t = 0;
         }
-    }
-
-    // sort p.s.
-    if (syy > sii) {
-        // syy is minor p.s.
-        n1 = 0;
-        n2 = 1;
-        p[0] = si;
-        p[1] = sii;
-        p[2] = syy;
-    }
-    else if (syy < si) {
-        // syy is major p.s.
-        n1 = 1;
-        n2 = 2;
-        p[0] = syy;
-        p[1] = si;
-        p[2] = sii;
-    }
-    else {
-        // syy is intermediate
-        n1 = 0;
-        n2 = 2;
-        p[0] = si;
-        p[1] = syy;
-        p[2] = sii;
     }
 }
 
@@ -193,19 +166,16 @@ static void elasto_plastic(double bulkm, double shearm,
     // transform to principal stress coordinate system
     //
     // eigenvalues (principal stresses)
-    double p[3];
-#ifndef THREED
-    // Stress YY component, plain strain
-    double syy = (bulkm - 2./3 * shearm) * (de[1] + de[2]);
-    // In 2D, we only construct the eigenvectors from
-    // cos(2*theta) and sin(2*theta) of Mohr circle
-    double cos2t, sin2t;
-    int n1, n2;
-    principal_stresses2(s, syy, p, cos2t, sin2t, n1, n2);
-#else
+    double p[NDIMS];
+#ifdef THREED
     // eigenvectors
     double v[3][3];
     principal_stresses3(s, p, v);
+#else
+    // In 2D, we only construct the eigenvectors from
+    // cos(2*theta) and sin(2*theta) of Mohr circle
+    double cos2t, sin2t;
+    principal_stresses2(s, p, cos2t, sin2t);
 #endif
 
     // composite (shear and tensile) yield criterion
@@ -229,8 +199,10 @@ static void elasto_plastic(double bulkm, double shearm,
         // shear failure
         alam = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + hardn);
         p[0] -= alam * (a1 - a2 * anpsi);
+#ifdef THREED
         p[1] -= alam * (a2 - a2 * anpsi);
-        p[2] -= alam * (a2 - a1 * anpsi);
+#endif
+        p[NDIMS-1] -= alam * (a2 - a1 * anpsi);
 
         // 2nd invariant of plastic strain
 #ifdef THREED
@@ -238,35 +210,37 @@ static void elasto_plastic(double bulkm, double shearm,
          * double depls1 = alam;
          * double depls3 = -alam * anpsi;
          * double deplsm = (depls1 + depls3) / 3;
-         * depls = std::sqrt( (depls1-deplsm)*(depls1-deplsm) +
-         *                   (-deplsm)*(-deplsm) +
-         *                   (depls3-deplsm)*(depls3-deplsm) );
+         * depls = std::sqrt(((depls1-deplsm)*(depls1-deplsm) +
+         *                    (-deplsm)*(-deplsm) +
+         *                    (depls3-deplsm)*(depls3-deplsm)) / 2);
          */
         // the equations above can be reduce to:
         depls = std::fabs(alam) * std::sqrt((1 + anpsi + anpsi*anpsi) / 3);
 #else
-        // TODO: copied from flac, but it is not consistent with the 3D formula above.
-        // check with Luc and Eunseo ...
+        /* // plastic strain in the principle directions
+         * double depls1 = alam;
+         * double depls2 = -alam * anpsi;
+         * double deplsm = (depls1 + depls2) / 2;
+         * depls = std::sqrt(((depls1-deplsm)*(depls1-deplsm) +
+         *                    (depls2-deplsm)*(depls2-deplsm)) / 2);
+         */
+        // the equations above can be reduce to:
         depls = 0.5 * std::fabs(alam + alam * anpsi);
 #endif
     }
     else {
         // tensile failure
-        // TODO: the final stress in the tensile failure case, copied from Snac,
-        // but the formula is different from the formula in flac.
-        // check with Luc and Eunseo ...
         alam = ft / a1;
         p[0] -= alam * a2;
         p[1] -= alam * a2;
-        p[2] -= alam * a1;
+        p[NDIMS-1] -= alam * a1;
 
         // 2nd invariant of plastic strain
 #ifdef THREED
         depls = std::fabs(alam) / std::sqrt(3);
 #else
-        // TODO: flac doesn't define depls in the tensile failure case.
-        // check with Luc and Eunseo ...
-        depls = alam;
+	// TODO: is this correct?
+        depls = std::fabs(alam) / std::sqrt(2);
 #endif
     }
 
@@ -288,11 +262,11 @@ static void elasto_plastic(double bulkm, double shearm,
         s[4] = ss[0][2];
         s[5] = ss[1][2];
 #else
-        double dc2 = (p[n1] - p[n2]) * cos2t;
-        double dss = p[n1] + p[n2];
+        double dc2 = (p[0] - p[1]) * cos2t;
+        double dss = p[0] + p[1];
         s[0] = 0.5 * (dss + dc2);
         s[1] = 0.5 * (dss - dc2);
-        s[2] = 0.5 * (p[n1] - p[n2]) * sin2t;
+        s[2] = 0.5 * (p[0] - p[1]) * sin2t;
 #endif
     }
 }
@@ -376,7 +350,7 @@ void update_stress(const Variables& var, tensor_t& stress,
                 double shearm = var.mat->shearm(e);
                 double viscosity = var.mat->visc(e);
                 double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
-                // stress due maxwell rheology
+                // stress due to maxwell rheology
                 double sv[NSTR];
                 for (int i=0; i<NSTR; ++i) sv[i] = s[i];
                 maxwell(bulkm, shearm, viscosity, var.dt, dv, de, sv);
@@ -385,7 +359,7 @@ void update_stress(const Variables& var, tensor_t& stress,
                 double amc, anphi, anpsi, hardn, ten_max;
                 var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
-                // stress due elasto-plastic rheology
+                // stress due to elasto-plastic rheology
                 double sp[NSTR];
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
                 elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
