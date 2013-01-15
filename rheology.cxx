@@ -286,17 +286,17 @@ void update_stress(const Variables& var, tensor_t& stress,
         double* es = strain[e];
         double* edot = strain_rate[e];
 
-        // update strain with true strain rate
-        for (int i=0; i<NSTR; ++i) {
-            es[i] += edot[i] * var.dt;
-        }
-
         // anti-mesh locking correction on strain rate
         {
             double div = trace(edot);
             for (int i=0; i<NDIMS; ++i) {
                 edot[i] += ((*var.edvoldt)[e] - div) / NDIMS;
             }
+        }
+
+        // update strain with strain rate
+        for (int i=0; i<NSTR; ++i) {
+            es[i] += edot[i] * var.dt;
         }
 
         // modified strain increment
