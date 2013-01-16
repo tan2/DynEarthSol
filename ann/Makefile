@@ -58,35 +58,19 @@ default:
 #-----------------------------------------------------------------------------
 alpha-g++ macosx-g++ linux-g++ sgi sunos4 sunos4-g++ sunos5 sunos5-g++ sunos5-g++-sl authors-debug authors-perf:
 	cd src ; $(MAKE) $@
-	cd test ; $(MAKE) $@
-	cd sample ; $(MAKE) $@
-	cd ann2fig ; $(MAKE) $@
 
 #-----------------------------------------------------------------------------
 # Remove .o files and core files
 #-----------------------------------------------------------------------------
 clean:
 	cd src ; $(MAKE) clean
-	cd test ; $(MAKE) clean
-	cd sample ; $(MAKE) clean
-	cd ann2fig ; $(MAKE) clean
-	cd doc ; $(MAKE) clean
-	cd MS_Win32; $(MAKE) clean
-	cd validate ; $(MAKE) clean
 
 #-----------------------------------------------------------------------------
 # Remove everthing that can be remade
 #-----------------------------------------------------------------------------
 realclean: 
 	-rm -f lib/*
-	-rm -f bin/*
 	cd src ; $(MAKE) realclean
-	cd test ; $(MAKE) realclean
-	cd sample ; $(MAKE) realclean
-	cd ann2fig ; $(MAKE) realclean
-	cd doc ; $(MAKE) realclean
-	cd MS_Win32; $(MAKE) realclean
-	cd validate ; $(MAKE) realclean
 
 #-----------------------------------------------------------------------------
 # Make distribution package (for use by authors only)
