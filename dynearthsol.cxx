@@ -156,7 +156,11 @@ int main(int argc, const char* argv[])
 
         if (var.steps % param.mesh.quality_check_step_interval == 0 &&
             bad_mesh_quality(param, var)) {
-            std::cout << "remeshing\n";
+            remesh(param, var);
+
+            output(param, var, start_time);
+            var.frame ++;
+            std::exit(1);
         }
 
     } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time_in_yr * YEAR2SEC);
