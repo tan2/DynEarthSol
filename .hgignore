@@ -3,6 +3,7 @@ dynearthsol2d
 dynearthsol3d
 snapshot.diff
 3x3-C/lib3x3.a
+ann/lib/libANN.a
 *.o
 *.pyc
 *.vtu
