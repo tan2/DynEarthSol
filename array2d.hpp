@@ -39,6 +39,17 @@ public:
     std::size_t size() const {return n_;}
     int num_elements() const {return N*n_;}
 
+    // NOTE: reset DOES NOT delete the array
+    void reset() {a_ = NULL; n_ = 0;}
+
+    // steal the pointer from other
+    void steal_ref(Array2D& other) {
+        delete [] a_;
+        a_ = other.data();
+        n_ = other.size();
+        other.reset();
+    }
+
     //
     // index accessing
     //
