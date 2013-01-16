@@ -13,7 +13,7 @@ bool bad_mesh_quality(const Param &param, const Variables &var)
     double q = worst_elem_quality(*var.coord, *var.connectivity,
                                   *var.volume, worst_elem);
     std::cout << "Worst mesh quality = " << q << " at element #" << worst_elem << ".\n";
-    if (q < 0.4) {
+    if (q < param.mesh.min_quality) {
         return 1;
     }
     return 0;

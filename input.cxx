@@ -65,6 +65,11 @@ static void declare_parameters(po::options_description &cfg,
          "Refining portion of ylength ([d0,d1]; 0<=d0<=d1<=1), for meshing_option=2 only, for 3D only")
         ("mesh.refined_zonez", po::value<std::string>()->default_value("[0.8, 1]"),
          "Refining portion of zlength ([d0,d1]; 0<=d0<=d1<=1), for meshing_option=2 only")
+
+        ("mesh.quality_check_step_interval", po::value<int>(&p.mesh.quality_check_step_interval)->default_value(1000),
+         "How often to check mesh quality?")
+        ("mesh.min_quality", po::value<double>(&p.mesh.min_quality)->default_value(0.4),
+         "Min. mesh quality before remeshing (between 0 and 1)")
         ;
 
     cfg.add_options()

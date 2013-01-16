@@ -38,6 +38,7 @@ struct Mesh {
     int meshing_option;
     int meshing_verbosity;
     int tetgen_optlevel;
+    int quality_check_step_interval;
 
     double xlength, ylength, zlength;
     double resolution;
@@ -45,6 +46,7 @@ struct Mesh {
     double min_angle;
     // for 3D only
     double min_tet_angle, max_ratio;
+    double min_quality;
 
     double_pair refined_zonex, refined_zoney, refined_zonez;
 };
