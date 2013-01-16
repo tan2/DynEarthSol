@@ -3,65 +3,11 @@
 #include "constants.hpp"
 #include "parameters.hpp"
 
+#include "fields.hpp"
 #include "geometry.hpp"
 #include "matprops.hpp"
 #include "mesh.hpp"
 #include "remeshing.hpp"
-
-
-static void reallocate_variables(const Param& param, Variables& var)
-{
-    const int n = var.nnode;
-    const int e = var.nelem;
-
-    delete var.volume;
-    delete var.volume_old;
-    delete var.volume_n;
-    var.volume = new double_vec(e);
-    var.volume_old = new double_vec(e);
-    var.volume_n = new double_vec(n);
-
-    delete var.mass;
-    delete var.tmass;
-    var.mass = new double_vec(n);
-    var.tmass = new double_vec(n);
-
-    delete var.dvoldt;
-    delete var.edvoldt;
-    var.dvoldt = new double_vec(n);
-    var.edvoldt = new double_vec(e);
-
-    delete var.temperature;
-    delete var.plstrain;
-    delete var.tmp0;
-    var.temperature = new double_vec(n);
-    var.plstrain = new double_vec(e);
-    var.tmp0 = new double_vec(std::max(n,e));
-
-    delete var.vel;
-    delete var.force;
-    var.vel = new array_t(n, 0);
-    var.force = new array_t(n, 0);
-
-    delete var.strain_rate;
-    delete var.strain;
-    delete var.stress;
-    var.strain_rate = new tensor_t(e, 0);
-    var.strain = new tensor_t(e, 0);
-    var.stress = new tensor_t(e, 0);
-
-    delete var.shpdx;
-    delete var.shpdz;
-    var.shpdx = new shapefn(e);
-    if (NDIMS == 3) {
-        delete var.shpdy;
-        var.shpdy = new shapefn(e);
-    }
-    var.shpdz = new shapefn(e);
-
-    delete var.mat;
-    var.mat = new MatProps(param, var);
-}
 
 
 bool bad_mesh_quality(const Param &param, const Variables &var)

@@ -17,40 +17,6 @@
 #include "rheology.hpp"
 
 
-static void allocate_variables(const Param &param, Variables& var)
-{
-    const int n = var.nnode;
-    const int e = var.nelem;
-
-    var.volume = new double_vec(e);
-    var.volume_old = new double_vec(e);
-    var.volume_n = new double_vec(n);
-
-    var.mass = new double_vec(n);
-    var.tmass = new double_vec(n);
-
-    var.dvoldt = new double_vec(n);
-    var.edvoldt = new double_vec(e);
-
-    var.temperature = new double_vec(n);
-    var.plstrain = new double_vec(e);
-    var.tmp0 = new double_vec(std::max(n,e));
-
-    var.vel = new array_t(n, 0);
-    var.force = new array_t(n, 0);
-
-    var.strain_rate = new tensor_t(e, 0);
-    var.strain = new tensor_t(e, 0);
-    var.stress = new tensor_t(e, 0);
-
-    var.shpdx = new shapefn(e);
-    if (NDIMS == 3) var.shpdy = new shapefn(e);
-    var.shpdz = new shapefn(e);
-
-    var.mat = new MatProps(param, var);
-}
-
-
 void init(const Param& param, Variables& var)
 {
     create_new_mesh(param, var);
