@@ -2,7 +2,6 @@
 #define DYNEARTHSOL3D_ARRAY2D_h
 
 #include <algorithm>
-#include <cstdlib>
 
 
 template <typename T, int N>
@@ -20,7 +19,6 @@ public:
 
     Array2D(int size, const T& val) {
         a_ = new T[N*size];
-        if (! a_) std::exit(9);
         n_ = size;
         std::fill_n(a_, N*n_, val);
     }
@@ -28,7 +26,6 @@ public:
     explicit
     Array2D(int size) {
         a_ = new T[N*size];
-        if (! a_) std::exit(9);
         n_ = size;
     }
 
