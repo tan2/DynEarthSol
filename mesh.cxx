@@ -29,7 +29,7 @@
 #include "mesh.hpp"
 
 
-void triangulate_polygon
+static void triangulate_polygon
 (double min_angle, double max_area,
  int meshing_verbosity,
  int npoints, int nsegments,
@@ -119,7 +119,7 @@ void triangulate_polygon
 }
 
 
-void tetrahedralize_polyhedron
+static void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
  int meshing_verbosity, int optlevel,
  int npoints, int nsegments,
@@ -221,7 +221,6 @@ void tetrahedralize_polyhedron
 #endif
 }
 
-
 static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 {
     int npoints = 4 * (NDIMS - 1); // 2D:4;  3D:8
@@ -232,13 +231,10 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
     int *init_segments = new int[n_init_segments*n_segment_nodes];
     int *init_segflags = new int[n_init_segments];
 
-    int nnode, nelem, nseg;
-    double *pcoord;
-    int *pconnectivity, *psegment, *psegflag;
+    double max_elem_size;
 
-    if (NDIMS == 2) {
 #ifndef THREED
-
+    {
 	/* Define 4 corner points of the rectangle, with this order:
          *            BOUNDZ1
          *          0 ------- 3
@@ -274,26 +270,10 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
         init_segflags[2] = BOUNDX1;
         init_segflags[3] = BOUNDZ1;
 
-        const double max_triangle_size = 1.5 * param.mesh.resolution
-            * param.mesh.resolution;
-
-        /********************************************************/
-	triangulate_polygon(param.mesh.min_angle, max_triangle_size,
-                            param.mesh.meshing_verbosity,
-			    npoints, n_init_segments, points,
-			    init_segments, init_segflags,
-			    &nnode, &nelem, &nseg,
-			    &pcoord, &pconnectivity, 
-			    &psegment, &psegflag);
-        /********************************************************/
-
-        if (nelem <= 0) {
-            std::cerr << "Error: triangulation failed\n";
-            std::exit(10);
-        }
-#endif
-    } else {
-#ifdef THREED
+        max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
+    }
+#else
+    {
 	/* Define 8 corner points of the box, with this order:
          *         4 ------- 7
          *        /         /|
@@ -384,35 +364,18 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
         init_segflags[4] = BOUNDY1;
         init_segflags[5] = BOUNDZ1;
 
-        const double max_tet_size = 0.7 * param.mesh.resolution
+        max_elem_size = 0.7 * param.mesh.resolution
             * param.mesh.resolution * param.mesh.resolution;
-
-        /***************************************************************/
-	tetrahedralize_polyhedron(param.mesh.max_ratio,
-                                  param.mesh.min_tet_angle, max_tet_size,
-                                  param.mesh.meshing_verbosity,
-                                  param.mesh.tetgen_optlevel,
-                                  npoints, n_init_segments, points,
-                                  init_segments, init_segflags,
-                                  &nnode, &nelem, &nseg,
-                                  &pcoord, &pconnectivity,
-                                  &psegment, &psegflag);
-        /***************************************************************/
-
-#endif
     }
+#endif
+
+    points_to_mesh(param, var, npoints, points,
+                   n_init_segments, init_segments, init_segflags,
+                   max_elem_size);
 
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
-
-    var.nnode = nnode;
-    var.nelem = nelem;
-    var.nseg = nseg;
-    var.coord = new array_t(pcoord, nnode);
-    var.connectivity = new conn_t(pconnectivity, nelem);
-    var.segment = new segment_t(psegment, nseg);
-    var.segflag = new segflag_t(psegflag, nseg);
 }
 
 
@@ -458,13 +421,10 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
     int *init_segments = new int[n_init_segments*n_segment_nodes];
     int *init_segflags = new int[n_init_segments];
 
-    int nnode, nelem, nseg;
-    double *pcoord;
-    int *pconnectivity, *psegment, *psegflag;
+    double max_elem_size;
 
-    if (NDIMS == 2) {
 #ifndef THREED
-
+    {
 	/* Define 4 corner points of the rectangle, with this order:
          *            BOUNDZ1
          *          0 ------- 3
@@ -512,23 +472,10 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
         init_segflags[2] = BOUNDX1;
         init_segflags[3] = BOUNDZ1;
 
-        /********************************************************/
-	triangulate_polygon(param.mesh.min_angle, 40*d*d,
-                            param.mesh.meshing_verbosity,
-			    npoints, n_init_segments, points,
-			    init_segments, init_segflags,
-			    &nnode, &nelem, &nseg,
-			    &pcoord, &pconnectivity,
-			    &psegment, &psegflag);
-        /********************************************************/
-
-        if (nelem <= 0) {
-            std::cerr << "Error: triangulation failed\n";
-            std::exit(10);
-        }
-#endif
-    } else {
-#ifdef THREED
+        max_elem_size = 40 * d * d;
+    }
+#else
+    {
 	/* Define 8 corner points of the box, with this order:
          *         4 ------- 7
          *        /         /|
@@ -635,25 +582,57 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
         init_segflags[4] = BOUNDY1;
         init_segflags[5] = BOUNDZ1;
 
-        /***************************************************************/
-	tetrahedralize_polyhedron(param.mesh.max_ratio,
-                                  param.mesh.min_tet_angle,
-                                  40*d*d*d,
-                                  param.mesh.meshing_verbosity,
-                                  param.mesh.tetgen_optlevel,
-                                  npoints, n_init_segments, points,
-                                  init_segments, init_segflags,
-                                  &nnode, &nelem, &nseg,
-                                  &pcoord, &pconnectivity,
-                                  &psegment, &psegflag);
-        /***************************************************************/
-
-#endif
+        max_elem_size = 40 * d * d * d;
     }
+#endif
+
+     points_to_mesh(param, var, npoints, points,
+                   n_init_segments, init_segments, init_segflags,
+                   max_elem_size);
 
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
+}
+
+
+void points_to_mesh(const Param &param, Variables &var,
+                    int npoints, double *points,
+                    int n_init_segments, int *init_segments, int *init_segflags,
+                    double max_elem_size)
+{
+    int nnode, nelem, nseg;
+    double *pcoord;
+    int *pconnectivity, *psegment, *psegflag;
+
+#ifdef THREED
+
+    tetrahedralize_polyhedron(param.mesh.max_ratio,
+                              param.mesh.min_tet_angle, max_elem_size,
+                              param.mesh.meshing_verbosity,
+                              param.mesh.tetgen_optlevel,
+                              npoints, n_init_segments, points,
+                              init_segments, init_segflags,
+                              &nnode, &nelem, &nseg,
+                              &pcoord, &pconnectivity,
+                              &psegment, &psegflag);
+
+#else
+
+    triangulate_polygon(param.mesh.min_angle, max_elem_size,
+                        param.mesh.meshing_verbosity,
+                        npoints, n_init_segments, points,
+			    init_segments, init_segflags,
+                        &nnode, &nelem, &nseg,
+                        &pcoord, &pconnectivity,
+                        &psegment, &psegflag);
+
+    if (nelem <= 0) {
+        std::cerr << "Error: triangulation failed\n";
+        std::exit(10);
+    }
+
+#endif
 
     var.nnode = nnode;
     var.nelem = nelem;
