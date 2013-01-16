@@ -156,6 +156,10 @@ int main(int argc, const char* argv[])
 
         if (var.steps % param.mesh.quality_check_step_interval == 0 &&
             bad_mesh_quality(param, var)) {
+
+            output(param, var, start_time);
+            var.frame ++;
+
             remesh(param, var);
 
             output(param, var, start_time);
