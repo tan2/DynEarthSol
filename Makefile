@@ -118,12 +118,17 @@ endif
 C3X3_DIR = 3x3-C
 C3X3_LIBNAME = 3x3
 
+ANN_DIR = ann
+ANN_LIBNAME = ANN
+CXXFLAGS += -I$(ANN_DIR)/include
+
 ## Action
 
 all: $(EXE)
 
-$(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a
-	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) -L$(C3X3_DIR) -l$(C3X3_LIBNAME) -o $@
+$(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
+	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
+		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) -o $@
 	@# snapshot of the code for building the executable
 	@which hg 2>&1 > /dev/null && (hg summary; hg diff) > snapshot.diff
 
@@ -145,6 +150,9 @@ tetgen/tetgen.o: tetgen/tetgen.cxx $(TET_INCS)
 
 $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
 	@+$(MAKE) -C $(C3X3_DIR)
+
+$(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
+	@+$(MAKE) -C $(ANN_DIR) linux-g++
 
 deepclean:
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
