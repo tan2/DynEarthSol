@@ -347,3 +347,60 @@ void compute_shape_fn(const array_t &coord, const conn_t &connectivity,
 }
 
 
+static double elem_quality(const array_t &coord, const conn_t &connectivity,
+                           const double_vec &volume, int e)
+{
+    /* This function returns the quality (0~1) of the element.
+     * The quality of an equidistant (i.e. best quality) tetrahedron/triangle is 1.
+     */
+    double quality;
+    double vol = volume[e];
+    int n0 = connectivity[e][0];
+    int n1 = connectivity[e][1];
+    int n2 = connectivity[e][2];
+
+    const double *a = coord[n0];
+    const double *b = coord[n1];
+    const double *c = coord[n2];
+
+#ifdef THREED
+    {
+        int n3 = connectivity[e][3];
+        const double *d = coord[n3];
+        double normalization_factor = 216 * std::sqrt(3);
+
+        double area_sum = (triangle_area(a, b, c) +
+                           triangle_area(a, b, d) +
+                           triangle_area(c, d, a) +
+                           triangle_area(c, d, b));
+        quality = normalization_factor * vol * vol / (area_sum * area_sum * area_sum);
+    }
+#else
+    {
+        double normalization_factor = 4 * std::sqrt(3);
+
+        double dist2_sum = dist2(a, b) + dist2(b, c) + dist2(a, c);
+        quality = normalization_factor * vol / dist2_sum;
+    }
+#endif
+
+    return quality;
+}
+
+
+double worst_elem_quality(const array_t &coord, const conn_t &connectivity,
+                          const double_vec &volume, int &worst_elem)
+{
+    double q = 1;
+    worst_elem = 0;
+    for (int e=0; e<volume.size(); e++) {
+        double quality = elem_quality(coord, connectivity, volume, e);
+        if (quality < q) {
+            q = quality;
+            worst_elem = e;
+        }
+    }
+    return q;
+}
+
+
