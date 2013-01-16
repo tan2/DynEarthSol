@@ -63,10 +63,8 @@ void reallocate_variables(const Param& param, Variables& var)
     var.edvoldt = new double_vec(e);
 
     delete var.temperature;
-    delete var.plstrain;
     delete var.tmp0;
     var.temperature = new double_vec(n);
-    var.plstrain = new double_vec(e);
     var.tmp0 = new double_vec(std::max(n,e));
 
     delete var.vel;
@@ -75,11 +73,7 @@ void reallocate_variables(const Param& param, Variables& var)
     var.force = new array_t(n, 0);
 
     delete var.strain_rate;
-    delete var.strain;
-    delete var.stress;
     var.strain_rate = new tensor_t(e, 0);
-    var.strain = new tensor_t(e, 0);
-    var.stress = new tensor_t(e, 0);
 
     delete var.shpdx;
     delete var.shpdz;

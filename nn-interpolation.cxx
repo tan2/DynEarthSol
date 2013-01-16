@@ -32,8 +32,8 @@ double** elem_center(const array_t &coord, const conn_t &connectivity)
 }
 
 
-void nearest_neighbor_interpolation(Variables &var, const array_t &old_coord,
-                                    const conn_t &old_connectivity)
+void find_nearest_neighbor(Variables &var, const array_t &old_coord,
+                           const conn_t &old_connectivity, int_vec &idx)
 {
     std::cout << "Constructing a kd-tree.\n";
     // kdtree requires the coordinate as double**
@@ -42,13 +42,15 @@ void nearest_neighbor_interpolation(Variables &var, const array_t &old_coord,
 
     std::cout << "Searching nearest neighbor in the kd-tree.\n";
     double **new_center = elem_center(*var.coord, *var.connectivity);
+
     const int k = 1;
     const double eps = 0;
     int *nn_idx = new int[k];
     double *dd = new double[k];
-    for(int i=0; i<var.nnode; i++) {
-        double *q = new_center[i];
+    for(int e=0; e<var.nelem; e++) {
+        double *q = new_center[e];
         kdtree.annkSearch(q, k, nn_idx, dd, eps);
+        idx[e] = nn_idx[0];
     }
 
     delete [] nn_idx;
@@ -57,4 +59,60 @@ void nearest_neighbor_interpolation(Variables &var, const array_t &old_coord,
     delete [] new_center;
     delete [] old_center[0];
     delete [] old_center;
+}
+
+
+static void inject_field(const int_vec idx, const double_vec &source, double_vec &target)
+{
+    for (int i=0; i<target.size(); i++) {
+        int n = idx[i];
+        target[i] = source[n];
+    }
+}
+
+
+static void inject_field(const int_vec idx, const tensor_t &source, tensor_t &target)
+{
+    for (int i=0; i<target.size(); i++) {
+        int n = idx[i];
+        for (int d=0; d<NSTR; d++) {
+            target[i][d] = source[n][d];
+        }
+    }
+}
+
+
+static void nn_interpolate_fields(Variables &var, const int_vec idx)
+{
+    const int n = var.nnode;
+    const int e = var.nelem;
+
+    double_vec *a = new double_vec(e);
+
+    inject_field(idx, *var.plstrain, *a);
+    delete var.plstrain;
+    var.plstrain = a;
+
+    tensor_t *b;
+    b = new tensor_t(e);
+    inject_field(idx, *var.strain, *b);
+    delete var.strain;
+    var.strain = b;
+
+    b = new tensor_t(e);
+    inject_field(idx, *var.stress, *b);
+    delete var.stress;
+    var.stress = b;
+
+}
+
+
+void nearest_neighbor_interpolation(Variables &var, const array_t &old_coord,
+                                    const conn_t &old_connectivity)
+{
+    int_vec idx(var.nelem);
+    find_nearest_neighbor(var, old_coord, old_connectivity, idx);
+
+    nn_interpolate_fields(var, idx);
+
 }
