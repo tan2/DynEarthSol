@@ -7,6 +7,7 @@
 #include "geometry.hpp"
 #include "matprops.hpp"
 #include "mesh.hpp"
+#include "nn-interpolation.hpp"
 #include "remeshing.hpp"
 
 
@@ -80,6 +81,7 @@ void remesh(const Param &param, Variables &var)
     reallocate_variables(param, var);
 
     // interpolating fields
+    nearest_neighbor_interpolation(var, old_coord);
 
     // arrays of new mesh
 

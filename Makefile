@@ -77,6 +77,7 @@ SRCS =	\
 	input.cxx \
 	matprops.cxx \
 	mesh.cxx \
+	nn-interpolation.cxx \
 	output.cxx \
 	remeshing.cxx \
 	rheology.cxx
