@@ -56,134 +56,142 @@ def main(modelname, start, end):
         nnode = nnode_list[i+start]
         nelem = nelem_list[i+start]
 
-        fvtu = open('{0}.{1}.vtu'.format(prefix, suffix), 'w')
-        vtu_header(fvtu, nnode, nelem)
+        filename = '{0}.{1}.vtu'.format(prefix, suffix)
+        fvtu = open(filename, 'w')
 
+        try:
+            vtu_header(fvtu, nnode, nelem)
 
-        #
-        # node-based field
-        #
-        fvtu.write('  <PointData>\n')
+            #
+            # node-based field
+            #
+            fvtu.write('  <PointData>\n')
 
-        vel = np.fromfile(prefix+'.vel.'+suffix, dtype=np.float64, count=ndims*nnode)
-        vel.shape = (nnode, ndims)
-        if ndims == 2:
-            # VTK requires vector field (velocity, coordinate) has 3 components.
-            # Allocating a 3-vector tmp array for VTK data output.
-            tmp = np.zeros((nnode, 3), dtype=vel.dtype)
-            tmp[:,:ndims] = vel
-        else:
-            tmp = vel
-        vtk_dataarray(fvtu, tmp, 'velocity', 3)
+            vel = np.fromfile(prefix+'.vel.'+suffix, dtype=np.float64, count=ndims*nnode)
+            vel.shape = (nnode, ndims)
+            if ndims == 2:
+                # VTK requires vector field (velocity, coordinate) has 3 components.
+                # Allocating a 3-vector tmp array for VTK data output.
+                tmp = np.zeros((nnode, 3), dtype=vel.dtype)
+                tmp[:,:ndims] = vel
+            else:
+                tmp = vel
+            vtk_dataarray(fvtu, tmp, 'velocity', 3)
 
-        force = np.fromfile(prefix+'.force.'+suffix, dtype=np.float64, count=ndims*nnode)
-        force.shape = (nnode, ndims)
-        if ndims == 2:
-            tmp = np.zeros((nnode, 3), dtype=force.dtype)
-            tmp[:,:ndims] = force
-        else:
-            tmp = force
-        vtk_dataarray(fvtu, tmp, 'force', 3)
+            force = np.fromfile(prefix+'.force.'+suffix, dtype=np.float64, count=ndims*nnode)
+            force.shape = (nnode, ndims)
+            if ndims == 2:
+                tmp = np.zeros((nnode, 3), dtype=force.dtype)
+                tmp[:,:ndims] = force
+            else:
+                tmp = force
+            vtk_dataarray(fvtu, tmp, 'force', 3)
 
-        temperature = np.fromfile(prefix+'.temperature.'+suffix, dtype=np.float64, count=nnode)
-        vtk_dataarray(fvtu, temperature, 'temperature')
+            temperature = np.fromfile(prefix+'.temperature.'+suffix, dtype=np.float64, count=nnode)
+            vtk_dataarray(fvtu, temperature, 'temperature')
 
-        # node number for debugging
-        vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node#')
+            # node number for debugging
+            vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node#')
 
-        fvtu.write('  </PointData>\n')
+            fvtu.write('  </PointData>\n')
 
-        #
-        # element-based field
-        #
-        fvtu.write('  <CellData>\n')
+            #
+            # element-based field
+            #
+            fvtu.write('  <CellData>\n')
 
-        plstrain = np.fromfile(prefix+'.plstrain.'+suffix, dtype=np.float64, count=nelem)
-        vtk_dataarray(fvtu, plstrain, 'plastic strain')
+            plstrain = np.fromfile(prefix+'.plstrain.'+suffix, dtype=np.float64, count=nelem)
+            vtk_dataarray(fvtu, plstrain, 'plastic strain')
 
-        strain_rate = np.fromfile(prefix+'.strain-rate.'+suffix, dtype=np.float64, count=nstr*nelem)
-        strain_rate.shape = (nelem, nstr)
-        srII = second_invariant(strain_rate)
-        vtk_dataarray(fvtu, np.log10(srII+1e-45), 'strain-rate II log10')
-        if output_tensor_components:
-            for d in range(nstr):
-                vtk_dataarray(fvtu, strain_rate[:,d], 'strain-rate ' + component[d])
+            strain_rate = np.fromfile(prefix+'.strain-rate.'+suffix, dtype=np.float64, count=nstr*nelem)
+            strain_rate.shape = (nelem, nstr)
+            srII = second_invariant(strain_rate)
+            vtk_dataarray(fvtu, np.log10(srII+1e-45), 'strain-rate II log10')
+            if output_tensor_components:
+                for d in range(nstr):
+                    vtk_dataarray(fvtu, strain_rate[:,d], 'strain-rate ' + component[d])
 
-        strain = np.fromfile(prefix+'.strain.'+suffix, dtype=np.float64, count=nstr*nelem)
-        strain.shape = (nelem, nstr)
-        sI = first_invariant(strain)
-        sII = second_invariant(strain)
-        vtk_dataarray(fvtu, sI, 'strain I')
-        vtk_dataarray(fvtu, sII, 'strain II')
-        if output_tensor_components:
-            for d in range(nstr):
-                vtk_dataarray(fvtu, strain[:,d], 'strain ' + component[d])
+            strain = np.fromfile(prefix+'.strain.'+suffix, dtype=np.float64, count=nstr*nelem)
+            strain.shape = (nelem, nstr)
+            sI = first_invariant(strain)
+            sII = second_invariant(strain)
+            vtk_dataarray(fvtu, sI, 'strain I')
+            vtk_dataarray(fvtu, sII, 'strain II')
+            if output_tensor_components:
+                for d in range(nstr):
+                    vtk_dataarray(fvtu, strain[:,d], 'strain ' + component[d])
 
-        stress = np.fromfile(prefix+'.stress.'+suffix, dtype=np.float64, count=nstr*nelem)
-        stress.shape = (nelem, nstr)
-        tI = first_invariant(stress)
-        tII = second_invariant(stress)
-        vtk_dataarray(fvtu, tI, 'stress I')
-        vtk_dataarray(fvtu, tII, 'stress II')
-        if output_tensor_components:
-            for d in range(nstr):
-                vtk_dataarray(fvtu, stress[:,d], 'stress ' + component[d])
+            stress = np.fromfile(prefix+'.stress.'+suffix, dtype=np.float64, count=nstr*nelem)
+            stress.shape = (nelem, nstr)
+            tI = first_invariant(stress)
+            tII = second_invariant(stress)
+            vtk_dataarray(fvtu, tI, 'stress I')
+            vtk_dataarray(fvtu, tII, 'stress II')
+            if output_tensor_components:
+                for d in range(nstr):
+                    vtk_dataarray(fvtu, stress[:,d], 'stress ' + component[d])
 
-        effvisc = tII / (srII + 1e-45)
-        vtk_dataarray(fvtu, effvisc, 'effective viscosity')
+            effvisc = tII / (srII + 1e-45)
+            vtk_dataarray(fvtu, effvisc, 'effective viscosity')
 
-        density = np.fromfile(prefix+'.density.'+suffix, dtype=np.float64, count=nelem)
-        vtk_dataarray(fvtu, density, 'density')
+            density = np.fromfile(prefix+'.density.'+suffix, dtype=np.float64, count=nelem)
+            vtk_dataarray(fvtu, density, 'density')
 
-        viscosity = np.fromfile(prefix+'.viscosity.'+suffix, dtype=np.float64, count=nelem)
-        vtk_dataarray(fvtu, density, 'viscosity')
+            viscosity = np.fromfile(prefix+'.viscosity.'+suffix, dtype=np.float64, count=nelem)
+            vtk_dataarray(fvtu, density, 'viscosity')
 
-        volume = np.fromfile(prefix+'.volume.'+suffix, dtype=np.float64, count=nelem)
-        vtk_dataarray(fvtu, volume, 'volume')
+            volume = np.fromfile(prefix+'.volume.'+suffix, dtype=np.float64, count=nelem)
+            vtk_dataarray(fvtu, volume, 'volume')
 
-        volume_old = np.fromfile(prefix+'.volume_old.'+suffix, dtype=np.float64, count=nelem)
-        vtk_dataarray(fvtu, 1 - volume_old/volume, 'dvol')
+            volume_old = np.fromfile(prefix+'.volume_old.'+suffix, dtype=np.float64, count=nelem)
+            vtk_dataarray(fvtu, 1 - volume_old/volume, 'dvol')
 
-        # element number for debugging
-        vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem#')
+            # element number for debugging
+            vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem#')
 
-        fvtu.write('  </CellData>\n')
+            fvtu.write('  </CellData>\n')
 
-        #
-        # node coordinate
-        #
-        fvtu.write('  <Points>\n')
-        coord = np.fromfile(prefix+'.coord.'+suffix, dtype=np.float64, count=ndims*nnode)
-        coord.shape = (nnode, ndims)
-        if ndims == 2:
-            # VTK requires vector field (velocity, coordinate) has 3 components.
-            # Allocating a 3-vector tmp array for VTK data output.
-            tmp = np.zeros((nnode, 3), dtype=coord.dtype)
-            tmp[:,:ndims] = coord
-        else:
-            tmp = coord
-        vtk_dataarray(fvtu, tmp, '', 3)
-        fvtu.write('  </Points>\n')
+            #
+            # node coordinate
+            #
+            fvtu.write('  <Points>\n')
+            coord = np.fromfile(prefix+'.coord.'+suffix, dtype=np.float64, count=ndims*nnode)
+            coord.shape = (nnode, ndims)
+            if ndims == 2:
+                # VTK requires vector field (velocity, coordinate) has 3 components.
+                # Allocating a 3-vector tmp array for VTK data output.
+                tmp = np.zeros((nnode, 3), dtype=coord.dtype)
+                tmp[:,:ndims] = coord
+            else:
+                tmp = coord
+            vtk_dataarray(fvtu, tmp, '', 3)
+            fvtu.write('  </Points>\n')
 
-        #
-        # element connectivity & types
-        #
-        fvtu.write('  <Cells>\n')
-        conn = np.fromfile(prefix+'.connectivity.'+suffix, dtype=np.int32, count=(ndims+1)*nelem)
-        conn.shape = (nelem, ndims+1)
-        vtk_dataarray(fvtu, conn, 'connectivity')
-        vtk_dataarray(fvtu, (ndims+1)*np.array(range(1, nelem+1), dtype=np.int32), 'offsets')
-        if ndims == 2:
-            # VTK_ TRIANGLE == 5
-            celltype = 5
-        else:
-            # VTK_ TETRA == 10
-            celltype = 10
-        vtk_dataarray(fvtu, celltype*np.ones((nelem,), dtype=np.int32), 'types')
-        fvtu.write('  </Cells>\n')
+            #
+            # element connectivity & types
+            #
+            fvtu.write('  <Cells>\n')
+            conn = np.fromfile(prefix+'.connectivity.'+suffix, dtype=np.int32, count=(ndims+1)*nelem)
+            conn.shape = (nelem, ndims+1)
+            vtk_dataarray(fvtu, conn, 'connectivity')
+            vtk_dataarray(fvtu, (ndims+1)*np.array(range(1, nelem+1), dtype=np.int32), 'offsets')
+            if ndims == 2:
+                # VTK_ TRIANGLE == 5
+                celltype = 5
+            else:
+                # VTK_ TETRA == 10
+                celltype = 10
+            vtk_dataarray(fvtu, celltype*np.ones((nelem,), dtype=np.int32), 'types')
+            fvtu.write('  </Cells>\n')
 
-        vtu_footer(fvtu)
-        fvtu.close()
+            vtu_footer(fvtu)
+            fvtu.close()
+
+        except:
+            # delete partial vtu file
+            fvtu.close()
+            os.remove(filename)
+            raise
     return
 
 
