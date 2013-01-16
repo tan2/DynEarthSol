@@ -13,6 +13,7 @@
 #include "matprops.hpp"
 #include "mesh.hpp"
 #include "output.hpp"
+#include "remeshing.hpp"
 #include "rheology.hpp"
 
 
@@ -151,6 +152,10 @@ int main(int argc, const char* argv[])
              (var.time > var.frame * param.sim.output_time_interval_in_yr * YEAR2SEC) ) {
             output(param, var, start_time);
             var.frame ++;
+        }
+
+        if (var.steps % 1000 == 0 && bad_mesh_quality(param, var)) {
+
         }
 
     } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time_in_yr * YEAR2SEC);
