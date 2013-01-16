@@ -81,7 +81,7 @@ void remesh(const Param &param, Variables &var)
     reallocate_variables(param, var);
 
     // interpolating fields
-    nearest_neighbor_interpolation(var, old_coord);
+    nearest_neighbor_interpolation(var, old_coord, old_connectivity);
 
     // arrays of new mesh
 
