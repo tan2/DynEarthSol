@@ -9,7 +9,7 @@
 #include "remeshing.hpp"
 
 
-static void reallocate_variables(Variables& var)
+static void reallocate_variables(const Param& param, Variables& var)
 {
     const int n = var.nnode;
     const int e = var.nelem;
@@ -58,6 +58,9 @@ static void reallocate_variables(Variables& var)
         var.shpdy = new shapefn(e);
     }
     var.shpdz = new shapefn(e);
+
+    delete var.mat;
+    var.mat = new MatProps(param, var);
 }
 
 
@@ -127,12 +130,12 @@ void remesh(const Param &param, Variables &var)
                    n_init_segments, init_segments, init_segflags,
                    max_elem_size, vertex_per_polygon);
 
+    // memory for new fields
+    reallocate_variables(param, var);
+
     // interpolating fields
 
     // arrays of new mesh
-    reallocate_variables(var);
-    delete var.mat;
-    var.mat = new MatProps(param, var);
 
     // updating other arrays
 

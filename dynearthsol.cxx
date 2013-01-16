@@ -17,7 +17,7 @@
 #include "rheology.hpp"
 
 
-static void allocate_variables(Variables& var)
+static void allocate_variables(const Param &param, Variables& var)
 {
     const int n = var.nnode;
     const int e = var.nelem;
@@ -46,20 +46,15 @@ static void allocate_variables(Variables& var)
     var.shpdx = new shapefn(e);
     if (NDIMS == 3) var.shpdy = new shapefn(e);
     var.shpdz = new shapefn(e);
-}
 
-
-static void create_matprops(const Param &par, Variables &var)
-{
-    var.mat = new MatProps(par, var);
+    var.mat = new MatProps(param, var);
 }
 
 
 void init(const Param& param, Variables& var)
 {
     create_new_mesh(param, var);
-    allocate_variables(var);
-    create_matprops(param, var);
+    allocate_variables(param, var);
 
     compute_volume(*var.coord, *var.connectivity, *var.egroups, *var.volume, *var.volume_n);
     *var.volume_old = *var.volume;
