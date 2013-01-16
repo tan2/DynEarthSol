@@ -121,7 +121,7 @@ static void triangulate_polygon
 
 static void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
- int meshing_verbosity, int optlevel,
+ int vertex_per_polygon, int meshing_verbosity, int optlevel,
  int npoints, int nsegments,
  double *points, int *segments, int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
@@ -169,8 +169,8 @@ static void tetrahedralize_polyhedron
 
     tetgenio::polygon *polys = new tetgenio::polygon[nsegments];
     for (int i=0; i<nsegments; ++i) {
-        polys[i].vertexlist = &segments[i*4];
-        polys[i].numberofvertices = 4;
+        polys[i].vertexlist = &segments[i*vertex_per_polygon];
+        polys[i].numberofvertices = vertex_per_polygon;
     }
 
     tetgenio::facet *fl = new tetgenio::facet[nsegments];
@@ -221,6 +221,7 @@ static void tetrahedralize_polyhedron
 #endif
 }
 
+
 static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 {
     int npoints = 4 * (NDIMS - 1); // 2D:4;  3D:8
@@ -232,6 +233,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
     int *init_segflags = new int[n_init_segments];
 
     double max_elem_size;
+    int vertex_per_polygon = 4;
 
 #ifndef THREED
     {
@@ -371,7 +373,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 
     points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags,
-                   max_elem_size);
+                   max_elem_size, vertex_per_polygon);
 
     delete [] points;
     delete [] init_segments;
@@ -422,6 +424,7 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
     int *init_segflags = new int[n_init_segments];
 
     double max_elem_size;
+    int vertex_per_polygon = 4;
 
 #ifndef THREED
     {
@@ -588,7 +591,7 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
 
      points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags,
-                   max_elem_size);
+                   max_elem_size, vertex_per_polygon);
 
     delete [] points;
     delete [] init_segments;
@@ -599,7 +602,7 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
 void points_to_mesh(const Param &param, Variables &var,
                     int npoints, double *points,
                     int n_init_segments, int *init_segments, int *init_segflags,
-                    double max_elem_size)
+                    double max_elem_size, int vertex_per_polygon)
 {
     int nnode, nelem, nseg;
     double *pcoord;
@@ -609,6 +612,7 @@ void points_to_mesh(const Param &param, Variables &var,
 
     tetrahedralize_polyhedron(param.mesh.max_ratio,
                               param.mesh.min_tet_angle, max_elem_size,
+                              vertex_per_polygon,
                               param.mesh.meshing_verbosity,
                               param.mesh.tetgen_optlevel,
                               npoints, n_init_segments, points,
@@ -622,7 +626,7 @@ void points_to_mesh(const Param &param, Variables &var,
     triangulate_polygon(param.mesh.min_angle, max_elem_size,
                         param.mesh.meshing_verbosity,
                         npoints, n_init_segments, points,
-			    init_segments, init_segflags,
+                        init_segments, init_segflags,
                         &nnode, &nelem, &nseg,
                         &pcoord, &pconnectivity,
                         &psegment, &psegflag);

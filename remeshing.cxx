@@ -122,10 +122,10 @@ void remesh(const Param &param, Variables &var)
 #else
     max_elem_size = param.mesh.xlength * param.mesh.zlength;
 #endif
-
+    double vertex_per_polygon = 3;
     points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags,
-                   max_elem_size);
+                   max_elem_size, vertex_per_polygon);
 
     // interpolating fields
 
