@@ -14,6 +14,21 @@ namespace { // anonymous namespace
 
 typedef Array2D<double,NODES_PER_ELEM> brc_t;
 
+
+void interpolate_field(const brc_t &brc, const int_vec &el, const conn_t &connectivity,
+                       const double_vec &source, double_vec &target)
+{
+    for (int i=0; i<target.size(); i++) {
+        int e = el[i];
+        const int *conn = connectivity[e];
+        double result = 0;
+        for (int j=0; j<NODES_PER_ELEM; j++) {
+            result += source[conn[j]] * brc[i][j];
+        }
+        target[i] = result;
+    }
+}
+
 } // end of anonymous namespace
 
 
@@ -140,18 +155,10 @@ void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
         // std::cout << '\n';
     }
 
-    double_vec *tmp = new double_vec(var.nnode);
-    for (int i=0; i<var.nnode; i++) {
-        int e = el[i];
-        const int *conn = old_connectivity[e];
-        double result = 0;
-        for (int j=0; j<NODES_PER_ELEM; j++) {
-            result += (*var.temperature)[conn[j]] * brc[i][j];
-        }
-        (*tmp)[i] = result;
-    }
+    double_vec *a = new double_vec(var.nnode);
+    interpolate_field(brc, el, old_connectivity, *var.temperature, *a);
     delete var.temperature;
-    var.temperature = tmp;
+    var.temperature = a;
 
     array_t *tmp2 = new array_t(var.nnode);
     for (int i=0; i<var.nnode; i++) {
