@@ -59,14 +59,10 @@ void reallocate_variables(const Param& param, Variables& var)
     delete var.edvoldt;
     var.edvoldt = new double_vec(e);
 
-    delete var.temperature;
     delete var.tmp0;
-    var.temperature = new double_vec(n);
     var.tmp0 = new double_vec(std::max(n,e));
 
-    delete var.vel;
     delete var.force;
-    var.vel = new array_t(n, 0);
     var.force = new array_t(n, 0);
 
     delete var.strain_rate;

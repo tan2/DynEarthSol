@@ -156,6 +156,23 @@ static void barycentric_node_interpolation(Variables &var, const array_t &old_co
         // std::cout << '\n';
     }
 
+    double_vec *tmp = new double_vec(var.nnode);
+    for (int i=0; i<var.nnode; i++) {
+        int e = el[i];
+        const int *conn = old_connectivity[e];
+        double result = 0;
+        for (int j=0; j<NODES_PER_ELEM; j++) {
+            result += (*var.temperature)[conn[j]] * brc_coord[i][j];
+        }
+        (*tmp)[i] = result;
+    }
+    delete var.temperature;
+    var.temperature = tmp;
+
+    delete var.vel;
+    var.vel = new array_t(var.nnode, 0);
+
+
 }
 
 
