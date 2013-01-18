@@ -10,8 +10,11 @@
 #include "utils.hpp"
 #include "brc-interpolation.hpp"
 
+namespace { // anonymous namespace
 
 typedef Array2D<double,NODES_PER_ELEM> brc_t;
+
+} // end of anonymous namespace
 
 
 void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
