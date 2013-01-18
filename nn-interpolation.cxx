@@ -62,7 +62,7 @@ void find_nearest_neighbor(Variables &var, const array_t &old_coord,
 }
 
 
-static void inject_field(const int_vec idx, const double_vec &source, double_vec &target)
+static void inject_field(const int_vec &idx, const double_vec &source, double_vec &target)
 {
     for (int i=0; i<target.size(); i++) {
         int n = idx[i];
@@ -71,7 +71,7 @@ static void inject_field(const int_vec idx, const double_vec &source, double_vec
 }
 
 
-static void inject_field(const int_vec idx, const tensor_t &source, tensor_t &target)
+static void inject_field(const int_vec &idx, const tensor_t &source, tensor_t &target)
 {
     for (int i=0; i<target.size(); i++) {
         int n = idx[i];
@@ -82,7 +82,7 @@ static void inject_field(const int_vec idx, const tensor_t &source, tensor_t &ta
 }
 
 
-static void nn_interpolate_elem_fields(Variables &var, const int_vec idx)
+static void nn_interpolate_elem_fields(Variables &var, const int_vec &idx)
 {
     const int n = var.nnode;
     const int e = var.nelem;
