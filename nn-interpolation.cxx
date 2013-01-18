@@ -82,7 +82,7 @@ static void inject_field(const int_vec idx, const tensor_t &source, tensor_t &ta
 }
 
 
-static void nn_interpolate_fields(Variables &var, const int_vec idx)
+static void nn_interpolate_elem_fields(Variables &var, const int_vec idx)
 {
     const int n = var.nnode;
     const int e = var.nelem;
@@ -113,6 +113,6 @@ void nearest_neighbor_interpolation(Variables &var, const array_t &old_coord,
     int_vec idx(var.nelem);
     find_nearest_neighbor(var, old_coord, old_connectivity, idx);
 
-    nn_interpolate_fields(var, idx);
+    nn_interpolate_elem_fields(var, idx);
 
 }
