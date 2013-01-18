@@ -11,13 +11,16 @@
 #include "brc-interpolation.hpp"
 
 
+typedef Array2D<double,NODES_PER_ELEM> brc_t;
+
+
 void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
                                     const conn_t &old_connectivity)
 {
     // for each new coord point, find the enclosing old element
     Barycentric_transformation bary(old_coord, old_connectivity);
     int_vec el(var.nnode);
-    Array2D<double,NODES_PER_ELEM> brc_coord(var.nnode);
+    brc_t brc(var.nnode);
     {
         // ANN requires double** as input
         double **points = new double*[old_coord.size()];
@@ -115,10 +118,10 @@ void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
             el[i] = e;
             double sum = 0;
             for (int d=0; d<NDIMS; d++) {
-                brc_coord[i][d] = r[d];
+                brc[i][d] = r[d];
                 sum += r[d];
             }
-            brc_coord[i][NODES_PER_ELEM-1] = 1 - sum;
+            brc[i][NODES_PER_ELEM-1] = 1 - sum;
         }
 
         delete [] nn_idx;
@@ -140,7 +143,7 @@ void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
         const int *conn = old_connectivity[e];
         double result = 0;
         for (int j=0; j<NODES_PER_ELEM; j++) {
-            result += (*var.temperature)[conn[j]] * brc_coord[i][j];
+            result += (*var.temperature)[conn[j]] * brc[i][j];
         }
         (*tmp)[i] = result;
     }
@@ -154,7 +157,7 @@ void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
         for (int d=0; d<NDIMS; d++) {
             double result = 0;
             for (int j=0; j<NODES_PER_ELEM; j++) {
-                result += (*var.vel)[conn[j]][d] * brc_coord[i][j];
+                result += (*var.vel)[conn[j]][d] * brc[i][j];
             }
             (*tmp2)[i][d] = result;
         }
