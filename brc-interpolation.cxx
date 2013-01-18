@@ -29,6 +29,23 @@ void interpolate_field(const brc_t &brc, const int_vec &el, const conn_t &connec
     }
 }
 
+
+void interpolate_field(const brc_t &brc, const int_vec &el, const conn_t &connectivity,
+                       const array_t &source, array_t &target)
+{
+    for (int i=0; i<target.size(); i++) {
+        int e = el[i];
+        const int *conn = connectivity[e];
+        for (int d=0; d<NDIMS; d++) {
+            double result = 0;
+            for (int j=0; j<NODES_PER_ELEM; j++) {
+                result += source[conn[j]][d] * brc[i][j];
+            }
+            target[i][d] = result;
+        }
+    }
+}
+
 } // end of anonymous namespace
 
 
@@ -160,20 +177,10 @@ void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
     delete var.temperature;
     var.temperature = a;
 
-    array_t *tmp2 = new array_t(var.nnode);
-    for (int i=0; i<var.nnode; i++) {
-        int e = el[i];
-        const int *conn = old_connectivity[e];
-        for (int d=0; d<NDIMS; d++) {
-            double result = 0;
-            for (int j=0; j<NODES_PER_ELEM; j++) {
-                result += (*var.vel)[conn[j]][d] * brc[i][j];
-            }
-            (*tmp2)[i][d] = result;
-        }
-    }
+    array_t *b = new array_t(var.nnode);
+    interpolate_field(brc, el, old_connectivity, *var.vel, *b);
     delete var.vel;
-    var.vel = tmp2;
+    var.vel = b;
 }
 
 
