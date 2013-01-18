@@ -70,6 +70,7 @@ endif
 
 SRCS =	\
 	barycentric-fn.cxx \
+	brc-interpolation.cxx \
 	bc.cxx \
 	dynearthsol.cxx \
 	fields.cxx \
