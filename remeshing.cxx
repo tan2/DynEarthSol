@@ -169,10 +169,20 @@ static void barycentric_node_interpolation(Variables &var, const array_t &old_co
     delete var.temperature;
     var.temperature = tmp;
 
+    array_t *tmp2 = new array_t(var.nnode);
+    for (int i=0; i<var.nnode; i++) {
+        int e = el[i];
+        const int *conn = old_connectivity[e];
+        for (int d=0; d<NDIMS; d++) {
+            double result = 0;
+            for (int j=0; j<NODES_PER_ELEM; j++) {
+                result += (*var.vel)[conn[j]][d] * brc_coord[i][j];
+            }
+            (*tmp2)[i][d] = result;
+        }
+    }
     delete var.vel;
-    var.vel = new array_t(var.nnode, 0);
-
-
+    var.vel = tmp2;
 }
 
 
