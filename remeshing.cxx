@@ -1,13 +1,17 @@
 #include "iostream"
 
+#include "ANN/ANN.h"
+
 #include "constants.hpp"
 #include "parameters.hpp"
 
+#include "barycentric-fn.hpp"
 #include "fields.hpp"
 #include "geometry.hpp"
 #include "matprops.hpp"
 #include "mesh.hpp"
 #include "nn-interpolation.hpp"
+#include "utils.hpp"
 #include "remeshing.hpp"
 
 
@@ -25,6 +29,68 @@ bool bad_mesh_quality(const Param &param, const Variables &var)
         return 1;
     }
     return 0;
+}
+
+
+static void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
+                                           const conn_t &old_connectivity)
+{
+    // for each new coord point, find the enclosing old element
+    Barycentric_transformation bary(old_coord, old_connectivity);
+    int_vec el(var.nnode);
+    array_t bar(var.nnode);
+    {
+        // ANN requires double** as input
+        double **points = new double*[old_coord.size()];
+        for (int i=0; i<var.nnode; i++) {
+            points[i] = const_cast<double*>(old_coord[i]);
+        }
+        ANNkd_tree kdtree(points, old_coord.size(), NDIMS);
+
+        const std::vector<int_vec> &old_support = *var.support;
+
+        const int k = 1;
+        const double eps = 0;
+        int *nn_idx = new int[k];
+        double *dd = new double[k];
+
+        for (int i=0; i<var.nnode; i++) {
+            double *q = (*var.coord)[i];
+            // find the nearest point nn in old_coord
+            kdtree.annkSearch(q, k, nn_idx, dd, eps);
+            int nn = nn_idx[0];
+
+            // loop over (old) elements surrounding nn to find
+            // the element that is enclosing q
+            int e;
+            double r[NDIMS];
+            const int_vec &nn_elem = old_support[nn];
+            for (int j=0; j<nn_elem.size(); j++) {
+                e = nn_elem[j];
+                bary.transform(q, e, r);
+                if (bary.is_inside(r)) {
+                    goto found;
+                }
+            }
+        not_found:
+            // q is outside the old domain
+            // using nearest old_coord instead
+            bary.transform(points[nn], e, r);
+
+        found:
+            el[i] = e;
+            for (int d=0; d<NDIMS; d++) {
+                bar[i][d] = r[d];
+            }
+        }
+
+        delete [] nn_idx;
+        delete [] dd;
+        // this line causes double-free error on run-time, why?
+        //delete [] points;
+    }
+
+    print(std::cout, bar);
 }
 
 
@@ -82,6 +148,7 @@ void remesh(const Param &param, Variables &var)
 
     // interpolating fields
     nearest_neighbor_interpolation(var, old_coord, old_connectivity);
+    barycentric_node_interpolation(var, old_coord, old_connectivity);
 
     // arrays of new mesh
 
