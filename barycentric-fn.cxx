@@ -4,7 +4,7 @@
 
 Barycentric_transformation::Barycentric_transformation(const array_t &coord, const conn_t &connectivity)
     : N(connectivity.size()),
-      coeff_(N)
+      coeff_(connectivity.size())
 {
     #pragma omp parallel for default(none) \
         shared(coord, connectivity)
