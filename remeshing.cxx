@@ -38,7 +38,7 @@ static void barycentric_node_interpolation(Variables &var, const array_t &old_co
     // for each new coord point, find the enclosing old element
     Barycentric_transformation bary(old_coord, old_connectivity);
     int_vec el(var.nnode);
-    array_t bar(var.nnode);
+    Array2D<double,NODES_PER_ELEM> brc_coord(var.nnode);
     {
         // ANN requires double** as input
         double **points = new double*[old_coord.size()];
@@ -79,23 +79,27 @@ static void barycentric_node_interpolation(Variables &var, const array_t &old_co
 
         found:
             el[i] = e;
+            double sum = 0;
             for (int d=0; d<NDIMS; d++) {
-                bar[i][d] = r[d];
+                brc_coord[i][d] = r[d];
+                sum += r[d];
             }
+            brc_coord[i][NODES_PER_ELEM-1] = 1 - sum;
         }
 
         delete [] nn_idx;
         delete [] dd;
-        // this line causes double-free error on run-time, why?
+        // XXX: this line causes double-free error on run-time, why?
         //delete [] points;
+
+        // print(std::cout, *var.coord);
+        // std::cout << '\n';
+        // print(std::cout, el);
+        // std::cout << '\n';
+        // print(std::cout, bar);
+        // std::cout << '\n';
     }
 
-    // print(std::cout, *var.coord);
-    // std::cout << '\n';
-    // print(std::cout, el);
-    // std::cout << '\n';
-    // print(std::cout, bar);
-    // std::cout << '\n';
 }
 
 
