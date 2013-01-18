@@ -122,8 +122,8 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 }
 
 
-void update_dvoldt(const Variables &var, double_vec &tmp,
-                   double_vec &dvoldt, double_vec &edvoldt)
+void update_dvoldt(const Variables &var, double_vec &dvoldt,
+                   double_vec &edvoldt)
 {
     /* dvoldt is the volumetric strain rate;
      * edvoldt is the averaged (i.e. smoothed) dvoldt on the element.
@@ -131,11 +131,11 @@ void update_dvoldt(const Variables &var, double_vec &tmp,
      */
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
-    std::fill_n(tmp.begin(), var.nnode, 0);
+    std::fill_n(dvoldt.begin(), var.nnode, 0);
 
     for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
         #pragma omp parallel for default(none)                  \
-            shared(egroup, var, tmp, volume)
+            shared(egroup, var, dvoldt, volume)
         for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
@@ -146,7 +146,7 @@ void update_dvoldt(const Variables &var, double_vec &tmp,
         double dj = trace(strain_rate);
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
-            tmp[n] += dj * volume[e];
+            dvoldt[n] += dj * volume[e];
         }
     }
         } // end of ee
@@ -154,9 +154,9 @@ void update_dvoldt(const Variables &var, double_vec &tmp,
 
 
     #pragma omp parallel for default(none)      \
-        shared(var, dvoldt, tmp, volume_n)
+        shared(var, dvoldt, volume_n)
     for (int n=0; n<var.nnode; ++n)
-         dvoldt[n] = tmp[n] / volume_n[n];
+         dvoldt[n] /= volume_n[n];
 
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, edvoldt)

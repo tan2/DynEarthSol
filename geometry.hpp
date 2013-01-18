@@ -6,7 +6,7 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
                     double_vec &volume, double_vec &volume_n);
 
 void update_dvoldt(const Variables &var, double_vec &tmp,
-                   double_vec &dvoldt, double_vec &edvoldt);
+                   double_vec &edvoldt);
 
 double compute_dt(const Param& param, const Variables& var);
 

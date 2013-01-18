@@ -18,7 +18,6 @@ void allocate_variables(const Param &param, Variables& var)
     var.mass = new double_vec(n);
     var.tmass = new double_vec(n);
 
-    var.dvoldt = new double_vec(n);
     var.edvoldt = new double_vec(e);
 
     var.temperature = new double_vec(n);
@@ -57,9 +56,7 @@ void reallocate_variables(const Param& param, Variables& var)
     var.mass = new double_vec(n);
     var.tmass = new double_vec(n);
 
-    delete var.dvoldt;
     delete var.edvoldt;
-    var.dvoldt = new double_vec(n);
     var.edvoldt = new double_vec(e);
 
     delete var.temperature;
