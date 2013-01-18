@@ -1,3 +1,4 @@
+#include "algorithm"
 #include "iostream"
 
 #include "ANN/ANN.h"
@@ -60,6 +61,10 @@ static void barycentric_node_interpolation(Variables &var, const array_t &old_co
             kdtree.annkSearch(q, k, nn_idx, dd, eps);
             int nn = nn_idx[0];
 
+            // std::cout << i << " ";
+            // print(std::cout, q, NDIMS);
+            // std::cout << " " << nn << " " << dd[0] << '\n';
+
             // loop over (old) elements surrounding nn to find
             // the element that is enclosing q
             int e;
@@ -69,14 +74,65 @@ static void barycentric_node_interpolation(Variables &var, const array_t &old_co
                 e = nn_elem[j];
                 bary.transform(q, e, r);
                 if (bary.is_inside(r)) {
+                    // std::cout << e << " ";
+                    // print(std::cout, r, NDIMS);
+                    // std::cout << '\n';
                     goto found;
                 }
             }
         not_found:
-            // Situation: q must be outside the old domain
-            // using nearest old_coord instead
-            bary.transform(points[nn], nn_elem[0], r);
+            {
+                // Situation: q is in the upper element, but its nearest point is o!
+                // we won't find the enclosing element with the method above
+                //     x
+                //    / \   <-- this is a large triangle
+                //   / q \
+                //  x---- x
+                //   \-o-/   <-- this is a small triangle
+                //
 
+                // this array contains the elements that have been searched so far
+                int_vec searched;
+                for (int j=0; j<nn_elem.size(); j++) {
+                    searched.push_back(nn_elem[j]);
+                }
+                // print(std::cout, searched);
+                // std::cout << " ... \n";
+
+                // search through elements that are neighbors of nn_elem
+                for (int j=0; j<nn_elem.size(); j++) {
+                    int ee = nn_elem[j];
+                    const int *conn = old_connectivity[ee];
+                    for (int m=0; m<NODES_PER_ELEM; m++) {
+                        // np is a node close to q
+                        int np = conn[m];
+                        const int_vec &np_elem = old_support[np];
+                        for (int j=0; j<np_elem.size(); j++) {
+                            e = np_elem[j];
+                            auto it = std::find(searched.begin(), searched.end(), e);
+                            if (it != searched.end()) {
+                                // this element has been searched before
+                                continue;
+                            }
+                            searched.push_back(e);
+                            bary.transform(q, e, r);
+                            // std::cout << e << " ";
+                            // print(std::cout, r, NDIMS);
+                            // std::cout << " ... \n";
+                            if (bary.is_inside(r)) {
+                                goto found;
+                            }
+                        }
+                    }
+                }
+            }
+            {
+                std::cout << "New node is outside of the old domain. \n";
+
+                // Situation: q must be outside the old domain
+                // using nearest old_coord instead
+                bary.transform(points[nn], nn_elem[0], r);
+            }
         found:
             el[i] = e;
             double sum = 0;
