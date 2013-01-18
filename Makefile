@@ -69,6 +69,7 @@ endif
 ##
 
 SRCS =	\
+	barycentric-fn.cxx \
 	bc.cxx \
 	dynearthsol.cxx \
 	fields.cxx \
@@ -84,6 +85,7 @@ SRCS =	\
 
 INCS =	\
 	array2d.hpp \
+	barycentric-fn.hpp \
 	constants.hpp \
 	parameters.hpp \
 	matprops.hpp \
