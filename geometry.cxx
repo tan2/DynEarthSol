@@ -122,12 +122,10 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 }
 
 
-void update_dvoldt(const Variables &var, double_vec &dvoldt,
-                   double_vec &edvoldt)
+void compute_dvoldt(const Variables &var, double_vec &dvoldt)
 {
-    /* dvoldt is the volumetric strain rate;
-     * edvoldt is the averaged (i.e. smoothed) dvoldt on the element.
-     * edvoldt is used in update_stress() to prevent mesh locking.
+    /* dvoldt is the volumetric strain rate, weighted by the element volume,
+     * lumped onto the nodes.
      */
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
@@ -152,12 +150,23 @@ void update_dvoldt(const Variables &var, double_vec &dvoldt,
         } // end of ee
     }
 
-
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, volume_n)
     for (int n=0; n<var.nnode; ++n)
          dvoldt[n] /= volume_n[n];
 
+    // std::cout << "dvoldt:\n";
+    // print(std::cout, dvoldt);
+    // std::cout << "\n";
+}
+
+
+void compute_edvoldt(const Variables &var, double_vec &dvoldt,
+                     double_vec &edvoldt)
+{
+    /* edvoldt is the averaged (i.e. smoothed) dvoldt on the element.
+     * It is used in update_stress() to prevent mesh locking.
+     */
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, edvoldt)
     for (int e=0; e<var.nelem; ++e) {
@@ -170,9 +179,6 @@ void update_dvoldt(const Variables &var, double_vec &dvoldt,
         edvoldt[e] = dj / NODES_PER_ELEM;
     }
 
-    // std::cout << "dvoldt:\n";
-    // print(std::cout, dvoldt);
-    // std::cout << "\n";
     // std::cout << "edvoldt:\n";
     // print(std::cout, edvoldt);
     // std::cout << "\n";
