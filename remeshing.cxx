@@ -73,9 +73,9 @@ static void barycentric_node_interpolation(Variables &var, const array_t &old_co
                 }
             }
         not_found:
-            // q is outside the old domain
+            // Situation: q must be outside the old domain
             // using nearest old_coord instead
-            bary.transform(points[nn], e, r);
+            bary.transform(points[nn], nn_elem[0], r);
 
         found:
             el[i] = e;
