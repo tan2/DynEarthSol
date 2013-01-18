@@ -90,7 +90,12 @@ static void barycentric_node_interpolation(Variables &var, const array_t &old_co
         //delete [] points;
     }
 
-    print(std::cout, bar);
+    // print(std::cout, *var.coord);
+    // std::cout << '\n';
+    // print(std::cout, el);
+    // std::cout << '\n';
+    // print(std::cout, bar);
+    // std::cout << '\n';
 }
 
 
