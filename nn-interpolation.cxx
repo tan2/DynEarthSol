@@ -17,6 +17,8 @@ double** elem_center(const array_t &coord, const conn_t &connectivity)
     int nelem = connectivity.size();
     double *tmp = new double[nelem*NDIMS];
     double **center = new double*[nelem];
+    #pragma omp parallel for default(none)          \
+        shared(nelem, tmp, coord, connectivity, center)
     for(int e=0; e<nelem; e++) {
         const int* conn = connectivity[e];
         center[e] = tmp + e*NDIMS;
@@ -64,6 +66,8 @@ void find_nearest_neighbor(Variables &var, const array_t &old_coord,
 
 static void inject_field(const int_vec &idx, const double_vec &source, double_vec &target)
 {
+    #pragma omp parallel for default(none)          \
+        shared(idx, source, target)
     for (int i=0; i<target.size(); i++) {
         int n = idx[i];
         target[i] = source[n];
@@ -73,6 +77,8 @@ static void inject_field(const int_vec &idx, const double_vec &source, double_ve
 
 static void inject_field(const int_vec &idx, const tensor_t &source, tensor_t &target)
 {
+    #pragma omp parallel for default(none)          \
+        shared(idx, source, target)
     for (int i=0; i<target.size(); i++) {
         int n = idx[i];
         for (int d=0; d<NSTR; d++) {
