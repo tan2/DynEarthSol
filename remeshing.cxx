@@ -79,16 +79,30 @@ void remesh(const Param &param, Variables &var)
                    n_init_segments, init_segments, init_segflags,
                    max_elem_size, vertex_per_polygon);
 
-    // memory for new fields
-    reallocate_variables(param, var);
-
     // interpolating fields
     nearest_neighbor_interpolation(var, old_coord, old_connectivity);
     barycentric_node_interpolation(var, old_coord, old_connectivity);
 
-    // arrays of new mesh
+    // memory for new fields
+    reallocate_variables(param, var);
 
     // updating other arrays
+    delete var.bcflag;
+    create_boundary_flags(var);
+    for (int i=0; i<6; ++i) {
+        var.bfacets[i].clear();
+    }
+    create_boundary_facets(var);
+    delete var.support;
+    create_support(var);
+    delete var.egroups;
+    create_elem_groups(var);
+
+    compute_volume(*var.coord, *var.connectivity, *var.egroups, *var.volume, *var.volume_n);
+    compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
+                 var.max_vbc_val, *var.mass, *var.tmass);
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
+                     *var.shpdx, *var.shpdy, *var.shpdz);
 
     free(old_coord.data());
     free(old_connectivity.data());
