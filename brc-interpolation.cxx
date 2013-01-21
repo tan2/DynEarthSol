@@ -59,7 +59,7 @@ void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
     {
         // ANN requires double** as input
         double **points = new double*[old_coord.size()];
-        for (int i=0; i<var.nnode; i++) {
+        for (int i=0; i<old_coord.size(); i++) {
             points[i] = const_cast<double*>(old_coord[i]);
         }
         ANNkd_tree kdtree(points, old_coord.size(), NDIMS);
@@ -161,8 +161,7 @@ void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
 
         delete [] nn_idx;
         delete [] dd;
-        // XXX: this line causes double-free error on run-time, why?
-        //delete [] points;
+        delete [] points;
 
         // print(std::cout, *var.coord);
         // std::cout << '\n';
