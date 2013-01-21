@@ -49,6 +49,7 @@ void find_nearest_neighbor(Variables &var, const array_t &old_coord,
     const double eps = 0;
     int *nn_idx = new int[k];
     double *dd = new double[k];
+    // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
     for(int e=0; e<var.nelem; e++) {
         double *q = new_center[e];
         kdtree.annkSearch(q, k, nn_idx, dd, eps);

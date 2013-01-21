@@ -73,6 +73,7 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
     int *nn_idx = new int[k];
     double *dd = new double[k];
 
+    // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
     for (int i=0; i<var.nnode; i++) {
         double *q = (*var.coord)[i];
         // find the nearest point nn in old_coord
