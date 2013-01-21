@@ -39,6 +39,10 @@ MatProps::MatProps(const Param& p, const Variables& var) :
 {}
 
 
+MatProps::~MatProps()
+{}
+
+
 double MatProps::bulkm(int e) const
 {
     // TODO: compute average bulk modulus

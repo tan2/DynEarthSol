@@ -7,6 +7,7 @@ class MatProps
 {
 public:
     MatProps(const Param& param, const Variables& var);
+    ~MatProps();
 
     const int rheol_type;
     const int nmat;
