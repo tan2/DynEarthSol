@@ -99,6 +99,8 @@ void remesh(const Param &param, Variables &var)
     create_elem_groups(var);
 
     compute_volume(*var.coord, *var.connectivity, *var.egroups, *var.volume, *var.volume_n);
+    // TODO: using edvoldt and volume to get volume_old
+    std::copy(var.volume->begin(), var.volume->end(), var.volume_old->begin());
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
