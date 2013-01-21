@@ -106,6 +106,11 @@ void remesh(const Param &param, Variables &var)
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
+    // the following variables need to be re-computed only because we are
+    // outputing right after remeshing
+    update_strain_rate(var, *var.strain_rate);
+    update_force(param, var, *var.force);
+
     free(old_coord.data());
     free(old_connectivity.data());
     free(old_segment.data());
