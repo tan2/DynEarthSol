@@ -126,7 +126,6 @@ int main(int argc, const char* argv[])
 
             output(param, var, start_time);
             var.frame ++;
-            std::exit(1);
         }
 
     } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time_in_yr * YEAR2SEC);
