@@ -96,10 +96,10 @@ int main(int argc, const char* argv[])
         var.steps ++;
         var.time += var.dt;
 
-        update_temperature(param, var, *var.temperature, *var.tmp0);
+        update_temperature(param, var, *var.temperature, *var.ntmp);
         update_strain_rate(var, *var.strain_rate);
-        compute_dvoldt(var, *var.tmp0);
-        compute_edvoldt(var, *var.tmp0, *var.edvoldt);
+        compute_dvoldt(var, *var.ntmp);
+        compute_edvoldt(var, *var.ntmp, *var.edvoldt);
         update_stress(var, *var.stress, *var.strain, *var.plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         update_velocity(var, *var.vel);

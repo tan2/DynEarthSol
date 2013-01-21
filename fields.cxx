@@ -22,7 +22,7 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.temperature = new double_vec(n);
     var.plstrain = new double_vec(e);
-    var.tmp0 = new double_vec(std::max(n,e));
+    var.ntmp= new double_vec(n);
 
     var.vel = new array_t(n, 0);
     var.force = new array_t(n, 0);
@@ -59,8 +59,8 @@ void reallocate_variables(const Param& param, Variables& var)
     delete var.edvoldt;
     var.edvoldt = new double_vec(e);
 
-    delete var.tmp0;
-    var.tmp0 = new double_vec(std::max(n,e));
+    delete var.ntmp;
+    var.ntmp = new double_vec(n);
 
     delete var.force;
     var.force = new array_t(n, 0);
