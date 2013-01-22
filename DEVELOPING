@@ -11,17 +11,16 @@ To-do list:
 High priority:
 * Simple benchmark for rheology
 * Scaling test
-* See TODO in elastio_plastic(), rheology.cxx
+* Water loading
+* Reading .poly file
+* Controllng element size during remeshing
+* Advanced Interpolation
 * Rotating stress
-* Read/write .poly file
-* Remesh
-* Interpolation
 * Multi-material
 
 Low priority:
 * Restart
 * Stress BC
-* Water loading
 * Heatflux BC
 * Frictional heating
 * Adiabatic cooling (adiabatic temperature profile)
@@ -30,7 +29,7 @@ Low priority:
 
 =============================================================================
 
-Desing notes:
+Design notes:
 
 * Avoid C++ stream for bulk ouput, as stream is slower than C-style IO.
 * Avoid creating/destroying objects in inner for-loops.
