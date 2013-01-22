@@ -87,7 +87,38 @@ void Barycentric_transformation::compute_coeff3d(const double *a,
                                                  double volume,
                                                  double *coeff_e)
 {
-    //TODO
+    double det = 6 * volume;
+
+    coeff_e[index(0,0)] = (b[0] * (c[1]*d[2] - d[1]*c[2]) +
+                           c[0] * (d[1]*b[2] - b[1]*d[2]) +
+                           d[0] * (b[1]*c[2] - c[1]*b[2])) / det;
+    coeff_e[index(0,1)] = (a[0] * (d[1]*c[2] - c[1]*d[2]) +
+                           c[0] * (a[1]*d[2] - d[1]*a[2]) +
+                           d[0] * (c[1]*a[2] - a[1]*c[2])) / det;
+    coeff_e[index(0,2)] = (a[0] * (b[1]*d[2] - d[1]*b[2]) +
+                           b[0] * (d[1]*a[2] - a[1]*d[2]) +
+                           d[0] * (a[1]*b[2] - b[1]*a[2])) / det;
+
+    coeff_e[index(1,0)] = ((d[1] - b[1]) * (c[2] - b[2]) -
+                           (c[1] - b[1]) * (d[2] - b[2])) / det;
+    coeff_e[index(1,1)] = ((c[1] - a[1]) * (d[2] - c[2]) -
+                           (d[1] - c[1]) * (c[2] - a[2])) / det;
+    coeff_e[index(1,2)] = ((b[1] - d[1]) * (a[2] - d[2]) -
+                           (a[1] - d[1]) * (b[2] - d[2])) / det;
+
+    coeff_e[index(2,0)] = ((d[2] - b[2]) * (c[0] - b[0]) -
+                           (c[2] - b[2]) * (d[0] - b[0])) / det;
+    coeff_e[index(2,1)] = ((c[2] - a[2]) * (d[0] - c[0]) -
+                           (d[2] - c[2]) * (c[0] - a[0])) / det;
+    coeff_e[index(2,2)] = ((b[2] - d[2]) * (a[0] - d[0]) -
+                           (a[2] - d[2]) * (b[0] - d[0])) / det;
+
+    coeff_e[index(3,0)] = ((d[0] - b[0]) * (c[1] - b[1]) -
+                           (c[0] - b[0]) * (d[1] - b[1])) / det;
+    coeff_e[index(3,1)] = ((c[0] - a[0]) * (d[1] - c[1]) -
+                           (d[0] - c[0]) * (c[1] - a[1])) / det;
+    coeff_e[index(3,2)] = ((b[0] - d[0]) * (a[1] - d[1]) -
+                           (a[0] - d[0]) * (b[1] - d[1])) / det;
 }
 
 #else
