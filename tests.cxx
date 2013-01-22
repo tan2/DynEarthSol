@@ -7,7 +7,7 @@
 
 void test_barycentric_transformation(Variables &var)
 {
-    Barycentric_transformation bary(*var.coord, *var.connectivity);
+    Barycentric_transformation bary(*var.coord, *var.connectivity, *var.volume);
 
     double p[NDIMS];
 
@@ -23,8 +23,10 @@ void test_barycentric_transformation(Variables &var)
     double q[NDIMS];
     bary.transform(p, e, q);
     print(std::cout, p, NDIMS);
-    // should print out "[0.333333, 0.333333]"
+    // should print out "[0.333333, 0.333333]" in 2D
+    // or "[0.25, 0.25, 0.25]" in 3D
     print(std::cout, q, NDIMS);
+    std::cout << '\n';
 }
 
 
