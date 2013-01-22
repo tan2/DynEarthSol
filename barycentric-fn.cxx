@@ -2,12 +2,14 @@
 #include "barycentric-fn.hpp"
 
 
-Barycentric_transformation::Barycentric_transformation(const array_t &coord, const conn_t &connectivity)
+Barycentric_transformation::Barycentric_transformation(const array_t &coord,
+                                                       const conn_t &connectivity,
+                                                       const double_vec &volume)
     : N(connectivity.size()),
       coeff_(connectivity.size())
 {
     #pragma omp parallel for default(none) \
-        shared(coord, connectivity)
+        shared(coord, connectivity, volume)
     for (int e=0; e<N; ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
@@ -21,9 +23,9 @@ Barycentric_transformation::Barycentric_transformation(const array_t &coord, con
         int n3 = connectivity[e][3];
         const double *d = coord[n3];
 
-        compute_coeff3d(a, b, c, d, coeff_[e]);
+        compute_coeff3d(a, b, c, d, volume[e], coeff_[e]);
 #else
-        compute_coeff2d(a, b, c, coeff_[e]);
+        compute_coeff2d(a, b, c, volume[e], coeff_[e]);
 #endif
     }
 }
@@ -83,6 +85,7 @@ void Barycentric_transformation::compute_coeff3d(const double *a,
                                                  const double *b,
                                                  const double *c,
                                                  const double *d,
+                                                 double volume,
                                                  double *coeff_e)
 {
     //TODO
@@ -93,11 +96,10 @@ void Barycentric_transformation::compute_coeff3d(const double *a,
 void Barycentric_transformation::compute_coeff2d(const double *a,
                                                  const double *b,
                                                  const double *c,
+                                                 double area,
                                                  double *coeff_e)
 {
-    double det = (a[0]*b[1] - a[1]*b[0] +
-                  b[0]*c[1] - b[1]*c[0] +
-                  c[0]*a[1] - c[1]*a[0]);
+    double det = 2 * area;
 
     coeff_e[index(0,0)] = (b[0]*c[1] - b[1]*c[0]) / det;
     coeff_e[index(0,1)] = (c[0]*a[1] - c[1]*a[0]) / det;

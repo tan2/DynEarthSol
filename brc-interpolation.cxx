@@ -57,7 +57,7 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
 {
     // for each new coord point, find the enclosing old element
 
-    Barycentric_transformation bary(old_coord, old_connectivity);
+    Barycentric_transformation bary(old_coord, old_connectivity, *var.volume);
 
     // ANN requires double** as input
     double **points = new double*[old_coord.size()];

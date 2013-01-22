@@ -18,7 +18,9 @@ class Barycentric_transformation {
 
 public:
 
-    Barycentric_transformation(const array_t &coord, const conn_t &connectivity);
+    Barycentric_transformation(const array_t &coord,
+                               const conn_t &connectivity,
+                               const double_vec &volume);
     ~Barycentric_transformation();
 
     void transform(const double *point, int e, double *result) const;
@@ -34,11 +36,13 @@ private:
                          const double *b,
                          const double *c,
                          const double *d,
+                         double volume,
                          double *coeff_e);
 #else
     void compute_coeff2d(const double *a,
                          const double *b,
                          const double *c,
+                         double area,
                          double *coeff_e);
 #endif
 
