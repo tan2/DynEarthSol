@@ -14,7 +14,6 @@ class Barycentric_transformation {
      */
     typedef Array2D<double,NODES_PER_ELEM*NDIMS> coeff_t;
     coeff_t coeff_;
-    const int N;
 
 public:
 
