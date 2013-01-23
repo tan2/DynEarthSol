@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "matprops.hpp"
@@ -262,7 +264,10 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 {
     // TODO: add general stress (Neumann) bcs
 
-    // TODO: add water loading from the surface boundary
+    // hydrostatic water loading for the surface boundary
+    if (param.bc.water_loading && param.control.gravity != 0) {
+        std::cout << "TODO: applying water loading...\n";
+    }
 
     // Wrinkler foundation for the bottom boundary
     if (param.bc.wrinkler_foundation && param.control.gravity != 0) {

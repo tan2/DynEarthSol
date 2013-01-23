@@ -65,6 +65,8 @@ struct BC {
     double wrinkler_delta_rho;
     int wrinkler_foundation;
 
+    int water_loading;
+
     int vbc_x0;
     int vbc_x1;
     int vbc_y0;
