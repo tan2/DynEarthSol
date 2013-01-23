@@ -308,7 +308,42 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
     // hydrostatic water loading for the surface boundary
     if (param.bc.water_loading && param.control.gravity != 0) {
-        std::cout << "TODO: applying water loading...\n";
+
+        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const auto& top = var.bfacets[top_bdry];
+        const auto& coord = *var.coord;
+        // loops over all top facets
+        for (std::size_t i=0; i<top.size(); ++i) {
+            // this facet belongs to element e
+            int e = top[i].first;
+            // this facet is the f-th facet of e
+            int f = top[i].second;
+            const int *conn = (*var.connectivity)[e];
+
+            // the outward-normal vector
+            double normal[NDIMS];
+            // the z-coordinate of the facet center
+            double zcenter;
+
+            normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
+
+            const double sea_level = 0;
+            const double sea_water_density = 1030;
+
+            // below sea level?
+            if (zcenter < sea_level) {
+                double dz = sea_level - zcenter;
+                double p = sea_water_density * param.control.gravity * dz;
+
+                for (int j=0; j<NODES_PER_FACET; ++j) {
+                    int n = conn[NODE_OF_FACET[f][j]];
+                    for (int i=0; i<NDIMS; ++i) {
+                        force[n][i] -= p * normal[i] / NODES_PER_FACET;
+                    }
+                }
+            }
+        }
+
     }
 
     // Wrinkler foundation for the bottom boundary
