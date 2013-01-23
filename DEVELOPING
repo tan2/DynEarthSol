@@ -11,12 +11,12 @@ To-do list:
 High priority:
 * Simple benchmark for rheology
 * Scaling test
-* Water loading
 * Reading .poly file
 * Controllng element size during remeshing
 * Advanced Interpolation
 * Rotating stress
 * Multi-material
+* Pressure regularization
 
 Low priority:
 * Restart
