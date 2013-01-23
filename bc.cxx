@@ -336,9 +336,9 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
                 (var.mat->rho(e) + param.bc.wrinkler_delta_rho) * param.control.gravity * dz;
 
             // bottom support - Archimed force (normal to the surface)
-            for (int i=0; i<NDIMS; ++i) {
-                for (int j=0; j<NODES_PER_FACET; ++j) {
-                    int n = conn[NODE_OF_FACET[f][j]];
+            for (int j=0; j<NODES_PER_FACET; ++j) {
+                int n = conn[NODE_OF_FACET[f][j]];
+                for (int i=0; i<NDIMS; ++i) {
                     force[n][i] -= p * normal[i] / NODES_PER_FACET;
                 }
             }
