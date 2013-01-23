@@ -7,6 +7,48 @@
 #include "bc.hpp"
 
 
+namespace {
+
+void normal_vector_of_facet(int f, const int *conn, const array_t &coord,
+                            double *normal, double &zcenter)
+{
+    int n0 = conn[NODE_OF_FACET[f][0]];
+    int n1 = conn[NODE_OF_FACET[f][1]];
+#ifdef THREED
+    int n2 = conn[NODE_OF_FACET[f][2]];
+
+    // vectors: n0-n1 and n0-n2
+    double v01[NDIMS], v02[NDIMS];
+    for (int i=0; i<NDIMS; ++i) {
+        v01[i] = coord[n1][i] - coord[n0][i];
+        v02[i] = coord[n2][i] - coord[n0][i];
+    }
+
+    // the outward normal vector is parallel to the cross product
+    // of v01 and v02, with magnitude = area of the triangle
+    normal[0] = (v01[1] * v02[2] - v01[2] * v02[1]) / 2;
+    normal[1] = (v01[2] * v02[0] - v01[0] * v02[2]) / 2;
+    normal[2] = (v01[0] * v02[1] - v01[1] * v02[0]) / 2;
+
+    zcenter = (coord[n0][2] + coord[n1][2] + coord[n2][2]) / NODES_PER_FACET;
+#else
+    // the edge vector
+    double v01[NDIMS];
+    for (int i=0; i<NDIMS; ++i) {
+        v01[i] = coord[n1][i] - coord[n0][i];
+    }
+
+    // the normal vector to the edge, pointing outward
+    normal[0] = v01[1];
+    normal[1] = -v01[0];
+
+    zcenter = (coord[n0][1] + coord[n1][1]) / NODES_PER_FACET;
+#endif
+}
+
+}
+
+
 bool is_on_boundary(const Variables &var, int node)
 {
     int flag = (*var.bcflag)[node];
@@ -282,51 +324,23 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             int f = bottom[i].second;
             const int *conn = (*var.connectivity)[e];
 
-            int n0 = conn[NODE_OF_FACET[f][0]];
-            int n1 = conn[NODE_OF_FACET[f][1]];
-#ifdef THREED
-            int n2 = conn[NODE_OF_FACET[f][2]];
-
-            // vectors: n0-n1 and n0-n2
-            double v01[NDIMS], v02[NDIMS];
-            for (int i=0; i<NDIMS; ++i) {
-                v01[i] = coord[n1][i] - coord[n0][i];
-                v02[i] = coord[n2][i] - coord[n0][i];
-            }
-
-            // the outward normal vector is parallel to the cross product
-            // of v01 and v02, with magnitude = area of the triangle
+            // the outward-normal vector
             double normal[NDIMS];
-            normal[0] = (v01[1] * v02[2] - v01[2] * v02[1]) / 2;
-            normal[1] = (v01[2] * v02[0] - v01[0] * v02[2]) / 2;
-            normal[2] = (v01[0] * v02[1] - v01[1] * v02[0]) / 2;
+            // the z-coordinate of the facet center
+            double zcenter;
 
-            double zcenter = (coord[n0][2] + coord[n1][2] + coord[n2][2]) / NODES_PER_FACET;
-#else
-            // the edge vector
-            double v01[NDIMS];
-            for (int i=0; i<NDIMS; ++i) {
-                v01[i] = coord[n1][i] - coord[n0][i];
-            }
+            normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
 
-            // the normal vector to the edge, pointing outward
-            double normal[NDIMS];
-            normal[0] = v01[1];
-            normal[1] = -v01[0];
-
-            double zcenter = (coord[n0][1] + coord[n1][1]) / NODES_PER_FACET;
-#endif
             double dz = zcenter - (-param.mesh.zlength);
             double p = var.compensation_pressure -
                 (var.mat->rho(e) + param.bc.wrinkler_delta_rho) * param.control.gravity * dz;
 
             // bottom support - Archimed force (normal to the surface)
             for (int i=0; i<NDIMS; ++i) {
-                force[n0][i] -= p * normal[i] / NODES_PER_FACET;
-                force[n1][i] -= p * normal[i] / NODES_PER_FACET;
-#ifdef THREED
-                force[n2][i] -= p * normal[i] / NODES_PER_FACET;
-#endif
+                for (int j=0; j<NODES_PER_FACET; ++j) {
+                    int n = conn[NODE_OF_FACET[f][j]];
+                    force[n][i] -= p * normal[i] / NODES_PER_FACET;
+                }
             }
         }
     }
