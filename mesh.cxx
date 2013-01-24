@@ -603,6 +603,206 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 
 void new_mesh_from_polyfile(const Param& param, Variables& var)
 {
+    /* The format specifiction for the poly file can be found in:
+     *   2D:  https://www.cs.cmu.edu/~quake/triangle.poly.html
+     *   3D:  http://wias-berlin.de/software/tetgen/fformats.poly.html
+     *
+     * Note that the poly file in 3D has a more complicated format.
+     */
+
+    double max_elem_size;
+#ifdef THREED
+    max_elem_size = 0.7 * param.mesh.resolution
+        * param.mesh.resolution * param.mesh.resolution;
+#else
+    max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
+#endif
+
+    std::FILE *fp = std::fopen(param.mesh.poly_filename.c_str(), "r");
+    if (! fp) {
+        std::cerr << "Error: Cannot open poly_filename '" << param.mesh.poly_filename << "'\n";
+        std::exit(1);
+    }
+
+    int lineno = 1;
+    int n;
+    char buffer[255];
+    char *s;
+
+    // get header of node list
+    int npoints;
+    {
+        s = std::fgets(buffer, 255, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        int dim, nattr, nbdrym;
+        n = std::sscanf(buffer, "%d %d %d %d", &npoints, &dim, &nattr, &nbdrym);
+        if (n != 4) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        if (dim != NDIMS ||
+            nattr != 0 ||
+            nbdrym != 0) {
+            std::cerr << "Error: unsupported value in line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        lineno ++;
+    }
+
+    // get node list
+    double *points = new double[npoints * NDIMS];
+    for (int i=0; i<npoints; i++) {
+        s = std::fgets(buffer, 255, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        int junk;
+        double *x = &points[i*NDIMS];
+#ifdef THREED
+        n = std::sscanf(buffer, "%d %lf %lf %lf", &junk, x, x+1, x+2);
+#else
+        n = std::sscanf(buffer, "%d %lf %lf", &junk, x, x+1);
+#endif
+        if (n != NDIMS+1) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        lineno ++;
+    }
+
+    // get header of segment (facet) list
+    int n_init_segments;
+    {
+        s = std::fgets(buffer, 255, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        int has_bdryflag;
+        n = std::sscanf(buffer, "%d %d", &n_init_segments, &has_bdryflag);
+        if (n != 2) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        if (has_bdryflag != 1) {
+            std::cerr << "Error: unsupported value in line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        lineno ++;
+    }
+
+    // get segment (facet) list
+    int *init_segments = new int[n_init_segments * NODES_PER_FACET];
+    int *init_segflags = new int[n_init_segments];
+    for (int i=0; i<n_init_segments; i++) {
+        s = std::fgets(buffer, 255, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        int *x = &init_segments[i*NODES_PER_FACET];
+
+        int junk;
+#ifdef THREED
+        int npolygons, nholes, bdryflag;
+        n = std::sscanf(buffer, "%d %d %d", &npolygons, &nholes, &bdryflag);
+        if (n != 3) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+        if (npolygons != 1 ||
+            nholes != 0) {
+            std::cerr << "Error: unsupported value in line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        init_segflags[i] = bdryflag;
+        lineno ++;
+
+        s = std::fgets(buffer, 255, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        int nvertex;
+        n = std::sscanf(buffer, "%d %d %d %d", &nvertex, x, x+1, x+2);
+        if (nvertex != NODES_PER_FACET) {
+            std::cerr << "Error: unsupported value in line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+#else
+        n = std::sscanf(buffer, "%d %lf %lf", &junk, x, x+1);
+#endif
+        if (n != NODES_PER_FACET+1) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        lineno ++;
+    }
+
+
+    // get header of hole list
+    {
+        s = std::fgets(buffer, 255, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        int nholes;
+        n = std::sscanf(buffer, "%d", &nholes);
+        if (n != 1) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        if (nholes != 0) {
+            std::cerr << "Error: unsupported value in line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        lineno ++;
+    }
+
+    points_to_mesh(param, var, npoints, points,
+                   n_init_segments, init_segments, init_segflags,
+                   max_elem_size, NODES_PER_FACET);
+
+    delete [] points;
+    delete [] init_segments;
+    delete [] init_segflags;
 }
 
 }
