@@ -33,7 +33,11 @@ static void declare_parameters(po::options_description &cfg,
 
     cfg.add_options()
         ("mesh.meshing_option", po::value<int>(&p.mesh.meshing_option)->default_value(1),
-         "How to create the new mesh?")
+         "How to create the new mesh?\n"
+         "1: rectangular box with roughly uniform resolution\n"
+         "2: rectangular box with rectangular zone of refined resolution\n"
+         "90: read the bounding polygon from a .poly file"
+         )
         ("mesh.meshing_verbosity", po::value<int>(&p.mesh.meshing_verbosity)->default_value(-1),
          "Output verbose during mesh/remeshing. -1 for no output.")
         ("mesh.tetgen_optlevel", po::value<int>(&p.mesh.tetgen_optlevel)->default_value(3),
@@ -65,6 +69,10 @@ static void declare_parameters(po::options_description &cfg,
          "Refining portion of ylength ([d0,d1]; 0<=d0<=d1<=1), for meshing_option=2 only, for 3D only")
         ("mesh.refined_zonez", po::value<std::string>()->default_value("[0.8, 1]"),
          "Refining portion of zlength ([d0,d1]; 0<=d0<=d1<=1), for meshing_option=2 only")
+
+        // for meshing_option = 90 only
+        ("mesh.poly_filename", po::value<std::string>(&p.mesh.poly_filename)->default_value("input.poly"),
+         "Filename of the input polygon description, for meshing_option-90 only")
 
         ("mesh.quality_check_step_interval", po::value<int>(&p.mesh.quality_check_step_interval)->default_value(1000),
          "How often to check mesh quality?")

@@ -600,6 +600,11 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
     delete [] init_segflags;
 }
 
+
+void new_mesh_from_polyfile(const Param& param, Variables& var)
+{
+}
+
 }
 
 
@@ -858,6 +863,9 @@ void create_new_mesh(const Param& param, Variables& var)
         break;
     case 2:
         new_mesh_refined_zone(param, var);
+        break;
+    case 90:
+        new_mesh_from_polyfile(param, var);
         break;
     default:
         std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';

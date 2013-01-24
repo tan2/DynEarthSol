@@ -49,6 +49,7 @@ struct Mesh {
     double min_quality;
 
     double_pair refined_zonex, refined_zoney, refined_zonez;
+    std::string poly_filename;
 };
 
 struct Control {
