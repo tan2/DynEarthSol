@@ -604,7 +604,7 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 void new_mesh_from_polyfile(const Param& param, Variables& var)
 {
     /* The format specifiction for the poly file can be found in:
-     *   2D:  https://www.cs.cmu.edu/~quake/triangle.poly.html
+     *   2D:  http://www.cs.cmu.edu/~quake/triangle.poly.html
      *   3D:  http://wias-berlin.de/software/tetgen/fformats.poly.html
      *
      * Note that the poly file in 3D has a more complicated format.

@@ -71,8 +71,14 @@ static void declare_parameters(po::options_description &cfg,
          "Refining portion of zlength ([d0,d1]; 0<=d0<=d1<=1), for meshing_option=2 only")
 
         // for meshing_option = 90 only
-        ("mesh.poly_filename", po::value<std::string>(&p.mesh.poly_filename)->default_value("input.poly"),
-         "Filename of the input polygon description, for meshing_option-90 only")
+        ("mesh.poly_filename", po::value<std::string>(&p.mesh.poly_filename)->default_value("mesh.poly"),
+         "Filename of the input polygon, for meshing_option=90 only.\n"
+         "The file format is described in\n"
+         "http://www.cs.cmu.edu/~quake/triangle.poly.html (2D) and\n"
+         "http://wias-berlin.de/software/tetgen/fformats.poly.html (3D).\n"
+         "Limitation: no point attributes, no boundary marker for points, no holes,\n"
+         "no regional attributes, and only triangles can be used for facets (3D).\n"
+         "Users still need to provide these parameters: mesh.xlength, mesh.ylength, and mesh.zlength.")
 
         ("mesh.quality_check_step_interval", po::value<int>(&p.mesh.quality_check_step_interval)->default_value(1000),
          "How often to check mesh quality?")
