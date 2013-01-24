@@ -29,7 +29,9 @@
 #include "mesh.hpp"
 
 
-static void triangulate_polygon
+namespace { // anonymous namespace
+
+void triangulate_polygon
 (double min_angle, double max_area,
  int meshing_verbosity,
  int npoints, int nsegments,
@@ -119,7 +121,7 @@ static void triangulate_polygon
 }
 
 
-static void tetrahedralize_polyhedron
+void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
  int vertex_per_polygon, int meshing_verbosity, int optlevel,
  int npoints, int nsegments,
@@ -222,7 +224,7 @@ static void tetrahedralize_polyhedron
 }
 
 
-static void new_mesh_uniform_resolution(const Param& param, Variables& var)
+void new_mesh_uniform_resolution(const Param& param, Variables& var)
 {
     int npoints = 4 * (NDIMS - 1); // 2D:4;  3D:8
     double *points = new double[npoints*NDIMS];
@@ -381,7 +383,7 @@ static void new_mesh_uniform_resolution(const Param& param, Variables& var)
 }
 
 
-static void new_mesh_refined_zone(const Param& param, Variables& var)
+void new_mesh_refined_zone(const Param& param, Variables& var)
 {
     const Mesh& m = param.mesh;
 
@@ -589,13 +591,15 @@ static void new_mesh_refined_zone(const Param& param, Variables& var)
     }
 #endif
 
-     points_to_mesh(param, var, npoints, points,
+    points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags,
                    max_elem_size, vertex_per_polygon);
 
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
+}
+
 }
 
 
