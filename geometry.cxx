@@ -251,6 +251,9 @@ void compute_mass(const Param &param,
                   double max_vbc_val,
                   double_vec &mass, double_vec &tmass)
 {
+    mass.assign(mass.size(), 0);
+    tmass.assign(tmass.size(), 0);
+
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
