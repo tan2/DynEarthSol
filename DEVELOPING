@@ -10,8 +10,6 @@ To-do list:
 
 High priority:
 * Simple benchmark for rheology
-* Scaling test
-* Reading .poly file
 * Controllng element size during remeshing
 * Advanced Interpolation
 * Rotating stress
@@ -20,6 +18,7 @@ High priority:
 
 Low priority:
 * Restart
+* Save output as vtk format directly
 * Stress BC
 * Heatflux BC
 * Frictional heating
