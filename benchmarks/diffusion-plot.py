@@ -18,7 +18,7 @@ def readdata(frame):
 
 
 def myplot(t, x, xx, frame, time):
-    diffusivity = 3./3210/1e3
+    diffusivity = 3./3000/1e3
     plot(t, x[:,-1]*1e-3, 'ok',
          273-(1600-273)*erf(xx/sqrt(4*diffusivity*time)), xx*1e-3, markerfacecolor='w')
     return
