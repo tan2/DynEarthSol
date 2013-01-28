@@ -42,6 +42,7 @@ struct Mesh {
 
     double xlength, ylength, zlength;
     double resolution;
+    double smallest_size;
     // for 2D only
     double min_angle;
     // for 3D only

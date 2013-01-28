@@ -52,6 +52,8 @@ static void declare_parameters(po::options_description &cfg,
 
         ("mesh.resolution", po::value<double>(&p.mesh.resolution)->required(),
          "Spatial resolution (in meters)")
+        ("mesh.smallest_size", po::value<double>(&p.mesh.smallest_size)->default_value(0.01),
+         "The size of smallest element relative to mesh resolution")
         // for 2D only
         ("mesh.min_angle", po::value<double>(&p.mesh.min_angle)->default_value(32.),
          "Min. angle of all triangles (in degrees), for 2D only")

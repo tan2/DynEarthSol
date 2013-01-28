@@ -12,6 +12,23 @@
 #include "utils.hpp"
 #include "remeshing.hpp"
 
+namespace {
+
+bool has_tiny_element(const Param &param, const Variables &var,
+                          int_vec &tiny_elems)
+{
+    const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
+
+    for (int e=0; e<var.nelem; e++) {
+        // if (volume[e] < smallest_vol)
+        //     tiny_elems.push_back(e);
+    }
+
+    return tiny_elems.size();
+}
+
+}
+
 
 bool bad_mesh_quality(const Param &param, const Variables &var)
 {
@@ -55,10 +72,6 @@ void remesh(const Param &param, Variables &var)
 
     // XXX: modifying boundary if necessary
 
-    // deleting (non-boundary) nodes to avoid small elements
-
-    // saving the modified mesh to .poly file
-
     // new mesh
     int npoints = var.nnode;
     double *points = old_coord.data();
@@ -74,10 +87,19 @@ void remesh(const Param &param, Variables &var)
 #else
     max_elem_size = param.mesh.xlength * param.mesh.zlength;
 #endif
-    double vertex_per_polygon = 3;
+    const double vertex_per_polygon = 3;
+
     points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags,
                    max_elem_size, vertex_per_polygon);
+
+    // deleting (non-boundary) nodes to avoid tiny elements
+    int_vec tiny_elems;
+    if (has_tiny_element(param, var, tiny_elems)) {
+        points_to_mesh(param, var, npoints, points,
+                       n_init_segments, init_segments, init_segflags,
+                       max_elem_size, vertex_per_polygon);
+    }
 
     // interpolating fields
     nearest_neighbor_interpolation(var, old_coord, old_connectivity);
