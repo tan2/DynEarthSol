@@ -81,8 +81,7 @@ static double triangle_area(const double *a,
 
 
 void compute_volume(const array_t &coord, const conn_t &connectivity,
-                    const std::vector<int_vec> &egroups,
-                    double_vec &volume, double_vec &volume_n)
+                    double_vec &volume)
 {
     #pragma omp parallel for default(none)      \
         shared(coord, connectivity, volume)
@@ -102,22 +101,6 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 #else
         volume[e] = triangle_area(a, b, c);
 #endif
-    }
-
-    // volume_n is (node-averaged volume * NODES_PER_ELEM)
-    volume_n.assign(volume_n.size(), 0);
-    for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
-        #pragma omp parallel for default(none)                  \
-            shared(egroup, connectivity, volume, volume_n)
-        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
-            int e = (*egroup)[ee];
-    {
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            int n = connectivity[e][i];
-            volume_n[n] += volume[e];
-        }
-    }
-        } // end of ee
     }
 }
 
@@ -248,16 +231,18 @@ double compute_dt(const Param& param, const Variables& var)
 void compute_mass(const Param &param,
                   const std::vector<int_vec> &egroups, const conn_t &connectivity,
                   const double_vec &volume, const MatProps &mat,
-                  double max_vbc_val,
+                  double max_vbc_val, double_vec &volume_n,
                   double_vec &mass, double_vec &tmass)
 {
+    // volume_n is (node-averaged volume * NODES_PER_ELEM)
+    volume_n.assign(volume_n.size(), 0);
     mass.assign(mass.size(), 0);
     tmass.assign(tmass.size(), 0);
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
-            shared(egroup, mat, connectivity, volume, mass, tmass)
+            shared(egroup, mat, connectivity, volume, volume_n, mass, tmass)
         for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
@@ -266,6 +251,7 @@ void compute_mass(const Param &param,
         double tm = mat.rho(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
         const int *conn = connectivity[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
+            volume_n[conn[i]] += volume[e];
             mass[conn[i]] += m;
             tmass[conn[i]] += tm;
         }

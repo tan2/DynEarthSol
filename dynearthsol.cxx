@@ -22,10 +22,10 @@ void init(const Param& param, Variables& var)
     create_new_mesh(param, var);
     allocate_variables(param, var);
 
-    compute_volume(*var.coord, *var.connectivity, *var.egroups, *var.volume, *var.volume_n);
+    compute_volume(*var.coord, *var.connectivity, *var.volume);
     *var.volume_old = *var.volume;
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
-                 var.max_vbc_val, *var.mass, *var.tmass);
+                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
@@ -42,9 +42,9 @@ void update_mesh(const Param& param, Variables& var)
     update_coordinate(var, *var.coord);
 
     var.volume->swap(*var.volume_old);
-    compute_volume(*var.coord, *var.connectivity, *var.egroups, *var.volume, *var.volume_n);
+    compute_volume(*var.coord, *var.connectivity, *var.volume);
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
-                 var.max_vbc_val, *var.mass, *var.tmass);
+                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 }
