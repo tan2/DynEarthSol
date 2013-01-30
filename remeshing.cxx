@@ -14,15 +14,17 @@
 
 namespace {
 
-bool has_tiny_element(const Param &param, const Variables &var,
-                          int_vec &tiny_elems)
+bool has_tiny_element(const Param &param, const double_vec &volume,
+                      int_vec &tiny_elems)
 {
     const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
 
-    for (int e=0; e<var.nelem; e++) {
-        // if (volume[e] < smallest_vol)
-        //     tiny_elems.push_back(e);
+    for (int e=0; e<volume.size(); e++) {
+        if (volume[e] < smallest_vol)
+            tiny_elems.push_back(e);
     }
+
+    // print(std::cout, tiny_elems);
 
     return tiny_elems.size();
 }
@@ -93,9 +95,12 @@ void remesh(const Param &param, Variables &var)
                    n_init_segments, init_segments, init_segflags,
                    max_elem_size, vertex_per_polygon);
 
-    // deleting (non-boundary) nodes to avoid tiny elements
+    // deleting (non-boundary) nodes to avoid having tiny elements
+    double_vec new_volume(var.nelem);
+    compute_volume(*var.coord, *var.connectivity, new_volume);
+
     int_vec tiny_elems;
-    if (has_tiny_element(param, var, tiny_elems)) {
+    if (has_tiny_element(param, new_volume, tiny_elems)) {
         points_to_mesh(param, var, npoints, points,
                        n_init_segments, init_segments, init_segflags,
                        max_elem_size, vertex_per_polygon);
