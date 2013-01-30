@@ -84,11 +84,27 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
         // print(std::cout, q, NDIMS);
         // std::cout << " " << nn << " " << dd[0] << '\n';
 
-        // loop over (old) elements surrounding nn to find
-        // the element that is enclosing q
-        int e;
         double r[NDIMS];
         const int_vec &nn_elem = old_support[nn];
+        int e;
+
+        // shortcut: q is exactly the same as nn
+        if (dd[0] == 0) {
+            e = nn_elem[0];
+            bary.transform(q, e, r);
+            // r should be a permutation of [1, 0, 0]
+            // normalize r to remove round-off error
+            for (int d=0; d<NDIMS; d++) {
+                if (r[d] > 0.9)
+                    r[d] = 1;
+                else
+                    r[d] = 0;
+            }
+            goto found;
+        }
+
+        // loop over (old) elements surrounding nn to find
+        // the element that is enclosing q
         for (int j=0; j<nn_elem.size(); j++) {
             e = nn_elem[j];
             bary.transform(q, e, r);
@@ -96,7 +112,7 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
                 // std::cout << e << " ";
                 // print(std::cout, r, NDIMS);
                 // std::cout << '\n';
-                    goto found;
+                goto found;
             }
         }
     not_found:
