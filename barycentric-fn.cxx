@@ -58,7 +58,7 @@ bool Barycentric_transformation::is_inside(const double *r) const
 
     // 3D has larger round-off error in coeff_
     // => needs greater tolerance
-    const double tolerance = 5e-14;
+    const double tolerance = 5e-11;
 
     if (r[0] >= -tolerance &&
         r[1] >= -tolerance &&
@@ -67,7 +67,7 @@ bool Barycentric_transformation::is_inside(const double *r) const
         return 1;
 #else
 
-    const double tolerance = 1e-14;
+    const double tolerance = 1e-12;
 
     if (r[0] >= -tolerance &&
         r[1] >= -tolerance &&
