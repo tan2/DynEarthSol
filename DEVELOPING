@@ -11,8 +11,10 @@ To-do list:
 High priority:
 * Simple benchmark for rheology
 * Controllng element size during remeshing
+* Flatten bottom boundary when remeshing
 * Advanced Interpolation
-* Rotating stress
+* Rotating stress in 3D
+* Markers
 * Multi-material
 * Pressure regularization
 
