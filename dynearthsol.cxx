@@ -105,10 +105,14 @@ int main(int argc, const char* argv[])
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel);
         update_mesh(param, var);
+
+        // elastic stress/strain are objective (frame-indifferent)
+        if (var.mat->rheol_type & MatProps::rh_elastic)
+            rotate_stress(var, *var.stress, *var.strain);
+
         // dt computation is expensive, and dt only changes slowly
         // don't have to do it every time step
         if (var.steps % 10 == 0) var.dt = compute_dt(param, var);
-        rotate_stress();
 
         if ( (var.steps == var.frame * param.sim.output_step_interval) ||
              (var.time > var.frame * param.sim.output_time_interval_in_yr * YEAR2SEC) ) {
