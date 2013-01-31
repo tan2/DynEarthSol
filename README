@@ -1,0 +1,49 @@
+
+DynEarthSol3D is a finite element code that solves the momentum balance and 
+the heat transfer in Lagrangian form using unstructured meshes. It can be
+used to study the long-term deformation of Earth's lithosphere and problems
+alike.
+
+
+===========
+Build
+===========
+
+Requirement:
+* You will need a recent C++ compiler that supports C++11 standard. (GNU g++
+  4.4 or newer version will suffice.)
+* You will need a recent version of Boost::Program_options library (1.42 or
+  newer version).
+* You will need Python 2.6 or 2.7 and the Numpy package.
+
+Build procedure:
+* Edit 'Makefile', modify BOOST_ROOT_DIR and BOOST_LDFLAGS if your boost
+  library is not installed in the system directory.
+* Run "make" to build an optimized 2D executable 'dynearthsol2d'.
+* Run "make ndims=3" to build an optimized 3D executable 'dynearthsol3d'.
+* Run "make opt=0" to build a debugging executable.
+* Run "make openmp=0" to build the executable without OpenMP. This is
+  necessary to debug under valgrind.
+
+
+===========
+Run
+===========
+
+* "dynearthsol2d inputfile"
+* An example of input file is provided as 'defaults.cfg'
+* Execute the executable with '-h' flag to see the available input parameters
+  and their descriptions.
+
+
+===========
+Plot
+===========
+
+* Run "2vtk.py modelname" to convert the binary output to VTK files. 
+* Some of the simulation outputs might be disabled. Edit 2vtk.py and
+  output.cxx to disable/enable them.
+* Plot the VTK files with Paraview or LLNL's Visit program.
+
+
+by Eh Tan, Jan. 2013
