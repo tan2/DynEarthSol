@@ -757,14 +757,19 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-#else
-        n = std::sscanf(buffer, "%d %lf %lf", &junk, x, x+1);
-#endif
         if (n != NODES_PER_FACET+1) {
             std::cerr << "Error: parsing line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
+#else
+        n = std::sscanf(buffer, "%d %d %d %d", &junk, x, x+1, init_segflags+i);
+        if (n != NODES_PER_FACET+2) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+#endif
 
         lineno ++;
     }
