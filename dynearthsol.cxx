@@ -98,6 +98,7 @@ int main(int argc, const char* argv[])
 
         update_temperature(param, var, *var.temperature, *var.ntmp);
         update_strain_rate(var, *var.strain_rate);
+        update_spin_rate(var, *var.spin_rate);
         compute_dvoldt(var, *var.ntmp);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
         update_stress(var, *var.stress, *var.strain, *var.plstrain, *var.strain_rate);

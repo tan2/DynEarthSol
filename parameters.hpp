@@ -156,7 +156,7 @@ struct Variables {
     double_vec *ntmp;
 
     array_t *vel, *force;
-    tensor_t *strain_rate, *strain, *stress;
+    tensor_t *strain_rate, *spin_rate, *strain, *stress;
     shapefn *shpdx, *shpdy, *shpdz;
 
     MatProps *mat;
