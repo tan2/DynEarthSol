@@ -1426,14 +1426,7 @@ int size;
 #endif /* not ANSI_DECLARATORS */
 
 {
-  VOID *memptr;
-
-  memptr = (VOID *) malloc((unsigned int) size);
-  if (memptr == (VOID *) NULL) {
-    printf("Error:  Out of memory.\n");
-    triexit(1);
-  }
-  return(memptr);
+  return ::operator new [] ((unsigned int) size);
 }
 
 #ifdef ANSI_DECLARATORS
@@ -1444,7 +1437,7 @@ VOID *memptr;
 #endif /* not ANSI_DECLARATORS */
 
 {
-  free(memptr);
+  delete [] (char *) memptr;
 }
 
 /**                                                                         **/
