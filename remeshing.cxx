@@ -1,4 +1,6 @@
-#include "iostream"
+#include <algorithm>
+#include <functional>
+#include <iostream>
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -50,16 +52,50 @@ void find_points_to_delete(const conn_t &connectivity, const int_vec &tiny_elems
         if (i->second > 1)
             to_delete.push_back(i->first);
     }
-
-    // std::cout << "nodes to delete:\n";
-    // print(std::cout, to_delete);
-    // std::cout << '\n';
 }
 
 
-void delete_points(const int_vec &to_delete, int &npoints, double *points,
+void delete_points(const int_vec &bcflag, int_vec &to_delete,
+                   int &npoints, double *points,
                    int &n_init_segments, int *init_segments, int *init_segflags)
 {
+    // will delete points in descending order
+    std::sort(to_delete.begin(), to_delete.end(), std::greater<int>());
+
+    std::cout << "points to delete:\n";
+    print(std::cout, to_delete);
+    std::cout << '\n';
+
+    std::cout << "segment before:\n";
+    print(std::cout, init_segments, n_init_segments*NODES_PER_FACET);
+    std::cout << '\n';
+
+    std::cout << npoints << ' ' << to_delete.size() << '\n';
+
+    for (auto i=to_delete.begin(); i!=to_delete.end(); ++i) {
+        std::cout << "deleting " << *i << " with flag " << bcflag[*i] << '\n';
+
+        // XXX: cannot delete boundary nodes, otherwise the segments and segflags
+        // will be messed up
+        if (bcflag[*i]) continue;
+
+        // when a point is deleted, replace it with the last point
+        npoints--;
+        std::cout << "  replaced by " << npoints << '\n';
+        for (int d=0; d<NDIMS; ++d)
+            points[(*i)*NDIMS + d] = points[npoints*NDIMS + d];
+
+        // if the last point is also a segment point, the segment point index
+        // needs to be updated as well
+        int *endseg = init_segments + n_init_segments * NODES_PER_FACET;
+        std::replace(init_segments, endseg, npoints, *i);
+    }
+
+    std::cout << "segment after:\n";
+    print(std::cout, init_segments, n_init_segments*NODES_PER_FACET);
+    std::cout << '\n';
+
+    std::cout << npoints << '\n';
 }
 
 }
@@ -85,6 +121,13 @@ bool bad_mesh_quality(const Param &param, const Variables &var)
 void remesh(const Param &param, Variables &var)
 {
     std::cout << "  Remeshing starts...\n";
+
+    std::cout << "segment:\n";
+    print(std::cout, *var.segment);
+    std::cout << '\n';
+    std::cout << "segflag:\n";
+    print(std::cout, *var.segflag);
+    std::cout << '\n';
 
     // setting up barycentric transformation
 
@@ -135,9 +178,12 @@ void remesh(const Param &param, Variables &var)
     int_vec to_delete;
     int_vec tiny_elems;
     if (has_tiny_element(param, new_volume, tiny_elems)) {
+        delete var.bcflag;
+        create_boundary_flags(var);
+
         find_points_to_delete(*var.connectivity, tiny_elems, to_delete);
-        delete_points(to_delete, npoints, points,
-                      n_init_segments, init_segments, init_segflags);
+        delete_points(*var.bcflag, to_delete, var.nnode, var.coord->data(),
+                      var.nseg, var.segment->data(), var.segflag->data());
 
         points_to_mesh(param, var, npoints, points,
                        n_init_segments, init_segments, init_segflags,
