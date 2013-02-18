@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstring>
 #include <functional>
 #include <iostream>
 
@@ -88,47 +89,47 @@ void find_points_to_delete(const array_t &coord, const conn_t &connectivity,
 }
 
 
-void delete_points(const int_vec &bcflag, int_vec &to_delete,
-                   int &npoints, double *points,
-                   int &n_init_segments, int *init_segments, int *init_segflags)
+void delete_points(const int_vec &to_delete, const array_t &old_coord,
+                   const segment_t &old_segment, const segflag_t &old_segflag,
+                   double *&points, int *&segment)
 {
-    // will delete points in descending order
-    std::sort(to_delete.begin(), to_delete.end(), std::greater<int>());
+    int nseg = old_segment.size();
+    int *endsegment = segment + nseg*NODES_PER_FACET;
 
-    std::cout << "points to delete:\n";
-    print(std::cout, to_delete);
-    std::cout << '\n';
+    std::memcpy(segment, old_segment.data(), sizeof(int)*nseg*NODES_PER_FACET);
 
     std::cout << "segment before:\n";
-    print(std::cout, init_segments, n_init_segments*NODES_PER_FACET);
+    print(std::cout, segment, nseg*NODES_PER_FACET);
     std::cout << '\n';
 
-    std::cout << npoints << ' ' << to_delete.size() << '\n';
+    int curr = 0;
+    int end = old_coord.size() - 1;
+    for (int i=0; i<old_coord.size() - to_delete.size(); ++i) {
+        if (i != to_delete[curr]) {
+            // copy points that are not deleted
+            for (int d=0; d<NDIMS; ++d) {
+                points[i*NDIMS + d] = old_coord[i][d];
+            }
+        }
+        else {
+            // when a point is deleted, replace it with the last point
+            for (int d=0; d<NDIMS; ++d) {
+                points[i*NDIMS + d] = old_coord[end][d];
+            }
 
-    for (auto i=to_delete.begin(); i!=to_delete.end(); ++i) {
-        std::cout << "deleting " << *i << " with flag " << bcflag[*i] << '\n';
+            // if the last point is also a segment point, the segment point index
+            // needs to be updated as well
+            std::replace(segment, endsegment, end, i);
 
-        // XXX: cannot delete boundary nodes, otherwise the segments and segflags
-        // will be messed up
-        if (bcflag[*i]) continue;
-
-        // when a point is deleted, replace it with the last point
-        npoints--;
-        std::cout << "  replaced by " << npoints << '\n';
-        for (int d=0; d<NDIMS; ++d)
-            points[(*i)*NDIMS + d] = points[npoints*NDIMS + d];
-
-        // if the last point is also a segment point, the segment point index
-        // needs to be updated as well
-        int *endseg = init_segments + n_init_segments * NODES_PER_FACET;
-        std::replace(init_segments, endseg, npoints, *i);
+            curr ++;
+            end --;
+        }
     }
 
     std::cout << "segment after:\n";
-    print(std::cout, init_segments, n_init_segments*NODES_PER_FACET);
+    print(std::cout, segment, nseg*NODES_PER_FACET);
     std::cout << '\n';
-
-    std::cout << npoints << '\n';
+    std::exit(1);
 }
 
 }
@@ -214,12 +215,15 @@ void remesh(const Param &param, Variables &var)
     if (has_tiny_element(param, new_volume, tiny_elems)) {
         find_points_to_delete(*new_coord, *new_connectivity, new_volume,
                               tiny_elems, old_coord, *var.bcflag, to_delete);
-        // delete_points(*new_bcflag, to_delete, new_nnode, pcoord,
-        //               new_nseg, psegment, psegflag);
 
-        // points_to_mesh(param, var, new_nnode, pcoord,
-        //                new_nseg, psegment, psegflag,
-        //                max_elem_size, vertex_per_polygon);
+        delete_points(to_delete, old_coord, old_segment, old_segflag,
+                      pcoord, psegment);
+
+        points_to_new_mesh(param, old_nnode, old_coord.data(),
+                           old_nseg, old_segment.data(), old_segflag.data(),
+                           max_elem_size, vertex_per_polygon,
+                           new_nnode, new_nelem, new_nseg,
+                           pcoord, pconnectivity, psegment, psegflag);
     }
     //else {
         var.nnode = new_nnode;
