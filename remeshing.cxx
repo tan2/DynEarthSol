@@ -222,11 +222,6 @@ void remesh(const Param &param, Variables &var)
     update_strain_rate(var, *var.strain_rate);
     update_force(param, var, *var.force);
 
-    delete [] old_coord.data();
-    delete [] old_connectivity.data();
-    delete [] old_segment.data();
-    delete [] old_segflag.data();
-
     std::cout << "  Remeshing finished.\n";
 }
 
