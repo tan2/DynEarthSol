@@ -134,6 +134,8 @@ void remesh(const Param &param, Variables &var)
     // saving the mesh to .poly file
 
     // creating a "copy" of mesh pointer so that they are not deleted
+    int old_nnode = var.nnode;
+    int old_nseg = var.nseg;
     array_t old_coord;
     conn_t old_connectivity;
     segment_t old_segment;
@@ -143,19 +145,7 @@ void remesh(const Param &param, Variables &var)
     old_segment.steal_ref(*var.segment);
     old_segflag.steal_ref(*var.segflag);
 
-    delete var.coord;
-    delete var.connectivity;
-    delete var.segment;
-    delete var.segflag;
-
     // XXX: modifying boundary if necessary
-
-    // new mesh
-    int npoints = var.nnode;
-    const double *points = old_coord.data();
-    int n_init_segments = var.nseg;
-    const int *init_segments = old_segment.data();
-    const int *init_segflags = old_segflag.data();
 
     // We don't want to refine large elements during remeshing,
     // so using the domain size as the max area
@@ -167,27 +157,52 @@ void remesh(const Param &param, Variables &var)
 #endif
     const double vertex_per_polygon = 3;
 
-    points_to_mesh(param, var, npoints, points,
-                   n_init_segments, init_segments, init_segflags,
-                   max_elem_size, vertex_per_polygon);
+    // new mesh
+    int new_nnode, new_nelem, new_nseg;
+    double *pcoord;
+    int *pconnectivity, *psegment, *psegflag;
+    points_to_new_mesh(param, old_nnode, old_coord.data(),
+                       old_nseg, old_segment.data(), old_segflag.data(),
+                       max_elem_size, vertex_per_polygon,
+                       new_nnode, new_nelem, new_nseg,
+                       pcoord, pconnectivity, psegment, psegflag);
+
+    array_t *new_coord = new array_t(pcoord, new_nnode);
+    conn_t *new_connectivity = new conn_t(pconnectivity, new_nelem);
+    segment_t *new_segment = new segment_t(psegment, new_nseg);
+    segflag_t *new_segflag = new segflag_t(psegflag, new_nseg);
 
     // deleting (non-boundary) nodes to avoid having tiny elements
-    double_vec new_volume(var.nelem);
-    compute_volume(*var.coord, *var.connectivity, new_volume);
+    double_vec new_volume(new_nelem);
+    compute_volume(*new_coord, *new_connectivity, new_volume);
 
     int_vec to_delete;
     int_vec tiny_elems;
     if (has_tiny_element(param, new_volume, tiny_elems)) {
-        delete var.bcflag;
-        create_boundary_flags(var);
+        // delete var.bcflag;
+        // create_boundary_flags(var);
 
-        find_points_to_delete(*var.connectivity, tiny_elems, to_delete);
-        delete_points(*var.bcflag, to_delete, var.nnode, var.coord->data(),
-                      var.nseg, var.segment->data(), var.segflag->data());
+        // find_points_to_delete(*new_connectivity, tiny_elems, to_delete);
+        // delete_points(*new_bcflag, to_delete, new_nnode, pcoord,
+        //               new_nseg, psegment, psegflag);
 
-        points_to_mesh(param, var, npoints, points,
-                       n_init_segments, init_segments, init_segflags,
-                       max_elem_size, vertex_per_polygon);
+        // points_to_mesh(param, var, new_nnode, pcoord,
+        //                new_nseg, psegment, psegflag,
+        //                max_elem_size, vertex_per_polygon);
+    }
+    else {
+        var.nnode = new_nnode;
+        var.nelem = new_nelem;
+        var.nseg = new_nseg;
+        var.coord->steal_ref(*new_coord);
+        var.connectivity->steal_ref(*new_connectivity);
+        var.segment->steal_ref(*new_segment);
+        var.segflag->steal_ref(*new_segflag);
+
+        delete new_coord;
+        delete new_connectivity;
+        delete new_segment;
+        delete new_segflag;
     }
 
     // interpolating fields
