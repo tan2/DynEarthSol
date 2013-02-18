@@ -90,46 +90,36 @@ void find_points_to_delete(const array_t &coord, const conn_t &connectivity,
 
 
 void delete_points(const int_vec &to_delete, const array_t &old_coord,
-                   const segment_t &old_segment, const segflag_t &old_segflag,
-                   double *&points, int *&segment)
+                   const segment_t &old_segment, double *points, int *segment)
 {
     int nseg = old_segment.size();
-    int *endsegment = segment + nseg*NODES_PER_FACET;
-
-    std::memcpy(segment, old_segment.data(), sizeof(int)*nseg*NODES_PER_FACET);
+    int *endsegment = segment + nseg * NODES_PER_FACET;
 
     std::cout << "segment before:\n";
     print(std::cout, segment, nseg*NODES_PER_FACET);
     std::cout << '\n';
 
-    int curr = 0;
     int end = old_coord.size() - 1;
-    for (int i=0; i<old_coord.size() - to_delete.size(); ++i) {
-        if (i != to_delete[curr]) {
-            // copy points that are not deleted
-            for (int d=0; d<NDIMS; ++d) {
-                points[i*NDIMS + d] = old_coord[i][d];
-            }
+    for (auto i=to_delete.rbegin(); i<to_delete.rend(); ++i) {
+        // when a point is deleted, replace it with the last point
+        for (int d=0; d<NDIMS; ++d) {
+            points[(*i)*NDIMS + d] = old_coord[end][d];
         }
-        else {
-            // when a point is deleted, replace it with the last point
-            for (int d=0; d<NDIMS; ++d) {
-                points[i*NDIMS + d] = old_coord[end][d];
-            }
 
-            // if the last point is also a segment point, the segment point index
-            // needs to be updated as well
-            std::replace(segment, endsegment, end, i);
+        // if the last point is also a segment point, the segment point index
+        // needs to be updated as well
+        std::replace(segment, endsegment, end, *i);
+        std::cout << *i << " <- " << end << "\n";
 
-            curr ++;
-            end --;
-        }
+        end --;
     }
 
     std::cout << "segment after:\n";
     print(std::cout, segment, nseg*NODES_PER_FACET);
     std::cout << '\n';
-    std::exit(1);
+    std::cout << "points after:\n";
+    print(std::cout, points, (end+1)*NDIMS);
+    std::cout << '\n';
 }
 
 }
@@ -210,35 +200,44 @@ void remesh(const Param &param, Variables &var)
     double_vec new_volume(new_nelem);
     compute_volume(*new_coord, *new_connectivity, new_volume);
 
-    int_vec to_delete;
     int_vec tiny_elems;
     if (has_tiny_element(param, new_volume, tiny_elems)) {
+        int_vec to_delete;
         find_points_to_delete(*new_coord, *new_connectivity, new_volume,
                               tiny_elems, old_coord, *var.bcflag, to_delete);
 
-        delete_points(to_delete, old_coord, old_segment, old_segflag,
-                      pcoord, psegment);
+        int q_nnode = old_nnode - to_delete.size();
+        // create a copy of old_coord and old_segment
+        double *qcoord = new double[old_coord.num_elements()];
+        std::memcpy(qcoord, old_coord.data(), sizeof(double)*old_coord.num_elements());
+        int *qsegment = new int[old_segment.num_elements()];
+        std::memcpy(qsegment, old_segment.data(), sizeof(int)*old_segment.num_elements());
 
-        points_to_new_mesh(param, old_nnode, old_coord.data(),
-                           old_nseg, old_segment.data(), old_segflag.data(),
+        delete_points(to_delete, old_coord, old_segment,
+                      qcoord, qsegment);
+
+        points_to_new_mesh(param, q_nnode, qcoord,
+                           old_nseg, qsegment, old_segflag.data(),
                            max_elem_size, vertex_per_polygon,
                            new_nnode, new_nelem, new_nseg,
                            pcoord, pconnectivity, psegment, psegflag);
-    }
-    //else {
-        var.nnode = new_nnode;
-        var.nelem = new_nelem;
-        var.nseg = new_nseg;
-        var.coord->steal_ref(*new_coord);
-        var.connectivity->steal_ref(*new_connectivity);
-        var.segment->steal_ref(*new_segment);
-        var.segflag->steal_ref(*new_segflag);
 
-        delete new_coord;
-        delete new_connectivity;
-        delete new_segment;
-        delete new_segflag;
-        //}
+        delete [] qcoord;
+        delete [] qsegment;
+    }
+
+    var.nnode = new_nnode;
+    var.nelem = new_nelem;
+    var.nseg = new_nseg;
+    var.coord->steal_ref(*new_coord);
+    var.connectivity->steal_ref(*new_connectivity);
+    var.segment->steal_ref(*new_segment);
+    var.segflag->steal_ref(*new_segflag);
+
+    delete new_coord;
+    delete new_connectivity;
+    delete new_segment;
+    delete new_segflag;
 
     // interpolating fields
     nearest_neighbor_interpolation(var, old_coord, old_connectivity);
