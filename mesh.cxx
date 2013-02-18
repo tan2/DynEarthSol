@@ -882,7 +882,7 @@ void create_boundary_flags(Variables& var)
     for (int i=0; i<var.nseg; ++i) {
         int flag = (*var.segflag)[i][0];
         int *n = (*var.segment)[i];
-        for (int j=0; j<NDIMS; ++j) {
+        for (int j=0; j<NODES_PER_FACET; ++j) {
             bcflag[n[j]] |= flag;
         }
     }
