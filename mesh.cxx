@@ -35,7 +35,7 @@ void triangulate_polygon
 (double min_angle, double max_area,
  int meshing_verbosity,
  int npoints, int nsegments,
- double *points, int *segments, int *segflags,
+ const double *points, const int *segments, const int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
  double **outpoints, int **triangles,
  int **outsegments, int **outsegflags)
@@ -68,7 +68,7 @@ void triangulate_polygon
     std::sprintf(options, "%spq%fjza%f", verbosity.c_str(), min_angle, max_area);
     //std::puts(options);
 
-    in.pointlist = points;
+    in.pointlist = const_cast<double*>(points);
     in.pointattributelist = NULL;
     in.pointmarkerlist = NULL;
     in.numberofpoints = npoints;
@@ -81,8 +81,8 @@ void triangulate_polygon
     in.numberofcorners = 3;
     in.numberoftriangleattributes = 0;
 
-    in.segmentlist = segments;
-    in.segmentmarkerlist = segflags;
+    in.segmentlist = const_cast<int*>(segments);
+    in.segmentmarkerlist = const_cast<int*>(segflags);
     in.numberofsegments = nsegments;
 
     in.holelist = NULL;
@@ -125,7 +125,7 @@ void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
  int vertex_per_polygon, int meshing_verbosity, int optlevel,
  int npoints, int nsegments,
- double *points, int *segments, int *segflags,
+ const double *points, const int *segments, const int *segflags,
  int *noutpoints, int *ntriangles, int *noutsegments,
  double **outpoints, int **triangles,
  int **outsegments, int **outsegflags)
@@ -166,12 +166,12 @@ void tetrahedralize_polyhedron
     // Setting input arrays to tetgen
     //
     tetgenio in;
-    in.pointlist = points;
+    in.pointlist = const_cast<double*>(points);
     in.numberofpoints = npoints;
 
     tetgenio::polygon *polys = new tetgenio::polygon[nsegments];
     for (int i=0; i<nsegments; ++i) {
-        polys[i].vertexlist = &segments[i*vertex_per_polygon];
+        polys[i].vertexlist = const_cast<int*>(&segments[i*vertex_per_polygon]);
         polys[i].numberofvertices = vertex_per_polygon;
     }
 
@@ -184,7 +184,7 @@ void tetrahedralize_polyhedron
     }
 
     in.facetlist = fl;
-    in.facetmarkerlist = segflags;
+    in.facetmarkerlist = const_cast<int*>(segflags);
     in.numberoffacets = nsegments;
 
     in.holelist = NULL;
@@ -813,8 +813,8 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 }
 
 
-void points_to_new_mesh(const Param &param, int npoints, double *points,
-                        int n_init_segments, int *init_segments, int *init_segflags,
+void points_to_new_mesh(const Param &param, int npoints, const double *points,
+                        int n_init_segments, const int *init_segments, const int *init_segflags,
                         double max_elem_size, int vertex_per_polygon,
                         int &nnode, int &nelem, int &nseg, double *&pcoord,
                         int *&pconnectivity, int *&psegment, int *&psegflag)
@@ -852,8 +852,8 @@ void points_to_new_mesh(const Param &param, int npoints, double *points,
 
 
 void points_to_mesh(const Param &param, Variables &var,
-                    int npoints, double *points,
-                    int n_init_segments, int *init_segments, int *init_segflags,
+                    int npoints, const double *points,
+                    int n_init_segments, const int *init_segments, const int *init_segflags,
                     double max_elem_size, int vertex_per_polygon)
 {
     double *pcoord;

@@ -152,10 +152,10 @@ void remesh(const Param &param, Variables &var)
 
     // new mesh
     int npoints = var.nnode;
-    double *points = old_coord.data();
+    const double *points = old_coord.data();
     int n_init_segments = var.nseg;
-    int *init_segments = old_segment.data();
-    int *init_segflags = old_segflag.data();
+    const int *init_segments = old_segment.data();
+    const int *init_segflags = old_segflag.data();
 
     // We don't want to refine large elements during remeshing,
     // so using the domain size as the max area
