@@ -95,31 +95,21 @@ void delete_points(const int_vec &to_delete, const array_t &old_coord,
     int nseg = old_segment.size();
     int *endsegment = segment + nseg * NODES_PER_FACET;
 
-    std::cout << "segment before:\n";
-    print(std::cout, segment, nseg*NODES_PER_FACET);
-    std::cout << '\n';
-
     int end = old_coord.size() - 1;
+    // delete points from the end
     for (auto i=to_delete.rbegin(); i<to_delete.rend(); ++i) {
         // when a point is deleted, replace it with the last point
         for (int d=0; d<NDIMS; ++d) {
-            points[(*i)*NDIMS + d] = old_coord[end][d];
+            points[(*i)*NDIMS + d] = points[end*NDIMS + d];
         }
 
         // if the last point is also a segment point, the segment point index
         // needs to be updated as well
         std::replace(segment, endsegment, end, *i);
-        std::cout << *i << " <- " << end << "\n";
+        // std::cout << *i << " <- " << end << "\n";
 
         end --;
     }
-
-    std::cout << "segment after:\n";
-    print(std::cout, segment, nseg*NODES_PER_FACET);
-    std::cout << '\n';
-    std::cout << "points after:\n";
-    print(std::cout, points, (end+1)*NDIMS);
-    std::cout << '\n';
 }
 
 }
@@ -145,13 +135,6 @@ bool bad_mesh_quality(const Param &param, const Variables &var)
 void remesh(const Param &param, Variables &var)
 {
     std::cout << "  Remeshing starts...\n";
-
-    std::cout << "segment:\n";
-    print(std::cout, *var.segment);
-    std::cout << '\n';
-    std::cout << "segflag:\n";
-    print(std::cout, *var.segflag);
-    std::cout << '\n';
 
     // setting up barycentric transformation
 
@@ -191,19 +174,20 @@ void remesh(const Param &param, Variables &var)
                        new_nnode, new_nelem, new_nseg,
                        pcoord, pconnectivity, psegment, psegflag);
 
-    array_t *new_coord = new array_t(pcoord, new_nnode);
-    conn_t *new_connectivity = new conn_t(pconnectivity, new_nelem);
-    segment_t *new_segment = new segment_t(psegment, new_nseg);
-    segflag_t *new_segflag = new segflag_t(psegflag, new_nseg);
+    array_t new_coord(pcoord, new_nnode);
+    conn_t new_connectivity(pconnectivity, new_nelem);
 
     // deleting (non-boundary) nodes to avoid having tiny elements
     double_vec new_volume(new_nelem);
-    compute_volume(*new_coord, *new_connectivity, new_volume);
+    compute_volume(new_coord, new_connectivity, new_volume);
 
     int_vec tiny_elems;
     if (has_tiny_element(param, new_volume, tiny_elems)) {
+        delete [] psegment;
+        delete [] psegflag;
+
         int_vec to_delete;
-        find_points_to_delete(*new_coord, *new_connectivity, new_volume,
+        find_points_to_delete(new_coord, new_connectivity, new_volume,
                               tiny_elems, old_coord, *var.bcflag, to_delete);
 
         int q_nnode = old_nnode - to_delete.size();
@@ -224,20 +208,17 @@ void remesh(const Param &param, Variables &var)
 
         delete [] qcoord;
         delete [] qsegment;
+        new_coord.reset(pcoord, new_nnode);
+        new_connectivity.reset(pconnectivity, new_nelem);
     }
 
     var.nnode = new_nnode;
     var.nelem = new_nelem;
     var.nseg = new_nseg;
-    var.coord->steal_ref(*new_coord);
-    var.connectivity->steal_ref(*new_connectivity);
-    var.segment->steal_ref(*new_segment);
-    var.segflag->steal_ref(*new_segflag);
-
-    delete new_coord;
-    delete new_connectivity;
-    delete new_segment;
-    delete new_segflag;
+    var.coord->steal_ref(new_coord);
+    var.connectivity->steal_ref(new_connectivity);
+    var.segment->reset(psegment, var.nseg);
+    var.segflag->reset(psegflag, var.nseg);
 
     // interpolating fields
     nearest_neighbor_interpolation(var, old_coord, old_connectivity);
