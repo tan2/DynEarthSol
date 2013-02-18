@@ -14,6 +14,7 @@
 
 namespace {
 
+
 bool has_tiny_element(const Param &param, const double_vec &volume,
                       int_vec &tiny_elems)
 {
@@ -27,6 +28,38 @@ bool has_tiny_element(const Param &param, const double_vec &volume,
     // print(std::cout, tiny_elems);
 
     return tiny_elems.size();
+}
+
+
+void find_points_to_delete(const conn_t &connectivity, const int_vec &tiny_elems,
+                           int_vec &to_delete)
+{
+    // find nodes that are connected to tiny elements and count the # of connection
+    std::map<int, int> common_nodes;
+    for (int i=0; i<tiny_elems.size(); ++i) {
+        int e = tiny_elems[i];
+        const int *conn = connectivity[e];
+        for (int j=0; j<NODES_PER_ELEM; ++j) {
+            int node = conn[j];
+            common_nodes[node] += 1;
+        }
+    }
+
+    // mark nodes that are connected to two (or more) tiny elements
+    for (auto i=common_nodes.begin(); i!=common_nodes.end(); ++i) {
+        if (i->second > 1)
+            to_delete.push_back(i->first);
+    }
+
+    // std::cout << "nodes to delete:\n";
+    // print(std::cout, to_delete);
+    // std::cout << '\n';
+}
+
+
+void delete_points(const int_vec &to_delete, int &npoints, double *points,
+                   int &n_init_segments, int *init_segments, int *init_segflags)
+{
 }
 
 }
@@ -99,8 +132,13 @@ void remesh(const Param &param, Variables &var)
     double_vec new_volume(var.nelem);
     compute_volume(*var.coord, *var.connectivity, new_volume);
 
+    int_vec to_delete;
     int_vec tiny_elems;
     if (has_tiny_element(param, new_volume, tiny_elems)) {
+        find_points_to_delete(*var.connectivity, tiny_elems, to_delete);
+        delete_points(to_delete, npoints, points,
+                      n_init_segments, init_segments, init_segflags);
+
         points_to_mesh(param, var, npoints, points,
                        n_init_segments, init_segments, init_segflags,
                        max_elem_size, vertex_per_polygon);
