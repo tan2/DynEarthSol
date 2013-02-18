@@ -98,18 +98,16 @@ int main(int argc, const char* argv[])
 
         update_temperature(param, var, *var.temperature, *var.ntmp);
         update_strain_rate(var, *var.strain_rate);
-        update_spin_rate(var, *var.spin_rate);
         compute_dvoldt(var, *var.ntmp);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
         update_stress(var, *var.stress, *var.strain, *var.plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
-        update_velocity(var, *var.vel);
-        apply_vbcs(param, var, *var.vel);
-        update_mesh(param, var);
-
         // elastic stress/strain are objective (frame-indifferent)
         if (var.mat->rheol_type & MatProps::rh_elastic)
             rotate_stress(var, *var.stress, *var.strain);
+        update_velocity(var, *var.vel);
+        apply_vbcs(param, var, *var.vel);
+        update_mesh(param, var);
 
         // dt computation is expensive, and dt only changes slowly
         // don't have to do it every time step

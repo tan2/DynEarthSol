@@ -28,7 +28,6 @@ void allocate_variables(const Param &param, Variables& var)
     var.force = new array_t(n, 0);
 
     var.strain_rate = new tensor_t(e, 0);
-    var.spin_rate = new tensor_t(e, 0);
     var.strain = new tensor_t(e, 0);
     var.stress = new tensor_t(e, 0);
 
@@ -206,70 +205,6 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 }
 
 
-
-void update_spin_rate(const Variables& var, tensor_t& spin_rate)
-{
-    double *v[NODES_PER_ELEM];
-
-    #pragma omp parallel for default(none) \
-        shared(var, spin_rate) private(v)
-    for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var.connectivity)[e];
-        const double *shpdx = (*var.shpdx)[e];
-        const double *shpdz = (*var.shpdz)[e];
-        double *s = (*var.spin_rate)[e];
-
-        for (int i=0; i<NODES_PER_ELEM; ++i)
-            v[i] = (*var.vel)[conn[i]];
-
-        // XX component
-        int n = 0;
-        s[n] = 0;
-
-#ifdef THREED
-        const double *shpdy = (*var.shpdy)[e];
-        // YY component
-        n = 1;
-        s[n] = 0;
-#endif
-
-        // ZZ component
-#ifdef THREED
-        n = 2;
-#else
-        n = 1;
-#endif
-        s[n] = 0;
-
-#ifdef THREED
-        // XY component
-        n = 3;
-        s[n] = 0;
-        for (int i=0; i<NODES_PER_ELEM; ++i)
-            s[n] += 0.5 * (v[i][0] * shpdy[i] - v[i][1] * shpdx[i]);
-#endif
-
-        // XZ component
-#ifdef THREED
-        n = 4;
-#else
-        n = 2;
-#endif
-        s[n] = 0;
-        for (int i=0; i<NODES_PER_ELEM; ++i)
-            s[n] += 0.5 * (v[i][0] * shpdz[i] - v[i][NDIMS-1] * shpdx[i]);
-
-#ifdef THREED
-        // YZ component
-        n = 5;
-        s[n] = 0;
-        for (int i=0; i<NODES_PER_ELEM; ++i)
-            s[n] += 0.5 * (v[i][1] * shpdz[i] - v[i][2] * shpdy[i]);
-#endif
-    }
-}
-
-
 static void apply_damping(const Param& param, const Variables& var, array_t& force)
 {
     // flatten 2d arrays to simplify indexing
@@ -386,29 +321,51 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
         shared(var, stress, strain)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
-        const double *w = (*var.spin_rate)[e];
+        double w3, w4, w5;
+        {
+            const double *shpdx = (*var.shpdx)[e];
+            const double *shpdy = (*var.shpdy)[e];
+            const double *shpdz = (*var.shpdz)[e];
+
+            double *v[NODES_PER_ELEM];
+            for (int i=0; i<NODES_PER_ELEM; ++i)
+                v[i] = (*var.vel)[conn[i]];
+
+            w3 = 0;
+            for (int i=0; i<NODES_PER_ELEM; ++i)
+                w3 += 0.5 * (v[i][0] * shpdy[i] - v[i][1] * shpdx[i]);
+
+            w4 = 0;
+            for (int i=0; i<NODES_PER_ELEM; ++i)
+                w4 += 0.5 * (v[i][0] * shpdz[i] - v[i][NDIMS-1] * shpdx[i]);
+
+            w5 = 0;
+            for (int i=0; i<NODES_PER_ELEM; ++i)
+                w5 += 0.5 * (v[i][1] * shpdz[i] - v[i][2] * shpdy[i]);
+        }
+
         double *s = stress[e];
         double *es = strain[e];
-        double s_inc[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        double es_inc[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        double s_inc[6];
+        double es_inc[6];
         
-        s_inc[0] += var.dt * ( -2.0 * s[3] * w[3] - 2.0 * s[4] * w[4] );
-        s_inc[1] += var.dt * (  2.0 * s[3] * w[3] - 2.0 * s[5] * w[5] );
-        s_inc[2] += var.dt * (  2.0 * s[4] * w[4] + 2.0 * s[5] * w[5] );
-        s_inc[3] += var.dt * ( s[0] * w[3] - s[1] * w[3] - s[4] * w[5] - s[5] * w[4] );
-        s_inc[4] += var.dt * ( s[0] * w[4] - s[2] * w[4] + s[3] * w[5] - s[5] * w[3] );
-        s_inc[5] += var.dt * ( s[1] * w[5] - s[2] * w[5] + s[3] * w[4] + s[4] * w[3] );
+        s_inc[0] =-2.0 * s[3] * w3 - 2.0 * s[4] * w4;
+        s_inc[1] = 2.0 * s[3] * w3 - 2.0 * s[5] * w5;
+        s_inc[2] = 2.0 * s[4] * w4 + 2.0 * s[5] * w5;
+        s_inc[3] = s[0] * w3 - s[1] * w3 - s[4] * w5 - s[5] * w4;
+        s_inc[4] = s[0] * w4 - s[2] * w4 + s[3] * w5 - s[5] * w3;
+        s_inc[5] = s[1] * w5 - s[2] * w5 + s[3] * w4 + s[4] * w3;
 
-        es_inc[0] += var.dt * ( -2.0 * es[3] * w[3] - 2.0 * es[4] * w[4] );
-        es_inc[1] += var.dt * (  2.0 * es[3] * w[3] - 2.0 * es[5] * w[5] );
-        es_inc[2] += var.dt * (  2.0 * es[4] * w[4] + 2.0 * es[5] * w[5] );
-        es_inc[3] += var.dt * ( es[0] * w[3] - es[1] * w[3] - es[4] * w[5] - es[5] * w[4] );
-        es_inc[4] += var.dt * ( es[0] * w[4] - es[2] * w[4] + es[3] * w[5] - es[5] * w[3] );
-        es_inc[5] += var.dt * ( es[1] * w[5] - es[2] * w[5] + es[3] * w[4] + es[4] * w[3] );
+        es_inc[0] =-2.0 * es[3] * w3 - 2.0 * es[4] * w4;
+        es_inc[1] = 2.0 * es[3] * w3 - 2.0 * es[5] * w5;
+        es_inc[2] = 2.0 * es[4] * w4 + 2.0 * es[5] * w5;
+        es_inc[3] = es[0] * w3 - es[1] * w3 - es[4] * w5 - es[5] * w4;
+        es_inc[4] = es[0] * w4 - es[2] * w4 + es[3] * w5 - es[5] * w3;
+        es_inc[5] = es[1] * w5 - es[2] * w5 + es[3] * w4 + es[4] * w3;
 
         for(int i=0; i<6; ++i)  {
-            s[i] += s_inc[i];
-            es[i] += es_inc[i];
+            s[i] += var.dt * s_inc[i];
+            es[i] += var.dt * es_inc[i];
         }
     }
 
