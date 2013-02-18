@@ -48,6 +48,12 @@ public:
         other.n_ = 0;
     }
 
+    void reset(T* a, int n) {
+        delete [] a_;
+        a_ = a;
+        n_ = n;
+    }
+
     //
     // index accessing
     //
