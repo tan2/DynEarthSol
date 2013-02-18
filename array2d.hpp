@@ -9,9 +9,6 @@ class Array2D {
 
     T* a_;
     int n_;
-    // Can this object safely delete a_?
-    // When a_ is owned by another object, or when a_ is mallac'd (not
-    // returned by the new operator), we cannot delete a_ in this object.
 
 public:
     //
@@ -42,15 +39,13 @@ public:
     std::size_t size() const {return n_;}
     int num_elements() const {return N*n_;}
 
-    // NOTE: reset DOES NOT delete the array
-    void reset() {a_ = NULL; n_ = 0;}
-
-    // steal the pointer from other
+    // steal the pointer from other, leave a NULL to other
     void steal_ref(Array2D& other) {
         delete [] a_;
-        a_ = other.data();
-        n_ = other.size();
-        other.reset();
+        a_ = other.a_;
+        n_ = other.n_;
+        other.a_ = NULL;
+        other.n_ = 0;
     }
 
     //
