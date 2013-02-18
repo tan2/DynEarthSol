@@ -1,6 +1,12 @@
 #ifndef DYNEARTHSOL3D_MESH_HPP
 #define DYNEARTHSOL3D_MESH_HPP
 
+void points_to_new_mesh(const Param &param, int npoints, double *points,
+                        int n_init_segments, int *init_segments, int *init_segflags,
+                        double max_elem_size, int vertex_per_polygon,
+                        int &nnode, int &nelem, int &nseg,
+                        double *&pcoord, int *&pconnectivity,
+                        int *&psegment, int *&psegflag);
 void points_to_mesh(const Param &param, Variables &var,
                     int npoints, double *points,
                     int n_init_segments, int *init_segments, int *init_segflags,

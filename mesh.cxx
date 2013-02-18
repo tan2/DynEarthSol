@@ -813,15 +813,12 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 }
 
 
-void points_to_mesh(const Param &param, Variables &var,
-                    int npoints, double *points,
-                    int n_init_segments, int *init_segments, int *init_segflags,
-                    double max_elem_size, int vertex_per_polygon)
+void points_to_new_mesh(const Param &param, int npoints, double *points,
+                        int n_init_segments, int *init_segments, int *init_segflags,
+                        double max_elem_size, int vertex_per_polygon,
+                        int &nnode, int &nelem, int &nseg, double *&pcoord,
+                        int *&pconnectivity, int *&psegment, int *&psegflag)
 {
-    int nnode, nelem, nseg;
-    double *pcoord;
-    int *pconnectivity, *psegment, *psegflag;
-
 #ifdef THREED
 
     tetrahedralize_polyhedron(param.mesh.max_ratio,
@@ -851,14 +848,27 @@ void points_to_mesh(const Param &param, Variables &var,
     }
 
 #endif
+}
 
-    var.nnode = nnode;
-    var.nelem = nelem;
-    var.nseg = nseg;
-    var.coord = new array_t(pcoord, nnode);
-    var.connectivity = new conn_t(pconnectivity, nelem);
-    var.segment = new segment_t(psegment, nseg);
-    var.segflag = new segflag_t(psegflag, nseg);
+
+void points_to_mesh(const Param &param, Variables &var,
+                    int npoints, double *points,
+                    int n_init_segments, int *init_segments, int *init_segflags,
+                    double max_elem_size, int vertex_per_polygon)
+{
+    double *pcoord;
+    int *pconnectivity, *psegment, *psegflag;
+
+    points_to_new_mesh(param, npoints, points,
+                       n_init_segments, init_segments, init_segflags,
+                       max_elem_size, vertex_per_polygon,
+                       var.nnode, var.nelem, var.nseg,
+                       pcoord, pconnectivity, psegment, psegflag);
+
+    var.coord = new array_t(pcoord, var.nnode);
+    var.connectivity = new conn_t(pconnectivity, var.nelem);
+    var.segment = new segment_t(psegment, var.nseg);
+    var.segflag = new segflag_t(psegflag, var.nseg);
 }
 
 
