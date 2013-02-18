@@ -5,6 +5,7 @@
 #include "constants.hpp"
 #include "parameters.hpp"
 
+#include "barycentric-fn.hpp"
 #include "brc-interpolation.hpp"
 #include "fields.hpp"
 #include "geometry.hpp"
@@ -27,31 +28,63 @@ bool has_tiny_element(const Param &param, const double_vec &volume,
             tiny_elems.push_back(e);
     }
 
+    // std::cout << "tiny elements: ";
     // print(std::cout, tiny_elems);
+    // std::cout << '\n';
 
     return tiny_elems.size();
 }
 
 
-void find_points_to_delete(const conn_t &connectivity, const int_vec &tiny_elems,
+void find_points_to_delete(const array_t &coord, const conn_t &connectivity,
+                           const double_vec &volume, const int_vec &tiny_elems,
+                           const array_t &old_coord, const int_vec &old_bcflag,
                            int_vec &to_delete)
 {
-    // find nodes that are connected to tiny elements and count the # of connection
-    std::map<int, int> common_nodes;
-    for (int i=0; i<tiny_elems.size(); ++i) {
-        int e = tiny_elems[i];
+    // collecting the nodes of tiny_elems
+    int tiny_nelem = tiny_elems.size();
+    array_t tiny_coord(tiny_nelem * NODES_PER_ELEM);
+    conn_t tiny_conn(tiny_nelem);
+    double_vec tiny_vol(tiny_nelem);
+    int ii = 0;
+    for (int ee=0; ee<tiny_nelem; ++ee) {
+        int e = tiny_elems[ee];
+
+        tiny_vol[ee] = volume[e];
+
         const int *conn = connectivity[e];
         for (int j=0; j<NODES_PER_ELEM; ++j) {
-            int node = conn[j];
-            common_nodes[node] += 1;
+            int n = conn[j];
+            tiny_conn[ee][j] = ii;
+
+            for (int d=0; d<NDIMS; ++d) {
+                tiny_coord[ii][d] = coord[n][d];
+            }
+            ii ++;
         }
     }
 
-    // mark nodes that are connected to two (or more) tiny elements
-    for (auto i=common_nodes.begin(); i!=common_nodes.end(); ++i) {
-        if (i->second > 1)
-            to_delete.push_back(i->first);
+    Barycentric_transformation bary(tiny_coord, tiny_conn, tiny_vol);
+
+    // find old nodes that are connected to tiny elements and are not on the boundary
+    // (most of the nodes of tiny elements are newly inserted by the remeshing library)
+    const int flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
+    for (int i=0; i<old_coord.size(); ++i) {
+        // cannot delete boundary nodes
+        if (old_bcflag[i] & flag) continue;
+
+        const double *p = old_coord[i];
+        for (int ee=0; ee<tiny_nelem; ++ee) {
+            if (bary.is_inside_elem(p, ee)) {
+                to_delete.push_back(i);
+                break;
+            }
+        }
     }
+
+    // std::cout << "old points to delete:\n";
+    // print(std::cout, to_delete);
+    // std::cout << '\n';
 }
 
 
@@ -179,10 +212,8 @@ void remesh(const Param &param, Variables &var)
     int_vec to_delete;
     int_vec tiny_elems;
     if (has_tiny_element(param, new_volume, tiny_elems)) {
-        // delete var.bcflag;
-        // create_boundary_flags(var);
-
-        // find_points_to_delete(*new_connectivity, tiny_elems, to_delete);
+        find_points_to_delete(*new_coord, *new_connectivity, new_volume,
+                              tiny_elems, old_coord, *var.bcflag, to_delete);
         // delete_points(*new_bcflag, to_delete, new_nnode, pcoord,
         //               new_nseg, psegment, psegflag);
 
@@ -190,7 +221,7 @@ void remesh(const Param &param, Variables &var)
         //                new_nseg, psegment, psegflag,
         //                max_elem_size, vertex_per_polygon);
     }
-    else {
+    //else {
         var.nnode = new_nnode;
         var.nelem = new_nelem;
         var.nseg = new_nseg;
@@ -203,7 +234,7 @@ void remesh(const Param &param, Variables &var)
         delete new_connectivity;
         delete new_segment;
         delete new_segflag;
-    }
+        //}
 
     // interpolating fields
     nearest_neighbor_interpolation(var, old_coord, old_connectivity);
