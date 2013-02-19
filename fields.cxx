@@ -297,6 +297,27 @@ void update_coordinate(const Variables& var, array_t& coord)
 }
 
 
+namespace {
+
+    void jaumann_rate_3d(double *s, double dt, double w3, double w4, double w5)
+    {
+        double s_inc[NSTR];
+
+        s_inc[0] =-2.0 * s[3] * w3 - 2.0 * s[4] * w4;
+        s_inc[1] = 2.0 * s[3] * w3 - 2.0 * s[5] * w5;
+        s_inc[2] = 2.0 * s[4] * w4 + 2.0 * s[5] * w5;
+        s_inc[3] = s[0] * w3 - s[1] * w3 - s[4] * w5 - s[5] * w4;
+        s_inc[4] = s[0] * w4 - s[2] * w4 + s[3] * w5 - s[5] * w3;
+        s_inc[5] = s[1] * w5 - s[2] * w5 + s[3] * w4 + s[4] * w3;
+
+        for(int i=0; i<NSTR; ++i)  {
+            s[i] += dt * s_inc[i];
+        }
+    }
+
+}
+
+
 void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 {
 
@@ -344,29 +365,8 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
                 w5 += 0.5 * (v[i][1] * shpdz[i] - v[i][2] * shpdy[i]);
         }
 
-        double *s = stress[e];
-        double *es = strain[e];
-        double s_inc[6];
-        double es_inc[6];
-        
-        s_inc[0] =-2.0 * s[3] * w3 - 2.0 * s[4] * w4;
-        s_inc[1] = 2.0 * s[3] * w3 - 2.0 * s[5] * w5;
-        s_inc[2] = 2.0 * s[4] * w4 + 2.0 * s[5] * w5;
-        s_inc[3] = s[0] * w3 - s[1] * w3 - s[4] * w5 - s[5] * w4;
-        s_inc[4] = s[0] * w4 - s[2] * w4 + s[3] * w5 - s[5] * w3;
-        s_inc[5] = s[1] * w5 - s[2] * w5 + s[3] * w4 + s[4] * w3;
-
-        es_inc[0] =-2.0 * es[3] * w3 - 2.0 * es[4] * w4;
-        es_inc[1] = 2.0 * es[3] * w3 - 2.0 * es[5] * w5;
-        es_inc[2] = 2.0 * es[4] * w4 + 2.0 * es[5] * w5;
-        es_inc[3] = es[0] * w3 - es[1] * w3 - es[4] * w5 - es[5] * w4;
-        es_inc[4] = es[0] * w4 - es[2] * w4 + es[3] * w5 - es[5] * w3;
-        es_inc[5] = es[1] * w5 - es[2] * w5 + es[3] * w4 + es[4] * w3;
-
-        for(int i=0; i<6; ++i)  {
-            s[i] += var.dt * s_inc[i];
-            es[i] += var.dt * es_inc[i];
-        }
+        jaumann_rate_3d(stress[e], var.dt, w3, w4, w5);
+        jaumann_rate_3d(strain[e], var.dt, w3, w4, w5);
     }
 
 #else
