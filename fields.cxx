@@ -334,15 +334,13 @@ namespace {
 
 void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 {
-
-#ifdef THREED
-    // The spin rate tensor, W, and the Cauchy stress tensor, S, are         	
+    // The spin rate tensor, W, and the Cauchy stress tensor, S, are
     //     [  0  w3  w4]     [s0 s3 s4]
     // W = [-w3   0  w5],  S=[s3 s1 s5].
     //     [-w4 -w5   0]     [s4 s5 s2]
     //
-    // Stressi(and strain) increment based on the Jaumann rate is
-    // dt*(S*W-W*S). S*W-W*S is also symmetric. 
+    // Stress (and strain) increment based on the Jaumann rate is
+    // dt*(S*W-W*S). S*W-W*S is also symmetric.
     // So, following the indexing of stress tensor,
     // we get
     // sj[0] = dt * ( -2 * s3 * w3 - 2 * s4 * w4)
@@ -356,6 +354,9 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
         shared(var, stress, strain)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
+
+#ifdef THREED
+
         double w3, w4, w5;
         {
             const double *shpdx = (*var.shpdx)[e];
@@ -376,19 +377,14 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 
             w5 = 0;
             for (int i=0; i<NODES_PER_ELEM; ++i)
-                w5 += 0.5 * (v[i][1] * shpdz[i] - v[i][2] * shpdy[i]);
+                w5 += 0.5 * (v[i][1] * shpdz[i] - v[i][NDIMS-1] * shpdy[i]);
         }
 
         jaumann_rate_3d(stress[e], var.dt, w3, w4, w5);
         jaumann_rate_3d(strain[e], var.dt, w3, w4, w5);
-    }
 
 #else
 
-    #pragma omp parallel for default(none) \
-        shared(var, stress, strain)
-    for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var.connectivity)[e];
         double w2;
         {
             const double *shpdx = (*var.shpdx)[e];
@@ -400,12 +396,13 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 
             w2 = 0;
             for (int i=0; i<NODES_PER_ELEM; ++i)
-                w2 += 0.5 * (v[i][0] * shpdz[i] - v[i][1] * shpdx[i]);
+                w2 += 0.5 * (v[i][0] * shpdz[i] - v[i][NDIMS-1] * shpdx[i]);
         }
 
         jaumann_rate_2d(stress[e], var.dt, w2);
         jaumann_rate_2d(strain[e], var.dt, w2);
-    }
+
 #endif
+    }
 }
 
