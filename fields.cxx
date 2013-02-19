@@ -315,6 +315,20 @@ namespace {
         }
     }
 
+
+    void jaumann_rate_2d(double *s, double dt, double w2)
+    {
+        double s_inc[NSTR];
+
+        s_inc[0] =-2.0 * s[2] * w2;
+        s_inc[1] = 2.0 * s[2] * w2;
+        s_inc[2] = s[0] * w2 - s[1] * w2;
+
+        for(int i=0; i<NSTR; ++i)  {
+            s[i] += dt * s_inc[i];
+        }
+    }
+
 }
 
 
@@ -375,33 +389,22 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
         shared(var, stress, strain)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
-        double *s = stress[e];
-        double *es = strain[e];
-        double w = 0;
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            int nv = conn[i];
-            int nx1 = conn[(i+1) % NODES_PER_ELEM];
-            int nx2 = conn[(i+2) % NODES_PER_ELEM];
-            const double *v = (*var.vel)[nv];
-            const double *x1 = (*var.coord)[nx1];
-            const double *x2 = (*var.coord)[nx2];
-            for (int d=0; d<NDIMS; d++)
-                w += v[d] * (x2[d] - x1[d]);
+        double w2;
+        {
+            const double *shpdx = (*var.shpdx)[e];
+            const double *shpdz = (*var.shpdz)[e];
+
+            double *v[NODES_PER_ELEM];
+            for (int i=0; i<NODES_PER_ELEM; ++i)
+                v[i] = (*var.vel)[conn[i]];
+
+            w2 = 0;
+            for (int i=0; i<NODES_PER_ELEM; ++i)
+                w2 += 0.5 * (v[i][0] * shpdz[i] - v[i][1] * shpdx[i]);
         }
 
-        w *= var.dt * 0.5 / (*var.volume)[e];
-
-        double s12 = s[2];
-        double sdiff = s[1] - s[0];
-        s[0] += w * s12;
-        s[1] -= w * s12;
-        s[2] += 0.5 * w * sdiff;
-
-        double e12 = es[2];
-        double ediff = es[1] - es[0];
-        es[0] += w * e12;
-        es[1] -= w * e12;
-        es[2] += 0.5 * w * ediff;
+        jaumann_rate_2d(stress[e], var.dt, w2);
+        jaumann_rate_2d(strain[e], var.dt, w2);
     }
 #endif
 }
