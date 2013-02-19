@@ -187,7 +187,7 @@ void new_mesh(const Param &param, Variables &var,
     var.segflag->reset(psegflag, var.nseg);
 }
 
-}
+} // anonymous namespace
 
 
 bool bad_mesh_quality(const Param &param, const Variables &var)
@@ -227,6 +227,8 @@ void remesh(const Param &param, Variables &var)
         // interpolating fields
         nearest_neighbor_interpolation(var, old_coord, old_connectivity);
         barycentric_node_interpolation(var, old_coord, old_connectivity);
+
+        // old_coord et al. are destroyed before exiting this block
     }
 
     // memory for new fields
