@@ -19,8 +19,27 @@
 namespace {
 
 
-bool has_tiny_element(const Param &param, const double_vec &volume,
-                      int_vec &tiny_elems)
+void flatten_bottom(const int_vec &old_bcflag, double *qcoord,
+                    double bottom)
+{
+    // find old nodes that are on or close to the bottom boundary
+
+    // find nodes that are on the edges of the bottom boundary
+    // compute their average depth
+    const int other_bdry = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ1;
+
+    for (int i=0; i<old_bcflag.size(); ++i) {
+        int flag = old_bcflag[i];
+        if (flag & BOUNDZ0) {
+            // restore edge nodes to initial depth
+            qcoord[i*NDIMS + NDIMS-1] = bottom;
+        }
+    }
+}
+
+
+void find_tiny_element(const Param &param, const double_vec &volume,
+                       int_vec &tiny_elems)
 {
     const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
 
@@ -32,15 +51,13 @@ bool has_tiny_element(const Param &param, const double_vec &volume,
     // std::cout << "tiny elements: ";
     // print(std::cout, tiny_elems);
     // std::cout << '\n';
-
-    return tiny_elems.size();
 }
 
 
-void find_points_to_delete(const array_t &coord, const conn_t &connectivity,
-                           const double_vec &volume, const int_vec &tiny_elems,
-                           const array_t &old_coord, const int_vec &old_bcflag,
-                           int_vec &to_delete)
+void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
+                              const double_vec &volume, const int_vec &tiny_elems,
+                              const array_t &old_coord, const int_vec &old_bcflag,
+                              int_vec &to_delete)
 {
     // collecting the nodes of tiny_elems
     int tiny_nelem = tiny_elems.size();
@@ -130,12 +147,22 @@ void new_mesh(const Param &param, Variables &var,
 #endif
     const double vertex_per_polygon = 3;
 
+    // create a copy of old_coord and old_segment
+    double *qcoord = new double[old_coord.num_elements()];
+    std::memcpy(qcoord, old_coord.data(), sizeof(double)*old_coord.num_elements());
+    int *qsegment = new int[old_segment.num_elements()];
+    std::memcpy(qsegment, old_segment.data(), sizeof(int)*old_segment.num_elements());
+
+    if (param.mesh.restoring_bottom) {
+        flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength);
+    }
+
     // new mesh
     int new_nnode, new_nelem, new_nseg;
     double *pcoord;
     int *pconnectivity, *psegment, *psegflag;
-    points_to_new_mesh(param, old_nnode, old_coord.data(),
-                       old_nseg, old_segment.data(), old_segflag.data(),
+    points_to_new_mesh(param, old_nnode, qcoord,
+                       old_nseg, qsegment, old_segflag.data(),
                        max_elem_size, vertex_per_polygon,
                        new_nnode, new_nelem, new_nseg,
                        pcoord, pconnectivity, psegment, psegflag);
@@ -148,23 +175,21 @@ void new_mesh(const Param &param, Variables &var,
     compute_volume(new_coord, new_connectivity, new_volume);
 
     int_vec tiny_elems;
-    if (has_tiny_element(param, new_volume, tiny_elems)) {
-        delete [] psegment;
-        delete [] psegflag;
+    find_tiny_element(param, new_volume, tiny_elems);
 
-        int_vec to_delete;
-        find_points_to_delete(new_coord, new_connectivity, new_volume,
-                              tiny_elems, old_coord, *var.bcflag, to_delete);
+    int_vec to_delete;
+    if (tiny_elems.size() > 0) {
+        find_points_of_tiny_elem(new_coord, new_connectivity, new_volume,
+                                 tiny_elems, old_coord, *var.bcflag, to_delete);
+    }
 
+    if (to_delete.size() > 0) {
         int q_nnode = old_nnode - to_delete.size();
-        // create a copy of old_coord and old_segment
-        double *qcoord = new double[old_coord.num_elements()];
-        std::memcpy(qcoord, old_coord.data(), sizeof(double)*old_coord.num_elements());
-        int *qsegment = new int[old_segment.num_elements()];
-        std::memcpy(qsegment, old_segment.data(), sizeof(int)*old_segment.num_elements());
-
         delete_points(to_delete, old_coord, old_segment,
                       qcoord, qsegment);
+
+        delete [] psegment;
+        delete [] psegflag;
 
         points_to_new_mesh(param, q_nnode, qcoord,
                            old_nseg, qsegment, old_segflag.data(),
@@ -172,8 +197,6 @@ void new_mesh(const Param &param, Variables &var,
                            new_nnode, new_nelem, new_nseg,
                            pcoord, pconnectivity, psegment, psegflag);
 
-        delete [] qcoord;
-        delete [] qsegment;
         new_coord.reset(pcoord, new_nnode);
         new_connectivity.reset(pconnectivity, new_nelem);
     }
@@ -185,6 +208,9 @@ void new_mesh(const Param &param, Variables &var,
     var.connectivity->steal_ref(new_connectivity);
     var.segment->reset(psegment, var.nseg);
     var.segflag->reset(psegflag, var.nseg);
+
+    delete [] qcoord;
+    delete [] qsegment;
 }
 
 } // anonymous namespace
