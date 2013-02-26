@@ -28,6 +28,8 @@ void flatten_bottom(const int_vec &old_bcflag, double *qcoord,
     // compute their average depth
     const int other_bdry = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ1;
 
+     #pragma omp parallel for default(none)      \
+         shared(old_bcflag, qcoord, bottom)
     for (int i=0; i<old_bcflag.size(); ++i) {
         int flag = old_bcflag[i];
         if (flag & BOUNDZ0) {
