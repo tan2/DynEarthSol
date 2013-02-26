@@ -162,7 +162,7 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
             }
         }
         {
-            std::cout << "New node is outside of the old domain. \n";
+            //std::cout << "New node is outside of the old domain. \n";
 
             // Situation: q must be outside the old domain
             // using nearest old_coord instead
