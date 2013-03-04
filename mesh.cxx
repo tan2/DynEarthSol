@@ -889,6 +889,26 @@ void create_boundary_flags(Variables& var)
 }
 
 
+void create_boundary_nodes(Variables& var)
+{
+    for (int i=0; i<var.bcflag->size(); ++i) {
+        int f = (*var.bcflag)[i];
+        for (int j=0; j<6; ++j) {
+            if (f & bdry[j]) {
+                // this node belongs to a boundary
+                (var.bnodes[j]).push_back(i);
+            }
+        }
+    }
+
+    // for (int j=0; j<6; ++j) {
+    //     std::cout << "boundary " << j << '\n';
+    //     print(std::cout, var.bnodes[j]);
+    //     std::cout << '\n';
+    // }
+}
+
+
 void create_boundary_facets(Variables& var)
 {
     for (int e=0; e<var.nelem; ++e) {
@@ -1094,6 +1114,7 @@ void create_new_mesh(const Param& param, Variables& var)
     // std::cout << '\n';
 
     create_boundary_flags(var);
+    create_boundary_nodes(var);
     create_boundary_facets(var);
     create_support(var);
     create_elem_groups(var);

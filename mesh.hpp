@@ -12,6 +12,7 @@ void points_to_mesh(const Param &param, Variables &var,
                     int n_init_segments, const int *init_segments, const int *init_segflags,
                     double max_elem_size, int vertex_per_polygon);
 void create_boundary_flags(Variables& var);
+void create_boundary_nodes(Variables& var);
 void create_boundary_facets(Variables& var);
 void create_support(Variables& var);
 void create_elem_groups(Variables& var);

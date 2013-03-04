@@ -26,6 +26,14 @@ const int BOUNDY1 = 1 << 3;
 const int BOUNDZ0 = 1 << 4;
 const int BOUNDZ1 = 1 << 5;
 
+static const int bdry[6] =
+    {BOUNDX0,
+     BOUNDX1,
+     BOUNDY0,
+     BOUNDY1,
+     BOUNDZ0,
+     BOUNDZ1};
+
 static const std::map<int, int> bdry_order =
     {{BOUNDX0, 0},
      {BOUNDX1, 1},

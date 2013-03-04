@@ -281,8 +281,10 @@ void remesh(const Param &param, Variables &var)
     delete var.bcflag;
     create_boundary_flags(var);
     for (int i=0; i<6; ++i) {
+        var.bnodes[i].clear();
         var.bfacets[i].clear();
     }
+    create_boundary_nodes(var);
     create_boundary_facets(var);
     delete var.support;
     create_support(var);
