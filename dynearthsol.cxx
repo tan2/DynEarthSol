@@ -78,7 +78,10 @@ int main(int argc, const char* argv[])
     var.steps = 0;
     var.frame = 0;
 
-    var.max_vbc_val = find_max_vbc(param.bc);
+    if (param.control.characteristic_speed == 0)
+        var.max_vbc_val = find_max_vbc(param.bc);
+    else
+        var.max_vbc_val = param.control.characteristic_speed;
 
     if (! param.sim.is_restarting) {
         init(param, var);

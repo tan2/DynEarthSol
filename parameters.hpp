@@ -57,6 +57,7 @@ struct Mesh {
 
 struct Control {
     double gravity;
+    double characteristic_speed;
     double inertial_scaling;
     double damping_factor;
     int ref_pressure_option;

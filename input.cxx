@@ -96,6 +96,13 @@ static void declare_parameters(po::options_description &cfg,
         ("control.gravity", po::value<double>(&p.control.gravity)->default_value(10),
          "Magnitude of the gravity (in m/s^2)")
 
+        ("control.characteristic_speed",
+         po::value<double>(&p.control.characteristic_speed)->default_value(0),
+         "Characteristic tectonic speed (in m/s). "
+         "It is used to estimate the size of stable time step. "
+         "If it is 0, its value is inferred from the imposed boundary velocity. "
+         "Set it to other value if the imposed boundary velocity is 0 everywhere.")
+
         ("control.inertial_scaling", po::value<double>(&p.control.inertial_scaling)->default_value(1e5),
          "Scaling factor for inertial (a large number)")
         ("control.damping_factor", po::value<double>(&p.control.damping_factor)->default_value(0.8),
