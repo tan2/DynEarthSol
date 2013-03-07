@@ -220,6 +220,21 @@ void new_mesh(const Param &param, Variables &var,
 
 bool bad_mesh_quality(const Param &param, const Variables &var)
 {
+    if (param.mesh.restoring_bottom) {
+        // check if any bottom node is too far away from the bottom depth
+        double bottom = - param.mesh.zlength;
+        const double dist_ratio = 0.25;
+        for (int i=0; i<var.nnode; ++i) {
+            if ((*var.bcflag)[i] & BOUNDZ0) {
+                double z = (*var.coord)[i][NDIMS-1];
+                if (std::fabs(z - bottom) > dist_ratio * param.mesh.resolution) {
+                    std::cout << "Node " << i << " is too far from the bottm: z = " << z << "\n";
+                    return 1;
+                }
+            }
+        }
+    }
+
     int worst_elem;
     double q = worst_elem_quality(*var.coord, *var.connectivity,
                                   *var.volume, worst_elem);
