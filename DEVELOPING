@@ -9,8 +9,9 @@ To get the most timely progress, using Mercurial:
 To-do list:
 
 High priority:
+* Diffusing surface topography
+* Prevent creating tiny elements during remeshing (delete tiny boundary segments)
 * Simple benchmark for rheology
-* Flatten bottom boundary when remeshing
 * Advanced Interpolation
 * Markers
 * Multi-material
