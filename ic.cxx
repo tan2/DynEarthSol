@@ -60,7 +60,6 @@ void initial_stress_state(const Param &param, const Variables &var,
     }
 
     // lithostatic condition for stress and strain
-    int earthlike_reference_pressure = 0;
     double rho = var.mat->rho(0);
     double ks = var.mat->bulkm(0);
 
