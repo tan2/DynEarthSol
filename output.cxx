@@ -116,6 +116,10 @@ void output(const Param& param, const Variables& var, double start_time)
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "force", var.frame);
     write_array(buffer, *var.force);
 
+    // bcflag
+    //snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "bcflag", var.frame);
+    //write_array(buffer, *var.bcflag);
+
     std::cout << "  Output # " << var.frame
               << ", step = " << var.steps
               << ", time = " << var.time / YEAR2SEC << " yr"

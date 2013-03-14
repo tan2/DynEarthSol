@@ -90,6 +90,9 @@ def main(modelname, start, end):
             temperature = np.fromfile(prefix+'.temperature.'+suffix, dtype=np.float64, count=nnode)
             vtk_dataarray(fvtu, temperature, 'temperature')
 
+            #bcflag = np.fromfile(prefix+'.bcflag.'+suffix, dtype=np.int32, count=nnode)
+            #vtk_dataarray(fvtu, bcflag, 'BC flag')
+
             # node number for debugging
             vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node#')
 
