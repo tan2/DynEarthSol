@@ -61,6 +61,9 @@ struct Control {
     double inertial_scaling;
     double damping_factor;
     int ref_pressure_option;
+
+    int surface_process_option;
+    double surface_diffusivity;
 };
 
 struct BC {

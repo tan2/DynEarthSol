@@ -40,6 +40,7 @@ void init(const Param& param, Variables& var)
 void update_mesh(const Param& param, Variables& var)
 {
     update_coordinate(var, *var.coord);
+    surface_processes(param, var, *var.coord);
 
     var.volume->swap(*var.volume_old);
     compute_volume(*var.coord, *var.connectivity, *var.volume);

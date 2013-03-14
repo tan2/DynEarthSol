@@ -382,3 +382,80 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 }
 
 
+namespace {
+
+    void simple_diffusion(const Variables& var, array_t& coord,
+                          double surface_diffusivity)
+    {
+
+#ifdef THREED
+        // deliberate syntax error
+        Error: 3D surface diffusion not implemented;
+#endif
+        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const auto& top = var.bfacets[top_bdry];
+
+        const int_vec& top_nodes = var.bnodes[top_bdry];
+        const std::size_t ntop = top_nodes.size();
+        double_vec total_dx(var.nnode, 0);
+        double_vec total_slope(var.nnode, 0);
+
+        // loops over all top facets
+        for (auto i=0; i<top.size(); ++i) {
+            // this facet belongs to element e
+            int e = top[i].first;
+            // this facet is the f-th facet of e
+            int f = top[i].second;
+
+            const int *conn = (*var.connectivity)[e];
+            int n0 = (*var.connectivity)[e][NODE_OF_FACET[f][0]];
+            int n1 = (*var.connectivity)[e][NODE_OF_FACET[f][1]];
+
+#ifdef THREED
+            int n2 = (*var.connectivity)[e][NODE_OF_FACET[f][2]];
+
+#else
+            double dx = std::fabs(coord[n1][0] - coord[n0][0]);
+            total_dx[n0] += dx;
+            total_dx[n1] += dx;
+
+            double slope = (coord[n1][NDIMS-1] - coord[n0][NDIMS-1]) / dx;
+            total_slope[n0] += slope;
+            total_slope[n1] -= slope;
+#endif
+            // std::cout << i << ' ' << n0 << ' ' << n1 << "  " << dx << "  " << slope << '\n';
+        }
+
+        double max_dh = 0;
+        for (int i=0; i<ntop; ++i) {
+            // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
+            int n = top_nodes[i];
+            double dh = surface_diffusivity * var.dt * total_slope[n] / total_dx[n];
+            coord[n][NDIMS-1] += dh;
+            max_dh = std::max(max_dh, std::fabs(dh));
+            // std::cout << n << "  dh:  " << dh << '\n';
+        }
+
+        // std::cout << "max erosion / sedimentation rate (cm/yr):  "
+        //           << max_dh / var.dt * 100 * YEAR2SEC << '\n';
+    }
+
+}
+
+
+void surface_processes(const Param& param, const Variables& var, array_t& coord)
+{
+    switch (param.control.surface_process_option) {
+    case 0:
+        // no surface process
+        break;
+    case 1:
+        simple_diffusion(var, coord, param.control.surface_diffusivity);
+        break;
+    default:
+        std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
+        std::exit(1);
+    }
+}
+
+

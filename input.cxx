@@ -111,6 +111,12 @@ static void declare_parameters(po::options_description &cfg,
         ("control.ref_pressure_option", po::value<int>(&p.control.ref_pressure_option)->default_value(0),
          "How to define reference pressure? 0: using density of the 0-th element to compute lithostatic pressure; 1: computing rerence pressure from the PREM model.")
 
+        ("control.surface_process_option", po::value<int>(&p.control.surface_process_option)->default_value(0),
+         "What kind of surface processes? 0: no surface processes. "
+         "1: using simple diffusion to modify surface topography.")
+        ("control.surface_diffusivity", po::value<double>(&p.control.surface_diffusivity)->default_value(1e-6),
+         "Diffusition coefficient of surface topography (m^2/s)")
+
         ;
 
     cfg.add_options()

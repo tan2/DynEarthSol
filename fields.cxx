@@ -292,8 +292,6 @@ void update_coordinate(const Variables& var, array_t& coord)
     for (int i=0; i<var.nnode*NDIMS; ++i) {
         x[i] += v[i] * var.dt;
     }
-
-    // surface_processes()
 }
 
 
