@@ -387,11 +387,10 @@ namespace {
     void simple_diffusion(const Variables& var, array_t& coord,
                           double surface_diffusivity)
     {
+        /* Diffusing surface topography to simulate the effect of erosion and
+         * sedimentation.
+         */
 
-#ifdef THREED
-        // deliberate syntax error
-        Error: 3D surface diffusion not implemented;
-#endif
         const int top_bdry = bdry_order.find(BOUNDZ1)->second;
         const auto& top = var.bfacets[top_bdry];
 
@@ -414,16 +413,86 @@ namespace {
 #ifdef THREED
             int n2 = (*var.connectivity)[e][NODE_OF_FACET[f][2]];
 
+            double projected_area;
+            {
+                // normal vector of this facet
+                double normal[NDIMS];
+
+                // two vectors n0-n1 and n0-n2
+                // n is the cross product of these two vectors
+                // the length of n is 2 * triangle area
+                double x01, y01, z01, x02, y02, z02;
+                x01 = coord[n1][0] - coord[n0][0];
+                y01 = coord[n1][1] - coord[n0][1];
+                z01 = coord[n1][2] - coord[n0][2];
+                x02 = coord[n2][0] - coord[n0][0];
+                y02 = coord[n2][1] - coord[n0][1];
+                z02 = coord[n2][2] - coord[n0][2];
+
+                normal[0] = y01*z02 - z01*y02;
+                normal[1] = z01*x02 - x01*z02;
+                normal[2] = x01*y02 - y01*x02;
+
+                /* the area of this facet is:
+                 *   0.5 * std::sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2])
+                 *
+                 * theta is the angle between this facet and horizontal
+                 *   tan_theta = std::sqrt(normal[0]*normal[0] + normal[1]*normal[1]) / normal[2]
+                 *   cos_theta = normal[2] / (2 * area)
+                 *
+                 * the area projected on the horizontal plane is:
+                 *   projected_area = area * cos_theta = 0.5 * normal[2]
+                 */
+                projected_area = 0.5 * normal[2];
+            }
+
+            total_dx[n0] += projected_area;
+            total_dx[n1] += projected_area;
+            total_dx[n2] += projected_area;
+
+            double shp2dx[NODES_PER_FACET], shp2dy[NODES_PER_FACET];
+            double iv = 1 / (2 * projected_area);
+            shp2dx[0] = iv * (coord[n1][1] - coord[n2][1]);
+            shp2dx[1] = iv * (coord[n2][1] - coord[n0][1]);
+            shp2dx[2] = iv * (coord[n0][1] - coord[n1][1]);
+            shp2dy[0] = iv * (coord[n2][0] - coord[n1][0]);
+            shp2dy[1] = iv * (coord[n0][0] - coord[n2][0]);
+            shp2dy[2] = iv * (coord[n1][0] - coord[n0][0]);
+
+            double D[NODES_PER_FACET][NODES_PER_FACET];
+            for (int j=0; j<NODES_PER_FACET; j++) {
+                for (int k=0; k<NODES_PER_FACET; k++) {
+                    D[j][k] = (shp2dx[j] * shp2dx[k] +
+                               shp2dy[j] * shp2dy[k]);
+                }
+            }
+
+            const int n[NODES_PER_FACET] = {n0, n1, n2};
+            for (int j=0; j<NODES_PER_FACET; j++) {
+                double slope = 0;
+                for (int k=0; k<NODES_PER_FACET; k++)
+                    slope += D[j][k] * coord[n[k]][2];
+
+                total_slope[n[j]] += slope * projected_area;
+            }
+
+            // std::cout << i << ' ' << n0 << ' ' << n1 << ' ' << n2 << "  "
+            //           << projected_area << "  " << slope << '\n';
 #else
+            /* The 1D diffusion operation is implemented ad hoc, not using FEM
+             * formulation (e.g. computing shape function derivation on the edges).
+             */
+
             double dx = std::fabs(coord[n1][0] - coord[n0][0]);
             total_dx[n0] += dx;
             total_dx[n1] += dx;
 
-            double slope = (coord[n1][NDIMS-1] - coord[n0][NDIMS-1]) / dx;
-            total_slope[n0] += slope;
-            total_slope[n1] -= slope;
-#endif
+            double slope = (coord[n1][1] - coord[n0][1]) / dx;
+            total_slope[n0] -= slope;
+            total_slope[n1] += slope;
+
             // std::cout << i << ' ' << n0 << ' ' << n1 << "  " << dx << "  " << slope << '\n';
+#endif
         }
 
         double max_dh = 0;
@@ -431,7 +500,7 @@ namespace {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
             double dh = surface_diffusivity * var.dt * total_slope[n] / total_dx[n];
-            coord[n][NDIMS-1] += dh;
+            coord[n][NDIMS-1] -= dh;
             max_dh = std::max(max_dh, std::fabs(dh));
             // std::cout << n << "  dh:  " << dh << '\n';
         }
