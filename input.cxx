@@ -113,7 +113,8 @@ static void declare_parameters(po::options_description &cfg,
 
         ("control.surface_process_option", po::value<int>(&p.control.surface_process_option)->default_value(0),
          "What kind of surface processes? 0: no surface processes. "
-         "1: using simple diffusion to modify surface topography.")
+         "1: using simple diffusion to modify surface topography. "
+         "101: custom function.")
         ("control.surface_diffusivity", po::value<double>(&p.control.surface_diffusivity)->default_value(1e-6),
          "Diffusition coefficient of surface topography (m^2/s)")
 

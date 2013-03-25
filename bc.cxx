@@ -509,6 +509,32 @@ namespace {
         //           << max_dh / var.dt * 100 * YEAR2SEC << '\n';
     }
 
+
+    void custom_surface_processes(const Variables& var, array_t& coord)
+    {
+        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const int_vec& top_nodes = var.bnodes[top_bdry];
+        const std::size_t ntop = top_nodes.size();
+
+        // loops over all top nodes
+        for (int i=0; i<ntop; ++i) {
+            int n = top_nodes[i];
+
+            // coordinate of this node
+            double x = coord[n][0];
+            double z = coord[n][NDIMS-1];
+
+            // compute topography changes here ...
+            // positive dh means sedimentation, negative dh means erosion
+            double dh = 0;
+            {
+                // dh == ....
+            }
+
+            coord[n][NDIMS-1] += dh;
+        }
+    }
+
 }
 
 
@@ -520,6 +546,9 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord)
         break;
     case 1:
         simple_diffusion(var, coord, param.control.surface_diffusivity);
+        break;
+    case 101:
+        custom_surface_processes(var, coord);
         break;
     default:
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
