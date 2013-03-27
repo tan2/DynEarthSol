@@ -147,7 +147,7 @@ void new_mesh(const Param &param, Variables &var,
 #else
     max_elem_size = param.mesh.xlength * param.mesh.zlength;
 #endif
-    const double vertex_per_polygon = 3;
+    const int vertex_per_polygon = 3;
 
     // create a copy of old_coord and old_segment
     double *qcoord = new double[old_coord.num_elements()];
