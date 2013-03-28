@@ -20,7 +20,7 @@ namespace {
 
 
 void flatten_bottom(const int_vec &old_bcflag, double *qcoord,
-                    double bottom)
+                    double bottom, int_vec &to_delete, double min_dist)
 {
     // find old nodes that are on or close to the bottom boundary
 
@@ -29,12 +29,16 @@ void flatten_bottom(const int_vec &old_bcflag, double *qcoord,
     const int other_bdry = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ1;
 
      #pragma omp parallel for default(none)      \
-         shared(old_bcflag, qcoord, bottom)
+         shared(old_bcflag, qcoord, bottom, to_delete, min_dist)
     for (int i=0; i<old_bcflag.size(); ++i) {
         int flag = old_bcflag[i];
         if (flag & BOUNDZ0) {
             // restore edge nodes to initial depth
             qcoord[i*NDIMS + NDIMS-1] = bottom;
+        }
+        else if (!(flag & other_bdry) &&
+                 std::fabs(qcoord[i*NDIMS + NDIMS-1] - bottom) < min_dist) {
+            to_delete.push_back(i);
         }
     }
 }
@@ -115,6 +119,7 @@ void delete_points(const int_vec &to_delete, const array_t &old_coord,
     int *endsegment = segment + nseg * NODES_PER_FACET;
 
     int end = old_coord.size() - 1;
+
     // delete points from the end
     for (auto i=to_delete.rbegin(); i<to_delete.rend(); ++i) {
         // when a point is deleted, replace it with the last point
@@ -155,8 +160,11 @@ void new_mesh(const Param &param, Variables &var,
     int *qsegment = new int[old_segment.num_elements()];
     std::memcpy(qsegment, old_segment.data(), sizeof(int)*old_segment.num_elements());
 
+    int_vec to_delete;
     if (param.mesh.restoring_bottom) {
-        flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength);
+        double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
+        flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
+                       to_delete, min_dist);
     }
 
     // new mesh
@@ -179,7 +187,6 @@ void new_mesh(const Param &param, Variables &var,
     int_vec tiny_elems;
     find_tiny_element(param, new_volume, tiny_elems);
 
-    int_vec to_delete;
     if (tiny_elems.size() > 0) {
         find_points_of_tiny_elem(new_coord, new_connectivity, new_volume,
                                  tiny_elems, old_coord, *var.bcflag, to_delete);
@@ -187,6 +194,8 @@ void new_mesh(const Param &param, Variables &var,
 
     if (to_delete.size() > 0) {
         int q_nnode = old_nnode - to_delete.size();
+        std::sort(to_delete.begin(), to_delete.end());
+        std::unique(to_delete.begin(), to_delete.end());
         delete_points(to_delete, old_coord, old_segment,
                       qcoord, qsegment);
 
