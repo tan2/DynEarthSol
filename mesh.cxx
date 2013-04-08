@@ -891,6 +891,9 @@ void create_boundary_flags(Variables& var)
 
 void create_boundary_nodes(Variables& var)
 {
+    /* var.bnodes[i] contains a list of nodes on the i-th boundary.
+     * (See constants.hpp for the order of boundaries.)
+     */
     for (int i=0; i<var.bcflag->size(); ++i) {
         int f = (*var.bcflag)[i];
         for (int j=0; j<6; ++j) {
@@ -911,6 +914,9 @@ void create_boundary_nodes(Variables& var)
 
 void create_boundary_facets(Variables& var)
 {
+    /* var.bfacets[i] contains a list of facets (or segments in 2D)
+     * on the i-th boundary. (See constants.hpp for the order of boundaries.)
+     */
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
         for (int i=0; i<FACETS_PER_ELEM; ++i) {
