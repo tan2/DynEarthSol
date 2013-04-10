@@ -18,14 +18,13 @@
 
 namespace {
 
+const int DELETED_FACET = -1;
+const int DEBUG = 0;
 
 void flatten_bottom(const int_vec &old_bcflag, double *qcoord,
                     double bottom, int_vec &to_delete, double min_dist)
 {
     // find old nodes that are on or close to the bottom boundary
-
-    // find nodes that are on the edges of the bottom boundary
-    // compute their average depth
     const int other_bdry = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ1;
 
     for (int i=0; i<old_bcflag.size(); ++i) {
@@ -42,6 +41,110 @@ void flatten_bottom(const int_vec &old_bcflag, double *qcoord,
 }
 
 
+bool is_bottom_corner(int flag)
+{
+    // is bottom?
+    if (!(flag & BOUNDZ0)) return 0;
+
+    // is corner?
+    if (
+#ifdef THREED
+        flag & (BOUNDX0 | BOUNDY0) || flag & (BOUNDX0 | BOUNDY1) ||
+        flag & (BOUNDX1 | BOUNDY0) || flag & (BOUNDX1 | BOUNDY1)
+#else
+        flag & BOUNDX0 || flag & BOUNDX1
+#endif
+        ) return 1;
+
+    return 0;
+}
+
+
+void new_bottom(const int_vec &old_bcflag, double *qcoord,
+                double bottom_depth, int_vec &to_delete, double min_dist,
+                int *segment, int *segflag, int nseg)
+{
+    /* deleting nodes that are on or close to the bottom boundary,
+     * excluding nodes on the side walls
+     */
+    const int other_bdry = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ1;
+
+    int_vec bottom_corners;
+    for (int i=0; i<old_bcflag.size(); ++i) {
+        int flag = old_bcflag[i];
+        if (flag & BOUNDZ0) {
+            if(is_bottom_corner(flag))
+                bottom_corners.push_back(i);
+            else
+                to_delete.push_back(i);
+        }
+        else if (!(flag & other_bdry) &&
+                 std::fabs(qcoord[i*NDIMS + NDIMS-1] - bottom_depth) < min_dist) {
+            to_delete.push_back(i);
+        }
+    }
+
+    if (DEBUG) {
+        std::cout << "bottom points to delete: ";
+        print(std::cout, to_delete);
+        std::cout << '\n';
+        std::cout << "segment before delete: ";
+        print(std::cout, segment, nseg*NODES_PER_FACET);
+        std::cout << '\n';
+        std::cout << "segflag before delete: ";
+        print(std::cout, segflag, nseg);
+        std::cout << '\n';
+    }
+
+    // must have 2 corners in 2D, 4 corners in 3D
+    if (bottom_corners.size() != (2 << (NDIMS-2))) {
+        std::cerr << "Error: cannot find all bottom corners before remeshing. n_bottom_corners = "
+                  << bottom_corners.size() << '\n';
+        std::exit(1);
+    }
+
+    // move the corners to the same depth
+    for (int i=0; i<bottom_corners.size(); i++) {
+        int n = bottom_corners[i];
+        qcoord[n*NDIMS + NDIMS-1] = bottom_depth;
+    }
+
+    // mark all bottom facets nodes as deleted
+    for (int i=0; i<nseg; ++i) {
+        if (segflag[i] == BOUNDZ0) {
+            for (int j=0; j<NODES_PER_FACET; j++)
+                segment[i*NODES_PER_FACET + j] = DELETED_FACET;
+        }
+    }
+
+    // create new bottom facets from corner nodes
+    // 1 facet (segment) in 2D, 2 facets in 3D
+    bottom_corners.push_back(bottom_corners[0]);  // close the polygon
+    for (int i=0, nfacets=0, offset=0; i<nseg, nfacets<(NDIMS-1); ++i) {
+        if (segflag[i] == BOUNDZ0) {
+            for (int j=0; j<NODES_PER_FACET; j++)
+                segment[i*NODES_PER_FACET + j] = bottom_corners[offset + j];
+
+            segflag[i] = BOUNDZ0;
+            nfacets ++;
+            offset += NDIMS-1;
+        }
+    }
+
+    if (DEBUG) {
+        std::cout << "bottom corners: ";
+        print(std::cout, bottom_corners);
+        std::cout << '\n';
+        std::cout << "segment with new bottom: ";
+        print(std::cout, segment, nseg*NODES_PER_FACET);
+        std::cout << '\n';
+        std::cout << "segflag with new bottom: ";
+        print(std::cout, segflag, nseg);
+        std::cout << '\n';
+    }
+}
+
+
 void find_tiny_element(const Param &param, const double_vec &volume,
                        int_vec &tiny_elems)
 {
@@ -52,16 +155,18 @@ void find_tiny_element(const Param &param, const double_vec &volume,
             tiny_elems.push_back(e);
     }
 
-    // std::cout << "tiny elements: ";
-    // print(std::cout, tiny_elems);
-    // std::cout << '\n';
+    if (DEBUG) {
+        std::cout << "tiny elements: ";
+        print(std::cout, tiny_elems);
+        std::cout << '\n';
+    }
 }
 
 
 void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
                               const double_vec &volume, const int_vec &tiny_elems,
-                              const array_t &old_coord, const int_vec &old_bcflag,
-                              int_vec &to_delete)
+                              int npoints, const double *old_points,
+                              const int_vec &old_bcflag, int_vec &to_delete)
 {
     // collecting the nodes of tiny_elems
     int tiny_nelem = tiny_elems.size();
@@ -91,11 +196,11 @@ void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
     // find old nodes that are connected to tiny elements and are not on the boundary
     // (most of the nodes of tiny elements are newly inserted by the remeshing library)
     const int flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
-    for (int i=0; i<old_coord.size(); ++i) {
+    for (int i=0; i<npoints; ++i) {
         // cannot delete boundary nodes
         if (old_bcflag[i] & flag) continue;
 
-        const double *p = old_coord[i];
+        const double *p = old_points + i*NDIMS;
         for (int ee=0; ee<tiny_nelem; ++ee) {
             if (bary.is_inside_elem(p, ee)) {
                 to_delete.push_back(i);
@@ -104,19 +209,26 @@ void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
         }
     }
 
-    // std::cout << "old points to delete:\n";
-    // print(std::cout, to_delete);
-    // std::cout << '\n';
+    if (DEBUG) {
+        std::cout << "points of tiny elements: ";
+        print(std::cout, to_delete);
+        std::cout << '\n';
+    }
 }
 
 
-void delete_points(const int_vec &to_delete, const array_t &old_coord,
-                   const segment_t &old_segment, double *points, int *segment)
+void delete_points(const int_vec &to_delete, int &npoints,
+                   int nseg, double *points, int *segment)
 {
-    int nseg = old_segment.size();
+    if (DEBUG) {
+        std::cout << "old points to delete: ";
+        print(std::cout, to_delete);
+        std::cout << '\n';
+    }
+
     int *endsegment = segment + nseg * NODES_PER_FACET;
 
-    int end = old_coord.size() - 1;
+    int end = npoints - 1;
 
     // delete points from the end
     for (auto i=to_delete.rbegin(); i<to_delete.rend(); ++i) {
@@ -132,6 +244,43 @@ void delete_points(const int_vec &to_delete, const array_t &old_coord,
 
         end --;
     }
+    npoints -= to_delete.size();
+}
+
+
+void delete_facets(int &nseg, int *segment, int *segflag)
+{
+    // delete facets from the end
+    for (int i=nseg-1; i>=0; i--) {
+        if (segment[i*NODES_PER_FACET] == DELETED_FACET) {
+            // safety check
+            if (segment[i*NODES_PER_FACET + 1] != DELETED_FACET
+#ifdef THREED
+                || segment[i*NODES_PER_FACET + 2] != DELETED_FACET
+#endif
+                ) {
+                std::cerr << "Error: segment array is corrupted!\n";
+                print(std::cerr, segment, nseg*NODES_PER_FACET);
+                std::exit(1);
+            }
+
+            // replace deleted segment with the last segment
+            for (int j=0; j<NODES_PER_FACET; ++j) {
+                segment[i*NODES_PER_FACET + j] = segment[(nseg-1)*NODES_PER_FACET + j];
+            }
+            segflag[i] = segflag[nseg-1];
+            nseg --;
+        }
+    }
+
+    if (DEBUG) {
+        std::cout << "segment: ";
+        print(std::cout, segment, nseg*NODES_PER_FACET);
+        std::cout << '\n';
+        std::cout << "segflag: ";
+        print(std::cout, segflag, nseg);
+        std::cout << '\n';
+    }
 }
 
 
@@ -139,9 +288,6 @@ void new_mesh(const Param &param, Variables &var,
               const array_t &old_coord, const conn_t &old_connectivity,
               const segment_t &old_segment, const segflag_t &old_segflag)
 {
-    int old_nnode = old_coord.size();
-    int old_nseg = old_segment.size();
-
     // We don't want to refine large elements during remeshing,
     // so using the domain size as the max area
     double max_elem_size;
@@ -157,12 +303,23 @@ void new_mesh(const Param &param, Variables &var,
     std::memcpy(qcoord, old_coord.data(), sizeof(double)*old_coord.num_elements());
     int *qsegment = new int[old_segment.num_elements()];
     std::memcpy(qsegment, old_segment.data(), sizeof(int)*old_segment.num_elements());
+    int *qsegflag = new int[old_segflag.num_elements()];
+    std::memcpy(qsegflag, old_segflag.data(), sizeof(int)*old_segflag.num_elements());
 
-    int_vec to_delete;
+    int old_nnode = old_coord.size();
+    int old_nseg = old_segment.size();
+
     if (param.mesh.restoring_bottom) {
         double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
-        flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
-                       to_delete, min_dist);
+        // flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
+        //                to_delete, min_dist);
+
+        int_vec to_delete;
+        new_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
+                   to_delete, min_dist, qsegment, qsegflag, old_nseg);
+        delete_points(to_delete, old_nnode, old_nseg,
+                      qcoord, qsegment);
+        delete_facets(old_nseg, qsegment, qsegflag);
     }
 
     // new mesh
@@ -170,7 +327,7 @@ void new_mesh(const Param &param, Variables &var,
     double *pcoord;
     int *pconnectivity, *psegment, *psegflag;
     points_to_new_mesh(param, old_nnode, qcoord,
-                       old_nseg, qsegment, old_segflag.data(),
+                       old_nseg, qsegment, qsegflag,
                        max_elem_size, vertex_per_polygon,
                        new_nnode, new_nelem, new_nseg,
                        pcoord, pconnectivity, psegment, psegflag);
@@ -185,23 +342,22 @@ void new_mesh(const Param &param, Variables &var,
     int_vec tiny_elems;
     find_tiny_element(param, new_volume, tiny_elems);
 
+    int_vec to_delete;
     if (tiny_elems.size() > 0) {
         find_points_of_tiny_elem(new_coord, new_connectivity, new_volume,
-                                 tiny_elems, old_coord, *var.bcflag, to_delete);
+                                 tiny_elems, old_nnode, qcoord, *var.bcflag, to_delete);
     }
 
     if (to_delete.size() > 0) {
-        int q_nnode = old_nnode - to_delete.size();
-        std::sort(to_delete.begin(), to_delete.end());
-        std::unique(to_delete.begin(), to_delete.end());
-        delete_points(to_delete, old_coord, old_segment,
+        int q_nnode = old_nnode;
+        delete_points(to_delete, q_nnode, old_nseg,
                       qcoord, qsegment);
 
         delete [] psegment;
         delete [] psegflag;
 
         points_to_new_mesh(param, q_nnode, qcoord,
-                           old_nseg, qsegment, old_segflag.data(),
+                           old_nseg, qsegment, qsegflag,
                            max_elem_size, vertex_per_polygon,
                            new_nnode, new_nelem, new_nseg,
                            pcoord, pconnectivity, psegment, psegflag);
