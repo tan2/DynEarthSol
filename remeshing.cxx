@@ -383,8 +383,18 @@ void new_mesh(const Param &param, Variables &var,
 
 bool bad_mesh_quality(const Param &param, const Variables &var, int &index)
 {
+    // check tiny elements
+    const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
+    for (int e=0; e<var.nelem; e++) {
+        if ((*var.volume)[e] < smallest_vol) {
+            index = e;
+            std::cout << "The size of element " << index << " is too small.\n";
+            return 3;
+        }
+    }
+
+    // check if any bottom node is too far away from the bottom depth
     if (param.mesh.restoring_bottom) {
-        // check if any bottom node is too far away from the bottom depth
         double bottom = - param.mesh.zlength;
         const double dist_ratio = 0.25;
         for (int i=0; i<var.nnode; ++i) {
@@ -399,6 +409,7 @@ bool bad_mesh_quality(const Param &param, const Variables &var, int &index)
         }
     }
 
+    // check element distortion
     int worst_elem;
     double q = worst_elem_quality(*var.coord, *var.connectivity,
                                   *var.volume, worst_elem);
