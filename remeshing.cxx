@@ -335,35 +335,38 @@ void new_mesh(const Param &param, Variables &var,
     array_t new_coord(pcoord, new_nnode);
     conn_t new_connectivity(pconnectivity, new_nelem);
 
-    // deleting (non-boundary) nodes to avoid having tiny elements
-    double_vec new_volume(new_nelem);
-    compute_volume(new_coord, new_connectivity, new_volume);
+    // coarsening
+    {
+        // deleting (non-boundary) nodes to avoid having tiny elements
+        double_vec new_volume(new_nelem);
+        compute_volume(new_coord, new_connectivity, new_volume);
 
-    int_vec tiny_elems;
-    find_tiny_element(param, new_volume, tiny_elems);
+        int_vec tiny_elems;
+        find_tiny_element(param, new_volume, tiny_elems);
 
-    int_vec points_to_delete;
-    if (tiny_elems.size() > 0) {
-        find_points_of_tiny_elem(new_coord, new_connectivity, new_volume,
-                                 tiny_elems, old_nnode, qcoord, *var.bcflag, points_to_delete);
-    }
+        int_vec points_to_delete;
+        if (tiny_elems.size() > 0) {
+            find_points_of_tiny_elem(new_coord, new_connectivity, new_volume,
+                                     tiny_elems, old_nnode, qcoord, *var.bcflag, points_to_delete);
+        }
 
-    if (points_to_delete.size() > 0) {
-        int q_nnode = old_nnode;
-        delete_points(points_to_delete, q_nnode, old_nseg,
-                      qcoord, qsegment);
+        if (points_to_delete.size() > 0) {
+            int q_nnode = old_nnode;
+            delete_points(points_to_delete, q_nnode, old_nseg,
+                          qcoord, qsegment);
 
-        delete [] psegment;
-        delete [] psegflag;
+            delete [] psegment;
+            delete [] psegflag;
 
-        points_to_new_mesh(param, q_nnode, qcoord,
-                           old_nseg, qsegment, qsegflag,
-                           max_elem_size, vertex_per_polygon,
-                           new_nnode, new_nelem, new_nseg,
-                           pcoord, pconnectivity, psegment, psegflag);
+            points_to_new_mesh(param, q_nnode, qcoord,
+                               old_nseg, qsegment, qsegflag,
+                               max_elem_size, vertex_per_polygon,
+                               new_nnode, new_nelem, new_nseg,
+                               pcoord, pconnectivity, psegment, psegflag);
 
-        new_coord.reset(pcoord, new_nnode);
-        new_connectivity.reset(pconnectivity, new_nelem);
+            new_coord.reset(pcoord, new_nnode);
+            new_connectivity.reset(pconnectivity, new_nelem);
+        }
     }
 
     var.nnode = new_nnode;
