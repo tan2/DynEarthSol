@@ -123,20 +123,21 @@ int main(int argc, const char* argv[])
             var.frame ++;
         }
 
-        var.bad_mesh_quality = bad_mesh_quality(param, var, var.bad_quality_index);
-        if (var.steps % param.mesh.quality_check_step_interval == 0 &&
-            var.bad_mesh_quality) {
+        if (var.steps % param.mesh.quality_check_step_interval == 0) {
+            var.bad_mesh_quality = bad_mesh_quality(param, var, var.bad_quality_index);
+            if (var.bad_mesh_quality) {
 
-            if (param.sim.output_during_remeshing) {
-                output(param, var, start_time);
-                var.frame ++;
-            }
+                if (param.sim.output_during_remeshing) {
+                    output(param, var, start_time);
+                    var.frame ++;
+                }
 
-            remesh(param, var);
+                remesh(param, var);
 
-            if (param.sim.output_during_remeshing) {
-                output(param, var, start_time);
-                var.frame ++;
+                if (param.sim.output_during_remeshing) {
+                    output(param, var, start_time);
+                    var.frame ++;
+                }
             }
         }
 
