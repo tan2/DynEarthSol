@@ -389,7 +389,7 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
     for (int e=0; e<var.nelem; e++) {
         if ((*var.volume)[e] < smallest_vol) {
             index = e;
-            std::cout << "The size of element " << index << " is too small.\n";
+            std::cout << "    The size of element #" << index << " is too small.\n";
             return 3;
         }
     }
@@ -403,7 +403,7 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
                 double z = (*var.coord)[i][NDIMS-1];
                 if (std::fabs(z - bottom) > dist_ratio * param.mesh.resolution) {
                     index = i;
-                    std::cout << "Node " << i << " is too far from the bottm: z = " << z << "\n";
+                    std::cout << "    Node #" << i << " is too far from the bottm: z = " << z << "\n";
                     return 2;
                 }
             }
@@ -420,7 +420,7 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
 #endif
     if (q < param.mesh.min_quality) {
         index = worst_elem;
-        std::cout << "Worst mesh quality = " << q << " at element #" << worst_elem << ".\n";
+        std::cout << "    Element #" << worst_elem << " has mesh quality = " << q << ".\n";
         return 1;
     }
     return 0;
