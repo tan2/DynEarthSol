@@ -118,7 +118,7 @@ void new_bottom(const int_vec &old_bcflag, double *qcoord,
     }
 
     // create new bottom facets from corner nodes
-    // 1 facet (segment) in 2D, 2 facets in 3D
+    // XXX: Assuming square box, 1 facet (segment) in 2D, 2 facets in 3D
     bottom_corners.push_back(bottom_corners[0]);  // close the polygon
     for (int i=0, nfacets=0, offset=0; i<nseg, nfacets<(NDIMS-1); ++i) {
         if (segflag[i] == BOUNDZ0) {
