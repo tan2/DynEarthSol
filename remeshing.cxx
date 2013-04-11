@@ -381,7 +381,7 @@ void new_mesh(const Param &param, Variables &var,
 } // anonymous namespace
 
 
-bool bad_mesh_quality(const Param &param, const Variables &var, int &index)
+int bad_mesh_quality(const Param &param, const Variables &var, int &index)
 {
     // check tiny elements
     const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
