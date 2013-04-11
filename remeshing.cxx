@@ -376,6 +376,7 @@ void new_mesh(const Param &param, Variables &var,
 
     delete [] qcoord;
     delete [] qsegment;
+    delete [] qsegflag;
 }
 
 } // anonymous namespace
