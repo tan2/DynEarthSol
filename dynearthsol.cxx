@@ -126,13 +126,17 @@ int main(int argc, const char* argv[])
         if (var.steps % param.mesh.quality_check_step_interval == 0 &&
             bad_mesh_quality(param, var)) {
 
-            output(param, var, start_time);
-            var.frame ++;
+            if (param.sim.output_during_remeshing) {
+                output(param, var, start_time);
+                var.frame ++;
+            }
 
             remesh(param, var);
 
-            output(param, var, start_time);
-            var.frame ++;
+            if (param.sim.output_during_remeshing) {
+                output(param, var, start_time);
+                var.frame ++;
+            }
         }
 
     } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time_in_yr * YEAR2SEC);

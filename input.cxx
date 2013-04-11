@@ -29,6 +29,8 @@ static void declare_parameters(po::options_description &cfg,
 
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
          "Restarting from previous save?")
+        ("sim.output_during_remeshing", po::value<bool>(&p.sim.output_during_remeshing)->default_value(false),
+         "Output immediately before and after remeshing?")
         ;
 
     cfg.add_options()

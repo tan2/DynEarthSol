@@ -30,6 +30,7 @@ struct Sim {
     int max_steps;
     int output_step_interval;
     bool is_restarting;
+    bool output_during_remeshing;
 
     std::string modelname;
 };
