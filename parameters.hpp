@@ -145,6 +145,9 @@ struct Variables {
     double max_vbc_val;
     double compensation_pressure;
 
+    int bad_mesh_quality;
+    int bad_quality_index;
+
     // These 4 arrays are allocated by external library
     array_t *coord;
     conn_t *connectivity;

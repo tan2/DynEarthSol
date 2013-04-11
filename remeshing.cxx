@@ -381,7 +381,7 @@ void new_mesh(const Param &param, Variables &var,
 } // anonymous namespace
 
 
-bool bad_mesh_quality(const Param &param, const Variables &var)
+bool bad_mesh_quality(const Param &param, const Variables &var, int &index)
 {
     if (param.mesh.restoring_bottom) {
         // check if any bottom node is too far away from the bottom depth
@@ -391,8 +391,9 @@ bool bad_mesh_quality(const Param &param, const Variables &var)
             if ((*var.bcflag)[i] & BOUNDZ0) {
                 double z = (*var.coord)[i][NDIMS-1];
                 if (std::fabs(z - bottom) > dist_ratio * param.mesh.resolution) {
+                    index = i;
                     std::cout << "Node " << i << " is too far from the bottm: z = " << z << "\n";
-                    return 1;
+                    return 2;
                 }
             }
         }
@@ -405,8 +406,9 @@ bool bad_mesh_quality(const Param &param, const Variables &var)
     // normalizing q so that its magnitude is about the same in 2D and 3D
     q = std::pow(q, 1.0/3);
 #endif
-    std::cout << "Worst mesh quality = " << q << " at element #" << worst_elem << ".\n";
     if (q < param.mesh.min_quality) {
+        index = worst_elem;
+        std::cout << "Worst mesh quality = " << q << " at element #" << worst_elem << ".\n";
         return 1;
     }
     return 0;
