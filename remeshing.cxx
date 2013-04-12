@@ -49,8 +49,10 @@ bool is_bottom_corner(int flag)
     // is corner?
     if (
 #ifdef THREED
-        flag & (BOUNDX0 | BOUNDY0) || flag & (BOUNDX0 | BOUNDY1) ||
-        flag & (BOUNDX1 | BOUNDY0) || flag & (BOUNDX1 | BOUNDY1)
+        (flag & BOUNDX0 && flag & BOUNDY0) ||
+        (flag & BOUNDX1 && flag & BOUNDY0) ||
+        (flag & BOUNDX0 && flag & BOUNDY1) ||
+        (flag & BOUNDX1 && flag & BOUNDY1)
 #else
         flag & BOUNDX0 || flag & BOUNDX1
 #endif
@@ -100,6 +102,9 @@ void new_bottom(const int_vec &old_bcflag, double *qcoord,
     if (bottom_corners.size() != (2 << (NDIMS-2))) {
         std::cerr << "Error: cannot find all bottom corners before remeshing. n_bottom_corners = "
                   << bottom_corners.size() << '\n';
+        std::cout << "bottom corners: ";
+        print(std::cout, bottom_corners);
+        std::cout << '\n';
         std::exit(1);
     }
 
@@ -119,7 +124,10 @@ void new_bottom(const int_vec &old_bcflag, double *qcoord,
 
     // create new bottom facets from corner nodes
     // XXX: Assuming square box, 1 facet (segment) in 2D, 2 facets in 3D
-    bottom_corners.push_back(bottom_corners[0]);  // close the polygon
+    // XXX: Assuming the order of bottom nodes in 3D is
+    //      0 -- 1
+    //      |    |
+    //      2 -- 3
     for (int i=0, nfacets=0, offset=0; i<nseg, nfacets<(NDIMS-1); ++i) {
         if (segflag[i] == BOUNDZ0) {
             for (int j=0; j<NODES_PER_FACET; j++)
@@ -127,7 +135,7 @@ void new_bottom(const int_vec &old_bcflag, double *qcoord,
 
             segflag[i] = BOUNDZ0;
             nfacets ++;
-            offset += NDIMS-1;
+            offset ++;
         }
     }
 
