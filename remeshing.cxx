@@ -358,6 +358,7 @@ void new_mesh(const Param &param, Variables &var,
                                      tiny_elems, old_nnode, qcoord, *var.bcflag, points_to_delete);
         }
 
+        // deleting boundary nodes associated with tiny facets
         if (points_to_delete.size() > 0) {
             int q_nnode = old_nnode;
             delete_points(points_to_delete, q_nnode, old_nseg,
