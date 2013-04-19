@@ -53,7 +53,7 @@ struct Mesh {
     double_pair refined_zonex, refined_zoney, refined_zonez;
     std::string poly_filename;
 
-    int restoring_bottom;
+    int remeshing_option;
 };
 
 struct Control {

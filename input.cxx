@@ -89,9 +89,11 @@ static void declare_parameters(po::options_description &cfg,
         ("mesh.min_quality", po::value<double>(&p.mesh.min_quality)->default_value(0.4),
          "Min. mesh quality before remeshing (between 0 and 1)")
 
-        ("mesh.restoring_bottom", po::value<int>(&p.mesh.restoring_bottom)->default_value(1),
-         "Restoring the bottom boundary to the initial location during remeshing?\n"
-         )
+        ("mesh.remeshing_option", po::value<int>(&p.mesh.remeshing_option)->default_value(0),
+         "How to deal with the boundaries during remeshing?\n"
+         "0: no modification on any boundary.\n"
+         "1: move all bottom nodes to the initial depth.\n"
+         "2: create a new bottom boundary at the initial depth.\n")
         ;
 
     cfg.add_options()

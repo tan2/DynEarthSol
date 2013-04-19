@@ -317,17 +317,29 @@ void new_mesh(const Param &param, Variables &var,
     int old_nnode = old_coord.size();
     int old_nseg = old_segment.size();
 
-    if (param.mesh.restoring_bottom) {
+    switch (param.mesh.remeshing_option) {
+    case 0:
+        break;
+    case 1: {
         double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
-        // flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
-        //                points_to_delete, min_dist);
-
+        int_vec points_to_delete;
+        flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
+                       points_to_delete, min_dist);
+        break;
+    }
+    case 2: {
+        double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
         int_vec points_to_delete;
         new_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
                    points_to_delete, min_dist, qsegment, qsegflag, old_nseg);
         delete_points(points_to_delete, old_nnode, old_nseg,
                       qcoord, qsegment);
         delete_facets(old_nseg, qsegment, qsegflag);
+        break;
+    }
+    default:
+        std::cerr << "Error: unknown remeshing_option: " << param.mesh.remeshing_option << '\n';
+        std::exit(1);
     }
 
     // new mesh
@@ -407,7 +419,7 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
     }
 
     // check if any bottom node is too far away from the bottom depth
-    if (param.mesh.restoring_bottom) {
+    if (param.mesh.remeshing_option == 1 || param.mesh.remeshing_option == 2) {
         double bottom = - param.mesh.zlength;
         const double dist_ratio = 0.25;
         for (int i=0; i<var.nnode; ++i) {
