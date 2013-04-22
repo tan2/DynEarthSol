@@ -19,14 +19,14 @@ const int NODES_PER_ELEM = NDIMS + 1;
 const int NSTR = NDIMS * (NDIMS + 1) / 2;
 
 // Flags for boundary
-const int BOUNDX0 = 1 << 0;
-const int BOUNDX1 = 1 << 1;
-const int BOUNDY0 = 1 << 2;
-const int BOUNDY1 = 1 << 3;
-const int BOUNDZ0 = 1 << 4;
-const int BOUNDZ1 = 1 << 5;
+const uint BOUNDX0 = 1 << 0;
+const uint BOUNDX1 = 1 << 1;
+const uint BOUNDY0 = 1 << 2;
+const uint BOUNDY1 = 1 << 3;
+const uint BOUNDZ0 = 1 << 4;
+const uint BOUNDZ1 = 1 << 5;
 
-static const int bdry[6] =
+static const uint bdry[6] =
     {BOUNDX0,
      BOUNDX1,
      BOUNDY0,
@@ -34,7 +34,7 @@ static const int bdry[6] =
      BOUNDZ0,
      BOUNDZ1};
 
-static const std::map<int, int> bdry_order =
+static const std::map<uint, int> bdry_order =
     {{BOUNDX0, 0},
      {BOUNDX1, 1},
      {BOUNDY0, 2},

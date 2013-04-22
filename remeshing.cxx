@@ -21,14 +21,14 @@ namespace {
 const int DELETED_FACET = -1;
 const int DEBUG = 0;
 
-void flatten_bottom(const int_vec &old_bcflag, double *qcoord,
+void flatten_bottom(const uint_vec &old_bcflag, double *qcoord,
                     double bottom, int_vec &points_to_delete, double min_dist)
 {
     // find old nodes that are on or close to the bottom boundary
     const int other_bdry = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ1;
 
     for (int i=0; i<old_bcflag.size(); ++i) {
-        int flag = old_bcflag[i];
+        uint flag = old_bcflag[i];
         if (flag & BOUNDZ0) {
             // restore edge nodes to initial depth
             qcoord[i*NDIMS + NDIMS-1] = bottom;
@@ -41,7 +41,7 @@ void flatten_bottom(const int_vec &old_bcflag, double *qcoord,
 }
 
 
-bool is_bottom_corner(int flag)
+bool is_bottom_corner(uint flag)
 {
     // is bottom?
     if (!(flag & BOUNDZ0)) return 0;
@@ -62,7 +62,7 @@ bool is_bottom_corner(int flag)
 }
 
 
-void new_bottom(const int_vec &old_bcflag, double *qcoord,
+void new_bottom(const uint_vec &old_bcflag, double *qcoord,
                 double bottom_depth, int_vec &points_to_delete, double min_dist,
                 int *segment, int *segflag, int nseg)
 {
@@ -73,7 +73,7 @@ void new_bottom(const int_vec &old_bcflag, double *qcoord,
 
     int_vec bottom_corners;
     for (int i=0; i<old_bcflag.size(); ++i) {
-        int flag = old_bcflag[i];
+        uint flag = old_bcflag[i];
         if (flag & BOUNDZ0) {
             if(is_bottom_corner(flag))
                 bottom_corners.push_back(i);
@@ -174,7 +174,7 @@ void find_tiny_element(const Param &param, const double_vec &volume,
 void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
                               const double_vec &volume, const int_vec &tiny_elems,
                               int npoints, const double *old_points,
-                              const int_vec &old_bcflag, int_vec &points_to_delete)
+                              const uint_vec &old_bcflag, int_vec &points_to_delete)
 {
     // collecting the nodes of tiny_elems
     int tiny_nelem = tiny_elems.size();
@@ -203,7 +203,7 @@ void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
 
     // find old nodes that are connected to tiny elements and are not on the boundary
     // (most of the nodes of tiny elements are newly inserted by the remeshing library)
-    const int flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
+    const uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
     for (int i=0; i<npoints; ++i) {
         // cannot delete boundary nodes
         if (old_bcflag[i] & flag) continue;

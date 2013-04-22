@@ -875,12 +875,12 @@ void points_to_mesh(const Param &param, Variables &var,
 void create_boundary_flags(Variables& var)
 {
     // allocate and init to 0
-    var.bcflag = new int_vec(var.nnode);
+    var.bcflag = new uint_vec(var.nnode);
 
     // alias for convienence
-    int_vec &bcflag = *var.bcflag;
+    uint_vec &bcflag = *var.bcflag;
     for (int i=0; i<var.nseg; ++i) {
-        int flag = (*var.segflag)[i][0];
+        uint flag = static_cast<uint>((*var.segflag)[i][0]);
         int *n = (*var.segment)[i];
         for (int j=0; j<NODES_PER_FACET; ++j) {
             bcflag[n[j]] |= flag;
@@ -895,7 +895,7 @@ void create_boundary_nodes(Variables& var)
      * (See constants.hpp for the order of boundaries.)
      */
     for (int i=0; i<var.bcflag->size(); ++i) {
-        int f = (*var.bcflag)[i];
+        uint f = (*var.bcflag)[i];
         for (int j=0; j<6; ++j) {
             if (f & bdry[j]) {
                 // this node belongs to a boundary
@@ -921,7 +921,7 @@ void create_boundary_facets(Variables& var)
         const int *conn = (*var.connectivity)[e];
         for (int i=0; i<FACETS_PER_ELEM; ++i) {
             // set all bits to 1
-            int flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
+            uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
             for (int j=0; j<NODES_PER_FACET; ++j) {
                 // find common flags
                 int n = NODE_OF_FACET[i][j];

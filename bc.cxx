@@ -51,7 +51,7 @@ void normal_vector_of_facet(int f, const int *conn, const array_t &coord,
 
 bool is_on_boundary(const Variables &var, int node)
 {
-    int flag = (*var.bcflag)[node];
+    uint flag = (*var.bcflag)[node];
     return flag & (BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1);
 }
 
@@ -96,7 +96,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
         // fast path: skip nodes not on boundary
         if (! is_on_boundary(var, i)) continue;
 
-        int flag = (*var.bcflag)[i];
+        uint flag = (*var.bcflag)[i];
         double *v = vel[i];
 
         // X

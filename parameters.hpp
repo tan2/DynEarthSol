@@ -12,6 +12,7 @@ typedef std::pair<double,double> double_pair;
 
 typedef std::vector<double> double_vec;
 typedef std::vector<int> int_vec;
+typedef std::vector<uint> uint_vec;
 
 typedef Array2D<double,NDIMS> array_t;
 typedef Array2D<double,NSTR> tensor_t;
@@ -154,7 +155,7 @@ struct Variables {
     segment_t *segment;
     segflag_t *segflag;
 
-    int_vec *bcflag;
+    uint_vec *bcflag;
     int_vec bnodes[6];
     std::vector< std::pair<int,int> > bfacets[6];
 
