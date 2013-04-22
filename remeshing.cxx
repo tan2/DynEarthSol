@@ -2,6 +2,7 @@
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <set>
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -41,23 +42,41 @@ void flatten_bottom(const uint_vec &old_bcflag, double *qcoord,
 }
 
 
+bool is_corner(uint flag)
+{
+    const std::set<uint> corner_set =
+        {
+#ifdef THREED
+            BOUNDX0 | BOUNDY0 | BOUNDZ0,
+            BOUNDX0 | BOUNDY0 | BOUNDZ1,
+            BOUNDX0 | BOUNDY1 | BOUNDZ0,
+            BOUNDX0 | BOUNDY1 | BOUNDZ1,
+            BOUNDX1 | BOUNDY0 | BOUNDZ0,
+            BOUNDX1 | BOUNDY0 | BOUNDZ1,
+            BOUNDX1 | BOUNDY1 | BOUNDZ0,
+            BOUNDX1 | BOUNDY1 | BOUNDZ1,
+#else
+            BOUNDX0 | BOUNDZ0,
+            BOUNDX0 | BOUNDZ1,
+            BOUNDX1 | BOUNDZ0,
+            BOUNDX1 | BOUNDZ1,
+#endif
+        };
+
+    uint f = flag & (BOUNDX0 | BOUNDX1 |
+                     BOUNDY0 | BOUNDY1 |
+                     BOUNDZ0 | BOUNDZ1);
+
+    if (!f) return 0;
+
+    if (corner_set.find(f) == corner_set.end()) return 0;
+    return 1;
+}
+
+
 bool is_bottom_corner(uint flag)
 {
-    // is bottom?
-    if (!(flag & BOUNDZ0)) return 0;
-
-    // is corner?
-    if (
-#ifdef THREED
-        (flag & BOUNDX0 && flag & BOUNDY0) ||
-        (flag & BOUNDX1 && flag & BOUNDY0) ||
-        (flag & BOUNDX0 && flag & BOUNDY1) ||
-        (flag & BOUNDX1 && flag & BOUNDY1)
-#else
-        flag & BOUNDX0 || flag & BOUNDX1
-#endif
-        ) return 1;
-
+    if ((flag & BOUNDZ0) && is_corner(flag)) return 1;
     return 0;
 }
 
