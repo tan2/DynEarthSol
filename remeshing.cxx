@@ -22,29 +22,15 @@ namespace {
 const int DELETED_FACET = -1;
 const int DEBUG = 0;
 
-void flatten_bottom(const uint_vec &old_bcflag, double *qcoord,
-                    double bottom, int_vec &points_to_delete, double min_dist)
-{
-    // find old nodes that are on or close to the bottom boundary
-    const int other_bdry = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ1;
-
-    for (int i=0; i<old_bcflag.size(); ++i) {
-        uint flag = old_bcflag[i];
-        if (flag & BOUNDZ0) {
-            // restore edge nodes to initial depth
-            qcoord[i*NDIMS + NDIMS-1] = bottom;
-        }
-        else if (!(flag & other_bdry) &&
-                 std::fabs(qcoord[i*NDIMS + NDIMS-1] - bottom) < min_dist) {
-            points_to_delete.push_back(i);
-        }
-    }
-}
-
-
 bool is_boundary(uint flag)
 {
     return flag & (BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1);
+}
+
+
+bool is_bottom(uint flag)
+{
+    return flag & BOUNDZ0;
 }
 
 
@@ -87,6 +73,25 @@ bool is_bottom_corner(uint flag)
 }
 
 
+void flatten_bottom(const uint_vec &old_bcflag, double *qcoord,
+                    double bottom, int_vec &points_to_delete, double min_dist)
+{
+    // find old nodes that are on or close to the bottom boundary
+
+    for (int i=0; i<old_bcflag.size(); ++i) {
+        uint flag = old_bcflag[i];
+        if (is_bottom(flag)) {
+            // restore edge nodes to initial depth
+            qcoord[i*NDIMS + NDIMS-1] = bottom;
+        }
+        else if (! is_boundary(flag) &&
+                 std::fabs(qcoord[i*NDIMS + NDIMS-1] - bottom) < min_dist) {
+            points_to_delete.push_back(i);
+        }
+    }
+}
+
+
 void new_bottom(const uint_vec &old_bcflag, double *qcoord,
                 double bottom_depth, int_vec &points_to_delete, double min_dist,
                 int *segment, int *segflag, int nseg)
@@ -94,18 +99,17 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
     /* deleting nodes that are on or close to the bottom boundary,
      * excluding nodes on the side walls
      */
-    const int other_bdry = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ1;
 
     int_vec bottom_corners;
     for (int i=0; i<old_bcflag.size(); ++i) {
         uint flag = old_bcflag[i];
-        if (flag & BOUNDZ0) {
+        if (is_bottom(flag)) {
             if(is_bottom_corner(flag))
                 bottom_corners.push_back(i);
             else
                 points_to_delete.push_back(i);
         }
-        else if (!(flag & other_bdry) &&
+        else if (! is_boundary(flag) &&
                  std::fabs(qcoord[i*NDIMS + NDIMS-1] - bottom_depth) < min_dist) {
             points_to_delete.push_back(i);
         }
@@ -454,7 +458,7 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
         double bottom = - param.mesh.zlength;
         const double dist_ratio = 0.25;
         for (int i=0; i<var.nnode; ++i) {
-            if ((*var.bcflag)[i] & BOUNDZ0) {
+            if (is_bottom((*var.bcflag)[i])) {
                 double z = (*var.coord)[i][NDIMS-1];
                 if (std::fabs(z - bottom) > dist_ratio * param.mesh.resolution) {
                     index = i;
