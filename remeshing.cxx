@@ -42,6 +42,12 @@ void flatten_bottom(const uint_vec &old_bcflag, double *qcoord,
 }
 
 
+bool is_boundary(uint flag)
+{
+    return flag & (BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1);
+}
+
+
 bool is_corner(uint flag)
 {
     const std::set<uint> corner_set =
@@ -193,7 +199,8 @@ void find_tiny_element(const Param &param, const double_vec &volume,
 void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
                               const double_vec &volume, const int_vec &tiny_elems,
                               int npoints, const double *old_points,
-                              const uint_vec &old_bcflag, int_vec &points_to_delete)
+                              const uint_vec &old_bcflag, int_vec &points_to_delete,
+                              bool excl_func(uint))
 {
     // collecting the nodes of tiny_elems
     int tiny_nelem = tiny_elems.size();
@@ -220,12 +227,11 @@ void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
 
     Barycentric_transformation bary(tiny_coord, tiny_conn, tiny_vol);
 
-    // find old nodes that are connected to tiny elements and are not on the boundary
+    // find old nodes that are connected to tiny elements and are not excluded
     // (most of the nodes of tiny elements are newly inserted by the remeshing library)
-    const uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
     for (int i=0; i<npoints; ++i) {
-        // cannot delete boundary nodes
-        if (old_bcflag[i] & flag) continue;
+        // excluded nodes
+        if (excl_func(old_bcflag[i])) continue;
 
         const double *p = old_points + i*NDIMS;
         for (int ee=0; ee<tiny_nelem; ++ee) {
@@ -336,10 +342,14 @@ void new_mesh(const Param &param, Variables &var,
     int old_nnode = old_coord.size();
     int old_nseg = old_segment.size();
 
+    // function pointer
+    bool (* excl_func)(uint) = NULL;
     switch (param.mesh.remeshing_option) {
     case 0:
+        excl_func = &is_boundary;
         break;
     case 1: {
+        excl_func = &is_boundary;
         double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
         int_vec points_to_delete;
         flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
@@ -347,6 +357,7 @@ void new_mesh(const Param &param, Variables &var,
         break;
     }
     case 2: {
+        excl_func = &is_boundary;
         double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
         int_vec points_to_delete;
         new_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
@@ -386,7 +397,8 @@ void new_mesh(const Param &param, Variables &var,
         int_vec points_to_delete;
         if (tiny_elems.size() > 0) {
             find_points_of_tiny_elem(new_coord, new_connectivity, new_volume,
-                                     tiny_elems, old_nnode, qcoord, *var.bcflag, points_to_delete);
+                                     tiny_elems, old_nnode, qcoord, *var.bcflag, points_to_delete,
+                                     excl_func);
         }
 
         // deleting boundary nodes associated with tiny facets
