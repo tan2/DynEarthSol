@@ -92,8 +92,8 @@ static void declare_parameters(po::options_description &cfg,
         ("mesh.remeshing_option", po::value<int>(&p.mesh.remeshing_option)->default_value(0),
          "How to deal with the boundaries during remeshing?\n"
          "0: no modification on any boundary.\n"
-         "1: move all bottom nodes to the initial depth.\n"
-         "2: create a new bottom boundary at the initial depth.\n")
+         "1: move all bottom nodes to initial depth, other boundaries are intact.\n"
+         "2: create a new bottom boundary at the initial depth, other boundaries are intact.\n")
         ;
 
     cfg.add_options()
