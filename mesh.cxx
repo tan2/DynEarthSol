@@ -934,7 +934,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 }
 
 
-void points_to_new_mesh(const Param &param, int npoints, const double *points,
+void points_to_new_mesh(const Mesh &mesh, int npoints, const double *points,
                         int n_init_segments, const int *init_segments, const int *init_segflags,
                         int n_regions, const double *regattr,
                         double max_elem_size, int vertex_per_polygon,
@@ -943,11 +943,11 @@ void points_to_new_mesh(const Param &param, int npoints, const double *points,
 {
 #ifdef THREED
 
-    tetrahedralize_polyhedron(param.mesh.max_ratio,
-                              param.mesh.min_tet_angle, max_elem_size,
+    tetrahedralize_polyhedron(mesh.max_ratio,
+                              mesh.min_tet_angle, max_elem_size,
                               vertex_per_polygon,
-                              param.mesh.meshing_verbosity,
-                              param.mesh.tetgen_optlevel,
+                              mesh.meshing_verbosity,
+                              mesh.tetgen_optlevel,
                               npoints, n_init_segments, points,
                               init_segments, init_segflags,
                               n_regions, regattr,
@@ -957,8 +957,8 @@ void points_to_new_mesh(const Param &param, int npoints, const double *points,
 
 #else
 
-    triangulate_polygon(param.mesh.min_angle, max_elem_size,
-                        param.mesh.meshing_verbosity,
+    triangulate_polygon(mesh.min_angle, max_elem_size,
+                        mesh.meshing_verbosity,
                         npoints, n_init_segments, points,
                         init_segments, init_segflags,
                         n_regions, regattr,
@@ -983,7 +983,7 @@ void points_to_mesh(const Param &param, Variables &var,
     double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;
 
-    points_to_new_mesh(param, npoints, points,
+    points_to_new_mesh(param.mesh, npoints, points,
                        n_init_segments, init_segments, init_segflags,
                        param.mat.nmat, regattr,
                        max_elem_size, vertex_per_polygon,

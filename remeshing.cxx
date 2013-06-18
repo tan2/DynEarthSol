@@ -381,7 +381,7 @@ void new_mesh(const Param &param, Variables &var,
     int new_nnode, new_nelem, new_nseg;
     double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;
-    points_to_new_mesh(param, old_nnode, qcoord,
+    points_to_new_mesh(param.mesh, old_nnode, qcoord,
                        old_nseg, qsegment, qsegflag,
                        0, NULL,
                        max_elem_size, vertex_per_polygon,
@@ -416,7 +416,7 @@ void new_mesh(const Param &param, Variables &var,
             delete [] psegment;
             delete [] psegflag;
 
-            points_to_new_mesh(param, q_nnode, qcoord,
+            points_to_new_mesh(param.mesh, q_nnode, qcoord,
                                old_nseg, qsegment, qsegflag,
                                0, NULL,
                                max_elem_size, vertex_per_polygon,
