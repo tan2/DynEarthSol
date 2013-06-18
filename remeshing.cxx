@@ -381,7 +381,9 @@ void new_mesh(const Param &param, Variables &var,
     int new_nnode, new_nelem, new_nseg;
     double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;
-    points_to_new_mesh(param.mesh, old_nnode, qcoord,
+    Mesh mesh_param;
+    std::memcpy(&mesh_param, &param.mesh, sizeof(Mesh));
+    points_to_new_mesh(mesh_param, old_nnode, qcoord,
                        old_nseg, qsegment, qsegflag,
                        0, NULL,
                        max_elem_size, vertex_per_polygon,
@@ -416,7 +418,10 @@ void new_mesh(const Param &param, Variables &var,
             delete [] psegment;
             delete [] psegflag;
 
-            points_to_new_mesh(param.mesh, q_nnode, qcoord,
+            // turning off the quality constraint, so no new points got inserted to the mesh
+            mesh_param.min_angle = 0;
+            mesh_param.max_ratio = 0;
+            points_to_new_mesh(mesh_param, q_nnode, qcoord,
                                old_nseg, qsegment, qsegflag,
                                0, NULL,
                                max_elem_size, vertex_per_polygon,
