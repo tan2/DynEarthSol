@@ -15,6 +15,7 @@
 #include "mesh.hpp"
 #include "nn-interpolation.hpp"
 #include "utils.hpp"
+#include "markerset.hpp"
 #include "remeshing.hpp"
 
 namespace {
@@ -378,13 +379,14 @@ void new_mesh(const Param &param, Variables &var,
 
     // new mesh
     int new_nnode, new_nelem, new_nseg;
-    double *pcoord;
+    double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;
     points_to_new_mesh(param, old_nnode, qcoord,
                        old_nseg, qsegment, qsegflag,
+                       0, NULL,
                        max_elem_size, vertex_per_polygon,
                        new_nnode, new_nelem, new_nseg,
-                       pcoord, pconnectivity, psegment, psegflag);
+                       pcoord, pconnectivity, psegment, psegflag, pregattr);
 
     array_t new_coord(pcoord, new_nnode);
     conn_t new_connectivity(pconnectivity, new_nelem);
@@ -416,9 +418,10 @@ void new_mesh(const Param &param, Variables &var,
 
             points_to_new_mesh(param, q_nnode, qcoord,
                                old_nseg, qsegment, qsegflag,
+                               0, NULL,
                                max_elem_size, vertex_per_polygon,
                                new_nnode, new_nelem, new_nseg,
-                               pcoord, pconnectivity, psegment, psegflag);
+                               pcoord, pconnectivity, psegment, psegflag, pregattr);
 
             new_coord.reset(pcoord, new_nnode);
             new_connectivity.reset(pconnectivity, new_nelem);
@@ -505,8 +508,12 @@ void remesh(const Param &param, Variables &var)
 
         // interpolating fields
         nearest_neighbor_interpolation(var, old_coord, old_connectivity);
-        barycentric_node_interpolation(var, old_coord, old_connectivity);
 
+        Barycentric_transformation bary(old_coord, old_connectivity, *var.volume);
+        barycentric_node_interpolation(var, old_coord, old_connectivity, bary);
+        // remap markers. elemmarkers are updated here, too.
+        remap_markers(param, var, old_coord, old_connectivity, bary);
+  
         // old_coord et al. are destroyed before exiting this block
     }
 

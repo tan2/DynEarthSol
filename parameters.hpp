@@ -12,11 +12,13 @@ typedef std::pair<double,double> double_pair;
 
 typedef std::vector<double> double_vec;
 typedef std::vector<int> int_vec;
+typedef std::vector<int_vec> int_vec2D;
 typedef std::vector<uint> uint_vec;
 
 typedef Array2D<double,NDIMS> array_t;
 typedef Array2D<double,NSTR> tensor_t;
 typedef Array2D<double,NODES_PER_ELEM> shapefn;
+typedef Array2D<double,1> regattr_t;
 
 typedef Array2D<int,NODES_PER_ELEM> conn_t;
 typedef Array2D<int,NDIMS> segment_t;
@@ -120,12 +122,18 @@ struct Mat {
     double_vec dilation_angle0, dilation_angle1;
 };
 
+struct Markers {
+    int init_marker_option;
+    int markers_per_element;
+};
+
 struct Param {
     Sim sim;
     Mesh mesh;
     Control control;
     BC bc;
     Mat mat;
+    Markers markers;
 };
 
 
@@ -133,6 +141,7 @@ struct Param {
 // Structures for model variables
 //
 class MatProps;
+class MarkerSet;
 struct Variables {
     double time;
     double dt;
@@ -154,12 +163,13 @@ struct Variables {
     conn_t *connectivity;
     segment_t *segment;
     segflag_t *segflag;
+    regattr_t *regattr;
 
     uint_vec *bcflag;
     int_vec bnodes[6];
     std::vector< std::pair<int,int> > bfacets[6];
 
-    std::vector<int_vec> *support, *egroups;
+    int_vec2D *support, *egroups, *elemmarkers;
 
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;
@@ -172,6 +182,8 @@ struct Variables {
     shapefn *shpdx, *shpdy, *shpdz;
 
     MatProps *mat;
+
+    MarkerSet *markerset;
 };
 
 #endif

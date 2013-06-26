@@ -27,6 +27,7 @@
 #include "sortindex.hpp"
 #include "utils.hpp"
 #include "mesh.hpp"
+#include "markerset.hpp"
 
 
 namespace { // anonymous namespace
@@ -36,9 +37,10 @@ void triangulate_polygon
  int meshing_verbosity,
  int npoints, int nsegments,
  const double *points, const int *segments, const int *segflags,
+ const int nregions, const double *regionattributes,
  int *noutpoints, int *ntriangles, int *noutsegments,
  double **outpoints, int **triangles,
- int **outsegments, int **outsegflags)
+ int **outsegments, int **outsegflags, double **outregattr)
 {
 #ifndef THREED
     char options[255];
@@ -65,7 +67,11 @@ void triangulate_polygon
         verbosity = "";
         break;
     }
-    std::sprintf(options, "%spq%fjza%f", verbosity.c_str(), min_angle, max_area);
+
+    if( nregions > 0 )
+        std::sprintf(options, "%spq%fjza%fA", verbosity.c_str(), min_angle, max_area);
+    else
+        std::sprintf(options, "%spq%fjza%f", verbosity.c_str(), min_angle, max_area);
     //std::puts(options);
 
     in.pointlist = const_cast<double*>(points);
@@ -88,8 +94,11 @@ void triangulate_polygon
     in.holelist = NULL;
     in.numberofholes = 0;
 
-    in.regionlist = NULL;
-    in.numberofregions = 0;
+    in.numberofregions = nregions;
+    if( nregions > 0 )
+        in.regionlist = const_cast<double*>(regionattributes);
+    else
+        in.regionlist = NULL;
 
     out.pointlist = NULL;
     out.pointattributelist = NULL;
@@ -115,6 +124,7 @@ void triangulate_polygon
     *noutsegments = out.numberofsegments;
     *outsegments = out.segmentlist;
     *outsegflags = out.segmentmarkerlist;
+    *outregattr = out.triangleattributelist;
 
     trifree(out.pointmarkerlist);
 #endif
@@ -126,9 +136,10 @@ void tetrahedralize_polyhedron
  int vertex_per_polygon, int meshing_verbosity, int optlevel,
  int npoints, int nsegments,
  const double *points, const int *segments, const int *segflags,
+ const int nregions, const double *regionattributes,
  int *noutpoints, int *ntriangles, int *noutsegments,
  double **outpoints, int **triangles,
- int **outsegments, int **outsegflags)
+ int **outsegments, int **outsegflags, double **outregattr)
 {
 #ifdef THREED
     //
@@ -158,8 +169,13 @@ void tetrahedralize_polyhedron
         verbosity = "";
         break;
     }
-    std::sprintf(options, "%spzs%dq%fqq%fqqq%fa%f", verbosity.c_str(), optlevel, max_ratio,
-                 min_dihedral_angle, max_dihedral_angle, max_volume);
+
+    if( nregions > 0 )
+        std::sprintf(options, "%spzs%dq%fqq%fqqq%fa%fA", verbosity.c_str(), optlevel, max_ratio,
+                     min_dihedral_angle, max_dihedral_angle, max_volume);
+    else
+        std::sprintf(options, "%spzs%dq%fqq%fqqq%fa%f", verbosity.c_str(), optlevel, max_ratio,
+                     min_dihedral_angle, max_dihedral_angle, max_volume);
     //std::puts(options);
 
     //
@@ -190,8 +206,11 @@ void tetrahedralize_polyhedron
     in.holelist = NULL;
     in.numberofholes = 0;
 
-    in.regionlist = NULL;
-    in.numberofregions = 0;
+    in.numberofregions = nregions;
+    if( nregions > 0 )
+        in.regionlist = const_cast<double*>(regionattributes);
+    else
+        in.regionlist = NULL;
 
     tetgenio out;
     /*******************************/
@@ -217,8 +236,10 @@ void tetrahedralize_polyhedron
     *noutsegments = out.numberoftrifaces;
     *outsegments = out.trifacelist;
     *outsegflags = out.trifacemarkerlist;
+    *outregattr = out.tetrahedronattributelist;
     out.trifacelist = NULL;
     out.trifacemarkerlist = NULL;
+    out.tetrahedronattributelist = NULL;
 
 #endif
 }
@@ -233,6 +254,9 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
     int n_segment_nodes = 2 * (NDIMS - 1); // 2D:2; 3D:4
     int *init_segments = new int[n_init_segments*n_segment_nodes];
     int *init_segflags = new int[n_init_segments];
+
+    const int attr_ndata = NDIMS+2;
+    double *regattr = new double[param.mat.nmat*attr_ndata]; // nmat regions and each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
 
     double max_elem_size;
     int vertex_per_polygon = 4;
@@ -275,6 +299,14 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
         init_segflags[3] = BOUNDZ1;
 
         max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
+
+        // Need to modify when nmat > 1.
+        for (int i = 0; i < param.mat.nmat; i++) {
+            regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
+            regattr[i * attr_ndata + 1] = -0.5*param.mesh.zlength;
+            regattr[i * attr_ndata + 2] = 0;
+            regattr[i * attr_ndata + 3] = -1;
+        }
     }
 #else
     {
@@ -370,16 +402,26 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
 
         max_elem_size = 0.7 * param.mesh.resolution
             * param.mesh.resolution * param.mesh.resolution;
+
+        // Need to modify when nmat > 1. Using .poly file might be better.
+        for (int i = 0; i < param.mat.nmat; i++) {
+            regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
+            regattr[i * attr_ndata + 1] = 0.5*param.mesh.ylength;
+            regattr[i * attr_ndata + 2] = -0.5*param.mesh.zlength;
+            regattr[i * attr_ndata + 3] = 0;
+            regattr[i * attr_ndata + 4] = -1;
+        }
     }
 #endif
 
     points_to_mesh(param, var, npoints, points,
-                   n_init_segments, init_segments, init_segflags,
+                   n_init_segments, init_segments, init_segflags, regattr,
                    max_elem_size, vertex_per_polygon);
 
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
+    // delete [] regattr;
 }
 
 
@@ -424,6 +466,9 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
     int n_segment_nodes = 2 * (NDIMS - 1); // 2D:2; 3D:4
     int *init_segments = new int[n_init_segments*n_segment_nodes];
     int *init_segflags = new int[n_init_segments];
+
+    const int attr_ndata = NDIMS+2;
+    double *regattr = new double[param.mat.nmat*attr_ndata]; // nmat regions and each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
 
     double max_elem_size;
     int vertex_per_polygon = 4;
@@ -478,6 +523,14 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
         init_segflags[3] = BOUNDZ1;
 
         max_elem_size = 40 * d * d;
+
+        // Need to modify when nmat > 1.
+        for (int i = 0; i < param.mat.nmat; i++) {
+            regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
+            regattr[i * attr_ndata + 1] = -0.5*param.mesh.zlength;
+            regattr[i * attr_ndata + 2] = 0;
+            regattr[i * attr_ndata + 3] = -1;
+        }
     }
 #else
     {
@@ -588,16 +641,26 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
         init_segflags[5] = BOUNDZ1;
 
         max_elem_size = 40 * d * d * d;
+
+        // Need to modify when nmat > 1.
+        for (int i = 0; i < param.mat.nmat; i++) {
+            regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
+            regattr[i * attr_ndata + 1] = 0.5*param.mesh.ylength;
+            regattr[i * attr_ndata + 2] = -0.5*param.mesh.zlength;
+            regattr[i * attr_ndata + 3] = 0;
+            regattr[i * attr_ndata + 4] = -1;
+        }
     }
 #endif
 
     points_to_mesh(param, var, npoints, points,
-                   n_init_segments, init_segments, init_segflags,
+                   n_init_segments, init_segments, init_segflags, regattr,
                    max_elem_size, vertex_per_polygon);
 
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
+    //delete [] regattr;
 }
 
 
@@ -801,13 +864,67 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         lineno ++;
     }
 
+    // get header of region list
+    int nregions;
+    {
+        s = std::fgets(buffer, 255, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+        
+
+        n = std::sscanf(buffer, "%d", &nregions);
+        if (n != 1) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+        
+        if (nregions != param.mat.nmat) {
+            std::cerr << "Error: Number of regions should be exactly 'nmat' but a different value given in line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+        
+        lineno ++;
+    }
+
+    // get region list
+    double *regattr = new double[nregions * (NDIMS+2)]; // nmat regions and each region has 5 data fields: x, (y,) z, region marker (mat type), and volume.
+    for (int i=0; i<nregions; i++) {
+        s = std::fgets(buffer, 255, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        int junk;
+        double *x = &regattr[i*(NDIMS+2)];
+#ifdef THREED
+        n = std::sscanf(buffer, "%d %lf %lf %lf %lf %lf", &junk, x, x+1, x+2, x+3, x+4);
+#else
+        n = std::sscanf(buffer, "%d %lf %lf %lf $lf", &junk, x, x+1, x+2, x+3);
+#endif
+        if (n != NDIMS+2) {
+            std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+
+        lineno ++;
+    }
+
     points_to_mesh(param, var, npoints, points,
-                   n_init_segments, init_segments, init_segflags,
+                   n_init_segments, init_segments, init_segflags, regattr,
                    max_elem_size, NODES_PER_FACET);
 
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
+    // delete [] regattr;
 }
 
 }
@@ -815,9 +932,10 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 
 void points_to_new_mesh(const Param &param, int npoints, const double *points,
                         int n_init_segments, const int *init_segments, const int *init_segflags,
+                        int n_regions, const double *regattr,
                         double max_elem_size, int vertex_per_polygon,
                         int &nnode, int &nelem, int &nseg, double *&pcoord,
-                        int *&pconnectivity, int *&psegment, int *&psegflag)
+                        int *&pconnectivity, int *&psegment, int *&psegflag, double *&pregattr)
 {
 #ifdef THREED
 
@@ -828,9 +946,10 @@ void points_to_new_mesh(const Param &param, int npoints, const double *points,
                               param.mesh.tetgen_optlevel,
                               npoints, n_init_segments, points,
                               init_segments, init_segflags,
+                              n_regions, regattr,
                               &nnode, &nelem, &nseg,
                               &pcoord, &pconnectivity,
-                              &psegment, &psegflag);
+                              &psegment, &psegflag, &pregattr);
 
 #else
 
@@ -838,9 +957,10 @@ void points_to_new_mesh(const Param &param, int npoints, const double *points,
                         param.mesh.meshing_verbosity,
                         npoints, n_init_segments, points,
                         init_segments, init_segflags,
+                        n_regions, regattr,
                         &nnode, &nelem, &nseg,
                         &pcoord, &pconnectivity,
-                        &psegment, &psegflag);
+                        &psegment, &psegflag, &pregattr);
 
     if (nelem <= 0) {
         std::cerr << "Error: triangulation failed\n";
@@ -853,22 +973,24 @@ void points_to_new_mesh(const Param &param, int npoints, const double *points,
 
 void points_to_mesh(const Param &param, Variables &var,
                     int npoints, const double *points,
-                    int n_init_segments, const int *init_segments, const int *init_segflags,
+                    int n_init_segments, const int *init_segments, const int *init_segflags, const double *regattr,
                     double max_elem_size, int vertex_per_polygon)
 {
-    double *pcoord;
+    double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;
 
     points_to_new_mesh(param, npoints, points,
                        n_init_segments, init_segments, init_segflags,
+                       param.mat.nmat, regattr,
                        max_elem_size, vertex_per_polygon,
                        var.nnode, var.nelem, var.nseg,
-                       pcoord, pconnectivity, psegment, psegflag);
+                       pcoord, pconnectivity, psegment, psegflag, pregattr);
 
     var.coord = new array_t(pcoord, var.nnode);
     var.connectivity = new conn_t(pconnectivity, var.nelem);
     var.segment = new segment_t(psegment, var.nseg);
     var.segflag = new segflag_t(psegflag, var.nseg);
+    var.regattr = new regattr_t(pregattr, var.nelem);
 }
 
 
@@ -1096,6 +1218,19 @@ void create_elem_groups(Variables& var)
 }
 
 
+void create_elemmarkers(const Param& param, Variables& var)
+{
+    var.elemmarkers = new int_vec2D( var.nelem, std::vector<int>(param.mat.nmat, 0) );
+
+}
+
+
+void create_markers(const Param& param, Variables& var)
+{
+    var.markerset = new MarkerSet( param, var );
+}
+
+
 void create_new_mesh(const Param& param, Variables& var)
 {
     switch (param.mesh.meshing_option) {
@@ -1124,4 +1259,6 @@ void create_new_mesh(const Param& param, Variables& var)
     create_boundary_facets(var);
     create_support(var);
     create_elem_groups(var);
+    create_elemmarkers(param, var);
+    create_markers(param, var);
 }

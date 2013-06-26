@@ -19,6 +19,7 @@ const int NODES_PER_ELEM = NDIMS + 1;
 const int NSTR = NDIMS * (NDIMS + 1) / 2;
 
 // Flags for boundary
+typedef unsigned int uint;
 const uint BOUNDX0 = 1 << 0;
 const uint BOUNDX1 = 1 << 1;
 const uint BOUNDY0 = 1 << 2;

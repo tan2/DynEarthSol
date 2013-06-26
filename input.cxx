@@ -97,6 +97,15 @@ static void declare_parameters(po::options_description &cfg,
         ;
 
     cfg.add_options()
+        ("markers.init_marker_option", po::value<int>(&p.markers.init_marker_option)->default_value(1),
+         "How to generate markers?\n"
+         "1: randomly distributed markers"
+         )
+        ("markers.markers_per_element", po::value<int>(&p.markers.markers_per_element)->default_value(4),
+         "Number of marekrs per element. 4 by default.")
+        ;
+
+    cfg.add_options()
         ("control.gravity", po::value<double>(&p.control.gravity)->default_value(10),
          "Magnitude of the gravity (in m/s^2)")
 
