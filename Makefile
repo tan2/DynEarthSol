@@ -82,7 +82,8 @@ SRCS =	\
 	nn-interpolation.cxx \
 	output.cxx \
 	remeshing.cxx \
-	rheology.cxx
+	rheology.cxx \
+	markerset.cxx
 
 INCS =	\
 	array2d.hpp \
@@ -91,7 +92,9 @@ INCS =	\
 	parameters.hpp \
 	matprops.hpp \
 	sortindex.hpp \
-	utils.hpp
+	utils.hpp \
+	mesh.hpp \
+	markerset.hpp
 
 OBJS = $(SRCS:.cxx=.$(ndims)d.o)
 
