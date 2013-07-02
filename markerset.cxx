@@ -135,7 +135,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
 {
 
     // Re-create elemmarkers
-    (var.elemmarkers)->clear();
+    delete var.elemmarkers;
     create_elemmarkers( param, var );
 
     // Loop over all the old markers and identify a containing element in the new mesh.
@@ -146,7 +146,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         bool found = false;
 
         // 1. Get physical coordinates, x, of an old marker.
-        double *x = new double[NDIMS];
+        double x[NDIMS];
         std::memset( x, 0.0, sizeof(double)*NDIMS );
         for (int j = 0; j < NDIMS; j++)
             for (int k = 0; k < NDIMS+1; k++)

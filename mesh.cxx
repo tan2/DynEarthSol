@@ -421,7 +421,7 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
-    // delete [] regattr;
+    delete [] regattr;
 }
 
 
@@ -660,7 +660,7 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
-    //delete [] regattr;
+    delete [] regattr;
 }
 
 
@@ -924,7 +924,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     delete [] points;
     delete [] init_segments;
     delete [] init_segflags;
-    // delete [] regattr;
+    delete [] regattr;
 }
 
 }
