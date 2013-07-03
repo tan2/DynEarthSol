@@ -906,7 +906,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 #ifdef THREED
         n = std::sscanf(buffer, "%d %lf %lf %lf %lf %lf", &junk, x, x+1, x+2, x+3, x+4);
 #else
-        n = std::sscanf(buffer, "%d %lf %lf %lf $lf", &junk, x, x+1, x+2, x+3);
+        n = std::sscanf(buffer, "%d %lf %lf %lf %lf", &junk, x, x+1, x+2, x+3);
 #endif
         if (n != NDIMS+2) {
             std::cerr << "Error: parsing line " << lineno << " of '"
