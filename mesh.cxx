@@ -222,6 +222,7 @@ void tetrahedralize_polyhedron
     in.pointlist = NULL;
     in.facetmarkerlist = NULL;
     in.facetlist = NULL;
+    in.regionlist = NULL;
     delete [] polys;
     delete [] fl;
 
