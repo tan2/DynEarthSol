@@ -400,7 +400,7 @@ namespace {
         double_vec total_slope(var.nnode, 0);
 
         // loops over all top facets
-        for (auto i=0; i<top.size(); ++i) {
+        for (std::size_t i=0; i<top.size(); ++i) {
             // this facet belongs to element e
             int e = top[i].first;
             // this facet is the f-th facet of e
@@ -496,7 +496,7 @@ namespace {
         }
 
         double max_dh = 0;
-        for (int i=0; i<ntop; ++i) {
+        for (std::size_t i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
             double dh = surface_diffusivity * var.dt * total_slope[n] / total_dx[n];

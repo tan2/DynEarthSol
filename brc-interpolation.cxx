@@ -20,7 +20,7 @@ void interpolate_field(const brc_t &brc, const int_vec &el, const conn_t &connec
 {
     #pragma omp parallel for default(none)          \
         shared(brc, el, connectivity, source, target)
-    for (int i=0; i<target.size(); i++) {
+    for (std::size_t i=0; i<target.size(); i++) {
         int e = el[i];
         const int *conn = connectivity[e];
         double result = 0;
@@ -37,7 +37,7 @@ void interpolate_field(const brc_t &brc, const int_vec &el, const conn_t &connec
 {
     #pragma omp parallel for default(none)          \
         shared(brc, el, connectivity, source, target)
-    for (int i=0; i<target.size(); i++) {
+    for (std::size_t i=0; i<target.size(); i++) {
         int e = el[i];
         const int *conn = connectivity[e];
         for (int d=0; d<NDIMS; d++) {
@@ -59,7 +59,7 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
 
     // ANN requires double** as input
     double **points = new double*[old_coord.size()];
-    for (int i=0; i<old_coord.size(); i++) {
+    for (std::size_t i=0; i<old_coord.size(); i++) {
         points[i] = const_cast<double*>(old_coord[i]);
     }
     ANNkd_tree kdtree(points, old_coord.size(), NDIMS);
@@ -103,7 +103,7 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
 
         // loop over (old) elements surrounding nn to find
         // the element that is enclosing q
-        for (int j=0; j<nn_elem.size(); j++) {
+        for (std::size_t j=0; j<nn_elem.size(); j++) {
             e = nn_elem[j];
             bary.transform(q, e, r);
             if (bary.is_inside(r)) {
@@ -126,21 +126,21 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
 
             // this array contains the elements that have been searched so far
             int_vec searched;
-            for (int j=0; j<nn_elem.size(); j++) {
+            for (std::size_t j=0; j<nn_elem.size(); j++) {
                 searched.push_back(nn_elem[j]);
             }
             // print(std::cout, searched);
             // std::cout << " ... \n";
 
             // search through elements that are neighbors of nn_elem
-            for (int j=0; j<nn_elem.size(); j++) {
+            for (std::size_t j=0; j<nn_elem.size(); j++) {
                 int ee = nn_elem[j];
                 const int *conn = old_connectivity[ee];
                 for (int m=0; m<NODES_PER_ELEM; m++) {
                     // np is a node close to q
                     int np = conn[m];
                     const int_vec &np_elem = old_support[np];
-                    for (int j=0; j<np_elem.size(); j++) {
+                    for (std::size_t j=0; j<np_elem.size(); j++) {
                         e = np_elem[j];
                         auto it = std::find(searched.begin(), searched.end(), e);
                         if (it != searched.end()) {

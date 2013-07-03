@@ -79,7 +79,7 @@ void flatten_bottom(const uint_vec &old_bcflag, double *qcoord,
 {
     // find old nodes that are on or close to the bottom boundary
 
-    for (int i=0; i<old_bcflag.size(); ++i) {
+    for (std::size_t i=0; i<old_bcflag.size(); ++i) {
         uint flag = old_bcflag[i];
         if (is_bottom(flag)) {
             // restore edge nodes to initial depth
@@ -102,7 +102,7 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
      */
 
     int_vec bottom_corners;
-    for (int i=0; i<old_bcflag.size(); ++i) {
+    for (std::size_t i=0; i<old_bcflag.size(); ++i) {
         uint flag = old_bcflag[i];
         if (is_bottom(flag)) {
             if(is_bottom_corner(flag))
@@ -139,7 +139,7 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
     }
 
     // move the corners to the same depth
-    for (int i=0; i<bottom_corners.size(); i++) {
+    for (std::size_t i=0; i<bottom_corners.size(); i++) {
         int n = bottom_corners[i];
         qcoord[n*NDIMS + NDIMS-1] = bottom_depth;
     }
@@ -188,7 +188,7 @@ void find_tiny_element(const Param &param, const double_vec &volume,
 {
     const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
 
-    for (int e=0; e<volume.size(); e++) {
+    for (std::size_t e=0; e<volume.size(); e++) {
         if (volume[e] < smallest_vol)
             tiny_elems.push_back(e);
     }

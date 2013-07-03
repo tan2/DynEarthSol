@@ -69,7 +69,7 @@ static void inject_field(const int_vec &idx, const double_vec &source, double_ve
 {
     #pragma omp parallel for default(none)          \
         shared(idx, source, target)
-    for (int i=0; i<target.size(); i++) {
+    for (std::size_t i=0; i<target.size(); i++) {
         int n = idx[i];
         target[i] = source[n];
     }
@@ -80,7 +80,7 @@ static void inject_field(const int_vec &idx, const tensor_t &source, tensor_t &t
 {
     #pragma omp parallel for default(none)          \
         shared(idx, source, target)
-    for (int i=0; i<target.size(); i++) {
+    for (std::size_t i=0; i<target.size(); i++) {
         int n = idx[i];
         for (int d=0; d<NSTR; d++) {
             target[i][d] = source[n][d];

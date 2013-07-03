@@ -1016,7 +1016,7 @@ void create_boundary_nodes(Variables& var)
     /* var.bnodes[i] contains a list of nodes on the i-th boundary.
      * (See constants.hpp for the order of boundaries.)
      */
-    for (int i=0; i<var.bcflag->size(); ++i) {
+    for (std::size_t i=0; i<var.bcflag->size(); ++i) {
         uint f = (*var.bcflag)[i];
         for (int j=0; j<6; ++j) {
             if (f & bdry[j]) {

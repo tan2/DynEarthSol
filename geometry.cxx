@@ -388,7 +388,7 @@ double worst_elem_quality(const array_t &coord, const conn_t &connectivity,
 {
     double q = 1;
     worst_elem = 0;
-    for (int e=0; e<volume.size(); e++) {
+    for (std::size_t e=0; e<volume.size(); e++) {
         double quality = elem_quality(coord, connectivity, volume, e);
         if (quality < q) {
             q = quality;
