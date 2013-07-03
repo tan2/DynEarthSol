@@ -167,7 +167,8 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             }
         }
         if( found ) continue;
-        
+
+        // TODO: usiing kd-tree to find the element
         // 3. If not found, loop over the entire element set.
         for( int e = 0; e < var.nelem && e != ms->get_elem(i); e++ ) {
             double r[NDIMS];
