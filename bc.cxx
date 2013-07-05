@@ -517,7 +517,7 @@ namespace {
         const std::size_t ntop = top_nodes.size();
 
         // loops over all top nodes
-        for (int i=0; i<ntop; ++i) {
+        for (std::size_t i=0; i<ntop; ++i) {
             int n = top_nodes[i];
 
             // coordinate of this node
