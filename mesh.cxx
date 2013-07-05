@@ -181,6 +181,9 @@ void tetrahedralize_polyhedron
     //
     // Setting input arrays to tetgen
     //
+
+    // NOTE: all tetgenio pointers will need to be
+    // reset to NULL to prevent double-free error
     tetgenio in;
     in.pointlist = const_cast<double*>(points);
     in.numberofpoints = npoints;

@@ -77,7 +77,7 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
             double inv_sum = 1.0/sum;
             for( int n = 0; n < NODES_PER_ELEM; n++ )
                 eta[n] *= inv_sum; 
-
+            /*
             if( NDIMS==3 )
                 std::cerr << e <<"/"<< ne <<" "<< m <<" "
                           <<pid<<" "<<(*_mattype)[pid]<<" "
@@ -92,6 +92,7 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
                           <<" size of eta= "<<(*_eta).size()<<" "
                           <<eta[0]<<"+"<<eta[1]<<"+"<<eta[2]
                           <<"="<<(eta[0]+eta[1]+eta[2])<<"\n";
+            */
         }
 }
 
@@ -213,7 +214,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             num_marker++;
         }
     }
-
+    /*
     // debug print
     if( NDIMS == 3 )
         for( int i = 0; i < ms->get_nmarkers(); i++ )
@@ -229,5 +230,5 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                       <<ms->get_eta(i)[0]<<"+"<<ms->get_eta(i)[1]<<"+"
                       <<ms->get_eta(i)[2]<<"="
                       <<(ms->get_eta(i)[0]+ms->get_eta(i)[1]+ms->get_eta(i)[2])<<"\n";
-    
+    */
 }
