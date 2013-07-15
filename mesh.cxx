@@ -1010,20 +1010,25 @@ void points_to_mesh(const Param &param, Variables &var,
 }
 
 
+void create_boundary_flags2(uint_vec &bcflag, const segment_t &segment,
+                            const segflag_t &segflag)
+{
+    for (std::size_t i=0; i<segment.size(); ++i) {
+        uint flag = static_cast<uint>(segflag[i][0]);
+        const int *n = segment[i];
+        for (int j=0; j<NODES_PER_FACET; ++j) {
+            bcflag[n[j]] |= flag;
+        }
+    }
+}
+
+
 void create_boundary_flags(Variables& var)
 {
     // allocate and init to 0
     var.bcflag = new uint_vec(var.nnode);
 
-    // alias for convienence
-    uint_vec &bcflag = *var.bcflag;
-    for (int i=0; i<var.nseg; ++i) {
-        uint flag = static_cast<uint>((*var.segflag)[i][0]);
-        int *n = (*var.segment)[i];
-        for (int j=0; j<NODES_PER_FACET; ++j) {
-            bcflag[n[j]] |= flag;
-        }
-    }
+    create_boundary_flags2(*var.bcflag, *var.segment, *var.segflag);
 }
 
 
