@@ -32,6 +32,31 @@
 
 namespace { // anonymous namespace
 
+void set_verbosity_str(std::string &verbosity, int meshing_verbosity)
+{
+    switch (meshing_verbosity) {
+    case -1:
+        verbosity = "Q";
+        break;
+    case 0:
+        verbosity = "";
+        break;
+    case 1:
+        verbosity = "V";
+        break;
+    case 2:
+        verbosity = "VV";
+        break;
+    case 3:
+        verbosity = "VVV";
+        break;
+    default:
+        verbosity = "";
+        break;
+    }
+}
+
+
 void set_2d_quality_str(std::string &quality, double min_angle)
 {
     quality.clear();
@@ -57,27 +82,7 @@ void triangulate_polygon
     triangulateio in, out;
 
     std::string verbosity, quality;
-    switch (meshing_verbosity) {
-    case -1:
-        verbosity = "Q";
-        break;
-    case 0:
-        verbosity = "";
-        break;
-    case 1:
-        verbosity = "V";
-        break;
-    case 2:
-        verbosity = "VV";
-        break;
-    case 3:
-        verbosity = "VVV";
-        break;
-    default:
-        verbosity = "";
-        break;
-    }
-
+    set_verbosity_str(verbosity, meshing_verbosity);
     set_2d_quality_str(quality, min_angle);
 
     if( nregions > 0 )
@@ -176,27 +181,7 @@ void tetrahedralize_polyhedron
     double max_dihedral_angle = 180 - 3 * min_dihedral_angle;
 
     std::string verbosity, quality;
-    switch (meshing_verbosity) {
-    case -1:
-        verbosity = "Q";
-        break;
-    case 0:
-        verbosity = "";
-        break;
-    case 1:
-        verbosity = "V";
-        break;
-    case 2:
-        verbosity = "VV";
-        break;
-    case 3:
-        verbosity = "VVV";
-        break;
-    default:
-        verbosity = "";
-        break;
-    }
-
+    set_verbosity_str(verbosity, meshing_verbosity);
     set_3d_quality_str(quality, max_ratio, min_dihedral_angle, max_dihedral_angle);
 
     if( nregions > 0 )
