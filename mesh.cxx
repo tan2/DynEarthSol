@@ -32,6 +32,16 @@
 
 namespace { // anonymous namespace
 
+void set_2d_quality_str(std::string &quality, double min_angle)
+{
+    quality.clear();
+    if (min_angle > 0) {
+        quality += 'q';
+        quality += std::to_string(min_angle);
+    }
+}
+
+
 void triangulate_polygon
 (double min_angle, double max_area,
  int meshing_verbosity,
@@ -46,7 +56,7 @@ void triangulate_polygon
     char options[255];
     triangulateio in, out;
 
-    std::string verbosity;
+    std::string verbosity, quality;
     switch (meshing_verbosity) {
     case -1:
         verbosity = "Q";
@@ -68,10 +78,12 @@ void triangulate_polygon
         break;
     }
 
+    set_2d_quality_str(quality, min_angle);
+
     if( nregions > 0 )
-        std::sprintf(options, "%spq%fjza%fA", verbosity.c_str(), min_angle, max_area);
+        std::sprintf(options, "%s%spjza%fA", verbosity.c_str(), quality.c_str(), max_area);
     else
-        std::sprintf(options, "%spq%fjza%f", verbosity.c_str(), min_angle, max_area);
+        std::sprintf(options, "%s%spjza%f", verbosity.c_str(), quality.c_str(), max_area);
     //std::puts(options);
 
     in.pointlist = const_cast<double*>(points);
@@ -131,6 +143,21 @@ void triangulate_polygon
 }
 
 
+void set_3d_quality_str(std::string &quality, double max_ratio,
+                        double min_dihedral_angle, double max_dihedral_angle)
+{
+    quality.clear();
+    if (max_ratio > 0) {
+        quality += 'q';
+        quality += std::to_string(max_ratio);
+        quality += "qq";
+        quality += std::to_string(min_dihedral_angle);
+        quality += "qqq";
+        quality += std::to_string(max_dihedral_angle);
+    }
+}
+
+
 void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
  int vertex_per_polygon, int meshing_verbosity, int optlevel,
@@ -148,7 +175,7 @@ void tetrahedralize_polyhedron
     char options[255];
     double max_dihedral_angle = 180 - 3 * min_dihedral_angle;
 
-    std::string verbosity;
+    std::string verbosity, quality;
     switch (meshing_verbosity) {
     case -1:
         verbosity = "Q";
@@ -170,12 +197,12 @@ void tetrahedralize_polyhedron
         break;
     }
 
+    set_3d_quality_str(quality, max_ratio, min_dihedral_angle, max_dihedral_angle);
+
     if( nregions > 0 )
-        std::sprintf(options, "%spzs%dq%fqq%fqqq%fa%fA", verbosity.c_str(), optlevel, max_ratio,
-                     min_dihedral_angle, max_dihedral_angle, max_volume);
+        std::sprintf(options, "%s%spzs%da%fA", verbosity.c_str(), quality.c_str(), optlevel, max_volume);
     else
-        std::sprintf(options, "%spzs%dq%fqq%fqqq%fa%f", verbosity.c_str(), optlevel, max_ratio,
-                     min_dihedral_angle, max_dihedral_angle, max_volume);
+        std::sprintf(options, "%s%spzs%da%f", verbosity.c_str(), quality.c_str(), optlevel, max_volume);
     //std::puts(options);
 
     //
