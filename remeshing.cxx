@@ -381,8 +381,7 @@ void new_mesh(const Param &param, Variables &var,
     int new_nnode, new_nelem, new_nseg;
     double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;
-    Mesh mesh_param;
-    std::memcpy(&mesh_param, &param.mesh, sizeof(Mesh));
+    Mesh mesh_param = param.mesh;
     points_to_new_mesh(mesh_param, old_nnode, qcoord,
                        old_nseg, qsegment, qsegflag,
                        0, NULL,
