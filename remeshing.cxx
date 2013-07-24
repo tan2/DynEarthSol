@@ -511,13 +511,14 @@ void remesh(const Param &param, Variables &var)
 
         new_mesh(param, var, old_coord, old_connectivity, old_segment, old_segflag);
 
-        // interpolating fields
+        // interpolating fields defined on elements
         nearest_neighbor_interpolation(var, old_coord, old_connectivity);
 
-        Barycentric_transformation bary(old_coord, old_connectivity, *var.volume);
-        barycentric_node_interpolation(var, old_coord, old_connectivity, bary);
+        // interpolating fields defined on nodes
+        barycentric_node_interpolation(var, old_coord, old_connectivity);
+
         // remap markers. elemmarkers are updated here, too.
-        remap_markers(param, var, old_coord, old_connectivity, bary);
+        remap_markers(param, var, old_coord, old_connectivity);
   
         // old_coord et al. are destroyed before exiting this block
     }

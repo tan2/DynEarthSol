@@ -8,6 +8,7 @@
 #include "barycentric-fn.hpp"
 #include "markerset.hpp"
 #include "mesh.hpp"
+#include "geometry.hpp"
 
 MarkerSet::MarkerSet(const Param& param, Variables& var)
 {
@@ -131,13 +132,16 @@ void MarkerSet::resize( const int nmarkers_new ) {
 }
 
 void remap_markers(const Param& param, Variables &var, const array_t &old_coord, 
-                   const conn_t &old_connectivity,
-                   const Barycentric_transformation &bary)
+                   const conn_t &old_connectivity)
 {
-
     // Re-create elemmarkers
     delete var.elemmarkers;
     create_elemmarkers( param, var );
+
+    double_vec new_volume( var.nelem );
+    compute_volume( *var.coord, *var.connectivity, new_volume );
+
+    Barycentric_transformation bary( *var.coord, *var.connectivity, new_volume );
 
     // Loop over all the old markers and identify a containing element in the new mesh.
     MarkerSet *ms = var.markerset; // alias to var.markerset
@@ -158,13 +162,15 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         {
             double r[NDIMS];
             int e = ms->get_elem(i);
-            
-            bary.transform(x, e, r);
-            if (bary.is_inside(r)) {
-                ms->set_eta( i, r );
-                ++(*(var.elemmarkers))[e][ms->get_mattype(i)];
+
+            if (e < var.nelem) { // e is from the old mesh, might exceed the current nelem
+                bary.transform(x, e, r);
+                if (bary.is_inside(r)) {
+                    ms->set_eta( i, r );
+                    ++(*(var.elemmarkers))[e][ms->get_mattype(i)];
                 
-                found = true;
+                    found = true;
+                }
             }
         }
         if( found ) continue;

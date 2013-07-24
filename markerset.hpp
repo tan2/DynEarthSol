@@ -1,8 +1,6 @@
 #ifndef DYNEARTHSOL3D_MARKERSET_HPP
 #define DYNEARTHSOL3D_MARKERSET_HPP
 
-#include "barycentric-fn.hpp"
-
 class MarkerSet
 {
 
@@ -58,6 +56,6 @@ private:
 };
 
 void remap_markers(const Param&, Variables &, 
-                   const array_t &, const conn_t &, const Barycentric_transformation &);
+                   const array_t &, const conn_t &);
 
 #endif
