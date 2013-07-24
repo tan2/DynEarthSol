@@ -1013,7 +1013,7 @@ void points_to_mesh(const Param &param, Variables &var,
 void create_boundary_flags2(uint_vec &bcflag, int nseg,
                             const int *psegment, const int *psegflag)
 {
-    for (std::size_t i=0; i<nseg; ++i) {
+    for (int i=0; i<nseg; ++i) {
         uint flag = static_cast<uint>(psegflag[i]);
         const int *n = psegment + i * NODES_PER_FACET;
         for (int j=0; j<NODES_PER_FACET; ++j) {
