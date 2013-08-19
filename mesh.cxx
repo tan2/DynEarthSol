@@ -62,7 +62,7 @@ void set_2d_quality_str(std::string &quality, double min_angle)
     quality.clear();
     if (min_angle > 0) {
         quality += 'q';
-        quality += std::to_string(min_angle);
+        quality += std::to_string((long double)min_angle);
     }
 }
 
@@ -154,11 +154,11 @@ void set_3d_quality_str(std::string &quality, double max_ratio,
     quality.clear();
     if (max_ratio > 0) {
         quality += 'q';
-        quality += std::to_string(max_ratio);
+        quality += std::to_string((long double)max_ratio);
         quality += "qq";
-        quality += std::to_string(min_dihedral_angle);
+        quality += std::to_string((long double)min_dihedral_angle);
         quality += "qqq";
-        quality += std::to_string(max_dihedral_angle);
+        quality += std::to_string((long double)max_dihedral_angle);
     }
 }
 
