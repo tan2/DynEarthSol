@@ -89,7 +89,9 @@ void triangulate_polygon
         std::sprintf(options, "%s%spjza%fA", verbosity.c_str(), quality.c_str(), max_area);
     else
         std::sprintf(options, "%s%spjza%f", verbosity.c_str(), quality.c_str(), max_area);
-    //std::puts(options);
+
+    if( meshing_verbosity >= 0 )
+        std::cout << "The meshing option is: " << options << '\n';
 
     in.pointlist = const_cast<double*>(points);
     in.pointattributelist = NULL;
@@ -188,7 +190,9 @@ void tetrahedralize_polyhedron
         std::sprintf(options, "%s%spzs%da%fA", verbosity.c_str(), quality.c_str(), optlevel, max_volume);
     else
         std::sprintf(options, "%s%spzs%da%f", verbosity.c_str(), quality.c_str(), optlevel, max_volume);
-    //std::puts(options);
+
+    if( meshing_verbosity >= 0 )
+        std::cout << "The meshing option is: " << options << '\n';
 
     //
     // Setting input arrays to tetgen
