@@ -158,7 +158,7 @@ struct Variables {
     int bad_mesh_quality;
     int bad_quality_index;
 
-    // These 4 arrays are allocated by external library
+    // These 5 arrays are allocated by external library
     array_t *coord;
     conn_t *connectivity;
     segment_t *segment;
