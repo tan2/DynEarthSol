@@ -288,7 +288,7 @@ void delete_points(const int_vec &points_to_delete, int &npoints,
 
 void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoints,
                                       int nseg, double *points, int *segment,
-                                      uint_vec &bcflag)
+                                      uint_vec &bcflag, double min_length)
 {
     if (NDIMS == 3) {
         std::cerr << "delete_points_and_merge_segments() doesn't work in 3D!\n";
@@ -311,16 +311,13 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
     // delete points from the end
     for (auto i=points_to_delete.rbegin(); i<points_to_delete.rend(); ++i) {
         if (DEBUG) {
-            std::cout << " deleting ponit " << *i << " replaced by point " << end << '\n';
+            std::cout << " deleting point " << *i << " replaced by point " << end << '\n';
         }
 
         // if the deleted point is a segment point, merge the neighboring two segments
         uint flag = bcflag[*i];
         if (is_boundary(flag)) {
-            /* segment and points
-             *   x------a = b-------x
-             *                      c
-             */
+            // segment and points:  aa------a = b-------bb
 
             int *a = std::find(segment, endsegment, *i);
             int *b = std::find(a+1, endsegment, *i);
@@ -328,18 +325,37 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
                 std::cerr << "Error: segment array is corrupted when merging segment!\n";
                 std::exit(1);
             }
-            bool not_first = (b - segment) % NODES_PER_FACET;
-            int *c = not_first? (b - 1) : (b + 1);
+
+            // a could be the either first or second node of the segment,
+            // which will affect the location of aa in the segment array.
+            bool not_first;
+            not_first = (a - segment) % NODES_PER_FACET;
+            int *aa = not_first? (a - 1) : (a + 1);
+            not_first = (b - segment) % NODES_PER_FACET;
+            int *bb = not_first? (b - 1) : (b + 1);
+
+            // if the length of the two segments are too long
+            // do not delete this point
+            double la2, lb2;
+            la2 = dist2(points + (*a)*NDIMS, points + (*aa)*NDIMS);
+            lb2 = dist2(points + (*b)*NDIMS, points + (*bb)*NDIMS);
+            if (la2 > min_length*min_length && lb2 > min_length*min_length) {
+                if (DEBUG) {
+                    std::cout << " the segments of point " << *i << " have length^2 "
+                              << la2 << ", " << lb2 << " -- skip deletion."<< '\n';
+                }
+                continue;
+            }
 
             // merge the two segments
-            *a = *c;
-            *c = DELETED_FACET;
+            *a = *bb;
+            *bb = DELETED_FACET;
             *b = DELETED_FACET;
 
             if (DEBUG) {
                 std::cout << "a: " << (a-segment) << "  b: " << (b-segment)
-                          << " not_first? " << not_first << " c: " << (c-segment)
-                          << " = " << *c << '\n';
+                          << " not_first? " << not_first << " bb: " << (bb-segment)
+                          << " = " << *bb << '\n';
                 std::cout << "segment after merging: ";
                 print(std::cout, segment, nseg*NODES_PER_FACET);
                 std::cout << '\n';
@@ -366,9 +382,8 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
         }
 
         end --;
+        npoints --;
     }
-
-    npoints -= points_to_delete.size();
 
     if (DEBUG) {
         std::cout << "segment after  delete: ";
@@ -432,6 +447,7 @@ void new_mesh(const Param &param, Variables &var,
     max_elem_size = param.mesh.xlength * param.mesh.zlength;
 #endif
     const int vertex_per_polygon = 3;
+    const double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
 
     // create a copy of old_coord and old_segment
     double *qcoord = new double[old_coord.num_elements()];
@@ -452,7 +468,6 @@ void new_mesh(const Param &param, Variables &var,
         break;
     case 1: {
         excl_func = &is_boundary;
-        double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
         int_vec points_to_delete;
         flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
                        points_to_delete, min_dist);
@@ -460,7 +475,6 @@ void new_mesh(const Param &param, Variables &var,
     }
     case 2: {
         excl_func = &is_boundary;
-        double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
         int_vec points_to_delete;
         new_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
                    points_to_delete, min_dist, qsegment, qsegflag, old_nseg);
@@ -471,12 +485,11 @@ void new_mesh(const Param &param, Variables &var,
     }
     case 11: {
         excl_func = &is_corner;
-        double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
         int_vec points_to_delete;
         flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
                        points_to_delete, min_dist);
         delete_points_and_merge_segments(points_to_delete, old_nnode, old_nseg,
-                                         qcoord, qsegment, *var.bcflag);
+                                         qcoord, qsegment, *var.bcflag, min_dist);
         delete_facets(old_nseg, qsegment, qsegflag);
         break;
     }
@@ -523,15 +536,15 @@ void new_mesh(const Param &param, Variables &var,
         if (points_to_delete.size() > 0) {
             int q_nnode = old_nnode;
             delete_points_and_merge_segments(points_to_delete, q_nnode, old_nseg,
-                                             qcoord, qsegment, new_bcflag);
+                                             qcoord, qsegment, new_bcflag, min_dist);
             delete_facets(old_nseg, qsegment, qsegflag);
 
             delete [] psegment;
             delete [] psegflag;
 
-            // turning off the quality constraint, so no new points got inserted to the mesh
-            mesh_param.min_angle = 0;
-            mesh_param.max_ratio = 0;
+            // lessen the quality constraint, so less new points got inserted to the mesh
+            mesh_param.min_angle *= 0.9;
+            mesh_param.max_ratio *= 1.1;
             points_to_new_mesh(mesh_param, q_nnode, qcoord,
                                old_nseg, qsegment, qsegflag,
                                0, NULL,
