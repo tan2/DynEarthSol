@@ -483,6 +483,15 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         delete_facets(old_nseg, qsegment, qsegflag);
         break;
     }
+    case 10: {
+        excl_func = &is_corner;
+        int_vec points_to_delete;
+        // mark points on segment to delete ...
+        delete_points_and_merge_segments(points_to_delete, old_nnode, old_nseg,
+                                         qcoord, qsegment, *var.bcflag, min_dist);
+        delete_facets(old_nseg, qsegment, qsegflag);
+        break;
+    }
     case 11: {
         excl_func = &is_corner;
         int_vec points_to_delete;

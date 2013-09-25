@@ -94,6 +94,7 @@ static void declare_parameters(po::options_description &cfg,
          " 0: no modification on any boundary.\n"
          " 1: move all bottom nodes to initial depth, other boundaries are intact.\n"
          " 2: create a new bottom boundary at the initial depth, other boundaries are intact.\n"
+         "10: no modification on any boundary, except small boundary segments might get merged.\n"
          "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments"
          "    might get merged.\n")
         ;
