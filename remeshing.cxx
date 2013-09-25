@@ -263,9 +263,14 @@ void find_points_of_tiny_elem(const array_t &coord, const conn_t &connectivity,
 }
 
 
-void delete_points(const int_vec &points_to_delete, int &npoints,
+void delete_points(int_vec &points_to_delete, int &npoints,
                    int nseg, double *points, int *segment)
 {
+    /* sort points_to_delete and remove duplicate */
+    std::sort(points_to_delete.begin(), points_to_delete.end());
+    auto last = std::unique(points_to_delete.begin(), points_to_delete.end());
+    points_to_delete.resize(last - points_to_delete.begin());
+
     if (DEBUG) {
         std::cout << "old points to delete: ";
         print(std::cout, points_to_delete);
@@ -468,6 +473,20 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     int old_nnode = old_coord.size();
     int old_nseg = old_segment.size();
 
+    int_vec points_to_delete;
+
+    if (bad_quality == 3) {
+        // some elements are too small, delete them
+        int_vec tiny_elems;
+        find_tiny_element(param, *var.volume, tiny_elems);
+
+        if (tiny_elems.size() > 0) {
+            find_points_of_tiny_elem(old_coord, old_connectivity, *var.volume,
+                                     tiny_elems, old_nnode, qcoord, *var.bcflag, points_to_delete,
+                                     is_boundary);
+        }
+    }
+
     // function pointer
     bool (* excl_func)(uint) = NULL;
     switch (param.mesh.remeshing_option) {
@@ -476,14 +495,12 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         break;
     case 1: {
         excl_func = &is_boundary;
-        int_vec points_to_delete;
         flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
                        points_to_delete, min_dist);
         break;
     }
     case 2: {
         excl_func = &is_boundary;
-        int_vec points_to_delete;
         new_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
                    points_to_delete, min_dist, qsegment, qsegflag, old_nseg);
         delete_points(points_to_delete, old_nnode, old_nseg,
@@ -493,7 +510,6 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     }
     case 10: {
         excl_func = &is_corner;
-        int_vec points_to_delete;
         // mark points on segment to delete ...
         delete_points_and_merge_segments(points_to_delete, old_nnode, old_nseg,
                                          qcoord, qsegment, *var.bcflag, min_dist);
@@ -502,7 +518,6 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     }
     case 11: {
         excl_func = &is_corner;
-        int_vec points_to_delete;
         flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
                        points_to_delete, min_dist);
         delete_points_and_merge_segments(points_to_delete, old_nnode, old_nseg,
