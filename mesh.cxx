@@ -10,7 +10,7 @@
 #include "tetgen/tetgen.h"
 #undef TETLIBRARY
 
-#else
+#endif // THREED
 
 #define REAL double
 #define VOID void
@@ -20,7 +20,6 @@
 #undef VOID
 #undef ANSI_DECLARATORS
 
-#endif // THREED
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -77,7 +76,6 @@ void triangulate_polygon
  double **outpoints, int **triangles,
  int **outsegments, int **outsegflags, double **outregattr)
 {
-#ifndef THREED
     char options[255];
     triangulateio in, out;
 
@@ -146,7 +144,6 @@ void triangulate_polygon
     *outregattr = out.triangleattributelist;
 
     trifree(out.pointmarkerlist);
-#endif
 }
 
 

@@ -111,14 +111,14 @@ TRI_SRCS = triangle/triangle.c
 TRI_INCS = triangle/triangle.h
 TRI_OBJS = $(TRI_SRCS:.c=.o)
 
-ifeq ($(ndims), 2)
-	M_SRCS = $(TRI_SRCS)
-	M_INCS = $(TRI_INCS)
-	M_OBJS = $(TRI_OBJS)
-else
-	M_SRCS = $(TET_SRCS)
-	M_INCS = $(TET_INCS)
-	M_OBJS = $(TET_OBJS)
+M_SRCS = $(TRI_SRCS)
+M_INCS = $(TRI_INCS)
+M_OBJS = $(TRI_OBJS)
+
+ifeq ($(ndims), 3)
+	M_SRCS += $(TET_SRCS)
+	M_INCS += $(TET_INCS)
+	M_OBJS += $(TET_OBJS)
 	CXXFLAGS += -DTHREED
 endif
 
