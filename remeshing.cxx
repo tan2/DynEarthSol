@@ -286,6 +286,103 @@ void delete_points(const int_vec &points_to_delete, int &npoints,
 }
 
 
+void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoints,
+                                      int nseg, double *points, int *segment,
+                                      uint_vec &bcflag)
+{
+    if (NDIMS == 3) {
+        std::cerr << "delete_points_and_merge_segments() doesn't work in 3D!\n";
+        std::exit(1);
+    }
+
+    if (DEBUG) {
+        std::cout << "old points to delete: ";
+        print(std::cout, points_to_delete);
+        std::cout << '\n';
+        std::cout << "segment before delete: ";
+        print(std::cout, segment, nseg*NODES_PER_FACET);
+        std::cout << '\n';
+    }
+
+    int *endsegment = segment + nseg * NODES_PER_FACET;
+
+    int end = npoints - 1;
+
+    // delete points from the end
+    for (auto i=points_to_delete.rbegin(); i<points_to_delete.rend(); ++i) {
+        if (DEBUG) {
+            std::cout << " deleting ponit " << *i << " replaced by point " << end << '\n';
+        }
+
+        // if the deleted point is a segment point, merge the neighboring two segments
+        uint flag = bcflag[*i];
+        if (is_boundary(flag)) {
+            /* segment and points
+             *   x------a = b-------x
+             *                      c
+             */
+
+            int *a = std::find(segment, endsegment, *i);
+            int *b = std::find(a+1, endsegment, *i);
+            if (b == endsegment) {
+                std::cerr << "Error: segment array is corrupted when merging segment!\n";
+                std::exit(1);
+            }
+            bool not_first = (b - segment) % NODES_PER_FACET;
+            int *c = not_first? (b - 1) : (b + 1);
+
+            // merge the two segments
+            *a = *c;
+            *c = DELETED_FACET;
+            *b = DELETED_FACET;
+
+            if (DEBUG) {
+                std::cout << "a: " << (a-segment) << "  b: " << (b-segment)
+                          << " not_first? " << not_first << " c: " << (c-segment)
+                          << " = " << *c << '\n';
+                std::cout << "segment after merging: ";
+                print(std::cout, segment, nseg*NODES_PER_FACET);
+                std::cout << '\n';
+            }
+        }
+
+        // when a point is deleted, replace it with the last point
+        flag = bcflag[end];
+        bcflag[*i] = flag;
+        for (int d=0; d<NDIMS; ++d) {
+            points[(*i)*NDIMS + d] = points[end*NDIMS + d];
+        }
+
+        // if the last point is also a segment point, the segment point index
+        // needs to be updated as well
+        if (is_boundary(flag)) {
+            std::replace(segment, endsegment, end, *i);
+            // std::cout << *i << " <- " << end << "\n";
+            if (DEBUG) {
+                std::cout << "segment after replace: ";
+                print(std::cout, segment, nseg*NODES_PER_FACET);
+                std::cout << '\n';
+            }
+        }
+
+        end --;
+    }
+
+    npoints -= points_to_delete.size();
+
+    if (DEBUG) {
+        std::cout << "segment after  delete: ";
+        print(std::cout, segment, nseg*NODES_PER_FACET);
+        std::cout << '\n';
+    }
+
+    /* PS: We don't check whether the merged segments are belong the same boundary or not,
+     *     e.g., one segment is on the top boundary while the other segment is on the left
+     *     boundary. The check is performed in delete_facets() instead.
+     */
+}
+
+
 void delete_facets(int &nseg, int *segment, int *segflag)
 {
     // delete facets from the end
@@ -297,7 +394,7 @@ void delete_facets(int &nseg, int *segment, int *segflag)
                 || segment[i*NODES_PER_FACET + 2] != DELETED_FACET
 #endif
                 ) {
-                std::cerr << "Error: segment array is corrupted!\n";
+                std::cerr << "Error: segment array is corrupted before delete_facets()!\n";
                 print(std::cerr, segment, nseg*NODES_PER_FACET);
                 std::exit(1);
             }
@@ -372,6 +469,17 @@ void new_mesh(const Param &param, Variables &var,
         delete_facets(old_nseg, qsegment, qsegflag);
         break;
     }
+    case 11: {
+        excl_func = &is_corner;
+        double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
+        int_vec points_to_delete;
+        flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
+                       points_to_delete, min_dist);
+        delete_points_and_merge_segments(points_to_delete, old_nnode, old_nseg,
+                                         qcoord, qsegment, *var.bcflag);
+        delete_facets(old_nseg, qsegment, qsegflag);
+        break;
+    }
     default:
         std::cerr << "Error: unknown remeshing_option: " << param.mesh.remeshing_option << '\n';
         std::exit(1);
@@ -392,6 +500,9 @@ void new_mesh(const Param &param, Variables &var,
     array_t new_coord(pcoord, new_nnode);
     conn_t new_connectivity(pconnectivity, new_nelem);
 
+    uint_vec new_bcflag(new_nnode);
+    create_boundary_flags2(new_bcflag, new_nseg, psegment, psegflag);
+
     // coarsening
     {
         // deleting (non-boundary) nodes to avoid having tiny elements
@@ -411,8 +522,9 @@ void new_mesh(const Param &param, Variables &var,
         // deleting boundary nodes associated with tiny facets
         if (points_to_delete.size() > 0) {
             int q_nnode = old_nnode;
-            delete_points(points_to_delete, q_nnode, old_nseg,
-                          qcoord, qsegment);
+            delete_points_and_merge_segments(points_to_delete, q_nnode, old_nseg,
+                                             qcoord, qsegment, new_bcflag);
+            delete_facets(old_nseg, qsegment, qsegflag);
 
             delete [] psegment;
             delete [] psegflag;
@@ -461,7 +573,9 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
     }
 
     // check if any bottom node is too far away from the bottom depth
-    if (param.mesh.remeshing_option == 1 || param.mesh.remeshing_option == 2) {
+    if (param.mesh.remeshing_option == 1 ||
+        param.mesh.remeshing_option == 2 ||
+        param.mesh.remeshing_option == 11) {
         double bottom = - param.mesh.zlength;
         const double dist_ratio = 0.25;
         for (int i=0; i<var.nnode; ++i) {
