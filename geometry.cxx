@@ -10,7 +10,7 @@
 
 
 /* Given two points, returns the distance^2 */
-static double dist2(const double* a, const double* b)
+double dist2(const double* a, const double* b)
 {
     double sum = 0;;
     for (int i=0; i<NDIMS; ++i) {
