@@ -124,15 +124,16 @@ int main(int argc, const char* argv[])
         }
 
         if (var.steps % param.mesh.quality_check_step_interval == 0) {
-            var.bad_mesh_quality = bad_mesh_quality(param, var, var.bad_quality_index);
-            if (var.bad_mesh_quality) {
+            int quality_is_bad, bad_quality_index;
+            quality_is_bad = bad_mesh_quality(param, var, bad_quality_index);
+            if (quality_is_bad) {
 
                 if (param.sim.output_during_remeshing) {
                     output(param, var, start_time);
                     var.frame ++;
                 }
 
-                remesh(param, var);
+                remesh(param, var, quality_is_bad);
 
                 if (param.sim.output_during_remeshing) {
                     output(param, var, start_time);

@@ -434,7 +434,7 @@ void delete_facets(int &nseg, int *segment, int *segflag)
 }
 
 
-void new_mesh(const Param &param, Variables &var,
+void new_mesh(const Param &param, Variables &var, int bad_quality,
               const array_t &old_coord, const conn_t &old_connectivity,
               const segment_t &old_segment, const segflag_t &old_segflag)
 {
@@ -627,7 +627,7 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
 }
 
 
-void remesh(const Param &param, Variables &var)
+void remesh(const Param &param, Variables &var, int bad_quality)
 {
     std::cout << "  Remeshing starts...\n";
 
@@ -642,7 +642,8 @@ void remesh(const Param &param, Variables &var)
         old_segment.steal_ref(*var.segment);
         old_segflag.steal_ref(*var.segflag);
 
-        new_mesh(param, var, old_coord, old_connectivity, old_segment, old_segflag);
+        new_mesh(param, var, bad_quality, old_coord, old_connectivity,
+                 old_segment, old_segflag);
 
         // interpolating fields defined on elements
         nearest_neighbor_interpolation(var, old_coord, old_connectivity);
