@@ -928,9 +928,15 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 #else
         n = std::sscanf(buffer, "%d %lf %lf %lf %lf", &junk, x, x+1, x+2, x+3);
 #endif
-        if (n != NDIMS+2) {
+        if (n != NDIMS+3) {
             std::cerr << "Error: parsing line " << lineno << " of '"
-                      << param.mesh.poly_filename << "'\n";
+                      << param.mesh.poly_filename << "'. "<<NDIMS+3<<" values should be given but only "<<n<<" found.\n";
+            std::exit(1);
+        }
+
+        if ( x[NDIMS] < 0 || x[NDIMS] >= param.mat.nmat ) {
+            std::cerr << "Error: "<<NDIMS+2<<"-th value in line "<<lineno<<" should be >=0 and < "<<param.mat.nmat<<" (=nmat) but is "<<x[NDIMS]<<"\n";
+            std::cerr << "Note that this parameter is directly used as the index of mat. prop. arrays.\n";
             std::exit(1);
         }
 
