@@ -575,6 +575,13 @@ void new_mesh(const Param &param, Variables &var,
 
 int bad_mesh_quality(const Param &param, const Variables &var, int &index)
 {
+    /* Check the quality of the mesh, return 0 if the mesh quality (by several
+     * measures) is good. Non-zero returned values indicate --
+     * 1: an element has bad quality (too acute / narrow / flat).
+     * 2: a bottom node has moved too far away from the flat bottom.
+     * 3: an element is smaller than (mesh.smallest_size * mesh.resolution^NDIMS).
+     */
+
     // check tiny elements
     const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
     for (int e=0; e<var.nelem; e++) {
