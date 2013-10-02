@@ -20,6 +20,14 @@
 
 namespace {
 
+
+// equilateral triangle area = 0.433*s^2, equilateral tetrahedron volume = 0.118*s^3
+#ifdef THREED
+const double sizefactor = 0.118;
+#else
+const double sizefactor = 0.433;
+#endif
+
 const int DELETED_FACET = -1;
 const int DEBUG = 0;
 
@@ -186,7 +194,7 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
 void find_tiny_element(const Param &param, const double_vec &volume,
                        int_vec &tiny_elems)
 {
-    const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
+    const double smallest_vol = param.mesh.smallest_size * sizefactor * std::pow(param.mesh.resolution, NDIMS);
 
     for (std::size_t e=0; e<volume.size(); e++) {
         if (volume[e] < smallest_vol)
@@ -447,7 +455,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     max_elem_size = param.mesh.xlength * param.mesh.zlength;
 #endif
     const int vertex_per_polygon = 3;
-    const double min_dist = std::pow(param.mesh.smallest_size, 1./NDIMS) * param.mesh.resolution;
+    const double min_dist = std::pow(param.mesh.smallest_size*sizefactor, 1./NDIMS) * param.mesh.resolution;
 
     // create a copy of old_coord and old_segment
     double *qcoord = new double[old_coord.num_elements()];
@@ -588,11 +596,12 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
      * measures) is good. Non-zero returned values indicate --
      * 1: an element has bad quality (too acute / narrow / flat).
      * 2: a bottom node has moved too far away from the flat bottom.
-     * 3: an element is smaller than (mesh.smallest_size * mesh.resolution^NDIMS).
+     * 3: an element is smaller than (mesh.smallest_size * [volume of a equilateral triangle/tetrahedron
+     *    of side = mesh.resolution]).
      */
 
     // check tiny elements
-    const double smallest_vol = param.mesh.smallest_size * std::pow(param.mesh.resolution, NDIMS);
+    const double smallest_vol = param.mesh.smallest_size * sizefactor * std::pow(param.mesh.resolution, NDIMS);
     for (int e=0; e<var.nelem; e++) {
         if ((*var.volume)[e] < smallest_vol) {
             index = e;
