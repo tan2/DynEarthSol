@@ -411,6 +411,25 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
 }
 
 
+void delete_points_and_merge_facets()
+{
+
+}
+
+
+void delete_points_on_boundary(const int_vec &points_to_delete, int &npoints,
+                               int nseg, double *points, int *segment,
+                               uint_vec &bcflag, double min_length)
+{
+#ifdef THREED
+    delete_points_and_merge_facets();
+#else
+    delete_points_and_merge_segments(points_to_delete, npoints, nseg,
+                                     points, segment, bcflag, min_length);
+#endif
+}
+
+
 void delete_facets(int &nseg, int *segment, int *segflag)
 {
     // delete facets from the end
@@ -511,8 +530,8 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     case 10: {
         excl_func = &is_corner;
         // mark points on segment to delete ...
-        delete_points_and_merge_segments(points_to_delete, old_nnode, old_nseg,
-                                         qcoord, qsegment, *var.bcflag, min_dist);
+        delete_points_on_boundary(points_to_delete, old_nnode, old_nseg,
+                                  qcoord, qsegment, *var.bcflag, min_dist);
         delete_facets(old_nseg, qsegment, qsegflag);
         break;
     }
@@ -520,8 +539,8 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         excl_func = &is_corner;
         flatten_bottom(*var.bcflag, qcoord, -param.mesh.zlength,
                        points_to_delete, min_dist);
-        delete_points_and_merge_segments(points_to_delete, old_nnode, old_nseg,
-                                         qcoord, qsegment, *var.bcflag, min_dist);
+        delete_points_on_boundary(points_to_delete, old_nnode, old_nseg,
+                                  qcoord, qsegment, *var.bcflag, min_dist);
         delete_facets(old_nseg, qsegment, qsegflag);
         break;
     }
@@ -567,8 +586,8 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         // deleting boundary nodes associated with tiny facets
         if (points_to_delete.size() > 0) {
             int q_nnode = old_nnode;
-            delete_points_and_merge_segments(points_to_delete, q_nnode, old_nseg,
-                                             qcoord, qsegment, new_bcflag, min_dist);
+            delete_points_on_boundary(points_to_delete, q_nnode, old_nseg,
+                                      qcoord, qsegment, new_bcflag, min_dist);
             delete_facets(old_nseg, qsegment, qsegflag);
 
             delete [] psegment;
