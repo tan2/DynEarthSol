@@ -303,19 +303,10 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
                                       int nseg, double *points, int *segment,
                                       uint_vec &bcflag, double min_length)
 {
-    if (NDIMS == 3) {
-        std::cerr << "delete_points_and_merge_segments() doesn't work in 3D!\n";
-        std::exit(1);
-    }
-
-    if (DEBUG) {
-        std::cout << "old points to delete: ";
-        print(std::cout, points_to_delete);
-        std::cout << '\n';
-        std::cout << "segment before delete: ";
-        print(std::cout, segment, nseg*NODES_PER_FACET);
-        std::cout << '\n';
-    }
+#ifdef THREED
+    std::cerr << "delete_points_and_merge_segments() doesn't work in 3D!\n";
+    std::exit(1);
+#endif
 
     int *endsegment = segment + nseg * NODES_PER_FACET;
 
@@ -398,12 +389,6 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
         npoints --;
     }
 
-    if (DEBUG) {
-        std::cout << "segment after  delete: ";
-        print(std::cout, segment, nseg*NODES_PER_FACET);
-        std::cout << '\n';
-    }
-
     /* PS: We don't check whether the merged segments are belong the same boundary or not,
      *     e.g., one segment is on the top boundary while the other segment is on the left
      *     boundary. The check is performed in delete_facets() instead.
@@ -413,6 +398,12 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
 
 void delete_points_and_merge_facets()
 {
+#ifndef THREED
+    std::cerr << "delete_points_and_merge_facets() doesn't work in 2D!\n";
+    std::exit(1);
+#endif
+
+
 
 }
 
@@ -421,12 +412,27 @@ void delete_points_on_boundary(const int_vec &points_to_delete, int &npoints,
                                int nseg, double *points, int *segment,
                                uint_vec &bcflag, double min_length)
 {
+    if (DEBUG) {
+        std::cout << "old points to delete: ";
+        print(std::cout, points_to_delete);
+        std::cout << '\n';
+        std::cout << "segment before delete: ";
+        print(std::cout, segment, nseg*NODES_PER_FACET);
+        std::cout << '\n';
+    }
+
 #ifdef THREED
     delete_points_and_merge_facets();
 #else
     delete_points_and_merge_segments(points_to_delete, npoints, nseg,
                                      points, segment, bcflag, min_length);
 #endif
+
+    if (DEBUG) {
+        std::cout << "segment after  delete: ";
+        print(std::cout, segment, nseg*NODES_PER_FACET);
+        std::cout << '\n';
+    }
 }
 
 
