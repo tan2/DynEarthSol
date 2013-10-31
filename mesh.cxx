@@ -56,6 +56,16 @@ void set_verbosity_str(std::string &verbosity, int meshing_verbosity)
 }
 
 
+void set_volume_str(std::string &vol, double max_volume)
+{
+    vol.clear();
+    if (max_volume > 0) {
+        vol += 'a';
+        vol += std::to_string((long double)max_volume);
+    }
+}
+
+
 void set_2d_quality_str(std::string &quality, double min_angle)
 {
     quality.clear();
@@ -79,14 +89,15 @@ void triangulate_polygon
     char options[255];
     triangulateio in, out;
 
-    std::string verbosity, quality;
+    std::string verbosity, vol, quality;
     set_verbosity_str(verbosity, meshing_verbosity);
+    set_volume_str(vol, max_area);
     set_2d_quality_str(quality, min_angle);
 
     if( nregions > 0 )
-        std::sprintf(options, "%s%spjza%fA", verbosity.c_str(), quality.c_str(), max_area);
+        std::sprintf(options, "%s%spjz%sA", verbosity.c_str(), quality.c_str(), vol.c_str());
     else
-        std::sprintf(options, "%s%spjza%f", verbosity.c_str(), quality.c_str(), max_area);
+        std::sprintf(options, "%s%spjz%s", verbosity.c_str(), quality.c_str(), vol.c_str());
 
     if( meshing_verbosity >= 0 )
         std::cout << "The meshing option is: " << options << '\n';
@@ -179,14 +190,15 @@ void tetrahedralize_polyhedron
     char options[255];
     double max_dihedral_angle = 180 - 3 * min_dihedral_angle;
 
-    std::string verbosity, quality;
+    std::string verbosity, vol, quality;
     set_verbosity_str(verbosity, meshing_verbosity);
+    set_volume_str(vol, max_volume);
     set_3d_quality_str(quality, max_ratio, min_dihedral_angle, max_dihedral_angle);
 
     if( nregions > 0 )
-        std::sprintf(options, "%s%spzs%da%fA", verbosity.c_str(), quality.c_str(), optlevel, max_volume);
+        std::sprintf(options, "%s%spzs%s%dA", verbosity.c_str(), quality.c_str(), vol.c_str(), optlevel);
     else
-        std::sprintf(options, "%s%spzs%da%f", verbosity.c_str(), quality.c_str(), optlevel, max_volume);
+        std::sprintf(options, "%s%spzs%s%d", verbosity.c_str(), quality.c_str(), vol.c_str(), optlevel);
 
     if( meshing_verbosity >= 0 )
         std::cout << "The meshing option is: " << options << '\n';
