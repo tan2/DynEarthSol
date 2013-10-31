@@ -191,6 +191,123 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
 }
 
 
+void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int_vec (&facet_polygons)[6])
+{
+    /* facet_polygons[i] contains a list of vertex which enclose the i-th boundary facet */
+#ifdef THREED
+    // 3d remeshing might need additional info on edge connection
+    const int nedges = 12;
+    int_vec edgenodes[nedges];
+
+    /* Expanded diagram of the brick, # vertex, E# edge, F# facet
+     *         4----E3-----7
+     *         |           |
+     *         |    F3     |
+     *         |           |
+     *   4-E10-5----E1-----6-E11-7----E3-----4
+     * E6|     |E4         |E5   |E7         |E6
+     *   | F0  |    F4     | F1  |     F5    |
+     *   |     |           |     |           |
+     *   0-E8--1----E0-----2-E9--3----E2-----0
+     *         |           |
+     *         |    F3     |
+     *         |           |
+     *         0----E2-----3
+     */
+
+
+    // WARNING: this part has hardcoded numbers for boundary and edges
+    // MIGHT BREAK when the domain is not a brick
+    for (int j=0; j<2; ++j) {
+        const int_vec &bnode = var.bnodes[j];
+        for (std::size_t i=0; i<bnode.size(); ++i) {
+            uint f = (*var.bcflag)[bnode[i]];
+            if (f & BOUNDZ0) {
+                edgenodes[j+4].push_back(bnode[i]);
+            }
+            if (f & BOUNDZ1) {
+                edgenodes[j+6].push_back(bnode[i]);
+            }
+            if (f & BOUNDY0) {
+                edgenodes[j+8].push_back(bnode[i]);
+            }
+            if (f & BOUNDY1) {
+                edgenodes[j+10].push_back(bnode[i]);
+            }
+        }
+    }
+    for (int j=2; j<4; ++j) {
+        const int_vec &bnode = var.bnodes[j];
+        for (std::size_t i=0; i<bnode.size(); ++i) {
+            uint f = (*var.bcflag)[bnode[i]];
+            if (f & BOUNDZ0) {
+                edgenodes[j-2].push_back(bnode[i]);
+            }
+            if (f & BOUNDZ1) {
+                edgenodes[j+0].push_back(bnode[i]);
+            }
+        }
+    }
+
+    // local cmp functor
+    struct cmp {
+        const int d;
+        const array_t &coord;
+        cmp (const array_t &coord_, int dim) : coord(coord_), d(dim) {};
+        int operator()(const int a, const int b) {return coord[a][d] < coord[b][d];}
+    };
+
+    // ordering the edge nodes by sorting the coordinate along the the corresponding dimension
+    // edge 0~3 along X; edge 4~7 along Y; edge 8~11 along Z
+    for (int i=0; i<nedges; ++i) {
+        int_vec &enodes = edgenodes[i];
+        int dim = i / 4;
+        std::sort(enodes.begin(), enodes.end(), cmp(old_coord, dim));
+    }
+
+    if (DEBUG > 1) {
+        for (int j=0; j<nedges; ++j) {
+            std::cout << "edge " << j << '\n';
+            print(std::cout, edgenodes[j]);
+            std::cout << '\n';
+        }
+    }
+
+    // polygons that enclosing each boundary facets (orientation is outward normal)
+    const int edgelist[6][4] = {{ 8, 6,10, 4},
+                                { 5,11, 7, 9},
+                                { 0, 9, 2, 8},
+                                {10, 3,11, 1},
+                                { 4, 1, 5, 0},
+                                { 2, 7, 3, 6}};
+
+    for (int n=0; n<6; ++n) {
+        int j;
+        j = edgelist[n][0];
+        // ending at end()-1 to avoid duplicating corner nodes
+        for (auto i=edgenodes[j].begin(); i!=edgenodes[j].end()-1; ++i) facet_polygons[n].push_back(*i);
+        j = edgelist[n][1];
+        for (auto i=edgenodes[j].begin(); i!=edgenodes[j].end()-1; ++i) facet_polygons[n].push_back(*i);
+        j = edgelist[n][2];
+        // using reversed iterator to maintain orientation
+        for (auto i=edgenodes[j].rbegin(); i!=edgenodes[j].rend()-1; ++i) facet_polygons[n].push_back(*i);
+        j = edgelist[n][3];
+        for (auto i=edgenodes[j].rbegin(); i!=edgenodes[j].rend()-1; ++i) facet_polygons[n].push_back(*i);
+    }
+
+    if (DEBUG > 1) {
+        for (int j=0; j<6; ++j) {
+            std::cout << "facet polygon nodes " << j << '\n';
+            print(std::cout, facet_polygons[j]);
+            std::cout << '\n';
+        }
+    }
+
+#endif
+    return;
+}
+
+
 void find_tiny_element(const Param &param, const double_vec &volume,
                        int_vec &tiny_elems)
 {
@@ -486,6 +603,9 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
 #endif
     const int vertex_per_polygon = 3;
     const double min_dist = std::pow(param.mesh.smallest_size*sizefactor, 1./NDIMS) * param.mesh.resolution;
+
+    int_vec facet_polygons[6];
+    assemble_facet_polygons(var, old_coord, facet_polygons);
 
     // create a copy of old_coord and old_segment
     double *qcoord = new double[old_coord.num_elements()];
