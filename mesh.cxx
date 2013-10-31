@@ -997,12 +997,17 @@ void points_to_new_mesh(const Mesh &mesh, int npoints, const double *points,
                         &pcoord, &pconnectivity,
                         &psegment, &psegflag, &pregattr);
 
+#endif
+
     if (nelem <= 0) {
+#ifdef THREED
+        std::cerr << "Error: tetrahedralization failed\n";
+#else
         std::cerr << "Error: triangulation failed\n";
+#endif
         std::exit(10);
     }
 
-#endif
 }
 
 
