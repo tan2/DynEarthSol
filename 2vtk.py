@@ -103,6 +103,8 @@ def main(modelname, start, end):
             #
             fvtu.write('  <CellData>\n')
 
+            quality = np.fromfile(prefix+'.meshquality.'+suffix, dtype=np.float64, count=nelem)
+            vtk_dataarray(fvtu, quality, 'mesh quality')
             plstrain = np.fromfile(prefix+'.plstrain.'+suffix, dtype=np.float64, count=nelem)
             vtk_dataarray(fvtu, plstrain, 'plastic strain')
 

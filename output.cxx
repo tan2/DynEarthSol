@@ -73,6 +73,10 @@ void output(const Param& param, const Variables& var, double start_time)
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "temperature", var.frame);
     write_array(buffer, *var.temperature);
 
+    // mesh quality
+    snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "meshquality", var.frame);
+    write_array(buffer, *var.elquality);
+
     // plstrain
     snprintf(buffer, 255, "%s.%s.%06d", param.sim.modelname.c_str(), "plstrain", var.frame);
     write_array(buffer, *var.plstrain);

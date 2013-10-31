@@ -384,12 +384,13 @@ static double elem_quality(const array_t &coord, const conn_t &connectivity,
 
 
 double worst_elem_quality(const array_t &coord, const conn_t &connectivity,
-                          const double_vec &volume, int &worst_elem)
+                          const double_vec &volume, double_vec &elquality, int &worst_elem)
 {
     double q = 1;
     worst_elem = 0;
     for (std::size_t e=0; e<volume.size(); e++) {
         double quality = elem_quality(coord, connectivity, volume, e);
+        elquality[e] = quality;
         if (quality < q) {
             q = quality;
             worst_elem = e;

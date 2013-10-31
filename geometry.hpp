@@ -24,6 +24,6 @@ void compute_shape_fn(const array_t &coord, const conn_t &connectivity,
                       shapefn &shpdx, shapefn &shpdy, shapefn &shpdz);
 
 double worst_elem_quality(const array_t &coord, const conn_t &connectivity,
-                          const double_vec &volume, int &worst_elem);
+                          const double_vec &volume, double_vec &elquality, int &worst_elem);
 
 #endif

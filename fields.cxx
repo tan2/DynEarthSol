@@ -23,6 +23,7 @@ void allocate_variables(const Param &param, Variables& var)
     var.temperature = new double_vec(n);
     var.plstrain = new double_vec(e);
     var.ntmp= new double_vec(n);
+    var.elquality= new double_vec(e);
 
     var.vel = new array_t(n, 0);
     var.force = new array_t(n, 0);
@@ -61,6 +62,9 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.ntmp;
     var.ntmp = new double_vec(n);
+
+    delete var.elquality;
+    var.elquality = new double_vec(e);
 
     delete var.force;
     var.force = new array_t(n, 0);

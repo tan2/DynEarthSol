@@ -173,6 +173,7 @@ struct Variables {
     double_vec *edvoldt;
     double_vec *temperature, *plstrain;
     double_vec *ntmp;
+    double_vec *elquality;
 
     array_t *vel, *force;
     tensor_t *strain_rate, *strain, *stress;
