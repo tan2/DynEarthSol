@@ -166,7 +166,7 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
     //      0 -- 1
     //      |    |
     //      2 -- 3
-    for (int i=0, nfacets=0, offset=0; i<nseg, nfacets<(NDIMS-1); ++i) {
+    for (int i=0, nfacets=0, offset=0; i<nseg || nfacets<(NDIMS-1); ++i) {
         if (static_cast<uint>(segflag[i]) == BOUNDZ0) {
             for (int j=0; j<NODES_PER_FACET; j++)
                 segment[i*NODES_PER_FACET + j] = bottom_corners[offset + j];
