@@ -219,12 +219,14 @@ double compute_dt(const Param& param, const Variables& var)
     }
 
     double dt_elastic = 0.5 * minl / (var.max_vbc_val * param.control.inertial_scaling);
-
-    // std::cout << "dt: " << dt_maxwell << " " << dt_diffusion
-    //           << " " << dt_elastic << "\n";
-
-    return std::min(std::min(dt_elastic, dt_maxwell),
-		    dt_diffusion);
+    double dt = std::min(std::min(dt_elastic, dt_maxwell),
+                         dt_diffusion);
+    if (dt <= 0) {
+        std::cerr << "Error: dt <= 0!  " << dt_maxwell << " " << dt_diffusion
+                  << " " << dt_elastic << "\n";
+        std::exit(1);
+    }
+    return dt;
 }
 
 
