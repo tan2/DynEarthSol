@@ -54,6 +54,11 @@ public:
         n_ = n;
     }
 
+    void nullify() {
+        a_ = NULL;
+        n_ = 0;
+    }
+
     //
     // index accessing
     //
