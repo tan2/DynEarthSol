@@ -251,8 +251,8 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int
 
     // local cmp functor
     struct cmp {
-        const int d;
         const array_t &coord;
+        const int d;
         cmp (const array_t &coord_, int dim) : coord(coord_), d(dim) {};
         int operator()(const int a, const int b) {return coord[a][d] < coord[b][d];}
     };
