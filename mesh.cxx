@@ -274,6 +274,29 @@ void tetrahedralize_polyhedron
 }
 
 
+void points_to_mesh(const Param &param, Variables &var,
+                    int npoints, const double *points,
+                    int n_init_segments, const int *init_segments, const int *init_segflags, const double *regattr,
+                    double max_elem_size, int vertex_per_polygon)
+{
+    double *pcoord, *pregattr;
+    int *pconnectivity, *psegment, *psegflag;
+
+    points_to_new_mesh(param.mesh, npoints, points,
+                       n_init_segments, init_segments, init_segflags,
+                       param.mat.nmat, regattr,
+                       max_elem_size, vertex_per_polygon,
+                       var.nnode, var.nelem, var.nseg,
+                       pcoord, pconnectivity, psegment, psegflag, pregattr);
+
+    var.coord = new array_t(pcoord, var.nnode);
+    var.connectivity = new conn_t(pconnectivity, var.nelem);
+    var.segment = new segment_t(psegment, var.nseg);
+    var.segflag = new segflag_t(psegflag, var.nseg);
+    var.regattr = new regattr_t(pregattr, var.nelem);
+}
+
+
 void new_mesh_uniform_resolution(const Param& param, Variables& var)
 {
     int npoints = 4 * (NDIMS - 1); // 2D:4;  3D:8
@@ -1035,29 +1058,6 @@ void points_to_new_surface(const Mesh &mesh, int npoints, const double *points,
         std::exit(10);
     }
 #endif
-}
-
-
-void points_to_mesh(const Param &param, Variables &var,
-                    int npoints, const double *points,
-                    int n_init_segments, const int *init_segments, const int *init_segflags, const double *regattr,
-                    double max_elem_size, int vertex_per_polygon)
-{
-    double *pcoord, *pregattr;
-    int *pconnectivity, *psegment, *psegflag;
-
-    points_to_new_mesh(param.mesh, npoints, points,
-                       n_init_segments, init_segments, init_segflags,
-                       param.mat.nmat, regattr,
-                       max_elem_size, vertex_per_polygon,
-                       var.nnode, var.nelem, var.nseg,
-                       pcoord, pconnectivity, psegment, psegflag, pregattr);
-
-    var.coord = new array_t(pcoord, var.nnode);
-    var.connectivity = new conn_t(pconnectivity, var.nelem);
-    var.segment = new segment_t(psegment, var.nseg);
-    var.segflag = new segflag_t(psegflag, var.nseg);
-    var.regattr = new regattr_t(pregattr, var.nelem);
 }
 
 
