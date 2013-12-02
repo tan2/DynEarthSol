@@ -196,9 +196,9 @@ void tetrahedralize_polyhedron
     set_3d_quality_str(quality, max_ratio, min_dihedral_angle, max_dihedral_angle);
 
     if( nregions > 0 )
-        std::sprintf(options, "%s%spzs%s%dA", verbosity.c_str(), quality.c_str(), vol.c_str(), optlevel);
+        std::sprintf(options, "%s%s%spzs%dA", verbosity.c_str(), quality.c_str(), vol.c_str(), optlevel);
     else
-        std::sprintf(options, "%s%spzs%s%d", verbosity.c_str(), quality.c_str(), vol.c_str(), optlevel);
+        std::sprintf(options, "%s%s%spzs%d", verbosity.c_str(), quality.c_str(), vol.c_str(), optlevel);
 
     if( meshing_verbosity >= 0 )
         std::cout << "The meshing option is: " << options << '\n';
