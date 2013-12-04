@@ -1010,8 +1010,8 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
 
         nloops ++;
         if (nloops > 5) {
-            std::cerr << "Error: exceeding loop limit in remeshing\n";
-            std::exit(1);
+            std::cout << "Warning: exceeding loop limit in remeshing. Proceeding with risks.\n";
+            break;
         }
     }
 
