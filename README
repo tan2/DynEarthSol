@@ -13,17 +13,24 @@ Requirement:
 * You will need a recent C++ compiler that supports C++11 standard. (GNU g++
   4.4 or newer version will suffice.)
 * You will need a recent version of Boost::Program_options library (1.42 or
-  newer version).
-* You will need Python 2.6 or 2.7 and the Numpy package.
+  newer version). Instructions for building the library:
+  -- Download the source code from www.boost.org
+  -- In the untarred source directory, run "./bootstrap.sh"
+  -- In the same directory, run "./b2 --with-program_options -q" to build
+     the library.
+* You will need Python 2.6+ or 3.2+ and the Numpy package.
 
 Build procedure:
-* Edit 'Makefile', modify BOOST_ROOT_DIR and BOOST_LDFLAGS if your boost
-  library is not installed in the system directory.
+* Edit 'Makefile', modify BOOST_ROOT_DIR if you manually built or installed 
+  boost library. If you followed the instructions above to build 
+  Boost::Program_options library, set BOOST_ROOT_DIR to the untarred boost
+  directory.
 * Run "make" to build an optimized 2D executable 'dynearthsol2d'.
 * Run "make ndims=3" to build an optimized 3D executable 'dynearthsol3d'.
 * Run "make opt=0" to build a debugging executable.
 * Run "make openmp=0" to build the executable without OpenMP. This is
-  necessary to debug under valgrind.
+  necessary to debug the code under valgrind.
+* Run "make gprof=1" to build the executable with profiling support.
 
 
 ===========
@@ -40,10 +47,11 @@ Run
 Plot
 ===========
 
-* Run "2vtk.py modelname" to convert the binary output to VTK files. 
+* Run "2vtk.py modelname" to convert the binary output to VTK files. (Or
+  "2vtk.py -3 modelname" if 3D.) 
 * Some of the simulation outputs might be disabled. Edit 2vtk.py and
   output.cxx to disable/enable them.
 * Plot the VTK files with Paraview or LLNL's Visit program.
 
 
-by Eh Tan, Jan. 2013
+by Eh Tan, Dec. 2013
