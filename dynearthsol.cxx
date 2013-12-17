@@ -10,6 +10,7 @@
 #include "fields.hpp"
 #include "geometry.hpp"
 #include "ic.hpp"
+#include "input.hpp"
 #include "matprops.hpp"
 #include "mesh.hpp"
 #include "output.hpp"
@@ -68,7 +69,6 @@ int main(int argc, const char* argv[])
     }
 
     Param param;
-    void get_input_parameters(const char*, Param&);
     get_input_parameters(argv[1], param);
 
     //
