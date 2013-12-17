@@ -48,7 +48,7 @@ ifeq ($(CXX), g++)
 		CXXFLAGS += -Ofast -funroll-loops -fwhole-program -flto
 		LDFLAGS += -flto
 	else
-		CXXFLAGS += -O0 -Wall -Wno-unused-function -Wno-unknown-pragmas -fbounds-check -ftrapv
+		CXXFLAGS += -O0 -Wall -Wno-unused-variable -Wno-unused-function -Wno-unknown-pragmas -fbounds-check -ftrapv
 	endif
 
 	ifeq ($(openmp), 1)
