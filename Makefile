@@ -22,16 +22,17 @@ CXX = g++
 
 ## Boost location and library name
 BOOST_ROOT_DIR =
-BOOST_LDFLAGS = -lboost_program_options
 
 ########################################################################
 ## Select compiler and linker flags
 ## (Usually you won't need to modify anything below)
 ########################################################################
 
+BOOST_LDFLAGS = -lboost_program_options
 ifdef BOOST_ROOT_DIR
 	BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
 	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,--rpath=$(BOOST_ROOT_DIR)/lib
+	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage -Wl,--rpath=$(BOOST_ROOT_DIR)/stage
 endif
 
 ifeq ($(CXX), g++)
