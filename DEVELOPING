@@ -9,10 +9,10 @@ To get the most timely progress, using Mercurial:
 To-do list:
 
 High priority:
-* Prevent creating tiny elements during remeshing (delete tiny boundary segments)
-* Simple benchmark for rheology
+* Find and fix bugs in 3D elasto-plastic()
+* Fix bugs in remeshing
+* Simple benchmarks for rheology
 * Advanced Interpolation
-* Markers
 * Multi-material
 * Pressure regularization
 
