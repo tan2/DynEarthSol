@@ -11,6 +11,7 @@ options:
     -h,--help   show this help
 '''
 
+from __future__ import print_function
 import sys, os
 import base64, zlib
 import numpy as np
@@ -52,7 +53,7 @@ def main(modelname, start, end):
         # convert from numpy.int to python int
         rec = int(rec)
         suffix = '{0:0=6}'.format(rec)
-        print 'Converting frame #{0}'.format(suffix)
+        print('Converting frame #{0}'.format(suffix))
         nnode = nnode_list[i+start]
         nelem = nelem_list[i+start]
 
@@ -281,12 +282,12 @@ def second_invariant(t):
 if __name__ == '__main__':
 
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(1)
     else:
         for arg in sys.argv[1:]:
             if arg.lower() in ('-h', '--help'):
-                print __doc__
+                print(__doc__)
                 sys.exit(0)
 
     if '-2' in sys.argv:
