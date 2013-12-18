@@ -96,6 +96,7 @@ int main(int argc, const char* argv[])
 
     var.dt = compute_dt(param, var);
 
+    int last_regular_frame = 0;  // excluding frames due to output_during_remeshing
     do {
         var.steps ++;
         var.time += var.dt;
@@ -117,10 +118,11 @@ int main(int argc, const char* argv[])
         // don't have to do it every time step
         if (var.steps % 10 == 0) var.dt = compute_dt(param, var);
 
-        if ( (var.steps == var.frame * param.sim.output_step_interval) ||
-             (var.time > var.frame * param.sim.output_time_interval_in_yr * YEAR2SEC) ) {
+        if ( (var.steps == last_regular_frame * param.sim.output_step_interval) ||
+             (var.time > last_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC) ) {
             output(param, var, start_time);
             var.frame ++;
+            last_regular_frame ++;
         }
 
         if (var.steps % param.mesh.quality_check_step_interval == 0 &&
