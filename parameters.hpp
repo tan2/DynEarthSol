@@ -146,7 +146,6 @@ struct Variables {
     double time;
     double dt;
     int steps;
-    int frame;
 
     int nnode;
     int nelem;
