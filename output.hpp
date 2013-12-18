@@ -1,7 +1,19 @@
 #ifndef DYNEARTHSOL3D_OUTPUT_HPP
 #define DYNEARTHSOL3D_OUTPUT_HPP
 
-void output(const Param& param, const Variables& var, double start_time);
+class Output
+{
+private:
+    const std::string &modelname;
+    const double start_time;
+    int frame;
+
+public:
+    Output(const Param& param, double start_time, int start_frame);
+    ~Output();
+    void write(const Variables& var);
+};
+
 
 void restart();
 
