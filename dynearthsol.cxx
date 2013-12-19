@@ -96,7 +96,7 @@ int main(int argc, const char* argv[])
 
     var.dt = compute_dt(param, var);
 
-    int last_regular_frame = 0;  // excluding frames due to output_during_remeshing
+    int last_regular_frame = 1;  // excluding frames due to output_during_remeshing
     do {
         var.steps ++;
         var.time += var.dt;
