@@ -34,7 +34,9 @@ static void write_array(const char* filename, const std::vector<T>& A)
 Output::Output(const Param& param, double start_time, int start_frame) :
     modelname(param.sim.modelname),
     start_time(start_time),
-    frame(start_frame)
+    average_interval(param.sim.output_averaged_fields),
+    frame(start_frame),
+    time0(0)
 {}
 
 
@@ -42,7 +44,7 @@ Output::~Output()
 {}
 
 
-void Output::write(const Variables& var)
+void Output::write(const Variables& var, bool is_averaged)
 {
     /* Not using C++ stream IO here since it can be much slower than C stdio. */
 
@@ -56,6 +58,10 @@ void Output::write(const Variables& var)
     double run_time = double(std::clock()) / CLOCKS_PER_SEC;
 #endif
 
+    double dt = var.dt;
+    if (average_interval && is_averaged)
+        dt = (var.time - time0) / average_interval;
+
     // info
     snprintf(buffer, 255, "%s.%s", modelname.c_str(), "info");
     if (frame == 0)
@@ -64,7 +70,7 @@ void Output::write(const Variables& var)
         f = fopen(buffer, "a");
 
     snprintf(buffer, 255, "%6d\t%10d\t%12.6e\t%12.4e\t%12.6e\t%8d\t%8d\t%8d\n",
-             frame, var.steps, var.time, var.dt, run_time,
+             frame, var.steps, var.time, dt, run_time,
              var.nnode, var.nelem, var.nseg);
     fputs(buffer, f);
     fclose(f);
@@ -79,7 +85,17 @@ void Output::write(const Variables& var)
 
     // vel
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "vel", frame);
-    write_array(buffer, *var.vel);
+    if (average_interval && is_averaged) {
+        // average_velocity = displacement / delta_t
+        double *c0 = coord0.data();
+        const double *c = var.coord->data();
+        for (int i=0; i<coord0.num_elements(); ++i) {
+            c0[i] = (c[i] - c0[i]) / (var.time - time0);
+        }
+        write_array(buffer, coord0);
+    }
+    else
+        write_array(buffer, *var.vel);
 
     // temperature
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "temperature", frame);
@@ -95,7 +111,17 @@ void Output::write(const Variables& var)
 
     // strain_rate
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "strain-rate", frame);
-    write_array(buffer, *var.strain_rate);
+    if (average_interval && is_averaged) {
+        // average_strain_rate = delta_strain / delta_t
+        double *s0 = strain0.data();
+        const double *s = var.strain->data();
+        for (int i=0; i<strain0.num_elements(); ++i) {
+            s0[i] = (s[i] - s0[i]) / (var.time - time0);
+        }
+        write_array(buffer, strain0);
+    }
+    else
+        write_array(buffer, *var.strain_rate);
 
     // strain
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "strain", frame);
@@ -103,7 +129,16 @@ void Output::write(const Variables& var)
 
     // stress
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "stress", frame);
-    write_array(buffer, *var.stress);
+    if (average_interval && is_averaged) {
+        double *s = stress_avg.data();
+        double tmp = 1 / (average_interval + 1);
+        for (int i=0; i<stress_avg.num_elements(); ++i) {
+            s[i] *= tmp;
+        }
+        write_array(buffer, stress_avg);
+    }
+    else
+        write_array(buffer, *var.stress);
 
     // density
     double_vec tmp(var.nelem);
@@ -139,9 +174,46 @@ void Output::write(const Variables& var)
     std::cout << "  Output # " << frame
               << ", step = " << var.steps
               << ", time = " << var.time / YEAR2SEC << " yr"
-              << ", dt = " << var.dt / YEAR2SEC << " yr.\n";
+              << ", dt = " << dt / YEAR2SEC << " yr.\n";
 
     frame ++;
+}
+
+
+void Output::average_fields(Variables& var)
+{
+    // In the first time step of each interval, some old fields are
+    // stored for later use.
+    // It is guaranteed that remeshing won't occur within the interval.
+    if (var.steps % average_interval == 1) {
+        time0 = var.time;
+
+        if (coord0.size() != var.coord->size()) {
+            double *tmp = new double[(var.coord)->num_elements()];
+            coord0.reset(tmp, var.coord->size());
+        }
+        std::copy(var.coord->begin(), var.coord->end(), coord0.begin());
+
+        if (strain0.size() != var.strain->size()) {
+            double *tmp = new double[(var.strain)->num_elements()];
+            strain0.reset(tmp, var.strain->size());
+        }
+        std::copy(var.strain->begin(), var.strain->end(), strain0.begin());
+
+        if (stress_avg.size() != var.stress->size()) {
+            double *tmp = new double[(var.stress)->num_elements()];
+            stress_avg.reset(tmp, var.stress->size());
+        }
+        std::copy(var.stress->begin(), var.stress->end(), stress_avg.begin());
+    }
+    else {
+        // averaging stress (ps: dt-weighted average would be better, but difficult to do)
+        double *s_avg = stress_avg.data();
+        const double *s = var.stress->data();
+        for (int i=0; i<stress_avg.num_elements(); ++i) {
+            s_avg[i] += s[i];
+        }
+    }
 }
 
 

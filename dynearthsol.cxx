@@ -86,7 +86,9 @@ int main(int argc, const char* argv[])
 
     if (! param.sim.is_restarting) {
         init(param, var);
-        output.write(var);
+        if (param.sim.output_averaged_fields)
+            output.average_fields(var);
+        output.write(var, false);
     }
     else {
         restart();
@@ -116,8 +118,14 @@ int main(int argc, const char* argv[])
         // don't have to do it every time step
         if (var.steps % 10 == 0) var.dt = compute_dt(param, var);
 
-        if ( (var.steps == last_regular_frame * param.sim.output_step_interval) ||
-             (var.time > last_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC) ) {
+        if (param.sim.output_averaged_fields)
+            output.average_fields(var);
+
+	if ((! param.sim.output_averaged_fields || (var.steps % param.sim.output_averaged_fields == 0)) &&
+            // When output_averaged_fields in turned on, the output cannot be
+            // done at arbitrary time steps.
+            ((var.steps == last_regular_frame * param.sim.output_step_interval) ||
+             (var.time > last_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC)) ) {
             output.write(var);
             last_regular_frame ++;
         }
@@ -128,13 +136,13 @@ int main(int argc, const char* argv[])
             if (quality_is_bad) {
 
                 if (param.sim.output_during_remeshing) {
-                    output.write(var);
+                    output.write(var, false);
                 }
 
                 remesh(param, var, quality_is_bad);
 
                 if (param.sim.output_during_remeshing) {
-                    output.write(var);
+                    output.write(var, false);
                 }
             }
         }

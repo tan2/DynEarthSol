@@ -32,6 +32,7 @@ struct Sim {
     double output_time_interval_in_yr;
     int max_steps;
     int output_step_interval;
+    int output_averaged_fields;
     bool is_restarting;
     bool output_during_remeshing;
 

@@ -31,6 +31,11 @@ static void declare_parameters(po::options_description &cfg,
          "Restarting from previous save?")
         ("sim.output_during_remeshing", po::value<bool>(&p.sim.output_during_remeshing)->default_value(false),
          "Output immediately before and after remeshing?")
+        ("sim.output_averaged_fields", po::value<int>(&p.sim.output_averaged_fields)->default_value(-1),
+         "Output time-averaged (smoothed) field variables or not. These fields are: velocity, strain rate, and stress.\n"
+         "0: no, output instaneous fields. The velocity and strain-rate might oscillate temporally.\n"
+         "1: yes, output field variables averaged over mesh.quality_check_step_interval time steps.\n"
+         "N: (integer N > 2) yes, output field variables averaged over N time steps. The value of N is strongly related to the value of mesh.quality_check_step_interval, which must be a multiple of N.\n")
         ;
 
     cfg.add_options()
@@ -335,6 +340,14 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     if ( ! vm.count("sim.output_time_interval_in_yr") )
         p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();;
 
+
+    if (p.sim.output_averaged_fields == 1)
+        p.sim.output_averaged_fields = p.mesh.quality_check_step_interval;
+
+    if (p.sim.output_averaged_fields && (p.mesh.quality_check_step_interval % p.sim.output_averaged_fields) != 0) {
+        std::cerr << "mesh.quality_check_step_interval must be a multiple of sim.output_averaged_fields!.\n";
+        std::exit(1);
+    }
 
     //
     // these parameters are required in mesh.meshing_option == 2
