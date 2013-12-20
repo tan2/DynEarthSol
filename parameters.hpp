@@ -76,9 +76,9 @@ struct BC {
     double mantle_temperature;
 
     double wrinkler_delta_rho;
-    int wrinkler_foundation;
+    bool has_wrinkler_foundation;
 
-    int water_loading;
+    bool has_water_loading;
 
     int vbc_x0;
     int vbc_x1;

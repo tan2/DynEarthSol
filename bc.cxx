@@ -307,7 +307,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
     // TODO: add general stress (Neumann) bcs
 
     // hydrostatic water loading for the surface boundary
-    if (param.bc.water_loading && param.control.gravity != 0) {
+    if (param.bc.has_water_loading && param.control.gravity != 0) {
 
         const int top_bdry = bdry_order.find(BOUNDZ1)->second;
         const auto& top = var.bfacets[top_bdry];
@@ -347,7 +347,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
     }
 
     // Wrinkler foundation for the bottom boundary
-    if (param.bc.wrinkler_foundation && param.control.gravity != 0) {
+    if (param.bc.has_wrinkler_foundation && param.control.gravity != 0) {
         const int bottom_bdry = bdry_order.find(BOUNDZ0)->second;
         const auto& bottom = var.bfacets[bottom_bdry];
         const auto& coord = *var.coord;

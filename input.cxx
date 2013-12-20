@@ -146,11 +146,11 @@ static void declare_parameters(po::options_description &cfg,
          "Surface temperature (in Kelvin)")
         ("bc.mantle_temperature", po::value<double>(&p.bc.mantle_temperature)->default_value(1600),
          "Mantle temperature (in Kelvin)")
-        ("bc.wrinkler_foundation", po::value<int>(&p.bc.wrinkler_foundation)->default_value(1),
+        ("bc.has_wrinkler_foundation", po::value<bool>(&p.bc.has_wrinkler_foundation)->default_value(true),
          "Using Wrinkler foundation for the bottom boundary?")
         ("bc.wrinkler_delta_rho", po::value<double>(&p.bc.wrinkler_delta_rho)->default_value(0),
          "Excess density of the bottom Wrinkler foundation (in kg/m^3)")
-        ("bc.water_loading", po::value<int>(&p.bc.water_loading)->default_value(1),
+        ("bc.has_water_loading", po::value<bool>(&p.bc.has_water_loading)->default_value(true),
          "Applying water loading for top boundary that is below sea level?")
 
         ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
@@ -408,19 +408,19 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     // bc
     //
     {
-        if ( p.bc.wrinkler_foundation && p.control.gravity == 0 ) {
-            p.bc.wrinkler_foundation = 0;
+        if ( p.bc.has_wrinkler_foundation && p.control.gravity == 0 ) {
+            p.bc.has_wrinkler_foundation = 0;
             std::cerr << "Warning: no gravity, Wrinkler foundation is turned off.\n";
         }
-        if ( p.bc.wrinkler_foundation && p.bc.vbc_z0 != 0 ) {
+        if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z0 != 0 ) {
             std::cerr << "Error: vbc_z0 is not 0, but Wrinkler foundation is turned on.\n";
             std::exit(1);
         }
-        if ( p.bc.water_loading && p.control.gravity == 0 ) {
-            p.bc.wrinkler_foundation = 0;
+        if ( p.bc.has_water_loading && p.control.gravity == 0 ) {
+            p.bc.has_water_loading = 0;
             std::cerr << "Warning: no gravity, water loading is turned off.\n";
         }
-        if ( p.bc.wrinkler_foundation && p.bc.vbc_z1 != 0 ) {
+        if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z1 != 0 ) {
             std::cerr << "Error: vbc_z1 is not 0, but water loading is turned on.\n";
             std::exit(1);
         }
