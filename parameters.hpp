@@ -69,6 +69,8 @@ struct Control {
 
     int surface_process_option;
     double surface_diffusivity;
+
+    bool is_quasi_static;
 };
 
 struct BC {

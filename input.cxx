@@ -124,6 +124,8 @@ static void declare_parameters(po::options_description &cfg,
          "If it is 0, its value is inferred from the imposed boundary velocity. "
          "Set it to other value if the imposed boundary velocity is 0 everywhere.")
 
+        ("control.is_quasi_static", po::value<bool>(&p.control.is_quasi_static)->default_value(true),
+         "Is the simulation quasi-static or dynamic? If quasi-static, inertial scaling and strong damping is applied.\n")
         ("control.inertial_scaling", po::value<double>(&p.control.inertial_scaling)->default_value(1e5),
          "Scaling factor for inertial (a large number)")
         ("control.damping_factor", po::value<double>(&p.control.damping_factor)->default_value(0.8),

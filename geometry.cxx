@@ -244,12 +244,14 @@ void compute_mass(const Param &param,
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
     for (auto egroup=egroups.begin(); egroup!=egroups.end(); egroup++) {
         #pragma omp parallel for default(none)                          \
-            shared(egroup, mat, connectivity, volume, volume_n, mass, tmass)
+            shared(egroup, param, mat, connectivity, volume, volume_n, mass, tmass)
         for (std::size_t ee=0; ee<egroup->size(); ++ee) {
             int e = (*egroup)[ee];
     {
-        double pseudo_rho = mat.bulkm(e) / (pseudo_speed * pseudo_speed);
-        double m = pseudo_rho * volume[e] / NODES_PER_ELEM;
+        double rho = (param.control.is_quasi_static) ?
+            mat.bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
+            mat.rho(e);                                     // true density for dynamic sim
+        double m = rho * volume[e] / NODES_PER_ELEM;
         double tm = mat.rho(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
         const int *conn = connectivity[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {

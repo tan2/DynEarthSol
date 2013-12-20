@@ -265,7 +265,7 @@ void update_force(const Param& param, const Variables& var, array_t& force)
 
     apply_stress_bcs(param, var, force);
 
-    if (param.control.damping_factor != 0) {
+    if (param.control.is_quasi_static) {
         apply_damping(param, var, force);
     }
 }
