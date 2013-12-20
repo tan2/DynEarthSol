@@ -135,13 +135,13 @@ int main(int argc, const char* argv[])
             quality_is_bad = bad_mesh_quality(param, var, bad_quality_index);
             if (quality_is_bad) {
 
-                if (param.sim.output_during_remeshing) {
+                if (param.sim.has_output_during_remeshing) {
                     output.write(var, false);
                 }
 
                 remesh(param, var, quality_is_bad);
 
-                if (param.sim.output_during_remeshing) {
+                if (param.sim.has_output_during_remeshing) {
                     output.write(var, false);
                 }
             }

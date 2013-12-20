@@ -34,7 +34,7 @@ struct Sim {
     int output_step_interval;
     int output_averaged_fields;
     bool is_restarting;
-    bool output_during_remeshing;
+    bool has_output_during_remeshing;
 
     std::string modelname;
 };

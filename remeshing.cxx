@@ -1141,7 +1141,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
-    if (param.sim.output_during_remeshing) {
+    if (param.sim.has_output_during_remeshing) {
         // the following variables need to be re-computed only when we are
         // outputing right after remeshing
         update_strain_rate(var, *var.strain_rate);
