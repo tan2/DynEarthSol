@@ -89,7 +89,7 @@ static void declare_parameters(po::options_description &cfg,
          "no regional attributes, and only triangles can be used for facets (3D).\n"
          "Users still need to provide these parameters: mesh.xlength, mesh.ylength, and mesh.zlength.")
 
-        ("mesh.quality_check_step_interval", po::value<int>(&p.mesh.quality_check_step_interval)->default_value(1000),
+        ("mesh.quality_check_step_interval", po::value<int>(&p.mesh.quality_check_step_interval)->default_value(100),
          "How often to check mesh quality?")
         ("mesh.min_quality", po::value<double>(&p.mesh.min_quality)->default_value(0.4),
          "Min. mesh quality before remeshing (between 0 and 1)")
