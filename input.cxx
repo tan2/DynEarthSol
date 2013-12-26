@@ -321,6 +321,8 @@ static void get_numbers(const po::variables_map &vm, const char *name,
 
 static void validate_parameters(const po::variables_map &vm, Param &p)
 {
+    std::cout << "Checking consisitency of input parameters...\n";
+
     //
     // stopping condition and output interval are based on either model time or step
     //

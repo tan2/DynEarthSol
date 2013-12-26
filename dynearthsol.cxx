@@ -20,6 +20,8 @@
 
 void init(const Param& param, Variables& var)
 {
+    std::cout << "Initializing mesh and field data...\n";
+
     create_new_mesh(param, var);
     allocate_variables(param, var);
 
@@ -97,6 +99,7 @@ int main(int argc, const char* argv[])
     var.dt = compute_dt(param, var);
 
     int last_regular_frame = 1;  // excluding frames due to output_during_remeshing
+    std::cout << "Starting simulation...\n";
     do {
         var.steps ++;
         var.time += var.dt;
@@ -149,5 +152,6 @@ int main(int argc, const char* argv[])
 
     } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time_in_yr * YEAR2SEC);
 
+    std::cout << "Ending simulation.\n";
     return 0;
 }

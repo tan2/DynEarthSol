@@ -221,6 +221,8 @@ void restart()
 {
     std::cerr << "Error: restarting not implemented.\n";
     std::exit(1);
+
+    std::cout << "Initializing mesh and field data from checkpoints...\n";
 }
 
 
