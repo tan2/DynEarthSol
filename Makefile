@@ -35,7 +35,7 @@ ifdef BOOST_ROOT_DIR
 	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage -Wl,--rpath=$(BOOST_ROOT_DIR)/stage
 endif
 
-ifeq ($(CXX), g++)
+ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
 
