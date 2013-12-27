@@ -31,8 +31,8 @@ BOOST_ROOT_DIR =
 BOOST_LDFLAGS = -lboost_program_options
 ifdef BOOST_ROOT_DIR
 	BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
-	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,--rpath=$(BOOST_ROOT_DIR)/lib
-	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage -Wl,--rpath=$(BOOST_ROOT_DIR)/stage
+	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/lib
+	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/stage/lib
 endif
 
 ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
