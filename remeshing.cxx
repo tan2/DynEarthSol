@@ -2,6 +2,7 @@
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <numeric>
 #include <set>
 
 #include "constants.hpp"
@@ -254,7 +255,7 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int
         const array_t &coord;
         const int d;
         cmp (const array_t &coord_, int dim) : coord(coord_), d(dim) {};
-        int operator()(const int a, const int b) {return coord[a][d] < coord[b][d];}
+        bool operator()(const int &a, const int &b) {return coord[a][d] < coord[b][d];}
     };
 
     // ordering the edge nodes by sorting the coordinate along the the corresponding dimension
