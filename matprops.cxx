@@ -131,36 +131,40 @@ void MatProps::plastic_weakening(int e, double pls,
                                  double &cohesion, double &friction_angle,
                                  double &dilation_angle, double &hardening) const
 {
-    // TODO: compute average plastic properties
-    const int mat = 0;
     double c, f, d, h;
-    if (pls <= pls0[mat]) {
-        // no weakening yet
-        c = cohesion0[mat];
-        f = friction_angle0[mat];
-        d = dilation_angle0[mat];
-        h = 0;
+    c = f = d = h = 0;
+    int n = 0;
+    for (int m=0; m<nmat; m++) {
+        int k = elemmarkers[e][m];
+        if (k == 0) continue;
+        n += k;
+        if (pls <= pls0[m]) {
+            // no weakening yet
+            c += cohesion0[m] * k;
+            f += friction_angle0[m] * k;
+            d += dilation_angle0[m] * k;
+            h += 0;
+        }
+        else if (pls < pls1[m]) {
+            // linear weakening
+            double p = (pls - pls0[m]) / (pls1[m] - pls0[m]);
+            c += (cohesion0[m] + p * (cohesion1[m] - cohesion0[m])) * k;
+            f += (friction_angle0[m] + p * (friction_angle1[m] - friction_angle0[m])) * k;
+            d += (dilation_angle0[m] + p * (dilation_angle1[m] - dilation_angle0[m])) * k;
+            h += (cohesion1[m] - cohesion0[m]) / (pls1[m] - pls0[m]) * k;
+        }
+        else {
+            // saturated weakening
+            c += cohesion1[m] * k;
+            f += friction_angle1[m] * k;
+            d += dilation_angle1[m] * k;
+            h += 0;
+        }
     }
-    else if (pls < pls1[mat]) {
-        // linear weakening
-        double p = (pls - pls0[mat]) / (pls1[mat] - pls0[mat]);
-        c = cohesion0[mat] + p * (cohesion1[mat] - cohesion0[mat]);
-        f = friction_angle0[mat] + p * (friction_angle1[mat] - friction_angle0[mat]);
-        d = dilation_angle0[mat] + p * (dilation_angle1[mat] - dilation_angle0[mat]);
-        h = (cohesion1[mat] - cohesion0[mat]) / (pls1[mat] - pls0[mat]);
-    }
-    else {
-        // saturated weakening
-        c = cohesion1[mat];
-        f = friction_angle1[mat];
-        d = dilation_angle1[mat];
-        h = 0;
-    }
-
-    cohesion = c;
-    friction_angle = f;
-    dilation_angle = d;
-    hardening = h;
+    cohesion = c / n;
+    friction_angle = f / n;
+    dilation_angle = d / n;
+    hardening = h / n;
 }
 
 
