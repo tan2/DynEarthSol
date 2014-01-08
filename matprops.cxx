@@ -114,11 +114,11 @@ double MatProps::visc(int e) const
         double pow1 = -1 / visc_exponent[m];
         double visc0 = 0.25 * std::pow(edot, pow) * std::pow(0.75 * visc_coefficient[m], pow1)
             * std::exp(visc_activation_energy[m] / (visc_exponent[m] * gas_constant * T)) * 1e6;
-        result += elemmarkers[e][m] * visc0;
+        result += elemmarkers[e][m] / visc0;
         n += elemmarkers[e][m];
     }
 
-    double visc = result / n;
+    double visc = n / result;
 
     // applying min & max limits
     visc = std::min(std::max(visc, visc_min), visc_max);
