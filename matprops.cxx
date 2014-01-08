@@ -7,6 +7,38 @@
 #include "matprops.hpp"
 
 
+namespace {
+
+    double arithmetic_mean(const double_vec &s, const int_vec &n)
+    {
+        if (s.size() == 1) return s[0];
+
+        double result = 0;
+        int m = 0;
+        for (std::size_t i=0; i<s.size(); i++) {
+            result += n[i] * s[i];
+            m += n[i];
+        }
+        return result / m;
+    }
+
+
+    double harmonic_mean(const double_vec &s, const int_vec &n)
+    {
+        if (s.size() == 1) return s[0];
+
+        double result = 0;
+        int m = 0;
+        for (std::size_t i=0; i<s.size(); i++) {
+            result += n[i] / s[i];
+            m += n[i];
+        }
+        return m / result;
+    }
+
+}
+
+
 MatProps::MatProps(const Param& p, const Variables& var) :
   rheol_type(p.mat.rheol_type),
   nmat(p.mat.nmat),
@@ -35,7 +67,8 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   connectivity(*var.connectivity),
   temperature(*var.temperature),
   stress(*var.stress),
-  strain_rate(*var.strain_rate)
+  strain_rate(*var.strain_rate),
+  elemmarkers(*var.elemmarkers)
 {}
 
 
@@ -45,15 +78,13 @@ MatProps::~MatProps()
 
 double MatProps::bulkm(int e) const
 {
-    // TODO: compute average bulk modulus
-    return bulk_modulus[0];
+    return harmonic_mean(bulk_modulus, elemmarkers[e]);
 }
 
 
 double MatProps::shearm(int e) const
 {
-    // TODO: compute average shear modulus
-    return shear_modulus[0];
+    return harmonic_mean(shear_modulus, elemmarkers[e]);
 }
 
 
@@ -61,9 +92,6 @@ double MatProps::visc(int e) const
 {
     const double gas_constant = 8.3144;
     const double min_strain_rate = 1e-30;
-
-    // TODO: compute average viscosity
-    const int m = 0;
 
     // average temperature of this element
     double T = 0;
@@ -79,10 +107,18 @@ double MatProps::visc(int e) const
     edot = std::max(edot, min_strain_rate);
 
     // viscosity law from Chen and Morgan, JGR, 1990
-    double pow = 1 / visc_exponent[m] - 1;
-    double pow1 = -1 / visc_exponent[m];
-    double visc = 0.25 * std::pow(edot, pow) * std::pow(0.75 * visc_coefficient[m], pow1)
-        * std::exp(visc_activation_energy[m] / (visc_exponent[m] * gas_constant * T)) * 1e6;
+    double result = 0;
+    int n = 0;
+    for (int m=0; m<nmat; m++) {
+        double pow = 1 / visc_exponent[m] - 1;
+        double pow1 = -1 / visc_exponent[m];
+        double visc0 = 0.25 * std::pow(edot, pow) * std::pow(0.75 * visc_coefficient[m], pow1)
+            * std::exp(visc_activation_energy[m] / (visc_exponent[m] * gas_constant * T)) * 1e6;
+        result += elemmarkers[e][m] * visc0;
+        n += elemmarkers[e][m];
+    }
+
+    double visc = result / n;
 
     // applying min & max limits
     visc = std::min(std::max(visc, visc_min), visc_max);
@@ -152,9 +188,6 @@ double MatProps::rho(int e) const
 {
     const double celsius0 = 273;
 
-    // TODO: compute average density with thermal expansion
-    const int m = 0;
-
     // average temperature of this element
     double T = 0;
     const int *conn = connectivity[e];
@@ -163,21 +196,27 @@ double MatProps::rho(int e) const
     }
     T /= NODES_PER_ELEM;
 
-    return rho0[m] - alpha[m] * (T - celsius0);
+    double TinCelsius = T - celsius0;
+    double result = 0;
+    int n = 0;
+    for (int m=0; m<nmat; m++) {
+        // TODO: compressibility
+        result += (rho0[m] - alpha[m] * TinCelsius) * elemmarkers[e][m];
+        n += elemmarkers[e][m];
+    }
+    return result / n;
 }
 
 
 double MatProps::cp(int e) const
 {
-    // TODO: compute average heat capacity
-    return heat_capacity[0];
+    return arithmetic_mean(heat_capacity, elemmarkers[e]);
 }
 
 
 double MatProps::k(int e) const
 {
-    // TODO: compute average thermal conductivity
-    return therm_cond[0];
+    return arithmetic_mean(therm_cond, elemmarkers[e]);
 }
 
 

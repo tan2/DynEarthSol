@@ -54,6 +54,7 @@ private:
     const double_vec &temperature;
     const tensor_t &stress;
     const tensor_t &strain_rate;
+    const int_vec2D &elemmarkers;
 
     void plastic_weakening(int e, double pls,
                            double &cohesion, double &friction_angle,
