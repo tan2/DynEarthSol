@@ -14,6 +14,21 @@ namespace po = boost::program_options;
 static void declare_parameters(po::options_description &cfg,
                                Param &p)
 {
+    /* To have a new input parameter declared as such in parameters.h,
+     *
+     *     struct SectionType {
+     *         type name;
+     *     }
+     *     struct Param {
+     *         SectionType section;
+     *     }
+     *
+     * add this line:
+     *
+     *     ("section.name", po::value<type>(&p.section.name), "help string")
+     *
+     */
+
     cfg.add_options()
         ("sim.modelname", po::value<std::string>(&p.sim.modelname),
          "Prefix for the output files")
