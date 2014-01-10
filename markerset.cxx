@@ -214,7 +214,13 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         int num_marker = 0;
         for( int i = 0; i < param.mat.nmat; i++ )
             num_marker += (*(var.elemmarkers))[e][i];
-        
+
+        // temporary safeguard, remove it when TBD is finished.
+        if( num_marker == 0 ) {
+            std::cerr << "Error: no marker in element #" << e << '\n';
+            std::exit(10);
+        }
+
         while( num_marker < mpe ) {
             // add a marker: NN sufficient for mattype decision?
             num_marker++;
