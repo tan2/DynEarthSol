@@ -20,19 +20,19 @@ public:
     void read();
     void resize(const int);
 
-    inline int get_nmarkers() { return _nmarkers; }
+    inline int get_nmarkers() const { return _nmarkers; }
     inline void set_nmarkers(int n) { _nmarkers = n; }
 
-    inline int get_id(int m) { return (*_id)[m]; }
+    inline int get_id(int m) const { return (*_id)[m]; }
     inline void set_id(const int m, const int i) { (*_id)[m] = i; }
 
-    inline int get_elem(int m) { return (*_elem)[m]; }
+    inline int get_elem(int m) const { return (*_elem)[m]; }
     inline void set_elem(const int m, const int e) { (*_elem)[m] = e; }
 
-    inline int get_mattype(int m) { return (*_mattype)[m]; }
+    inline int get_mattype(int m) const { return (*_mattype)[m]; }
     inline void set_mattype(const int m, const int mt) { (*_mattype)[m] = mt; }
 
-    inline double *get_eta(int m) { return (*_eta)[m]; }
+    inline const double *get_eta(int m) const { return (*_eta)[m]; }
     inline void set_eta( const int i, const double r[NDIMS] );
 
 private:
