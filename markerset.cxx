@@ -151,9 +151,9 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
 
     // Loop over all the old markers and identify a containing element in the new mesh.
     MarkerSet *ms = var.markerset; // alias to var.markerset
-    const int nmarkers_old = ms->get_nmarkers();
-    for(int i = 0 ; i < nmarkers_old ; i++) {
-
+    int last_marker = ms->get_nmarkers();
+    int i = 0;
+    while (i < last_marker) {
         bool found = false;
 
         // 1. Get physical coordinates, x, of an old marker.
@@ -180,6 +180,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                     ++(*(var.elemmarkers))[eold][ms->get_mattype(i)];
                 
                     found = true;
+                    ++i;
                     if (DEBUG) {
                         std::cout << " in same element" << '\n';
                     }
@@ -200,6 +201,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                 ++(*(var.elemmarkers))[e][ms->get_mattype(i)];
             
                 found = true;
+                ++i;
                 if (DEBUG) {
                     std::cout << " in element " << e << '\n';
                 }
@@ -211,10 +213,12 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         if (DEBUG) {
             std::cout << " not in any element" << '\n';
         }
-        
-        // Since no containing element has been found, delete this marker.
-        if( !found ) {
-            int last_marker = nmarkers_old-1;
+
+        /* not found */
+        {
+            // Since no containing element has been found, delete this marker,
+            // replace it by the last marker. Note i is not inc'd.
+            --last_marker;
 
             std::memcpy( ms->get_eta(i), ms->get_eta(last_marker), sizeof(double)*(NODES_PER_ELEM) );
             ms->set_id( i, ms->get_id(last_marker) );
@@ -224,6 +228,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             ms->set_nmarkers( last_marker );
         }
     }
+
     // Resize the marker-related arrays.
     const int nmarkers_new = ms->get_nmarkers();
     ms->resize( nmarkers_new );
