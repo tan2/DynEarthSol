@@ -2,6 +2,7 @@
 #define DYNEARTHSOL3D_ARRAY2D_h
 
 #include <algorithm>
+#include <cstring>  // for memcpy
 
 
 template <typename T, int N>
@@ -16,6 +17,11 @@ public:
     //
     Array2D() {a_ = NULL; n_ = 0;}
     Array2D(T* a, int n) {a_ = a; n_ = n;}
+    Array2D(const Array2D& src) {
+        n_ = src.size();
+        a_ = new T[src.num_elements()];
+        std::memcpy(a_, src.data(), sizeof(T)*src.num_elements());
+    }
 
     Array2D(int size, const T& val) {
         a_ = new T[N*size];
@@ -78,8 +84,7 @@ public:
     typedef T element;
 
 private:
-    // disable copy and assignment operators
-    Array2D(const Array2D&);
+    // disable assignment operator
     Array2D<T,N>& operator=(const Array2D<T,N>& rhs);
 };
 
