@@ -25,5 +25,6 @@ void create_elem_groups(Variables& var);
 void create_elemmarkers(const Param&, Variables&);
 void create_markers(const Param&, Variables&);
 void create_new_mesh(const Param&, Variables&);
+double** elem_center(const array_t &coord, const conn_t &connectivity);
 
 #endif

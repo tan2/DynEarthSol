@@ -1335,3 +1335,31 @@ void create_new_mesh(const Param& param, Variables& var)
     create_elemmarkers(param, var);
     create_markers(param, var);
 }
+
+
+double** elem_center(const array_t &coord, const conn_t &connectivity)
+{
+    /* Returns the centroid of the elements.
+     * Note: center[0] == tmp
+     * The caller is responsible to delete [] center[0] and center!
+     */
+    int nelem = connectivity.size();
+    double *tmp = new double[nelem*NDIMS];
+    double **center = new double*[nelem];
+    #pragma omp parallel for default(none)          \
+        shared(nelem, tmp, coord, connectivity, center)
+    for(int e=0; e<nelem; e++) {
+        const int* conn = connectivity[e];
+        center[e] = tmp + e*NDIMS;
+        for(int d=0; d<NDIMS; d++) {
+            double sum = 0;
+            for(int k=0; k<NODES_PER_ELEM; k++) {
+                sum += coord[conn[k]][d];
+            }
+            center[e][d] = sum / NODES_PER_ELEM;
+        }
+    }
+    return center;
+}
+
+
