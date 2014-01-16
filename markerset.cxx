@@ -151,16 +151,16 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         bool found = false;
 
         // 1. Get physical coordinates, x, of an old marker.
+        int e = ms->get_elem(i);
         double x[NDIMS] = {0};
         for (int j = 0; j < NDIMS; j++)
-            for (int k = 0; k < NDIMS+1; k++)
+            for (int k = 0; k < NODES_PER_ELEM; k++)
                 x[j] += ms->get_eta(i)[k]*
-                    old_coord[old_connectivity[ms->get_elem(i)][k]][j];
+                    old_coord[ old_connectivity[e][k] ][j];
 
         // 2. First look into a new element with id = _elem[i].
         {
             double r[NDIMS];
-            int e = ms->get_elem(i);
 
             if (e < var.nelem) { // e is from the old mesh, might exceed the current nelem
                 bary.transform(x, e, r);
