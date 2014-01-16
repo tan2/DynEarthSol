@@ -845,13 +845,8 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
               const segment_t &original_segment, const segflag_t &original_segflag)
 {
     // We don't want to refine large elements during remeshing,
-    // so using the domain size as the max area
-    double max_elem_size;
-#ifdef THREED
-    max_elem_size = param.mesh.xlength * param.mesh.ylength * param.mesh.zlength;
-#else
-    max_elem_size = param.mesh.xlength * param.mesh.zlength;
-#endif
+    // so using negative size as the max area
+    const double max_elem_size = -1;
     const int vertex_per_polygon = 3;
     const double min_dist = std::pow(param.mesh.smallest_size*sizefactor, 1./NDIMS) * param.mesh.resolution;
     Mesh mesh_param = param.mesh;
