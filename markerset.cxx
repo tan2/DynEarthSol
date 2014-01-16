@@ -151,8 +151,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         bool found = false;
 
         // 1. Get physical coordinates, x, of an old marker.
-        double x[NDIMS];
-        std::memset( x, 0.0, sizeof(double)*NDIMS );
+        double x[NDIMS] = {0};
         for (int j = 0; j < NDIMS; j++)
             for (int k = 0; k < NDIMS+1; k++)
                 x[j] += ms->get_eta(i)[k]*
