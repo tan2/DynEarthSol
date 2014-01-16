@@ -9,6 +9,14 @@
 #include "markerset.hpp"
 #include "mesh.hpp"
 #include "geometry.hpp"
+#include "utils.hpp"
+
+namespace {
+
+    const int DEBUG = 1;
+
+}
+
 
 MarkerSet::MarkerSet(const Param& param, Variables& var)
 {
@@ -77,23 +85,21 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
             // 2. normalize.
             double inv_sum = 1.0/sum;
             for( int n = 0; n < NODES_PER_ELEM; n++ )
-                eta[n] *= inv_sum; 
-            /*
-            if( NDIMS==3 )
-                std::cerr << e <<"/"<< ne <<" "<< m <<" "
-                          <<pid<<" "<<(*_mattype)[pid]<<" "
-                          <<inv_sum<<" "
-                          <<" size of eta= "<<(*_eta).size()<<" "
-                          <<eta[0]<<"+"<<eta[1]<<"+"<<eta[2]
-                          <<"+"<<eta[3]<<"="<<(eta[0]+eta[1]+eta[2]+eta[3])<<"\n";
-            else
-                std::cerr << e <<"/"<< ne <<" "<< m <<" "
-                          <<pid<<" "<<(*_mattype)[pid]<<" "
-                          <<inv_sum<<" "
-                          <<" size of eta= "<<(*_eta).size()<<" "
-                          <<eta[0]<<"+"<<eta[1]<<"+"<<eta[2]
-                          <<"="<<(eta[0]+eta[1]+eta[2])<<"\n";
-            */
+                eta[n] *= inv_sum;
+
+            if(DEBUG > 1) {
+                std::cout << e << "/" << ne << " " << m << " "
+                          << pid << " " << (*_mattype)[pid] << " "
+                          << inv_sum << " "
+                          << " size(eta) = " << (*_eta).size() << " "
+                          << eta[0] << "+" << eta[1] << "+" << eta[2];
+#ifdef THREED
+                std::cout << "+" << eta[3]
+                          << "=" << (eta[0]+eta[1]+eta[2]+eta[3]) << "\n";
+#else
+                std::cout << "=" << (eta[0]+eta[1]+eta[2]) << "\n";
+#endif
+            }
         }
 }
 
@@ -151,24 +157,32 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         bool found = false;
 
         // 1. Get physical coordinates, x, of an old marker.
-        int e = ms->get_elem(i);
+        int eold = ms->get_elem(i);
         double x[NDIMS] = {0};
         for (int j = 0; j < NDIMS; j++)
             for (int k = 0; k < NODES_PER_ELEM; k++)
                 x[j] += ms->get_eta(i)[k]*
-                    old_coord[ old_connectivity[e][k] ][j];
+                    old_coord[ old_connectivity[eold][k] ][j];
+
+        if (DEBUG) {
+            std::cout << "marker #" << i << " old_elem " << eold << " x: ";
+            print(std::cout, x, NDIMS);
+        }
 
         // 2. First look into a new element with id = _elem[i].
         {
             double r[NDIMS];
 
-            if (e < var.nelem) { // e is from the old mesh, might exceed the current nelem
-                bary.transform(x, e, r);
+            if (eold < var.nelem) { // eold is from the old mesh, might exceed the current nelem
+                bary.transform(x, eold, r);
                 if (bary.is_inside(r)) {
                     ms->set_eta( i, r );
-                    ++(*(var.elemmarkers))[e][ms->get_mattype(i)];
+                    ++(*(var.elemmarkers))[eold][ms->get_mattype(i)];
                 
                     found = true;
+                    if (DEBUG) {
+                        std::cout << " in same element" << '\n';
+                    }
                 }
             }
         }
@@ -186,10 +200,17 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                 ++(*(var.elemmarkers))[e][ms->get_mattype(i)];
             
                 found = true;
+                if (DEBUG) {
+                    std::cout << " in element " << e << '\n';
+                }
                 break;
             }
         }
         if( found ) continue;
+
+        if (DEBUG) {
+            std::cout << " not in any element" << '\n';
+        }
         
         // Since no containing element has been found, delete this marker.
         if( !found ) {
@@ -217,6 +238,8 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         // temporary safeguard, remove it when TBD is finished.
         if( num_marker == 0 ) {
             std::cerr << "Error: no marker in element #" << e << '\n';
+            print(std::cout, *var.elemmarkers);
+            std::cout << '\n';
             std::exit(10);
         }
 
