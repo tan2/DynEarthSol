@@ -15,6 +15,7 @@ public:
     }
 
     void append_random_marker_in_elem( int el, int mt );
+    void remove_marker(int i);
     void write();
     void read();
     void resize(const int);

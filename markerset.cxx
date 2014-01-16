@@ -127,6 +127,16 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
 }
 
 
+void MarkerSet::remove_marker(int i)
+{
+    // Replace marker i by the last marker.
+    --_nmarkers;
+    std::memcpy( (*_eta)[i], (*_eta)[_nmarkers], sizeof(double)*(NODES_PER_ELEM) );
+    (*_id)[i] = (*_id)[_nmarkers];
+    (*_elem)[i] = (*_elem)[_nmarkers];
+    (*_mattype)[i] = (*_mattype)[_nmarkers];
+}
+
     
 void MarkerSet::write()
 {
@@ -253,16 +263,10 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
 
         /* not found */
         {
-            // Since no containing element has been found, delete this marker,
-            // replace it by the last marker. Note i is not inc'd.
+            // Since no containing element has been found, delete this marker.
+            // Note i is not inc'd.
             --last_marker;
-
-            std::memcpy( ms->get_eta(i), ms->get_eta(last_marker), sizeof(double)*(NODES_PER_ELEM) );
-            ms->set_id( i, ms->get_id(last_marker) );
-            ms->set_elem( i, ms->get_elem(last_marker) );
-            ms->set_mattype( i, ms->get_mattype(last_marker) );
-
-            ms->set_nmarkers( last_marker );
+            ms->remove_marker(i);
         }
     }
 
