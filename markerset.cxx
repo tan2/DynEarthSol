@@ -16,6 +16,7 @@
 namespace {
 
     const int DEBUG = 0;
+    const double over_alloc_ratio = 2.0;  // how many extra space to allocate for future expansion
 
 }
 
@@ -35,7 +36,7 @@ MarkerSet::MarkerSet(const Param& param, Variables& var)
 
 void MarkerSet::allocate_markerdata( const int max_markers, const int mpe )
 {
-    _nmarkers = max_markers;
+    _reserved_space = max_markers;
     _eta = new shapefn( max_markers );
     _elem = new int_vec( max_markers );
     _mattype = new int_vec( max_markers );
@@ -47,8 +48,9 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
 {
     const int ne = var.nelem;
     const int mpe = param.markers.markers_per_element;
-    const int max_markers = ne*mpe;
-    
+    const int num_markers = ne*mpe;
+    const int max_markers = num_markers * over_alloc_ratio;
+
     // allocate memory for data members.
     allocate_markerdata( max_markers, mpe );
     
@@ -56,7 +58,7 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
     srand (time(NULL));
     
     // Store the number of markers
-    _nmarkers = max_markers;
+    _nmarkers = num_markers;
 
     // Generate particles in each element.
     for( int e = 0; e < ne; e++ )
@@ -128,16 +130,31 @@ void MarkerSet::set_eta( const int i, const double r[NDIMS] ) {
     (*_eta)[i][NDIMS] = 1.0 - sum;
 }
 
-void MarkerSet::resize( const int nmarkers_new ) {
-    
-    double *new_eta = new double[NODES_PER_ELEM * nmarkers_new];
-    std::copy( get_eta(0), get_eta(nmarkers_new), new_eta );
-    resize_eta( new_eta, nmarkers_new );
-    
-    resize_id( nmarkers_new );
-    resize_elem( nmarkers_new );
-    resize_mattype( nmarkers_new );
+
+void MarkerSet::resize( const int newsize )
+{
+    if( newsize > _reserved_space ) {
+        // enlarge arrays
+        std::cout << "  Increasing marker arrays size to " << newsize << " markers.\n";
+        _reserved_space = newsize;
+
+        double *new_eta = new double[NODES_PER_ELEM * newsize];
+        std::copy( (*_eta)[0], (*_eta)[_nmarkers], new_eta );
+        _eta->reset( new_eta, _nmarkers );
+
+        _elem->resize( newsize );
+        _mattype->resize( newsize );
+        _id->resize( newsize );
+    }
+    // else if( nmarkers_new < _reserved_space ) {
+    //     // TBD: shrink arrays
+    //     _reserved_space = newsize;
+    // }
+    else {
+        // New size is too close to old size, don't do anything.
+    }
 }
+
 
 void remap_markers(const Param& param, Variables &var, const array_t &old_coord, 
                    const conn_t &old_connectivity)
@@ -235,8 +252,8 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     delete [] centroid[0];
     delete [] centroid;
 
-    // Resize the marker-related arrays.
-    const int nmarkers_new = ms->get_nmarkers();
+    // Resize the marker-related arrays if necessary.
+    const int nmarkers_new = ms->get_nmarkers() * over_alloc_ratio;
     ms->resize( nmarkers_new );
 
     // TBD: If any new element has too few markers, generate markers in them. 
