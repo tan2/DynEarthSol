@@ -1002,17 +1002,17 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         new_connectivity.nullify();
         if (! bad_quality) break;
 
-        delete [] pcoord;
-        delete [] pconnectivity;
-        delete [] psegment;
-        delete [] psegflag;
-        delete [] pregattr;
-
         nloops ++;
         if (nloops > 5) {
             std::cout << "Warning: exceeding loop limit in remeshing. Proceeding with risks.\n";
             break;
         }
+
+        delete [] pcoord;
+        delete [] pconnectivity;
+        delete [] psegment;
+        delete [] psegflag;
+        delete [] pregattr;
     }
 
     var.nnode = new_nnode;
