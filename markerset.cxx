@@ -176,7 +176,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
 
         // TODO: usiing kd-tree to find the element
         // 3. If not found, loop over the entire element set.
-        for( int e = 0; e < var.nelem && e != ms->get_elem(i); e++ ) {
+        for( int e = 0; e < var.nelem; e++ ) {
             double r[NDIMS];
 
             bary.transform(x, e, r);
