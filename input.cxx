@@ -457,6 +457,17 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     }
 
     //
+    // marker
+    //
+    {
+        if ( p.markers.markers_per_element <= 2 ) {
+            std::cerr << "Error: markers.markers.markers_per_element must be greater than 2.\n";
+            std::exit(1);
+        }
+
+    }
+
+    //
     // material properties
     //
     {

@@ -14,6 +14,7 @@ public:
         delete _mattype;
     }
 
+    void append_random_marker_in_elem( int el, int mt );
     void write();
     void read();
     void resize(const int);
@@ -39,6 +40,7 @@ private:
 
     int _nmarkers;
     int _reserved_space;
+    int _last_id;
 
     // Barycentric (local) coordinate within the reference element
     shapefn *_eta;
@@ -49,6 +51,8 @@ private:
     // Unique id
     int_vec *_id;
 
+    void random_eta( double* );
+    void append_marker( double *eta, int el, int mt );
     void random_markers( const Param&, Variables& );
     void allocate_markerdata( const int, const int );
 

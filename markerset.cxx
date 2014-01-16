@@ -23,6 +23,8 @@ namespace {
 
 MarkerSet::MarkerSet(const Param& param, Variables& var)
 {
+    _last_id = _nmarkers = 0;
+
     switch ( param.markers.init_marker_option ) {
     case 1:
         random_markers(param, var);
@@ -44,6 +46,64 @@ void MarkerSet::allocate_markerdata( const int max_markers, const int mpe )
 }
 
 
+void MarkerSet::random_eta( double *eta )
+{
+    // eta for randomly scattered markers within an element.
+    // An alternative would be to fix barycentric coordinates and add random perturbations.
+    //
+    // 1. populate eta with random numbers between 0 and 1.0.
+    double sum = 0;
+    for( int n = 0; n < NODES_PER_ELEM; n++ ) {
+        eta[n] = (rand()/(double)RAND_MAX);
+        sum += eta[n];
+    }
+    // 2. normalize.
+    double inv_sum = 1.0/sum;
+    for( int n = 0; n < NODES_PER_ELEM; n++ )
+        eta[n] *= inv_sum;
+}
+
+
+void MarkerSet::append_marker( double *eta, int el, int mt )
+{
+    // Ensure sufficient array size
+    if( _nmarkers == _reserved_space ) {
+        // Resize the marker-related arrays if necessary.
+        const int newsize = _nmarkers * over_alloc_ratio;
+        resize( newsize );
+    }
+
+    int m = _nmarkers;
+    std::memcpy((*_eta)[m], eta, NODES_PER_ELEM*sizeof(double));
+    (*_elem)[m] = el;
+    (*_mattype)[m] = mt;
+    (*_id)[m] = _last_id;
+
+    if(DEBUG > 1) {
+        std::cout << el << " " << m << " "
+                  << _nmarkers << " " << (*_mattype)[_nmarkers] << " "
+                  << eta[0] << "+" << eta[1] << "+" << eta[2];
+#ifdef THREED
+        std::cout << "+" << eta[3]
+                  << "=" << (eta[0]+eta[1]+eta[2]+eta[3]) << "\n";
+#else
+        std::cout << "=" << (eta[0]+eta[1]+eta[2]) << "\n";
+#endif
+    }
+
+    ++_nmarkers;
+    ++_last_id;
+}
+
+
+void MarkerSet::append_random_marker_in_elem( int el, int mt )
+{
+    double eta[NODES_PER_ELEM];
+    random_eta(eta);
+    append_marker(eta, el, mt);
+}
+
+
 void MarkerSet::random_markers( const Param& param, Variables &var )
 {
     const int ne = var.nelem;
@@ -57,53 +117,12 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
     // initialize random seed:
     srand (time(NULL));
     
-    // Store the number of markers
-    _nmarkers = num_markers;
-
     // Generate particles in each element.
     for( int e = 0; e < ne; e++ )
         for( int m = 0; m < mpe; m++ ) {
-            int pid = m + e*mpe;
-            
-            (*_id)[pid] = pid; 
-            (*_elem)[pid] = e;
-            (*_mattype)[pid] = (int)(*((*var.regattr)[e])); // mattype should take a reginal attribute assigned during meshing.
-
-            ++(*var.elemmarkers)[e][(*_mattype)[pid]];
-
-
-            // _eta for randomly scattered markers within an element. 
-            // An alternative would be to fix barycentric coordinates and add random perturbations.
-            //
-            // 1. populate _eta[pid] with random numbers between 0 and 1.0.
-            double sum = 0.0;
-            double *eta = (*_eta)[pid];
-            for( int n = 0; n < NODES_PER_ELEM; n++ ) {
-                eta[n] = (rand()/(double)RAND_MAX);
-                sum += eta[n];
-                // std::cerr << e <<" "<< m <<" "<<pid<<" "<<n<<" "
-                //           <<(*_eta)[pid][n]<<" "<<sum<<"\n";
-            }
-            assert(sum > 0.0);
-
-            // 2. normalize.
-            double inv_sum = 1.0/sum;
-            for( int n = 0; n < NODES_PER_ELEM; n++ )
-                eta[n] *= inv_sum;
-
-            if(DEBUG > 1) {
-                std::cout << e << "/" << ne << " " << m << " "
-                          << pid << " " << (*_mattype)[pid] << " "
-                          << inv_sum << " "
-                          << " size(eta) = " << (*_eta).size() << " "
-                          << eta[0] << "+" << eta[1] << "+" << eta[2];
-#ifdef THREED
-                std::cout << "+" << eta[3]
-                          << "=" << (eta[0]+eta[1]+eta[2]+eta[3]) << "\n";
-#else
-                std::cout << "=" << (eta[0]+eta[1]+eta[2]) << "\n";
-#endif
-            }
+            int mt = (int)(*((*var.regattr)[e])); // mattype should take a reginal attribute assigned during meshing.
+            append_random_marker_in_elem(e, mt);
+            ++(*var.elemmarkers)[e][mt];
         }
 }
 
@@ -252,45 +271,19 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     delete [] centroid[0];
     delete [] centroid;
 
-    // Resize the marker-related arrays if necessary.
-    const int nmarkers_new = ms->get_nmarkers() * over_alloc_ratio;
-    ms->resize( nmarkers_new );
-
-    // TBD: If any new element has too few markers, generate markers in them. 
+    // If any new element has too few markers, generate markers in them.
     const int mpe = param.markers.markers_per_element;
     for( int e = 0; e < var.nelem; e++ ) {
-        int num_marker = 0;
+        int num_marker_in_elem = 0;
         for( int i = 0; i < param.mat.nmat; i++ )
-            num_marker += (*(var.elemmarkers))[e][i];
+            num_marker_in_elem += (*(var.elemmarkers))[e][i];
 
-        // temporary safeguard, remove it when TBD is finished.
-        if( num_marker == 0 ) {
-            std::cerr << "Error: no marker in element #" << e << '\n';
-            print(std::cout, *var.elemmarkers);
-            std::cout << '\n';
-            std::exit(10);
-        }
+        while( num_marker_in_elem < mpe / 2 ) {  // mpe must >= 2
+            const int mt = 0; // TBD: determine new marker's matttype
+            ms->append_random_marker_in_elem(e, mt);
 
-        while( num_marker < mpe ) {
-            // add a marker: NN sufficient for mattype decision?
-            num_marker++;
+            ++(*var.elemmarkers)[e][mt];
+            ++num_marker_in_elem;
         }
     }
-    /*
-    // debug print
-    if( NDIMS == 3 )
-        for( int i = 0; i < ms->get_nmarkers(); i++ )
-            std::cerr << i <<" / "<< ms->get_nmarkers() <<" id="<<ms->get_mattype(i)
-                      <<" el="<<ms->get_elem(i)<<" mat="<<ms->get_mattype(i)<<" eta="
-                      <<ms->get_eta(i)[0]<<"+"<<ms->get_eta(i)[1]<<"+"
-                      <<ms->get_eta(i)[2]<<"+"<<ms->get_eta(i)[3]<<"="
-                      <<(ms->get_eta(i)[0]+ms->get_eta(i)[1]+ms->get_eta(i)[2]+ms->get_eta(i)[3])<<"\n";
-    else
-        for( int i = 0; i < ms->get_nmarkers(); i++ )
-            std::cerr << i <<" / "<< ms->get_nmarkers() <<" id="<<ms->get_mattype(i)
-                      <<" el="<<ms->get_elem(i)<<" mat="<<ms->get_mattype(i)<<" eta="
-                      <<ms->get_eta(i)[0]<<"+"<<ms->get_eta(i)[1]<<"+"
-                      <<ms->get_eta(i)[2]<<"="
-                      <<(ms->get_eta(i)[0]+ms->get_eta(i)[1]+ms->get_eta(i)[2])<<"\n";
-    */
 }
