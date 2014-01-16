@@ -860,28 +860,26 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     assemble_facet_polygons(var, original_coord, facet_polygons);
 
     // create a copy of original_coord and original_segment
-    double *qcoord = new double[original_coord.num_elements()];
-    std::memcpy(qcoord, original_coord.data(), sizeof(double)*original_coord.num_elements());
-    int *qconn = new int[original_connectivity.num_elements()];
-    std::memcpy(qconn, original_connectivity.data(), sizeof(int)*original_connectivity.num_elements());
-    int *qsegment = new int[original_segment.num_elements()];
-    std::memcpy(qsegment, original_segment.data(), sizeof(int)*original_segment.num_elements());
-    int *qsegflag = new int[original_segflag.num_elements()];
-    std::memcpy(qsegflag, original_segflag.data(), sizeof(int)*original_segflag.num_elements());
+    array_t old_coord(original_coord);
+    conn_t old_connectivity(original_connectivity);
+    segment_t old_segment(original_segment);
+    segflag_t old_segflag(original_segflag);
 
-    int old_nnode = original_coord.size();
-    int old_nelem = original_connectivity.size();
-    int old_nseg = original_segment.size();
+    double *qcoord = old_coord.data();
+    int *qconn = old_connectivity.data();
+    int *qsegment = old_segment.data();
+    int *qsegflag = old_segflag.data();
+
+    int old_nnode = old_coord.size();
+    int old_nelem = old_connectivity.size();
+    int old_nseg = old_segment.size();
 
     // copy
-    array_t old_coord(qcoord, old_nnode);
-    conn_t old_connectivity(qconn, old_nelem);
     double_vec old_volume(*var.volume);
     uint_vec old_bcflag(*var.bcflag);
     int_vec old_bnodes[6];
     for (int i=0; i<6; ++i) {
-        old_bnodes[i].resize(var.bnodes[i].size());
-        std::copy(var.bnodes[i].cbegin(), var.bnodes[i].cend(), old_bnodes[i].begin());
+        old_bnodes[i] = var.bnodes[i];
     }
 
     int_vec points_to_delete;
@@ -1022,10 +1020,6 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     var.connectivity->reset(pconnectivity, new_nelem);
     var.segment->reset(psegment, var.nseg);
     var.segflag->reset(psegflag, var.nseg);
-
-    delete [] qsegment;
-    delete [] qsegflag;
-
 }
 
 } // anonymous namespace
