@@ -3,6 +3,8 @@
 #include <time.h> // for time()
 #include <assert.h>
 
+#include "ANN/ANN.h"
+
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "barycentric-fn.hpp"
@@ -13,7 +15,7 @@
 
 namespace {
 
-    const int DEBUG = 1;
+    const int DEBUG = 0;
 
 }
 
@@ -149,6 +151,14 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
 
     Barycentric_transformation bary( *var.coord, *var.connectivity, new_volume );
 
+    // nearest-neighbor search structure
+    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
+    ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
+    const int k = std::min(20, var.nelem);  // how many nearest neighbors to search?
+    const double eps = 0.001 * param.mesh.resolution; // tolerance of distance error
+    int *nn_idx = new int[k];
+    double *dd = new double[k];
+
     // Loop over all the old markers and identify a containing element in the new mesh.
     MarkerSet *ms = var.markerset; // alias to var.markerset
     int last_marker = ms->get_nmarkers();
@@ -169,32 +179,22 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             print(std::cout, x, NDIMS);
         }
 
-        // 2. First look into a new element with id = _elem[i].
-        {
-            double r[NDIMS];
+        // 2. look for nearby elements.
+        // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
+        kdtree.annkSearch(x, k, nn_idx, dd, eps);
 
-            if (eold < var.nelem) { // eold is from the old mesh, might exceed the current nelem
-                bary.transform(x, eold, r);
-                if (bary.is_inside(r)) {
-                    ms->set_eta( i, r );
-                    ++(*(var.elemmarkers))[eold][ms->get_mattype(i)];
-                
-                    found = true;
-                    ++i;
-                    if (DEBUG) {
-                        std::cout << " in same element" << '\n';
-                    }
-                }
-            }
-        }
-        if( found ) continue;
-
-        // TODO: usiing kd-tree to find the element
-        // 3. If not found, loop over the entire element set.
-        for( int e = 0; e < var.nelem; e++ ) {
+        for( int j = 0; j < k; j++ ) {
+            int e = nn_idx[j];
             double r[NDIMS];
 
             bary.transform(x, e, r);
+
+            // change this if-condition to (i == N) to debug the N-th marker
+            if (0) {
+                std::cout << '\n' << j << " check elem #" << e << ' ';
+                print(std::cout, r, NDIMS);
+            }
+
             if (bary.is_inside(r)) {
                 ms->set_eta(i, r);
                 ms->set_elem(i, e);
@@ -208,6 +208,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                 break;
             }
         }
+
         if( found ) continue;
 
         if (DEBUG) {
@@ -228,6 +229,11 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             ms->set_nmarkers( last_marker );
         }
     }
+
+    delete [] nn_idx;
+    delete [] dd;
+    delete [] centroid[0];
+    delete [] centroid;
 
     // Resize the marker-related arrays.
     const int nmarkers_new = ms->get_nmarkers();
