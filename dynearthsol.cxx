@@ -14,6 +14,7 @@
 #include "matprops.hpp"
 #include "mesh.hpp"
 #include "output.hpp"
+#include "phasechanges.hpp"
 #include "remeshing.hpp"
 #include "rheology.hpp"
 
@@ -120,6 +121,9 @@ int main(int argc, const char* argv[])
         // dt computation is expensive, and dt only changes slowly
         // don't have to do it every time step
         if (var.steps % 10 == 0) var.dt = compute_dt(param, var);
+
+        // ditto for phase changes
+        if (var.steps % 10 == 0) phase_changes(param, var, *var.markerset, *var.elemmarkers);
 
         if (param.sim.output_averaged_fields)
             output.average_fields(var);

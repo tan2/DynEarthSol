@@ -82,6 +82,7 @@ SRCS =	\
 	mesh.cxx \
 	nn-interpolation.cxx \
 	output.cxx \
+	phasechanges.cxx \
 	remeshing.cxx \
 	rheology.cxx \
 	markerset.cxx

@@ -99,6 +99,7 @@ struct BC {
 
 struct Mat {
     int rheol_type;
+    int phase_change_option;
     int nmat;
     double visc_min;
     double visc_max;

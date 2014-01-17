@@ -208,6 +208,10 @@ static void declare_parameters(po::options_description &cfg,
     cfg.add_options()
         ("mat.rheology_type", po::value<std::string>()->required(),
          "Type of rheology, either 'elastic', 'viscous', 'maxwell', 'elasto-plastic', or 'elasto-visco-plastic'")
+        ("mat.phase_change_option", po::value<int>(&p.mat.phase_change_option)->default_value(0),
+         "What kind of phase changes?\n"
+         "0: no phase changes.\n"
+         "101: custom phase changes.")
         ("mat.num_materials", po::value<int>(&p.mat.nmat)->default_value(1),
          "Number of material types")
         ("mat.max_viscosity", po::value<double>(&p.mat.visc_max)->default_value(1e24),
@@ -484,6 +488,11 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             p.mat.rheol_type = MatProps::rh_evp;
         else {
             std::cerr << "Error: unknown rheology: '" << str << "'\n";
+            std::exit(1);
+        }
+
+        if (p.mat.phase_change_option != 0 && p.mat.nmat == 1) {
+            std::cerr << "Error: mat.phase_change_option is chosen but mat.num_materials is 1.\n";
             std::exit(1);
         }
 
