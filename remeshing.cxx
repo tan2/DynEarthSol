@@ -192,6 +192,15 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
 }
 
 
+// local cmp functor
+struct cmp {
+    const array_t &coord;
+    const int d;
+    cmp (const array_t &coord_, int dim) : coord(coord_), d(dim) {};
+    bool operator()(const int &a, const int &b) {return coord[a][d] < coord[b][d];}
+};
+
+
 void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int_vec (&facet_polygons)[6])
 {
     /* facet_polygons[i] contains a list of vertex which enclose the i-th boundary facet */
@@ -249,14 +258,6 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int
             }
         }
     }
-
-    // local cmp functor
-    struct cmp {
-        const array_t &coord;
-        const int d;
-        cmp (const array_t &coord_, int dim) : coord(coord_), d(dim) {};
-        bool operator()(const int &a, const int &b) {return coord[a][d] < coord[b][d];}
-    };
 
     // ordering the edge nodes by sorting the coordinate along the the corresponding dimension
     // edge 0~3 along X; edge 4~7 along Y; edge 8~11 along Z
