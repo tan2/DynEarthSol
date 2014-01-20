@@ -25,12 +25,17 @@ namespace {
         // Get pressure, which is constant in the element
         double P = trace((*var.stress)[e]) / NDIMS;
 
+        // Set new mattype the same as current mattype for now
+        int new_mt = current_mt;
+
         switch (current_mt) {
         case 0:
             break;
         case 1:
             break;
         }
+
+        return new_mt;
     }
 
 } // anonymous namespace
