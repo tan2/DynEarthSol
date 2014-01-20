@@ -109,7 +109,7 @@ int main(int argc, const char* argv[])
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        update_stress(var, *var.stress, *var.strain, *var.plstrain, *var.strain_rate);
+        update_stress(var, *var.stress, *var.strain, *var.plstrain,  *var.delta_plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         // elastic stress/strain are objective (frame-indifferent)
         if (var.mat->rheol_type & MatProps::rh_elastic)

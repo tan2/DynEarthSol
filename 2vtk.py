@@ -108,6 +108,8 @@ def main(modelname, start, end):
             vtk_dataarray(fvtu, quality, 'mesh quality')
             plstrain = np.fromfile(prefix+'.plstrain.'+suffix, dtype=np.float64, count=nelem)
             vtk_dataarray(fvtu, plstrain, 'plastic strain')
+            delta_plstrain = np.fromfile(prefix+'.delta_plstrain.'+suffix, dtype=np.float64, count=nelem)
+            vtk_dataarray(fvtu, delta_plstrain, 'plastic strain increment')
 
             strain_rate = np.fromfile(prefix+'.strain-rate.'+suffix, dtype=np.float64, count=nstr*nelem)
             strain_rate.shape = (nelem, nstr)

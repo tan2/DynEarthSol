@@ -3,6 +3,6 @@
 
 void update_stress(const Variables& var, tensor_t& stress,
                    tensor_t& strain, double_vec& plstrain,
-                   tensor_t& strain_rate);
+                   double_vec& delta_plstrain, tensor_t& strain_rate);
 
 #endif

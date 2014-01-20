@@ -274,12 +274,12 @@ static void elasto_plastic(double bulkm, double shearm,
 
 void update_stress(const Variables& var, tensor_t& stress,
                    tensor_t& strain, double_vec& plstrain,
-                   tensor_t& strain_rate)
+                   double_vec& delta_plstrain, tensor_t& strain_rate)
 {
     const int rheol_type = var.mat->rheol_type;
 
     #pragma omp parallel for default(none)                              \
-        shared(var, stress, strain, plstrain, strain_rate, std::cerr)
+        shared(var, stress, strain, plstrain, delta_plstrain, strain_rate, std::cerr)
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
         double* s = stress[e];
@@ -341,6 +341,7 @@ void update_stress(const Variables& var, tensor_t& stress,
                 elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                de, depls, s);
                 plstrain[e] += depls;
+                delta_plstrain[e] = depls;
             }
             break;
         case MatProps::rh_evp:
@@ -372,6 +373,7 @@ void update_stress(const Variables& var, tensor_t& stress,
                 else {
                     for (int i=0; i<NSTR; ++i) s[i] = sp[i];
                     plstrain[e] += depls;
+                    delta_plstrain[e] = depls;
                 }
             }
             break;

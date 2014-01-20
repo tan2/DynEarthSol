@@ -68,11 +68,17 @@ static void nn_interpolate_elem_fields(Variables &var, const int_vec &idx)
     const int n = var.nnode;
     const int e = var.nelem;
 
-    double_vec *a = new double_vec(e);
+    double_vec *a;
 
+    a = new double_vec(e);
     inject_field(idx, *var.plstrain, *a);
     delete var.plstrain;
     var.plstrain = a;
+
+    a = new double_vec(e);
+    inject_field(idx, *var.delta_plstrain, *a);
+    delete var.delta_plstrain;
+    var.delta_plstrain = a;
 
     tensor_t *b;
     b = new tensor_t(e);

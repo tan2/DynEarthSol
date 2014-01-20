@@ -109,6 +109,18 @@ void Output::write(const Variables& var, bool is_averaged)
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "plstrain", frame);
     write_array(buffer, *var.plstrain);
 
+    // delta_plstrain
+    snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "delta_plstrain", frame);
+    if (average_interval && is_averaged) {
+        double tmp = 1.0 / (average_interval + 1);
+        for (int i=0; i<delta_plstrain_avg.size(); ++i) {
+            delta_plstrain_avg[i] *= tmp;
+        }
+        write_array(buffer, delta_plstrain_avg);
+    }
+    else
+        write_array(buffer, *var.delta_plstrain);
+
     // strain_rate
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "strain-rate", frame);
     if (average_interval && is_averaged) {
@@ -205,13 +217,19 @@ void Output::average_fields(Variables& var)
             stress_avg.reset(tmp, var.stress->size());
         }
         std::copy(var.stress->begin(), var.stress->end(), stress_avg.begin());
+
+        delta_plstrain_avg = *var.delta_plstrain;
     }
     else {
-        // averaging stress (ps: dt-weighted average would be better, but difficult to do)
+        // Averaging stress & plastic strain
+        // (PS: dt-weighted average would be better, but difficult to do)
         double *s_avg = stress_avg.data();
         const double *s = var.stress->data();
         for (int i=0; i<stress_avg.num_elements(); ++i) {
             s_avg[i] += s[i];
+        }
+        for (int i=0; i<delta_plstrain_avg.size(); ++i) {
+            delta_plstrain_avg[i] += (*var.delta_plstrain)[i];
         }
     }
 }

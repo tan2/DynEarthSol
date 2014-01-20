@@ -22,6 +22,7 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.temperature = new double_vec(n);
     var.plstrain = new double_vec(e);
+    var.delta_plstrain = new double_vec(e);
     var.ntmp= new double_vec(n);
     var.elquality= new double_vec(e);
 

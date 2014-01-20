@@ -174,7 +174,7 @@ struct Variables {
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;
     double_vec *edvoldt;
-    double_vec *temperature, *plstrain;
+    double_vec *temperature, *plstrain, *delta_plstrain;
     double_vec *ntmp;
     double_vec *elquality;
 

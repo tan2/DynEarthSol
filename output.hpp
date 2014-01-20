@@ -16,6 +16,7 @@ private:
     array_t coord0;
     tensor_t strain0;
     tensor_t stress_avg;
+    double_vec delta_plstrain_avg;
 
 public:
     Output(const Param& param, double start_time, int start_frame);
