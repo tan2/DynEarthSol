@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 '''Convert the binary output of DynEarthSol3D to VTK files.
 
-usage: 2vtk.py [-2 -3 -a -t -h] modelname [start [end]]
+usage: 2vtk.py [-2 -3 -a -c -t -h] modelname [start [end]]
 
 options:
     -2          save 2D data (default)
     -3          save 3D data
     -a          save data in ASCII format (default: binary)
+    -c          save files in current directory
     -t          save all tensor components (default: no component)
     -h,--help   show this help
 '''
@@ -23,15 +24,19 @@ ndims = 2
 # Some old VTK programs cannot read binary VTK files.
 output_in_binary = True
 
+# Save the resultant vtu files in current directory?
+output_in_cwd = False
+
 # Save indivisual components?
 output_tensor_components = False
 
 
 def main(modelname, start, end):
-    path = os.path.dirname(modelname)
-    prefix = os.path.basename(modelname)
-    if path:
-        os.chdir(path)
+    prefix = modelname
+    if output_in_cwd:
+        output_prefix = os.path.basename(modelname)
+    else:
+        output_prefix = modelname
     tmp = np.fromfile(prefix+'.info', dtype=float, sep=' ')
     tmp.shape = (-1, 8)
 
@@ -57,7 +62,7 @@ def main(modelname, start, end):
         nnode = nnode_list[i+start]
         nelem = nelem_list[i+start]
 
-        filename = '{0}.{1}.vtu'.format(prefix, suffix)
+        filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
         fvtu = open(filename, 'w')
 
         try:
@@ -298,6 +303,8 @@ if __name__ == '__main__':
         ndims = 3
     if '-a' in sys.argv:
         output_in_binary = False
+    if '-c' in sys.argv:
+        output_in_cwd = True
     if '-t' in sys.argv:
         output_tensor_components = True
 
