@@ -131,7 +131,7 @@ void Output::write(const Variables& var, bool is_averaged)
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "stress", frame);
     if (average_interval && is_averaged) {
         double *s = stress_avg.data();
-        double tmp = 1 / (average_interval + 1);
+        double tmp = 1.0 / (average_interval + 1);
         for (int i=0; i<stress_avg.num_elements(); ++i) {
             s[i] *= tmp;
         }
