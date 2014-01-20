@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: utf-8
 '''Convert the binary output of DynEarthSol3D to VTK files.
 
 usage: 2vtk.py [-2 -3 -a -c -t -h] modelname [start [end]]
@@ -12,7 +13,7 @@ options:
     -h,--help   show this help
 '''
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 import sys, os
 import base64, zlib
 import numpy as np
@@ -63,7 +64,7 @@ def main(modelname, start, end):
         nelem = nelem_list[i+start]
 
         filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
-        fvtu = open(filename, 'w')
+        fvtu = open(filename, 'wb')
 
         try:
             vtu_header(fvtu, nnode, nelem)
@@ -71,7 +72,7 @@ def main(modelname, start, end):
             #
             # node-based field
             #
-            fvtu.write('  <PointData>\n')
+            fvtu.write(b'  <PointData>\n')
 
             vel = np.fromfile(prefix+'.vel.'+suffix, dtype=np.float64, count=ndims*nnode)
             vel.shape = (nnode, ndims)
@@ -102,12 +103,12 @@ def main(modelname, start, end):
             # node number for debugging
             vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node#')
 
-            fvtu.write('  </PointData>\n')
+            fvtu.write(b'  </PointData>\n')
 
             #
             # element-based field
             #
-            fvtu.write('  <CellData>\n')
+            fvtu.write(b'  <CellData>\n')
 
             quality = np.fromfile(prefix+'.meshquality.'+suffix, dtype=np.float64, count=nelem)
             vtk_dataarray(fvtu, quality, 'mesh quality')
@@ -162,12 +163,12 @@ def main(modelname, start, end):
             # element number for debugging
             vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem#')
 
-            fvtu.write('  </CellData>\n')
+            fvtu.write(b'  </CellData>\n')
 
             #
             # node coordinate
             #
-            fvtu.write('  <Points>\n')
+            fvtu.write(b'  <Points>\n')
             coord = np.fromfile(prefix+'.coord.'+suffix, dtype=np.float64, count=ndims*nnode)
             coord.shape = (nnode, ndims)
             if ndims == 2:
@@ -178,12 +179,12 @@ def main(modelname, start, end):
             else:
                 tmp = coord
             vtk_dataarray(fvtu, tmp, '', 3)
-            fvtu.write('  </Points>\n')
+            fvtu.write(b'  </Points>\n')
 
             #
             # element connectivity & types
             #
-            fvtu.write('  <Cells>\n')
+            fvtu.write(b'  <Cells>\n')
             conn = np.fromfile(prefix+'.connectivity.'+suffix, dtype=np.int32, count=(ndims+1)*nelem)
             conn.shape = (nelem, ndims+1)
             vtk_dataarray(fvtu, conn, 'connectivity')
@@ -195,7 +196,7 @@ def main(modelname, start, end):
                 # VTK_ TETRA == 10
                 celltype = 10
             vtk_dataarray(fvtu, celltype*np.ones((nelem,), dtype=np.int32), 'types')
-            fvtu.write('  </Cells>\n')
+            fvtu.write(b'  </Cells>\n')
 
             vtu_footer(fvtu)
             fvtu.close()
@@ -232,7 +233,7 @@ def vtk_dataarray(f, data, data_name=None, data_comps=None):
         fmt = 'ascii'
     header = '<DataArray type="{0}" {1} {2} format="{3}">\n'.format(
         dtype, name, ncomp, fmt)
-    f.write(header)
+    f.write(header.encode('ascii'))
     if output_in_binary:
         header = np.zeros(4, dtype=np.int32)
         header[0] = 1
@@ -241,11 +242,11 @@ def vtk_dataarray(f, data, data_name=None, data_comps=None):
         header[2] = len(a)
         b = zlib.compress(a)
         header[3] = len(b)
-        f.write(base64.standard_b64encode(header))
+        f.write(base64.standard_b64encode(header.tostring()))
         f.write(base64.standard_b64encode(b))
     else:
-        data.tofile(f, sep=' ')
-    f.write('\n</DataArray>\n')
+        data.tofile(f, sep=b' ')
+    f.write(b'\n</DataArray>\n')
     return
 
 
@@ -255,13 +256,13 @@ def vtu_header(f, nnode, nelem):
 <VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
 <UnstructuredGrid>
 <Piece NumberOfPoints="{0}" NumberOfCells="{1}">
-'''.format(nnode, nelem))
+'''.format(nnode, nelem).encode('ascii'))
     return
 
 
 def vtu_footer(f):
     f.write(
-'''</Piece>
+b'''</Piece>
 </UnstructuredGrid>
 </VTKFile>
 ''')
