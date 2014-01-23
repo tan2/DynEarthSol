@@ -6,6 +6,52 @@
 
 #include "ic.hpp"
 
+namespace {
+
+    class Zone
+    {
+    public:
+        virtual bool contains(const double x[NDIMS]) const = 0;
+    };
+
+    class Empty_zone : public Zone
+    {
+    public:
+        bool contains(const double x[NDIMS]) const {return false;}
+    };
+
+
+    class Planar_zone : public Zone
+    {
+    private:
+        const double az, incl;
+        const double halfwidth; // in meter
+        const double zmin, zmax; // in meter
+        const double *x0;
+
+    public:
+        Planar_zone(const double center[NDIMS], double azimuth, double inclination,
+                    double halfwidth_, double zmin_, double zmax_) :
+            az(std::tan(azimuth * DEG2RAD)), incl(1/std::tan(inclination * DEG2RAD)),
+            halfwidth(halfwidth_), zmin(zmin_), zmax(zmax_),
+            x0(center) // Copy the pointer only, not the data. The caller needs to keep center alive.
+        {}
+
+        bool contains(const double x[NDIMS]) const
+        {
+            // Is x within halfwidth distance to a plane cutting through x0?
+            return (x[NDIMS-1] > zmin &&
+                    x[NDIMS-1] < zmax &&
+                    std::fabs( (x[0] - x0[0])
+#ifdef THREED
+                               - az * (x[1] - x0[1])
+#endif
+                               + incl * (x[NDIMS-1] - x0[NDIMS-1]) ) < halfwidth );
+        }
+    };
+
+} // anonymous namespace
+
 
 double get_prem_pressure(double depth)
 {
@@ -104,10 +150,37 @@ void initial_stress_state(const Param &param, const Variables &var,
 void initial_weak_zone(const Param &param, const Variables &var,
                        double_vec &plstrain)
 {
+    Zone *weakzone;
+
+    // TODO: adding different types of weak zone
+    double plane_center[NDIMS]; // this variable must outlive weakzone
+    switch (param.ic.weakzone_option) {
+    case 0:
+        weakzone = new Empty_zone();
+        break;
+    case 1:
+        // a planar weak zone, cut through top center
+        plane_center[0] = param.ic.weakzone_xcenter * param.mesh.xlength;
+#ifdef THREED
+        plane_center[1] = param.ic.weakzone_ycenter * param.mesh.ylength;
+#endif
+        plane_center[NDIMS-1] = -param.ic.weakzone_zcenter * param.mesh.zlength;;
+        weakzone = new Planar_zone(plane_center,
+                                   param.ic.weakzone_azimuth,
+                                   param.ic.weakzone_inclination,
+                                   param.ic.weakzone_halfwidth * param.mesh.resolution,
+                                   -param.ic.weakzone_depth_max * param.mesh.zlength,
+                                   -param.ic.weakzone_depth_min * param.mesh.zlength);
+        break;
+    default:
+        std::cerr << "Error: unknown weakzone_option: " << param.ic.weakzone_option << '\n';
+        std::exit(1);
+    }
+
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
         // the coordinate of the center of this element
-        double center[3] = {0,0,0};
+        double center[NDIMS] = {0};
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             for (int d=0; d<NDIMS; ++d) {
                 center[d] += (*var.coord)[conn[i]][d];
@@ -116,12 +189,12 @@ void initial_weak_zone(const Param &param, const Variables &var,
         for (int d=0; d<NDIMS; ++d) {
             center[d] /= NODES_PER_ELEM;
         }
-        // TODO: adding different types of weak zone
-        const double d = param.mesh.resolution;
-        if (std::fabs(center[0] - param.mesh.xlength * 0.5) < 2*d &&
-            std::fabs(center[NDIMS-1] + param.mesh.zlength) < 1.5*d)
-            plstrain[e] = 0.1;
+
+        if (weakzone->contains(center))
+            plstrain[e] = param.ic.weakzone_plstrain;
     }
+
+    delete weakzone;
 }
 
 

@@ -202,7 +202,31 @@ static void declare_parameters(po::options_description &cfg,
          "Value of boundary condtition for bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_z1", po::value<double>(&p.bc.vbc_val_z1)->default_value(0),
          "Value of boundary condtition for top side (if velocity, unit is m/s; if stress, unit is Pa)")
+        ;
 
+    cfg.add_options()
+        ("ic.weakzone_option", po::value<int>(&p.ic.weakzone_option)->default_value(1),
+         "How to set the initial weak zone?\n"
+         "0: no weak zone.\n"
+         "1: planar weak zone with specified azimuth, inclination, halfwidth, min/max depth range, and center location.\n")
+        ("ic.weakzone_azimuth", po::value<double>(&p.ic.weakzone_azimuth)->default_value(0),
+         "Azimuth angle (relative to +y axis) (in degree)")
+        ("ic.weakzone_inclination", po::value<double>(&p.ic.weakzone_inclination)->default_value(90),
+         "Inclination angle (relative to horizontal plane) (in degree)")
+        ("ic.weakzone_halfwidth", po::value<double>(&p.ic.weakzone_halfwidth)->default_value(1.5),
+         "Half-width of the weak zone (in unit of mesh.resolution)")
+        ("ic.weakzone_depth_min", po::value<double>(&p.ic.weakzone_depth_min)->default_value(0),
+         "Depth upper (shallower) range (between 0 and 1, in unit of mesh.zlength)")
+        ("ic.weakzone_depth_max", po::value<double>(&p.ic.weakzone_depth_max)->default_value(1),
+         "Depth lower (deeper) range (between 0 and 1, in unit of mesh.zlength)")
+        ("ic.weakzone_xcenter", po::value<double>(&p.ic.weakzone_xcenter)->default_value(0.5),
+         "Location of weak zone center in x direction (between 0 and 1, in unit of mesh.xlength)")
+        ("ic.weakzone_ycenter", po::value<double>(&p.ic.weakzone_ycenter)->default_value(0.5),
+         "Location of weak zone center in y direction (between 0 and 1, in unit of mesh.ylength)")
+        ("ic.weakzone_zcenter", po::value<double>(&p.ic.weakzone_zcenter)->default_value(0.5),
+         "Location of weak zone center in z direction (between 0 and 1, in unit of mesh.zlength)")
+        ("ic.weakzone_plstrain", po::value<double>(&p.ic.weakzone_plstrain)->default_value(0.1),
+         "Initial plastic strain in the weak zone")
         ;
 
     cfg.add_options()

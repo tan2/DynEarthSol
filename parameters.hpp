@@ -97,6 +97,19 @@ struct BC {
     double vbc_val_z1;
 };
 
+struct IC {
+    int weakzone_option;
+    double weakzone_azimuth;
+    double weakzone_inclination;
+    double weakzone_halfwidth;
+    double weakzone_depth_min;
+    double weakzone_depth_max;
+    double weakzone_xcenter;
+    double weakzone_ycenter;
+    double weakzone_zcenter;
+    double weakzone_plstrain;
+};
+
 struct Mat {
     int rheol_type;
     int phase_change_option;
@@ -136,6 +149,7 @@ struct Param {
     Mesh mesh;
     Control control;
     BC bc;
+    IC ic;
     Mat mat;
     Markers markers;
 };
