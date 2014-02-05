@@ -166,7 +166,8 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
 
             // Situation: q must be outside the old domain
             // using nearest old_coord instead
-            bary.transform(points[nn], nn_elem[0], r);
+            e = nn_elem[0];
+            bary.transform(points[nn], e, r);
         }
     found:
         el[i] = e;
