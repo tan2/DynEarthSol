@@ -76,16 +76,19 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
     // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
     for (int i=0; i<var.nnode; i++) {
         double *q = (*var.coord)[i];
+
         // find the nearest point nn in old_coord
         kdtree.annkSearch(q, k, nn_idx, dd, eps);
         int nn = nn_idx[0];
+
+        // elements surrounding nn
+        const int_vec &nn_elem = old_support[nn];
 
         // std::cout << i << " ";
         // print(std::cout, q, NDIMS);
         // std::cout << " " << nn << " " << dd[0] << '\n';
 
         double r[NDIMS];
-        const int_vec &nn_elem = old_support[nn];
         int e;
 
         // shortcut: q is exactly the same as nn
@@ -115,7 +118,9 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
                 goto found;
             }
         }
-    not_found:
+
+        /* not_found */
+
         {
             // Situation: q is in the upper element, but its nearest point is o!
             // we won't find the enclosing element with the method above
@@ -127,12 +132,7 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
             //
 
             // this array contains the elements that have been searched so far
-            int_vec searched;
-            for (std::size_t j=0; j<nn_elem.size(); j++) {
-                searched.push_back(nn_elem[j]);
-            }
-            // print(std::cout, searched);
-            // std::cout << " ... \n";
+            int_vec searched(nn_elem);
 
             // search through elements that are neighbors of nn_elem
             for (std::size_t j=0; j<nn_elem.size(); j++) {
