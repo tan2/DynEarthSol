@@ -282,12 +282,22 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         for( int i = 0; i < param.mat.nmat; i++ )
             num_marker_in_elem += (*(var.elemmarkers))[e][i];
 
-        while( num_marker_in_elem < mpe / 2 ) {  // mpe must >= 2
-            const int mt = 0; // TBD: determine new marker's matttype
-            ms->append_random_marker_in_elem(e, mt);
+        if (num_marker_in_elem < mpe / 2) {  // mpe must >= 2
+            // cumulative probability density function of mattype in this element
+            double_vec cpdf(param.mat.nmat);
+            cpdf[0] = (*(var.elemmarkers))[e][0] / double(num_marker_in_elem);
+            for( int i = 1; i < param.mat.nmat - 1; i++ )
+                cpdf[i] = cpdf[i-1] + (*(var.elemmarkers))[e][i] / double(num_marker_in_elem);
+            cpdf[param.mat.nmat - 1] = 1; // fix to 1 to avoid round-off error
+            while( num_marker_in_elem < mpe / 2 ) {
+                // Determine new marker's matttype based on cpdf
+                auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
+                const int mt = upper - cpdf.begin();
+                ms->append_random_marker_in_elem(e, mt);
 
-            ++(*var.elemmarkers)[e][mt];
-            ++num_marker_in_elem;
+                ++(*var.elemmarkers)[e][mt];
+                ++num_marker_in_elem;
+            }
         }
     }
 }
