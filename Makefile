@@ -44,10 +44,8 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 	else ifeq ($(opt), 2)
 		CXXFLAGS += -O2
 	else ifeq ($(opt), 3) # experimental, use at your own risk :)
-		CXXFLAGS = -std=c++0x -march=native ## -g is incompatible with -flto
-		CXXFLAGS += -Ofast -funroll-loops -fwhole-program -flto
-		LDFLAGS += -flto
-	else
+		CXXFLAGS += -march=native -O3 -ffast-math -funroll-loops
+	else # debugging flags
 		CXXFLAGS += -O0 -Wall -Wno-unused-variable -Wno-unused-function -Wno-unknown-pragmas -fbounds-check -ftrapv
 	endif
 
