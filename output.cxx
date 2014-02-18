@@ -44,6 +44,30 @@ Output::~Output()
 {}
 
 
+void Output::write_info(const Variables& var, double dt)
+{
+#ifdef USE_OMP
+    double run_time = omp_get_wtime() - start_time;
+#else
+    double run_time = double(std::clock()) / CLOCKS_PER_SEC;
+#endif
+
+    char buffer[256];
+    std::snprintf(buffer, 255, "%6d\t%10d\t%12.6e\t%12.4e\t%12.6e\t%8d\t%8d\t%8d\n",
+                  frame, var.steps, var.time, dt, run_time,
+                  var.nnode, var.nelem, var.nseg);
+
+    std::string filename(modelname + ".info");
+    std::FILE* f;
+    if (frame == 0)
+        f = std::fopen(filename.c_str(), "w");
+    else
+        f = std::fopen(filename.c_str(), "a");
+    std::fputs(buffer, f);
+    std::fclose(f);
+}
+
+
 void Output::write(const Variables& var, bool is_averaged)
 {
     /* Not using C++ stream IO here since it can be much slower than C stdio. */
@@ -52,28 +76,11 @@ void Output::write(const Variables& var, bool is_averaged)
     char buffer[255];
     std::FILE* f;
 
-#ifdef USE_OMP
-    double run_time = omp_get_wtime() - start_time;
-#else
-    double run_time = double(std::clock()) / CLOCKS_PER_SEC;
-#endif
-
     double dt = var.dt;
     if (average_interval && is_averaged)
         dt = (var.time - time0) / average_interval;
 
-    // info
-    snprintf(buffer, 255, "%s.%s", modelname.c_str(), "info");
-    if (frame == 0)
-        f = fopen(buffer, "w");
-    else
-        f = fopen(buffer, "a");
-
-    snprintf(buffer, 255, "%6d\t%10d\t%12.6e\t%12.4e\t%12.6e\t%8d\t%8d\t%8d\n",
-             frame, var.steps, var.time, dt, run_time,
-             var.nnode, var.nelem, var.nseg);
-    fputs(buffer, f);
-    fclose(f);
+    write_info(var, dt);
 
     // coord
     snprintf(buffer, 255, "%s.%s.%06d", modelname.c_str(), "coord", frame);
