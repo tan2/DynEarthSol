@@ -96,7 +96,8 @@ INCS =	\
 	sortindex.hpp \
 	utils.hpp \
 	mesh.hpp \
-	markerset.hpp
+	markerset.hpp \
+	output.hpp
 
 OBJS = $(SRCS:.cxx=.$(ndims)d.o)
 
