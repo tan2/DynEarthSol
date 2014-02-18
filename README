@@ -47,8 +47,7 @@ Run
 Plot
 ===========
 
-* Run "2vtk.py modelname" to convert the binary output to VTK files. (Or
-  "2vtk.py -3 modelname" if 3D.) 
+* Run "2vtk.py modelname" to convert the binary output to VTK files.
 * Some of the simulation outputs might be disabled. Edit 2vtk.py and
   output.cxx to disable/enable them.
 * Plot the VTK files with Paraview or LLNL's Visit program.

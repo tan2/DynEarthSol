@@ -2,11 +2,9 @@
 # encoding: utf-8
 '''Convert the binary output of DynEarthSol3D to VTK files.
 
-usage: 2vtk.py [-2 -3 -a -c -t -h] modelname [start [end]]
+usage: 2vtk.py [-a -c -t -h] modelname [start [end]]
 
 options:
-    -2          save 2D data (default)
-    -3          save 3D data
     -a          save data in ASCII format (default: binary)
     -c          save files in current directory
     -t          save all tensor components (default: no component)
@@ -20,6 +18,7 @@ import numpy as np
 
 # 2D or 3D data?
 ndims = 2
+nstr = 3
 
 # Save in ASCII or encoded binary.
 # Some old VTK programs cannot read binary VTK files.
@@ -32,40 +31,120 @@ output_in_cwd = False
 output_tensor_components = False
 
 
+class Dynearthsol:
+    '''Read output file of 2D/3D DynEarthSol'''
+
+    def __init__(self, modelname):
+        self.modelname = modelname
+        self.read_info()
+        self.read_header(self.frames[0])
+
+
+    def read_info(self):
+        tmp = np.fromfile(self.modelname + '.info', dtype=float, sep=' ')
+        tmp.shape = (-1, 8)
+        self.frames = tmp[:,0].astype(int)
+        self.nnode_list = tmp[:,5].astype(int)
+        self.nelem_list = tmp[:,6].astype(int)
+        return
+
+
+    def get_fn(self, frame):
+        return '{0}.save.{1:0=6}'.format(self.modelname, frame)
+
+
+    def read_header(self, frame):
+        headerlen = 4096
+        fname = self.get_fn(frame)
+        with open(fname) as f:
+            header = f.read(headerlen).splitlines()
+            #print(header)
+
+        # parsing 1st line
+        first = header[0].split(' ')
+        if (first[0] != '#' or
+            first[1] != 'DynEarthSol' or
+            first[2].split('=')[0] != 'ndims' or
+            first[3].split('=')[0] != 'revision'):
+            print('Error:', fname, 'is not a valid DynEarthSol output file!')
+            sys.exit(1)
+
+        self.ndims = int(first[2].split('=')[1])
+        self.revision = int(first[3].split('=')[1])
+
+        # parsing other lines
+        self.field_pos = {}
+        for line in header[1:]:
+            if line[0] == '\x00': break  # end of record
+            name, pos = line.split('\t')
+            self.field_pos[name] = int(pos)
+
+        #print(self.field_pos)
+        return
+
+
+    def read_field(self, frame, name):
+        pos = self.field_pos[name]
+        nnode = self.nnode_list[frame]
+        nelem = self.nelem_list[frame]
+
+        dtype = np.float64 if name != 'connectivity' else np.int32
+        count = 0
+        shape = (-1,)
+        if name in set(['strain', 'strain-rate', 'stress']):
+            count = nstr * nelem
+            shape = (nelem, nstr)
+        elif name in set(['density', 'mesh quality', 'plastic strain', 'plastic strain increment',
+                      'viscosity', 'volume', 'volume_old']):
+            count = nelem
+        elif name in set(['connectivity']):
+            count = (self.ndims + 1) * nelem
+            shape = (nelem, self.ndims+1)
+        elif name in set(['coordinate', 'velocity', 'force']):
+            count = self.ndims * nnode
+            shape = (nnode, self.ndims)
+        elif name in set(['temperature']):
+            count = nnode
+
+        fname = self.get_fn(frame)
+        with open(fname) as f:
+            f.seek(pos)
+            field = np.fromfile(f, dtype=dtype, count=count).reshape(shape)
+        return field
+
+
 def main(modelname, start, end):
     prefix = modelname
     if output_in_cwd:
         output_prefix = os.path.basename(modelname)
     else:
         output_prefix = modelname
-    tmp = np.fromfile(prefix+'.info', dtype=float, sep=' ')
-    tmp.shape = (-1, 8)
 
-    frames = tmp[:,0].astype(int)
-    nnode_list = tmp[:,5].astype(int)
-    nelem_list = tmp[:,6].astype(int)
+    des = Dynearthsol(modelname)
+    ndims = des.ndims
 
     if end == -1:
-        end = len(frames)
+        end = len(des.frames)
 
-    if ndims == 2:
+    # 2D or 3D data?
+    if des.ndims == 2:
         nstr = 3
         component = ('XX', 'ZZ', 'XZ')
     else:
         nstr = 6
         component = ('XX', 'YY', 'ZZ', 'XY', 'XZ', 'YZ')
 
-    for i, rec in enumerate(frames[start:end]):
+    for i, frame in enumerate(des.frames[start:end]):
         # convert from numpy.int to python int
-        rec = int(rec)
-        suffix = '{0:0=6}'.format(rec)
+        frame = int(frame)
+        suffix = '{0:0=6}'.format(frame)
         print('Converting frame #{0}'.format(suffix))
-        nnode = nnode_list[i+start]
-        nelem = nelem_list[i+start]
 
         filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
         fvtu = open(filename, 'wb')
 
+        nnode = des.nnode_list[frame]
+        nelem = des.nelem_list[frame]
         try:
             vtu_header(fvtu, nnode, nelem)
 
@@ -74,94 +153,59 @@ def main(modelname, start, end):
             #
             fvtu.write(b'  <PointData>\n')
 
-            vel = np.fromfile(prefix+'.vel.'+suffix, dtype=np.float64, count=ndims*nnode)
-            vel.shape = (nnode, ndims)
-            if ndims == 2:
-                # VTK requires vector field (velocity, coordinate) has 3 components.
-                # Allocating a 3-vector tmp array for VTK data output.
-                tmp = np.zeros((nnode, 3), dtype=vel.dtype)
-                tmp[:,:ndims] = vel
-            else:
-                tmp = vel
-            vtk_dataarray(fvtu, tmp, 'velocity', 3)
+            convert_vector(des, frame, 'velocity', fvtu)
+            convert_vector(des, frame, 'force', fvtu)
 
-            force = np.fromfile(prefix+'.force.'+suffix, dtype=np.float64, count=ndims*nnode)
-            force.shape = (nnode, ndims)
-            if ndims == 2:
-                tmp = np.zeros((nnode, 3), dtype=force.dtype)
-                tmp[:,:ndims] = force
-            else:
-                tmp = force
-            vtk_dataarray(fvtu, tmp, 'force', 3)
-
-            temperature = np.fromfile(prefix+'.temperature.'+suffix, dtype=np.float64, count=nnode)
-            vtk_dataarray(fvtu, temperature, 'temperature')
-
-            #bcflag = np.fromfile(prefix+'.bcflag.'+suffix, dtype=np.int32, count=nnode)
-            #vtk_dataarray(fvtu, bcflag, 'BC flag')
+            convert_scalar(des, frame, 'temperature', fvtu)
+            #convert_scalar(des, frame, 'bcflag', fvtu)
 
             # node number for debugging
-            vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node#')
+            vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node number')
 
             fvtu.write(b'  </PointData>\n')
-
             #
             # element-based field
             #
             fvtu.write(b'  <CellData>\n')
 
-            quality = np.fromfile(prefix+'.meshquality.'+suffix, dtype=np.float64, count=nelem)
-            vtk_dataarray(fvtu, quality, 'mesh quality')
-            plstrain = np.fromfile(prefix+'.plstrain.'+suffix, dtype=np.float64, count=nelem)
-            vtk_dataarray(fvtu, plstrain, 'plastic strain')
-            delta_plstrain = np.fromfile(prefix+'.delta_plstrain.'+suffix, dtype=np.float64, count=nelem)
-            vtk_dataarray(fvtu, delta_plstrain, 'plastic strain increment')
+            convert_scalar(des, frame, 'mesh quality', fvtu)
+            convert_scalar(des, frame, 'plastic strain', fvtu)
+            convert_scalar(des, frame, 'plastic strain increment', fvtu)
 
-            strain_rate = np.fromfile(prefix+'.strain-rate.'+suffix, dtype=np.float64, count=nstr*nelem)
-            strain_rate.shape = (nelem, nstr)
+            strain_rate = des.read_field(frame, 'strain-rate')
             srII = second_invariant(strain_rate)
             vtk_dataarray(fvtu, np.log10(srII+1e-45), 'strain-rate II log10')
             if output_tensor_components:
-                for d in range(nstr):
+                for d in range(des.nstr):
                     vtk_dataarray(fvtu, strain_rate[:,d], 'strain-rate ' + component[d])
 
-            strain = np.fromfile(prefix+'.strain.'+suffix, dtype=np.float64, count=nstr*nelem)
-            strain.shape = (nelem, nstr)
+            strain = des.read_field(frame, 'strain')
             sI = first_invariant(strain)
             sII = second_invariant(strain)
             vtk_dataarray(fvtu, sI, 'strain I')
             vtk_dataarray(fvtu, sII, 'strain II')
             if output_tensor_components:
-                for d in range(nstr):
+                for d in range(des.nstr):
                     vtk_dataarray(fvtu, strain[:,d], 'strain ' + component[d])
 
-            stress = np.fromfile(prefix+'.stress.'+suffix, dtype=np.float64, count=nstr*nelem)
-            stress.shape = (nelem, nstr)
+            stress = des.read_field(frame, 'stress')
             tI = first_invariant(stress)
             tII = second_invariant(stress)
             vtk_dataarray(fvtu, tI, 'stress I')
             vtk_dataarray(fvtu, tII, 'stress II')
             if output_tensor_components:
-                for d in range(nstr):
+                for d in range(des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + component[d])
 
+            convert_scalar(des, frame, 'density', fvtu)
+            convert_scalar(des, frame, 'viscosity', fvtu)
             effvisc = tII / (srII + 1e-45)
             vtk_dataarray(fvtu, effvisc, 'effective viscosity')
-
-            density = np.fromfile(prefix+'.density.'+suffix, dtype=np.float64, count=nelem)
-            vtk_dataarray(fvtu, density, 'density')
-
-            viscosity = np.fromfile(prefix+'.viscosity.'+suffix, dtype=np.float64, count=nelem)
-            vtk_dataarray(fvtu, viscosity, 'viscosity')
-
-            volume = np.fromfile(prefix+'.volume.'+suffix, dtype=np.float64, count=nelem)
-            vtk_dataarray(fvtu, volume, 'volume')
-
-            volume_old = np.fromfile(prefix+'.volume_old.'+suffix, dtype=np.float64, count=nelem)
-            vtk_dataarray(fvtu, 1 - volume_old/volume, 'dvol')
+            convert_scalar(des, frame, 'volume', fvtu)
+            convert_scalar(des, frame, 'volume_old', fvtu)
 
             # element number for debugging
-            vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem#')
+            vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem number')
 
             fvtu.write(b'  </CellData>\n')
 
@@ -169,27 +213,16 @@ def main(modelname, start, end):
             # node coordinate
             #
             fvtu.write(b'  <Points>\n')
-            coord = np.fromfile(prefix+'.coord.'+suffix, dtype=np.float64, count=ndims*nnode)
-            coord.shape = (nnode, ndims)
-            if ndims == 2:
-                # VTK requires vector field (velocity, coordinate) has 3 components.
-                # Allocating a 3-vector tmp array for VTK data output.
-                tmp = np.zeros((nnode, 3), dtype=coord.dtype)
-                tmp[:,:ndims] = coord
-            else:
-                tmp = coord
-            vtk_dataarray(fvtu, tmp, '', 3)
+            convert_vector(des, frame, 'coordinate', fvtu)
             fvtu.write(b'  </Points>\n')
 
             #
             # element connectivity & types
             #
             fvtu.write(b'  <Cells>\n')
-            conn = np.fromfile(prefix+'.connectivity.'+suffix, dtype=np.int32, count=(ndims+1)*nelem)
-            conn.shape = (nelem, ndims+1)
-            vtk_dataarray(fvtu, conn, 'connectivity')
-            vtk_dataarray(fvtu, (ndims+1)*np.array(range(1, nelem+1), dtype=np.int32), 'offsets')
-            if ndims == 2:
+            convert_scalar(des, frame, 'connectivity', fvtu)
+            vtk_dataarray(fvtu, (des.ndims+1)*np.array(range(1, nelem+1), dtype=np.int32), 'offsets')
+            if des.ndims == 2:
                 # VTK_ TRIANGLE == 5
                 celltype = 5
             else:
@@ -206,6 +239,25 @@ def main(modelname, start, end):
             fvtu.close()
             os.remove(filename)
             raise
+    return
+
+
+def convert_scalar(des, frame, name, fvtu):
+    field = des.read_field(frame, name)
+    vtk_dataarray(fvtu, field, name)
+    return
+
+
+def convert_vector(des, frame, name, fvtu):
+    field = des.read_field(frame, name)
+    if des.ndims == 2:
+        # VTK requires vector field (velocity, coordinate) has 3 components.
+        # Allocating a 3-vector tmp array for VTK data output.
+        tmp = np.zeros((des.nnode_list[frame], 3), dtype=field.dtype)
+        tmp[:,:des.ndims] = field
+    else:
+        tmp = field
+    vtk_dataarray(fvtu, tmp, name, 3)
     return
 
 
@@ -298,10 +350,6 @@ if __name__ == '__main__':
                 print(__doc__)
                 sys.exit(0)
 
-    if '-2' in sys.argv:
-        ndims = 2
-    if '-3' in sys.argv:
-        ndims = 3
     if '-a' in sys.argv:
         output_in_binary = False
     if '-c' in sys.argv:
