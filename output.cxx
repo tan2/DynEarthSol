@@ -106,9 +106,11 @@ void Output::write(const Variables& var, bool is_averaged)
     std::FILE* f;
 
     double dt = var.dt;
-    if (average_interval && is_averaged)
+    double inv_dt = 1 / var.dt;
+    if (average_interval && is_averaged) {
         dt = (var.time - time0) / average_interval;
-
+        inv_dt = 1.0 / (var.time - time0);
+    }
     write_info(var, dt);
 
     std::snprintf(filename, 255, "%s.save.%06d", modelname.c_str(), frame);
@@ -129,7 +131,7 @@ void Output::write(const Variables& var, bool is_averaged)
         double *c0 = coord0.data();
         const double *c = var.coord->data();
         for (int i=0; i<coord0.num_elements(); ++i) {
-            c0[i] = (c[i] - c0[i]) / (var.time - time0);
+            c0[i] = (c[i] - c0[i]) * inv_dt;
         }
     }
     write_array(f, *vel, "velocity");
@@ -142,13 +144,13 @@ void Output::write(const Variables& var, bool is_averaged)
 
     double_vec *delta_plstrain = var.delta_plstrain;
     if (average_interval && is_averaged) {
+        // average_strain_rate = delta_strain / delta_t
         delta_plstrain = &delta_plstrain_avg;
-        double tmp = 1.0 / (average_interval + 1);
-        for (int i=0; i<delta_plstrain_avg.size(); ++i) {
-            delta_plstrain_avg[i] *= tmp;
-        }
     }
-    write_array(f, *delta_plstrain, "plastic strain increment");
+    for (int i=0; i<delta_plstrain_avg.size(); ++i) {
+        delta_plstrain_avg[i] *= inv_dt;
+    }
+    write_array(f, *delta_plstrain, "plastic strain-rate");
 
     tensor_t *strain_rate = var.strain_rate;
     if (average_interval && is_averaged) {
@@ -157,7 +159,7 @@ void Output::write(const Variables& var, bool is_averaged)
         double *s0 = strain0.data();
         const double *s = var.strain->data();
         for (int i=0; i<strain0.num_elements(); ++i) {
-            s0[i] = (s[i] - s0[i]) / (var.time - time0);
+            s0[i] = (s[i] - s0[i]) * inv_dt;
         }
     }
     write_array(f, *strain_rate, "strain-rate");

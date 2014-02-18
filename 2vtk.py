@@ -94,8 +94,8 @@ class Dynearthsol:
         if name in set(['strain', 'strain-rate', 'stress']):
             count = nstr * nelem
             shape = (nelem, nstr)
-        elif name in set(['density', 'mesh quality', 'plastic strain', 'plastic strain increment',
-                      'viscosity', 'volume', 'volume_old']):
+        elif name in set(['density', 'mesh quality', 'plastic strain', 'plastic strain-rate',
+                          'viscosity', 'volume', 'volume_old']):
             count = nelem
         elif name in set(['connectivity']):
             count = (self.ndims + 1) * nelem
@@ -170,7 +170,7 @@ def main(modelname, start, end):
 
             convert_scalar(des, frame, 'mesh quality', fvtu)
             convert_scalar(des, frame, 'plastic strain', fvtu)
-            convert_scalar(des, frame, 'plastic strain increment', fvtu)
+            convert_scalar(des, frame, 'plastic strain-rate', fvtu)
 
             strain_rate = des.read_field(frame, 'strain-rate')
             srII = second_invariant(strain_rate)
