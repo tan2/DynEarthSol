@@ -99,6 +99,7 @@ struct BC {
 
 struct IC {
     int weakzone_option;
+    double weakzone_plstrain;
     double weakzone_azimuth;
     double weakzone_inclination;
     double weakzone_halfwidth;
@@ -107,7 +108,9 @@ struct IC {
     double weakzone_xcenter;
     double weakzone_ycenter;
     double weakzone_zcenter;
-    double weakzone_plstrain;
+    double weakzone_xsemi_axis;
+    double weakzone_ysemi_axis;
+    double weakzone_zsemi_axis;
 };
 
 struct Mat {

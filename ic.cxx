@@ -50,6 +50,31 @@ namespace {
         }
     };
 
+
+    class Ellipsoidal_zone : public Zone
+    {
+    private:
+        const double *x0;
+        double semi_axis2[NDIMS];
+
+    public:
+        Ellipsoidal_zone(const double center[NDIMS], const double semi_axis[NDIMS]) :
+            x0(center) // Copy the pointer only, not the data. The caller needs to keep center alive.
+        {
+            for(int i=0; i<NDIMS; i++)
+                semi_axis2[i] =  semi_axis[i] * semi_axis[i];
+        }
+
+        bool contains(const double x[NDIMS]) const
+        {
+            return ( (x[0] - x0[0])*(x[0] - x0[0])/semi_axis2[0]
+#ifdef THREED
+                     + (x[1] - x0[1])*(x[1] - x0[1])/semi_axis2[1]
+#endif
+                     + (x[NDIMS-1] - x0[NDIMS-1])*(x[NDIMS-1] - x0[NDIMS-1])/semi_axis2[NDIMS-1] < 1 );
+        }
+    };
+
 } // anonymous namespace
 
 
@@ -164,13 +189,26 @@ void initial_weak_zone(const Param &param, const Variables &var,
 #ifdef THREED
         plane_center[1] = param.ic.weakzone_ycenter * param.mesh.ylength;
 #endif
-        plane_center[NDIMS-1] = -param.ic.weakzone_zcenter * param.mesh.zlength;;
+        plane_center[NDIMS-1] = -param.ic.weakzone_zcenter * param.mesh.zlength;
         weakzone = new Planar_zone(plane_center,
                                    param.ic.weakzone_azimuth,
                                    param.ic.weakzone_inclination,
                                    param.ic.weakzone_halfwidth * param.mesh.resolution,
                                    -param.ic.weakzone_depth_max * param.mesh.zlength,
                                    -param.ic.weakzone_depth_min * param.mesh.zlength);
+        break;
+    case 2:
+        // a ellipsoidal weak zone
+        double semi_axis[NDIMS];
+        plane_center[0] = param.ic.weakzone_xcenter * param.mesh.xlength;
+        semi_axis[0] = param.ic.weakzone_xsemi_axis;
+#ifdef THREED
+        plane_center[1] = param.ic.weakzone_ycenter * param.mesh.ylength;
+        semi_axis[1] = param.ic.weakzone_ysemi_axis;
+#endif
+        plane_center[NDIMS-1] = -param.ic.weakzone_zcenter * param.mesh.zlength;
+        semi_axis[NDIMS-1] = param.ic.weakzone_zsemi_axis;
+        weakzone = new Ellipsoidal_zone(plane_center, semi_axis);
         break;
     default:
         std::cerr << "Error: unknown weakzone_option: " << param.ic.weakzone_option << '\n';

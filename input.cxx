@@ -208,7 +208,10 @@ static void declare_parameters(po::options_description &cfg,
         ("ic.weakzone_option", po::value<int>(&p.ic.weakzone_option)->default_value(1),
          "How to set the initial weak zone?\n"
          "0: no weak zone.\n"
-         "1: planar weak zone with specified azimuth, inclination, halfwidth, min/max depth range, and center location.\n")
+         "1: planar weak zone with specified azimuth, inclination, halfwidth, min/max depth range, and center location.\n"
+         "2: ellipsoidal weak zone with specified center location and semi-axes.\n")
+        ("ic.weakzone_plstrain", po::value<double>(&p.ic.weakzone_plstrain)->default_value(0.1),
+         "Initial plastic strain in the weak zone")
         ("ic.weakzone_azimuth", po::value<double>(&p.ic.weakzone_azimuth)->default_value(0),
          "Azimuth angle (relative to +y axis) (in degree)")
         ("ic.weakzone_inclination", po::value<double>(&p.ic.weakzone_inclination)->default_value(90),
@@ -225,8 +228,12 @@ static void declare_parameters(po::options_description &cfg,
          "Location of weak zone center in y direction (between 0 and 1, in unit of mesh.ylength)")
         ("ic.weakzone_zcenter", po::value<double>(&p.ic.weakzone_zcenter)->default_value(0.5),
          "Location of weak zone center in z direction (between 0 and 1, in unit of mesh.zlength)")
-        ("ic.weakzone_plstrain", po::value<double>(&p.ic.weakzone_plstrain)->default_value(0.1),
-         "Initial plastic strain in the weak zone")
+        ("ic.weakzone_xsemi_axis", po::value<double>(&p.ic.weakzone_xsemi_axis)->default_value(1e3),
+         "Length of weak zone semi-axis in x direction (in meters)")
+        ("ic.weakzone_ysemi_axis", po::value<double>(&p.ic.weakzone_ysemi_axis)->default_value(1e3),
+         "Length of weak zone semi-axis in y direction (in meters)")
+        ("ic.weakzone_zsemi_axis", po::value<double>(&p.ic.weakzone_zsemi_axis)->default_value(1e3),
+         "Length of weak zone semi-axis in z direction (in meters)")
         ;
 
     cfg.add_options()
