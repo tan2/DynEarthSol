@@ -20,18 +20,22 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.edvoldt = new double_vec(e);
 
-    var.temperature = new double_vec(n);
-    var.plstrain = new double_vec(e);
-    var.delta_plstrain = new double_vec(e);
+    {
+        // these fields are reallocated during remeshing interpolation
+        var.temperature = new double_vec(n);
+        var.plstrain = new double_vec(e);
+        var.delta_plstrain = new double_vec(e);
+        var.vel = new array_t(n, 0);
+        var.strain = new tensor_t(e, 0);
+        var.stress = new tensor_t(e, 0);
+    }
+
     var.ntmp= new double_vec(n);
     var.elquality= new double_vec(e);
 
-    var.vel = new array_t(n, 0);
     var.force = new array_t(n, 0);
 
     var.strain_rate = new tensor_t(e, 0);
-    var.strain = new tensor_t(e, 0);
-    var.stress = new tensor_t(e, 0);
 
     var.shpdx = new shapefn(e);
     if (NDIMS == 3) var.shpdy = new shapefn(e);
