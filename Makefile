@@ -10,12 +10,10 @@
 ## ndims = 3: 3D code; 2: 2D code
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openmp = 1: enable OpenMP
-## gprof = 1: enable instrumentation for GNU profiler
 
 ndims = 2
 opt = 2
 openmp = 1
-gprof = 0
 
 ## Select C++ compiler
 CXX = g++
@@ -49,15 +47,6 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 		CXXFLAGS += -O0 -Wall -Wno-unused-variable -Wno-unused-function -Wno-unknown-pragmas -fbounds-check -ftrapv
 	endif
 
-	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP
-		LDFLAGS += -fopenmp
-	endif
-
-	ifeq ($(gprof), 1)
-		CXXFLAGS += -pg
-		LDFLAGS += -pg
-	endif
 else
 # the only way to display the error message in Makefile ...
 all:
