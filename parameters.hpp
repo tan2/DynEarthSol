@@ -111,6 +111,8 @@ struct IC {
     double weakzone_xsemi_axis;
     double weakzone_ysemi_axis;
     double weakzone_zsemi_axis;
+
+    double oceanic_plate_age_in_yr;
 };
 
 struct Mat {

@@ -234,6 +234,9 @@ static void declare_parameters(po::options_description &cfg,
          "Length of weak zone semi-axis in y direction (in meters)")
         ("ic.weakzone_zsemi_axis", po::value<double>(&p.ic.weakzone_zsemi_axis)->default_value(1e3),
          "Length of weak zone semi-axis in z direction (in meters)")
+
+        ("ic.oceanic_plate_age_in_yr", po::value<double>(&p.ic.oceanic_plate_age_in_yr)->default_value(60e6),
+         "Age of the oceanic plate (in years), used for the temperature profile on the plate.\n")
         ;
 
     cfg.add_options()

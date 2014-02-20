@@ -239,11 +239,12 @@ void initial_weak_zone(const Param &param, const Variables &var,
 void initial_temperature(const Param &param, const Variables &var,
                          double_vec &temperature)
 {
-    const double oceanic_plate_age = 60e6 * YEAR2SEC;
-    const double diffusivity = 1e-6;
+    const double age = param.ic.oceanic_plate_age_in_yr * YEAR2SEC;
+    const MatProps &mat = *var.mat;
+    const double diffusivity = mat.k(0) / mat.rho(0) / mat.cp(0); // thermal diffusivity of 0th element
 
     for (int i=0; i<var.nnode; ++i) {
-        double w = -(*var.coord)[i][NDIMS-1] / std::sqrt(4 * diffusivity * oceanic_plate_age);
+        double w = -(*var.coord)[i][NDIMS-1] / std::sqrt(4 * diffusivity * age);
         temperature[i] = param.bc.surface_temperature +
             (param.bc.mantle_temperature - param.bc.surface_temperature) * std::erf(w);
     }
