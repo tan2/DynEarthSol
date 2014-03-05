@@ -103,6 +103,8 @@ struct IC {
     double weakzone_azimuth;
     double weakzone_inclination;
     double weakzone_halfwidth;
+    double weakzone_y_min;
+    double weakzone_y_max;
     double weakzone_depth_min;
     double weakzone_depth_max;
     double weakzone_xcenter;

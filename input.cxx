@@ -218,6 +218,10 @@ static void declare_parameters(po::options_description &cfg,
          "Inclination angle (relative to horizontal plane) (in degree)")
         ("ic.weakzone_halfwidth", po::value<double>(&p.ic.weakzone_halfwidth)->default_value(1.5),
          "Half-width of the weak zone (in unit of mesh.resolution)")
+        ("ic.weakzone_y_min", po::value<double>(&p.ic.weakzone_y_min)->default_value(0),
+         "Y-direction range (between 0 and 1, in unit of mesh.ylength)")
+        ("ic.weakzone_y_max", po::value<double>(&p.ic.weakzone_y_max)->default_value(1),
+         "Y-direction range (between 0 and 1, in unit of mesh.ylength)")
         ("ic.weakzone_depth_min", po::value<double>(&p.ic.weakzone_depth_min)->default_value(0),
          "Depth upper (shallower) range (between 0 and 1, in unit of mesh.zlength)")
         ("ic.weakzone_depth_max", po::value<double>(&p.ic.weakzone_depth_max)->default_value(1),

@@ -26,14 +26,23 @@ namespace {
     private:
         const double az, incl;
         const double halfwidth; // in meter
+#ifdef THREED
+        const double ymin, ymax; // in meter
+#endif
         const double zmin, zmax; // in meter
         const double *x0;
 
     public:
-        Planar_zone(const double center[NDIMS], double azimuth, double inclination,
-                    double halfwidth_, double zmin_, double zmax_) :
-            az(std::tan(azimuth * DEG2RAD)), incl(1/std::tan(inclination * DEG2RAD)),
-            halfwidth(halfwidth_), zmin(zmin_), zmax(zmax_),
+        Planar_zone(const double center[NDIMS], double azimuth, double inclination, double halfwidth_,
+#ifdef THREED
+                    double ymin_, double ymax_,
+#endif
+                    double zmin_, double zmax_) :
+            az(std::tan(azimuth * DEG2RAD)), incl(1/std::tan(inclination * DEG2RAD)), halfwidth(halfwidth_),
+#ifdef THREED
+            ymin(ymin_), ymax(ymax_),
+#endif
+            zmin(zmin_), zmax(zmax_),
             x0(center) // Copy the pointer only, not the data. The caller needs to keep center alive.
         {}
 
@@ -42,6 +51,10 @@ namespace {
             // Is x within halfwidth distance to a plane cutting through x0?
             return (x[NDIMS-1] > zmin &&
                     x[NDIMS-1] < zmax &&
+#ifdef THREED
+                    x[1] > ymin &&
+                    x[1] < ymax &&
+#endif
                     std::fabs( (x[0] - x0[0])
 #ifdef THREED
                                - az * (x[1] - x0[1])
@@ -194,6 +207,10 @@ void initial_weak_zone(const Param &param, const Variables &var,
                                    param.ic.weakzone_azimuth,
                                    param.ic.weakzone_inclination,
                                    param.ic.weakzone_halfwidth * param.mesh.resolution,
+#ifdef THREED
+                                   param.ic.weakzone_y_min * param.mesh.ylength,
+                                   param.ic.weakzone_y_max * param.mesh.ylength,
+#endif
                                    -param.ic.weakzone_depth_max * param.mesh.zlength,
                                    -param.ic.weakzone_depth_min * param.mesh.zlength);
         break;
