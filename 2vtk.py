@@ -135,6 +135,7 @@ def main(modelname, start, end):
         component = ('XX', 'YY', 'ZZ', 'XY', 'XZ', 'YZ')
 
     for i, frame in enumerate(des.frames[start:end]):
+        des.read_header(frame)
         # convert from numpy.int to python int
         frame = int(frame)
         suffix = '{0:0=6}'.format(frame)
