@@ -198,6 +198,7 @@ void Output::write(const Variables& var, bool is_averaged)
     /* write header */
     std::fseek(f, 0, SEEK_SET);
     std::fwrite(header, sizeof(char), headerlen, f);
+    std::fclose(f);
     delete [] header;
 
     std::cout << "  Output # " << frame
