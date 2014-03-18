@@ -124,17 +124,16 @@ void Output::write(const Variables& var, bool is_averaged)
     write_array(f, *var.coord, "coordinate");
     write_array(f, *var.connectivity, "connectivity");
 
-    array_t *vel = var.vel;
+    write_array(f, *var.vel, "velocity");
     if (average_interval && is_averaged) {
         // average_velocity = displacement / delta_t
-        vel = &coord0;
         double *c0 = coord0.data();
         const double *c = var.coord->data();
         for (int i=0; i<coord0.num_elements(); ++i) {
             c0[i] = (c[i] - c0[i]) * inv_dt;
         }
+        write_array(f, coord0, "velocity averaged");
     }
-    write_array(f, *vel, "velocity");
 
     write_array(f, *var.temperature, "temperature");
 
@@ -142,6 +141,8 @@ void Output::write(const Variables& var, bool is_averaged)
     write_array(f, *var.elquality, "mesh quality");
     write_array(f, *var.plstrain, "plastic strain");
 
+    // Strain rate and plastic strain rate do not need to be checkpointed,
+    // so we don't have to distinguish averged/non-averaged variants.
     double_vec *delta_plstrain = var.delta_plstrain;
     if (average_interval && is_averaged) {
         // average_strain_rate = delta_strain / delta_t
@@ -165,17 +166,16 @@ void Output::write(const Variables& var, bool is_averaged)
     write_array(f, *strain_rate, "strain-rate");
 
     write_array(f, *var.strain, "strain");
+    write_array(f, *var.stress, "stress");
 
-    tensor_t *stress = var.stress;
     if (average_interval && is_averaged) {
-        stress = &stress_avg;
         double *s = stress_avg.data();
         double tmp = 1.0 / (average_interval + 1);
         for (int i=0; i<stress_avg.num_elements(); ++i) {
             s[i] *= tmp;
         }
+        write_array(f, stress_avg, "stress averaged");
     }
-    write_array(f, *stress, "stress");
 
     double_vec tmp(var.nelem);
     for (int e=0; e<var.nelem; ++e) {

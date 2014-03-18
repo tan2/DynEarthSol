@@ -91,7 +91,7 @@ class Dynearthsol:
         dtype = np.float64 if name != 'connectivity' else np.int32
         count = 0
         shape = (-1,)
-        if name in set(['strain', 'strain-rate', 'stress']):
+        if name in set(['strain', 'strain-rate', 'stress', 'stress averaged']):
             count = nstr * nelem
             shape = (nelem, nstr)
         elif name in set(['density', 'mesh quality', 'plastic strain', 'plastic strain-rate',
@@ -100,7 +100,7 @@ class Dynearthsol:
         elif name in set(['connectivity']):
             count = (self.ndims + 1) * nelem
             shape = (nelem, self.ndims+1)
-        elif name in set(['coordinate', 'velocity', 'force']):
+        elif name in set(['coordinate', 'velocity', 'velocity averaged', 'force']):
             count = self.ndims * nnode
             shape = (nnode, self.ndims)
         elif name in set(['temperature']):
@@ -154,7 +154,13 @@ def main(modelname, start, end):
             #
             fvtu.write(b'  <PointData>\n')
 
-            convert_vector(des, frame, 'velocity', fvtu)
+            # averaged velocity is more stable and is preferred
+            try:
+                vel = des.read_field(frame, 'velocity averaged')
+            except KeyError:
+                vel = des.read_field(frame, 'velocity')
+            vtk_dataarray(fvtu, vel, 'velocity')
+
             convert_vector(des, frame, 'force', fvtu)
 
             convert_scalar(des, frame, 'temperature', fvtu)
@@ -189,7 +195,11 @@ def main(modelname, start, end):
                 for d in range(des.nstr):
                     vtk_dataarray(fvtu, strain[:,d], 'strain ' + component[d])
 
-            stress = des.read_field(frame, 'stress')
+            # averaged stress is more stable and is preferred
+            try:
+                stress = des.read_field(frame, 'stress averaged')
+            except KeyError:
+                stress = des.read_field(frame, 'stress')
             tI = first_invariant(stress)
             tII = second_invariant(stress)
             vtk_dataarray(fvtu, tI, 'stress I')
