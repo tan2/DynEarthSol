@@ -9,20 +9,9 @@
 
 #include "constants.hpp"
 #include "parameters.hpp"
+#include "binaryio.hpp"
 #include "matprops.hpp"
 #include "output.hpp"
-
-/*****************************************************************************
- * The format of the .save file:
- * 1  The first 'headerlen' bytes are ASCII text.
- *   1.1  The 1st line in the header is the revision string. Starting with
- *        "# DynEarthSol ndims=%1 revision=%2", with %1 equal to 2 or 3
- *        (indicating 2D or 3D simulation) and %2 an integer.
- *   1.2  The following lines are 'name', 'position' pairs, separated by a
- *        TAB character. This line tells the name of the data and the
- *        starting position (in bytes) of the data in this file.
- * 2  The rests are binary data.
- ****************************************************************************/
 
 
 Output::Output(const Param& param, double start_time, int start_frame) :
@@ -36,43 +25,6 @@ Output::Output(const Param& param, double start_time, int start_frame) :
 
 Output::~Output()
 {}
-
-
-template <typename T>
-void Output::write_array(std::FILE* f, const std::vector<T>& A, const char *name)
-{
-    write_header(f, name);
-    std::size_t n = std::fwrite(A.data(), sizeof(T), A.size(), f);
-    eof_pos += n * sizeof(T);
-}
-
-
-template <typename T, int N>
-void Output::write_array(std::FILE* f, const Array2D<T,N>& A, const char *name)
-{
-    write_header(f, name);
-    std::size_t n = std::fwrite(A.data(), sizeof(T), A.num_elements(), f);
-    eof_pos += n * sizeof(T);
-}
-
-
-void Output::write_header(std::FILE* f, const char *name)
-{
-    const int bsize = 256;
-    char buffer[bsize];
-    int len = std::snprintf(buffer, bsize, "%s\t%ld\n", name, eof_pos);
-    if (len >= bsize) {
-        std::cerr << "Error: exceeding buffer length at Output::write_array, name=" << name
-                  << " eof_position=" << eof_pos << '\n';
-        std::exit(1);
-    }
-    if (len >= headerlen - (hd_pos - header)*sizeof(char)) {
-        std::cerr << "Error: exceeding header length at Output::write_array, name=" << name
-                  << " eof_position=" << eof_pos << '\n';
-        std::exit(1);
-    }
-    hd_pos = std::strncat(hd_pos, buffer, len);
-}
 
 
 void Output::write_info(const Variables& var, double dt)
@@ -101,10 +53,6 @@ void Output::write_info(const Variables& var, double dt)
 
 void Output::write(const Variables& var, bool is_averaged)
 {
-    /* Not using C++ stream IO here since it can be much slower than C stdio. */
-    char filename[256];
-    std::FILE* f;
-
     double dt = var.dt;
     double inv_dt = 1 / var.dt;
     if (average_interval && is_averaged) {
@@ -113,18 +61,14 @@ void Output::write(const Variables& var, bool is_averaged)
     }
     write_info(var, dt);
 
+    char filename[256];
     std::snprintf(filename, 255, "%s.save.%06d", modelname.c_str(), frame);
-    f = fopen(filename, "w");
+    BinaryOutput bin(filename);
 
-    header = new char[headerlen]();
-    hd_pos = std::strcat(header, revision_str);
-    eof_pos = headerlen;
-    std::fseek(f, eof_pos, SEEK_SET);
+    bin.write_array(*var.coord, "coordinate");
+    bin.write_array(*var.connectivity, "connectivity");
 
-    write_array(f, *var.coord, "coordinate");
-    write_array(f, *var.connectivity, "connectivity");
-
-    write_array(f, *var.vel, "velocity");
+    bin.write_array(*var.vel, "velocity");
     if (average_interval && is_averaged) {
         // average_velocity = displacement / delta_t
         double *c0 = coord0.data();
@@ -132,14 +76,14 @@ void Output::write(const Variables& var, bool is_averaged)
         for (int i=0; i<coord0.num_elements(); ++i) {
             c0[i] = (c[i] - c0[i]) * inv_dt;
         }
-        write_array(f, coord0, "velocity averaged");
+        bin.write_array(coord0, "velocity averaged");
     }
 
-    write_array(f, *var.temperature, "temperature");
+    bin.write_array(*var.temperature, "temperature");
 
 
-    write_array(f, *var.elquality, "mesh quality");
-    write_array(f, *var.plstrain, "plastic strain");
+    bin.write_array(*var.elquality, "mesh quality");
+    bin.write_array(*var.plstrain, "plastic strain");
 
     // Strain rate and plastic strain rate do not need to be checkpointed,
     // so we don't have to distinguish averged/non-averaged variants.
@@ -151,7 +95,7 @@ void Output::write(const Variables& var, bool is_averaged)
     for (int i=0; i<delta_plstrain_avg.size(); ++i) {
         delta_plstrain_avg[i] *= inv_dt;
     }
-    write_array(f, *delta_plstrain, "plastic strain-rate");
+    bin.write_array(*delta_plstrain, "plastic strain-rate");
 
     tensor_t *strain_rate = var.strain_rate;
     if (average_interval && is_averaged) {
@@ -163,10 +107,10 @@ void Output::write(const Variables& var, bool is_averaged)
             s0[i] = (s[i] - s0[i]) * inv_dt;
         }
     }
-    write_array(f, *strain_rate, "strain-rate");
+    bin.write_array(*strain_rate, "strain-rate");
 
-    write_array(f, *var.strain, "strain");
-    write_array(f, *var.stress, "stress");
+    bin.write_array(*var.strain, "strain");
+    bin.write_array(*var.stress, "stress");
 
     if (average_interval && is_averaged) {
         double *s = stress_avg.data();
@@ -174,32 +118,26 @@ void Output::write(const Variables& var, bool is_averaged)
         for (int i=0; i<stress_avg.num_elements(); ++i) {
             s[i] *= tmp;
         }
-        write_array(f, stress_avg, "stress averaged");
+        bin.write_array(stress_avg, "stress averaged");
     }
 
     double_vec tmp(var.nelem);
     for (int e=0; e<var.nelem; ++e) {
         tmp[e] = var.mat->rho(e);
     }
-    write_array(f, tmp, "density");
+    bin.write_array(tmp, "density");
 
     for (int e=0; e<var.nelem; ++e) {
         tmp[e] = var.mat->visc(e);
     }
-    write_array(f, tmp, "viscosity");
+    bin.write_array(tmp, "viscosity");
 
-    write_array(f, *var.volume, "volume");
-    write_array(f, *var.volume_old, "volume_old");
+    bin.write_array(*var.volume, "volume");
+    bin.write_array(*var.volume_old, "volume_old");
 
-    write_array(f, *var.force, "force");
+    bin.write_array(*var.force, "force");
 
-    //write_array(f, *var.bcflag, "bcflag");
-
-    /* write header */
-    std::fseek(f, 0, SEEK_SET);
-    std::fwrite(header, sizeof(char), headerlen, f);
-    std::fclose(f);
-    delete [] header;
+    //bin.write_array(*var.bcflag, "bcflag");
 
     std::cout << "  Output # " << frame
               << ", step = " << var.steps

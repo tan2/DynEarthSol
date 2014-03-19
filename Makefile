@@ -60,6 +60,7 @@ SRCS =	\
 	barycentric-fn.cxx \
 	brc-interpolation.cxx \
 	bc.cxx \
+	binaryio.cxx \
 	dynearthsol.cxx \
 	fields.cxx \
 	geometry.cxx \
@@ -77,6 +78,7 @@ SRCS =	\
 INCS =	\
 	array2d.hpp \
 	barycentric-fn.hpp \
+	binaryio.hpp \
 	constants.hpp \
 	parameters.hpp \
 	matprops.hpp \
