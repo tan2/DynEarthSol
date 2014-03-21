@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 
 #include "constants.hpp"
@@ -119,3 +120,111 @@ void BinaryOutput::write_array<int,NDIMS>(const Array2D<int,NDIMS>& A, const cha
 template
 void BinaryOutput::write_array<int,1>(const Array2D<int,1>& A, const char *name);
 
+//////////////////////////////////////////////////////////////////////////////
+
+BinaryInput::BinaryInput(const char *filename)
+{
+    f = std::fopen(filename, "r");
+    if (f == NULL) {
+        std::cerr << "Error: cannot open file: " << filename << '\n';
+        std::exit(1);
+    }
+    read_header();
+}
+
+
+BinaryInput::~BinaryInput()
+{
+    std::fclose(f);
+}
+
+
+void BinaryInput::read_header()
+{
+    /* Read into header buffer */
+    std::fseek(f, 0, SEEK_SET);
+    char *header = new char[headerlen]();
+    std::size_t n = std::fread(header, sizeof(char), headerlen, f);
+    if (n != headerlen) {
+        std::cerr << "Error: error reading file header\n";
+        std::exit(1);
+    }
+
+    /* Parse the content of header buffer */
+    char *line = header;
+
+    // Compare revision string (excluding the trailing new line)
+    line = std::strtok(header, "\n");
+    if (strncmp(line, revision_str, strlen(revision_str)-1) != 0) {
+        std::cerr << "Error: mismatching revision string in header\n"
+                  << "  Expect: " << revision_str
+                  << "  Got: "<< line << '\n';
+        std::exit(1);
+    }
+
+    line = std::strtok(NULL, "\n");
+    while (line != NULL) {
+        /* Each line is a string (might contain space), a tab, and an integer */
+        char *tab = std::strchr(line, '\t');
+        if (tab == NULL) {
+            std::cerr << "Error: error parsing file header\n"
+                      << " Line is:" << line << '\n';
+            std::exit(1);
+        }
+        std::string name(line, tab-line);
+        std::size_t loc;
+        std::sscanf(tab, "%zu", &loc);
+
+        offset[name] = loc;
+        line = std::strtok(NULL, "\n");
+    }
+
+    delete [] header;
+}
+
+
+void BinaryInput::seek_to_array(const char *name)
+{
+    std::string name2(name);
+    auto it = offset.find(name);
+    if (it == offset.end()) {
+        std::cerr << "Error: no array with a name: " << name << '\n';
+        std::exit(1);
+    }
+    std::size_t loc = it->second;
+    //std::cout << name << ' ' << loc << '\n';
+    std::fseek(f, loc, SEEK_SET);
+}
+
+
+template <typename T>
+void BinaryInput::read_array(std::vector<T>& A, const char *name, int size)
+{
+    seek_to_array(name);
+    A.resize(size);
+    int n = std::fread(A.data(), sizeof(T), size, f);
+    if (n != size) {
+        std::cerr << "Error: cannot read array: " << name << '\n';
+        std::exit(1);
+    }
+}
+
+
+template <typename T, int N>
+void BinaryInput::read_array(Array2D<T,N>& A, const char *name, int size)
+{
+    seek_to_array(name);
+    A.resize(size);
+    int n = std::fread(A.data(), sizeof(T), size*N, f);
+    if (n != N*size) {
+        std::cerr << "Error: cannot read array: " << name << '\n';
+        std::exit(1);
+    }
+}
+
+
+// explicit instantiation
+template
+void BinaryInput::read_array<double>(std::vector<double>& A, const char *name, int size);
+template
+void BinaryInput::read_array<double,NDIMS>(Array2D<double,NDIMS>& A, const char *name, int size);
