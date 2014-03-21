@@ -1326,14 +1326,6 @@ void create_new_mesh(const Param& param, Variables& var)
     // std::cout << "segflag:\n";
     // print(std::cout, *var.segflag);
     // std::cout << '\n';
-
-    create_boundary_flags(var);
-    create_boundary_nodes(var);
-    create_boundary_facets(var);
-    create_support(var);
-    create_elem_groups(var);
-    create_elemmarkers(param, var);
-    create_markers(param, var);
 }
 
 

@@ -24,6 +24,14 @@ void init(const Param& param, Variables& var)
     std::cout << "Initializing mesh and field data...\n";
 
     create_new_mesh(param, var);
+    create_boundary_flags(var);
+    create_boundary_nodes(var);
+    create_boundary_facets(var);
+    create_support(var);
+    create_elem_groups(var);
+    create_elemmarkers(param, var);
+    create_markers(param, var);
+
     allocate_variables(param, var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
