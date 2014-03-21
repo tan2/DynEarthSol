@@ -133,8 +133,7 @@ void Output::write(const Variables& var, bool is_averaged)
     }
     bin.write_array(tmp, "viscosity");
 
-    bin.write_array(*var.volume, "volume");
-    bin.write_array(*var.volume_old, "volume_old");
+    //bin.write_array(*var.volume, "volume");
 
     bin.write_array(*var.force, "force");
 
@@ -207,6 +206,8 @@ void Output::write_checkpoint(const Variables& var)
     bin.write_array(*var.segment, "segment");
     bin.write_array(*var.segflag, "segflag");
     bin.write_array(*var.regattr, "regattr");
+
+    bin.write_array(*var.volume_old, "volume_old");
 
     MarkerSet &ms = *var.markerset;
     ms.write(bin);

@@ -95,7 +95,7 @@ class Dynearthsol:
             count = nstr * nelem
             shape = (nelem, nstr)
         elif name in set(['density', 'mesh quality', 'plastic strain', 'plastic strain-rate',
-                          'viscosity', 'volume', 'volume_old']):
+                          'viscosity']):
             count = nelem
         elif name in set(['connectivity']):
             count = (self.ndims + 1) * nelem
@@ -212,8 +212,6 @@ def main(modelname, start, end):
             convert_scalar(des, frame, 'viscosity', fvtu)
             effvisc = tII / (srII + 1e-45)
             vtk_dataarray(fvtu, effvisc, 'effective viscosity')
-            convert_scalar(des, frame, 'volume', fvtu)
-            convert_scalar(des, frame, 'volume_old', fvtu)
 
             # element number for debugging
             vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem number')
