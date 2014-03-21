@@ -106,6 +106,16 @@ template
 void BinaryOutput::write_array<double,NDIMS>(const Array2D<double,NDIMS>& A, const char *name);
 template
 void BinaryOutput::write_array<double,NSTR>(const Array2D<double,NSTR>& A, const char *name);
+#ifdef THREED // when 2d, NSTR == NODES_PER_ELEM == 3
+template
+void BinaryOutput::write_array<double,NODES_PER_ELEM>(const Array2D<double,NODES_PER_ELEM>& A, const char *name);
+#endif
+template
+void BinaryOutput::write_array<double,1>(const Array2D<double,1>& A, const char *name);
 template
 void BinaryOutput::write_array<int,NODES_PER_ELEM>(const Array2D<int,NODES_PER_ELEM>& A, const char *name);
+template
+void BinaryOutput::write_array<int,NDIMS>(const Array2D<int,NDIMS>& A, const char *name);
+template
+void BinaryOutput::write_array<int,1>(const Array2D<int,1>& A, const char *name);
 

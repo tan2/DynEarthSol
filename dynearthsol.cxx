@@ -133,7 +133,12 @@ int main(int argc, const char* argv[])
             // done at arbitrary time steps.
             ((var.steps == last_regular_frame * param.sim.output_step_interval) ||
              (var.time > last_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC)) ) {
+
             output.write(var);
+
+            if (last_regular_frame % param.sim.checkpoint_frame_interval == 0)
+                output.write_checkpoint(var);
+
             last_regular_frame ++;
         }
 

@@ -1,6 +1,9 @@
 #ifndef DYNEARTHSOL3D_MARKERSET_HPP
 #define DYNEARTHSOL3D_MARKERSET_HPP
 
+// forward declaration
+class BinaryOutput;
+
 class MarkerSet
 {
 
@@ -16,9 +19,9 @@ public:
 
     void append_random_marker_in_elem( int el, int mt );
     void remove_marker(int i);
-    void write();
-    void read();
     void resize(const int);
+    void write(BinaryOutput &bin);
+    void read(BinaryOutput &bin);
 
     inline int get_nmarkers() const { return _nmarkers; }
     inline void set_nmarkers(int n) { _nmarkers = n; }

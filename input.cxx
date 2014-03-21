@@ -42,8 +42,11 @@ static void declare_parameters(po::options_description &cfg,
         ("sim.output_time_interval_in_yr", po::value<double>(&p.sim.output_time_interval_in_yr),
          "Output time interval (in years)")
 
+        ("sim.checkpoint_frame_interval", po::value<int>(&p.sim.checkpoint_frame_interval)->default_value(10),
+         "How frequent to write checkpoint file (used for restarting simulation)?")
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
-         "Restarting from previous save?")
+         "Restarting from previous checkpoint file?")
+
         ("sim.has_output_during_remeshing", po::value<bool>(&p.sim.has_output_during_remeshing)->default_value(false),
          "Output immediately before and after remeshing?")
         ("sim.output_averaged_fields", po::value<int>(&p.sim.output_averaged_fields)->default_value(1),

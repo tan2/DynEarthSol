@@ -8,6 +8,7 @@
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "barycentric-fn.hpp"
+#include "binaryio.hpp"
 #include "markerset.hpp"
 #include "mesh.hpp"
 #include "geometry.hpp"
@@ -138,18 +139,6 @@ void MarkerSet::remove_marker(int i)
 }
 
     
-void MarkerSet::write()
-{
-
-}
-
-void MarkerSet::read()
-{
-
-}
-
-
-
 void MarkerSet::set_eta( const int i, const double r[NDIMS] ) {
     double sum = 0.0;
     for( int j = 0; j < NDIMS; j++ ) {
@@ -300,4 +289,25 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             }
         }
     }
+}
+
+
+void MarkerSet::write(BinaryOutput &bin)
+{
+    int_vec itmp(2);
+    itmp[0] = _nmarkers;
+    itmp[1] = _last_id;
+    bin.write_array(itmp, "markeset size");
+
+    bin.write_array(*_eta, "markerset.eta");
+    bin.write_array(*_elem, "markerset.elem");
+    bin.write_array(*_mattype, "markerset.mattype");
+    bin.write_array(*_id, "markerset.id");
+
+}
+
+
+void MarkerSet::read(BinaryOutput &bin)
+{
+
 }

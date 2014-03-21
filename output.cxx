@@ -10,6 +10,7 @@
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "binaryio.hpp"
+#include "markerset.hpp"
 #include "matprops.hpp"
 #include "output.hpp"
 
@@ -188,6 +189,27 @@ void Output::average_fields(Variables& var)
             delta_plstrain_avg[i] += (*var.delta_plstrain)[i];
         }
     }
+}
+
+
+void Output::write_checkpoint(const Variables& var)
+{
+    char filename[256];
+    std::snprintf(filename, 255, "%s.chkpt.%06d", modelname.c_str(), frame);
+    BinaryOutput bin(filename);
+
+    double_vec tmp(3);
+    tmp[0] = var.time;
+    tmp[1] = var.dt;
+    tmp[2] = var.compensation_pressure;
+    bin.write_array(tmp, "time dt compensation_pressure");
+
+    bin.write_array(*var.segment, "segment");
+    bin.write_array(*var.segflag, "segflag");
+    bin.write_array(*var.regattr, "regattr");
+
+    MarkerSet &ms = *var.markerset;
+    ms.write(bin);
 }
 
 
