@@ -276,7 +276,8 @@ void tetrahedralize_polyhedron
 
 void points_to_mesh(const Param &param, Variables &var,
                     int npoints, const double *points,
-                    int n_init_segments, const int *init_segments, const int *init_segflags, const double *regattr,
+                    int n_init_segments, const int *init_segments, const int *init_segflags,
+                    int nregions, const double *regattr,
                     double max_elem_size, int vertex_per_polygon)
 {
     double *pcoord, *pregattr;
@@ -284,7 +285,7 @@ void points_to_mesh(const Param &param, Variables &var,
 
     points_to_new_mesh(param.mesh, npoints, points,
                        n_init_segments, init_segments, init_segflags,
-                       param.mat.nmat, regattr,
+                       nregions, regattr,
                        max_elem_size, vertex_per_polygon,
                        var.nnode, var.nelem, var.nseg,
                        pcoord, pconnectivity, psegment, psegflag, pregattr);
@@ -308,7 +309,8 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
     int *init_segflags = new int[n_init_segments];
 
     const int attr_ndata = NDIMS+2;
-    double *regattr = new double[param.mat.nmat*attr_ndata]; // nmat regions and each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
+    const int nregions = (param.ic.mattype_option == 0) ? param.mat.nmat : 0;
+    double *regattr = new double[nregions*attr_ndata]; // each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
 
     double max_elem_size;
     int vertex_per_polygon = 4;
@@ -352,8 +354,8 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
 
         max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
 
-        // Need to modify when nmat > 1.
-        for (int i = 0; i < param.mat.nmat; i++) {
+        // Need to modify when nregions > 1.
+        for (int i = 0; i < nregions; i++) {
             regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
             regattr[i * attr_ndata + 1] = -0.5*param.mesh.zlength;
             regattr[i * attr_ndata + 2] = 0;
@@ -455,8 +457,8 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
         max_elem_size = 0.7 * param.mesh.resolution
             * param.mesh.resolution * param.mesh.resolution;
 
-        // Need to modify when nmat > 1. Using .poly file might be better.
-        for (int i = 0; i < param.mat.nmat; i++) {
+        // Need to modify when nregions > 1. Using .poly file might be better.
+        for (int i = 0; i < nregions; i++) {
             regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
             regattr[i * attr_ndata + 1] = 0.5*param.mesh.ylength;
             regattr[i * attr_ndata + 2] = -0.5*param.mesh.zlength;
@@ -467,7 +469,7 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
 #endif
 
     points_to_mesh(param, var, npoints, points,
-                   n_init_segments, init_segments, init_segflags, regattr,
+                   n_init_segments, init_segments, init_segflags, nregions, regattr,
                    max_elem_size, vertex_per_polygon);
 
     delete [] points;
@@ -520,7 +522,8 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
     int *init_segflags = new int[n_init_segments];
 
     const int attr_ndata = NDIMS+2;
-    double *regattr = new double[param.mat.nmat*attr_ndata]; // nmat regions and each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
+    const int nregions = (param.ic.mattype_option == 0) ? param.mat.nmat : 0;
+    double *regattr = new double[nregions*attr_ndata]; // each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
 
     double max_elem_size;
     int vertex_per_polygon = 4;
@@ -576,8 +579,8 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 
         max_elem_size = 40 * d * d;
 
-        // Need to modify when nmat > 1.
-        for (int i = 0; i < param.mat.nmat; i++) {
+        // Need to modify when nregions > 1.
+        for (int i = 0; i < nregions; i++) {
             regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
             regattr[i * attr_ndata + 1] = -0.5*param.mesh.zlength;
             regattr[i * attr_ndata + 2] = 0;
@@ -694,8 +697,8 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 
         max_elem_size = 40 * d * d * d;
 
-        // Need to modify when nmat > 1.
-        for (int i = 0; i < param.mat.nmat; i++) {
+        // Need to modify when nregions > 1.
+        for (int i = 0; i < nregions; i++) {
             regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
             regattr[i * attr_ndata + 1] = 0.5*param.mesh.ylength;
             regattr[i * attr_ndata + 2] = -0.5*param.mesh.zlength;
@@ -706,7 +709,7 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 #endif
 
     points_to_mesh(param, var, npoints, points,
-                   n_init_segments, init_segments, init_segflags, regattr,
+                   n_init_segments, init_segments, init_segflags, nregions, regattr,
                    max_elem_size, vertex_per_polygon);
 
     delete [] points;
@@ -934,7 +937,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
             std::exit(1);
         }
         
-        if (nregions != param.mat.nmat) {
+        if (param.ic.mattype_option == 0 && nregions != param.mat.nmat) {
             std::cerr << "Error: Number of regions should be exactly 'nmat' but a different value given in line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
@@ -944,7 +947,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     }
 
     // get region list
-    double *regattr = new double[nregions * (NDIMS+2)]; // nmat regions and each region has 5 data fields: x, (y,) z, region marker (mat type), and volume.
+    double *regattr = new double[nregions * (NDIMS+2)]; // each region has 5 data fields: x, (y,) z, region marker (mat type), and volume.
     for (int i=0; i<nregions; i++) {
         s = std::fgets(buffer, 255, fp);
         if (! s) {
@@ -976,7 +979,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     }
 
     points_to_mesh(param, var, npoints, points,
-                   n_init_segments, init_segments, init_segflags, regattr,
+                   n_init_segments, init_segments, init_segflags, nregions, regattr,
                    max_elem_size, NODES_PER_FACET);
 
     delete [] points;

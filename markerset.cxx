@@ -120,8 +120,22 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
     // Generate particles in each element.
     for( int e = 0; e < ne; e++ )
         for( int m = 0; m < mpe; m++ ) {
+            // random barycentric coordinate
+            double eta[NODES_PER_ELEM];
+            random_eta(eta);
+
             int mt = (int)(*((*var.regattr)[e])); // mattype should take a reginal attribute assigned during meshing.
-            append_random_marker_in_elem(e, mt);
+            if (0) {
+                // XXX: modify mt according to the marker coordinate p
+                double p[NDIMS] = 0;
+                int *conn = var.connectivity[e];
+                for(int i=0; i<NDIMS; i++) {
+                    for(int j=0; j<NODES_PER_ELEM; j++)
+                        p[i] += var.coord[ conn[j] ];
+                }
+                if (p[0] > 10) mt = 1;
+            }
+            append_marker(eta, el, mt);
             ++(*var.elemmarkers)[e][mt];
         }
 }
