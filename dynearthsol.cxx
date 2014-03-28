@@ -88,8 +88,6 @@ int main(int argc, const char* argv[])
     static Variables var; // declared as static to silence valgrind's memory leak detection
     Output output(param, start_time,
                   (param.sim.is_restarting) ? param.sim.restarting_from_frame : 0);
-    double starting_time = 0;
-    int starting_step = 0;
     var.time = 0;
     var.steps = 0;
 
@@ -100,19 +98,18 @@ int main(int argc, const char* argv[])
 
     if (! param.sim.is_restarting) {
         init(param, var);
-        if (param.sim.output_averaged_fields)
-            output.average_fields(var);
-        output.write(var, false);
     }
     else {
         restart(param, var);
-        starting_time = var.time;
-        starting_step = var.steps;
     }
 
     var.dt = compute_dt(param, var);
+    output.write(var, false);
 
-    int last_regular_frame = 1;  // excluding frames due to output_during_remeshing
+    double starting_time = var.time; // var.time & var.steps might be set in restart()
+    double starting_step = var.steps;
+    int next_regular_frame = 1;  // excluding frames due to output_during_remeshing
+
     std::cout << "Starting simulation...\n";
     do {
         var.steps ++;
@@ -144,15 +141,15 @@ int main(int argc, const char* argv[])
 	if ((! param.sim.output_averaged_fields || (var.steps % param.sim.output_averaged_fields == 0)) &&
             // When output_averaged_fields in turned on, the output cannot be
             // done at arbitrary time steps.
-            (((var.steps - starting_step) == last_regular_frame * param.sim.output_step_interval) ||
-             ((var.time - starting_time) > last_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC)) ) {
+            (((var.steps - starting_step) == next_regular_frame * param.sim.output_step_interval) ||
+             ((var.time - starting_time) > next_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC)) ) {
 
             output.write(var);
 
-            if (last_regular_frame % param.sim.checkpoint_frame_interval == 0)
+            if (next_regular_frame % param.sim.checkpoint_frame_interval == 0)
                 output.write_checkpoint(var);
 
-            last_regular_frame ++;
+            next_regular_frame ++;
         }
 
         if (var.steps % param.mesh.quality_check_step_interval == 0) {
