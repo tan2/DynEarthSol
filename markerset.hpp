@@ -3,13 +3,15 @@
 
 // forward declaration
 class BinaryOutput;
+class BinaryInput;
 
 class MarkerSet
 {
 
 public:
     MarkerSet( const Param& param, Variables& var );
-    ~MarkerSet() 
+    MarkerSet( const Param& param, Variables& var, BinaryInput& bin );
+    ~MarkerSet()
     { 
         delete _id;
         delete _eta; 
@@ -21,7 +23,7 @@ public:
     void remove_marker(int i);
     void resize(const int);
     void write(BinaryOutput &bin);
-    void read(BinaryOutput &bin);
+    void read(Variables &var, BinaryInput &bin);
 
     inline int get_nmarkers() const { return _nmarkers; }
     inline void set_nmarkers(int n) { _nmarkers = n; }

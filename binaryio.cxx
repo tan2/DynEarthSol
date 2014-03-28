@@ -227,6 +227,8 @@ void BinaryInput::read_array(Array2D<T,N>& A, const char *name, int size)
 template
 void BinaryInput::read_array<double>(std::vector<double>& A, const char *name, int size);
 template
+void BinaryInput::read_array<int>(std::vector<int>& A, const char *name, int size);
+template
 void BinaryInput::read_array<double,NDIMS>(Array2D<double,NDIMS>& A, const char *name, int size);
 template
 void BinaryInput::read_array<double,NSTR>(Array2D<double,NSTR>& A, const char *name, int size);

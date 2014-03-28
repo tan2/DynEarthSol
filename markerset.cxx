@@ -37,6 +37,13 @@ MarkerSet::MarkerSet(const Param& param, Variables& var)
 }
 
 
+MarkerSet::MarkerSet(const Param& param, Variables& var, BinaryInput& bin)
+{
+    // init from checkpoint file
+    read(var, bin);
+}
+
+
 void MarkerSet::allocate_markerdata( const int max_markers )
 {
     _reserved_space = max_markers;
@@ -307,7 +314,23 @@ void MarkerSet::write(BinaryOutput &bin)
 }
 
 
-void MarkerSet::read(BinaryOutput &bin)
+void MarkerSet::read(Variables &var, BinaryInput &bin)
 {
+    int_vec itmp(2);
+    bin.read_array(itmp, "markeset size", 2);
+    _nmarkers = itmp[0];
+    _last_id = itmp[1];
 
+    allocate_markerdata(_nmarkers);
+
+    bin.read_array(*_eta, "markerset.eta", _nmarkers);
+    bin.read_array(*_elem, "markerset.elem", _nmarkers);
+    bin.read_array(*_mattype, "markerset.mattype", _nmarkers);
+    bin.read_array(*_id, "markerset.id", _nmarkers);
+
+    for( int i = 0; i < _nmarkers; i++ ) {
+        int e = (*_elem)[i];
+        int mt = (*_mattype)[i];
+        ++(*var.elemmarkers)[e][mt];
+    }
 }

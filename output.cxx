@@ -250,6 +250,9 @@ void restart(const Param& param, Variables& var)
         std::fclose(f);
     }
 
+    var.coord = new array_t(var.nnode);
+    var.connectivity = new conn_t(var.nelem);
+    create_elemmarkers(param, var);
     allocate_variables(param, var);
 
     /* Reading save file */
@@ -260,9 +263,7 @@ void restart(const Param& param, Variables& var)
         BinaryInput bin(filename);
         std::cout << "  Reading " << filename << "...\n";
 
-        var.coord = new array_t;
         bin.read_array(*var.coord, "coordinate", var.nnode);
-        var.connectivity = new conn_t;
         bin.read_array(*var.connectivity, "connectivity", var.nelem);
 
         bin.read_array(*var.vel, "velocity", var.nnode);
@@ -284,23 +285,27 @@ void restart(const Param& param, Variables& var)
         BinaryInput bin(filename);
         std::cout << "  Reading " << filename << "...\n";
 
+        double_vec tmp(3);
+        bin.read_array(tmp, "time dt compensation_pressure", 3);
+        var.time = tmp[0];
+        var.dt  = tmp[1];
+        var.compensation_pressure = tmp[2];
+
         var.segment = new segment_t;
         bin.read_array(*var.segment, "segment", var.nseg);
         var.segflag = new segflag_t;
         bin.read_array(*var.segflag, "segflag", var.nseg);
         var.regattr = new regattr_t;
         bin.read_array(*var.regattr, "regattr", var.nelem);
+
+        var.markerset = new MarkerSet(param, var, bin);
     }
 
-    std::exit(1);
     create_boundary_flags(var);
     create_boundary_nodes(var);
     create_boundary_facets(var);
     create_support(var);
     create_elem_groups(var);
-    create_elemmarkers(param, var);
-
-    // TODO: read markers
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
@@ -309,6 +314,7 @@ void restart(const Param& param, Variables& var)
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     apply_vbcs(param, var, *var.vel);
+
 }
 
 
