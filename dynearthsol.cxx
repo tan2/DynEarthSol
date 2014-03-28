@@ -61,8 +61,7 @@ void restart(const Param& param, Variables& var)
         std::snprintf(filename, 255, "%s.info", param.sim.restarting_from_modelname.c_str());
         std::FILE *f = std::fopen(filename, "r");
         int frame, steps, nnode, nelem, nseg;
-        bool found = false;
-        while (!found) {
+        while (1) {
             int n = std::fscanf(f, "%d %d %*f %*f %*f %d %d %d\n",
                                 &frame, &steps, &nnode, &nelem, &nseg);
             if (n != 5) {
@@ -70,7 +69,7 @@ void restart(const Param& param, Variables& var)
                 std::exit(1);
             }
             if (frame == param.sim.restarting_from_frame)
-                found = true;
+                break;
         }
 
         var.steps = steps;
