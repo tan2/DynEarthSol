@@ -150,6 +150,10 @@ void restart(const Param& param, Variables& var)
         var.time = tmp[0];
         var.dt  = tmp[1];
         var.compensation_pressure = tmp[2];
+
+        // the next two fields are not needed for restarting
+        bin_save.read_array(*var.elquality, "mesh quality", var.nelem);
+        bin_save.read_array(*var.force, "force", var.nnode);
     }
 }
 
