@@ -200,9 +200,14 @@ void BinaryInput::seek_to_array(const char *name)
 template <typename T>
 void BinaryInput::read_array(std::vector<T>& A, const char *name, int size)
 {
+    if (A.size() != size) {
+        std::cerr << "Error: array size mismatches: " << name << ' ' << size << '\n';
+        std::exit(1);
+    }
+
     seek_to_array(name);
-    A.resize(size);
     int n = std::fread(A.data(), sizeof(T), size, f);
+
     if (n != size) {
         std::cerr << "Error: cannot read array: " << name << '\n';
         std::exit(1);
@@ -213,9 +218,14 @@ void BinaryInput::read_array(std::vector<T>& A, const char *name, int size)
 template <typename T, int N>
 void BinaryInput::read_array(Array2D<T,N>& A, const char *name, int size)
 {
+    if (A.size() != size) {
+        std::cerr << "Error: array size mismatches: " << name << ' ' << size << '\n';
+        std::exit(1);
+    }
+
     seek_to_array(name);
-    A.resize(size);
     int n = std::fread(A.data(), sizeof(T), size*N, f);
+
     if (n != N*size) {
         std::cerr << "Error: cannot read array: " << name << '\n';
         std::exit(1);

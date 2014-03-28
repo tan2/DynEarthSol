@@ -104,11 +104,11 @@ void restart(const Param& param, Variables& var)
         var.connectivity = new conn_t(var.nelem);
         bin_save.read_array(*var.connectivity, "connectivity", var.nelem);
 
-        var.segment = new segment_t;
+        var.segment = new segment_t(var.nseg);
         bin_chkpt.read_array(*var.segment, "segment", var.nseg);
-        var.segflag = new segflag_t;
+        var.segflag = new segflag_t(var.nseg);
         bin_chkpt.read_array(*var.segflag, "segflag", var.nseg);
-        var.regattr = new regattr_t;
+        var.regattr = new regattr_t(var.nelem);
         bin_chkpt.read_array(*var.regattr, "regattr", var.nelem);
     }
 

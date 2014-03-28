@@ -65,14 +65,6 @@ public:
         n_ = 0;
     }
 
-    void resize(int size) {
-        if (n_ == size) return;
-
-        delete [] a_;
-        a_ = new T[N*size];
-        n_ = size;
-    }
-
     //
     // index accessing
     //
