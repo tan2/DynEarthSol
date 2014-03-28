@@ -250,55 +250,35 @@ void restart(const Param& param, Variables& var)
         std::fclose(f);
     }
 
-    var.coord = new array_t(var.nnode);
-    var.connectivity = new conn_t(var.nelem);
-    create_elemmarkers(param, var);
-    allocate_variables(param, var);
+    char filename_save[256];
+    std::snprintf(filename_save, 255, "%s.save.%06d",
+                  param.sim.restarting_from_modelname.c_str(), param.sim.restarting_from_frame);
+    BinaryInput bin_save(filename_save);
+    std::cout << "  Reading " << filename_save << "...\n";
 
-    /* Reading save file */
+    char filename_chkpt[256];
+    std::snprintf(filename_chkpt, 255, "%s.chkpt.%06d",
+                  param.sim.restarting_from_modelname.c_str(), param.sim.restarting_from_frame);
+    BinaryInput bin_chkpt(filename_chkpt);
+    std::cout << "  Reading " << filename_chkpt << "...\n";
+
+    //
+    // Following the same procedure in init()
+    //
+
+    // Reading mesh, replacing create_new_mesh()
     {
-        char filename[256];
-        std::snprintf(filename, 255, "%s.save.%06d",
-                      param.sim.restarting_from_modelname.c_str(), param.sim.restarting_from_frame);
-        BinaryInput bin(filename);
-        std::cout << "  Reading " << filename << "...\n";
-
-        bin.read_array(*var.coord, "coordinate", var.nnode);
-        bin.read_array(*var.connectivity, "connectivity", var.nelem);
-
-        bin.read_array(*var.vel, "velocity", var.nnode);
-        bin.read_array(*var.temperature, "temperature", var.nnode);
-        bin.read_array(*var.plstrain, "plastic strain", var.nelem);
-        bin.read_array(*var.strain_rate, "strain-rate", var.nelem);
-        bin.read_array(*var.strain, "strain", var.nelem);
-        bin.read_array(*var.stress, "stress", var.nelem);
-
-        // print(std::cout, *var.connectivity);
-        // std::cout << '\n';
-    }
-
-    /* Reading checkpoint file */
-    {
-        char filename[256];
-        std::snprintf(filename, 255, "%s.chkpt.%06d",
-                      param.sim.restarting_from_modelname.c_str(), param.sim.restarting_from_frame);
-        BinaryInput bin(filename);
-        std::cout << "  Reading " << filename << "...\n";
-
-        double_vec tmp(3);
-        bin.read_array(tmp, "time dt compensation_pressure", 3);
-        var.time = tmp[0];
-        var.dt  = tmp[1];
-        var.compensation_pressure = tmp[2];
+        var.coord = new array_t(var.nnode);
+        bin_save.read_array(*var.coord, "coordinate", var.nnode);
+        var.connectivity = new conn_t(var.nelem);
+        bin_save.read_array(*var.connectivity, "connectivity", var.nelem);
 
         var.segment = new segment_t;
-        bin.read_array(*var.segment, "segment", var.nseg);
+        bin_chkpt.read_array(*var.segment, "segment", var.nseg);
         var.segflag = new segflag_t;
-        bin.read_array(*var.segflag, "segflag", var.nseg);
+        bin_chkpt.read_array(*var.segflag, "segflag", var.nseg);
         var.regattr = new regattr_t;
-        bin.read_array(*var.regattr, "regattr", var.nelem);
-
-        var.markerset = new MarkerSet(param, var, bin);
+        bin_chkpt.read_array(*var.regattr, "regattr", var.nelem);
     }
 
     create_boundary_flags(var);
@@ -306,8 +286,15 @@ void restart(const Param& param, Variables& var)
     create_boundary_facets(var);
     create_support(var);
     create_elem_groups(var);
+    create_elemmarkers(param, var);
+
+    // Replacing create_markers()
+    var.markerset = new MarkerSet(param, var, bin_chkpt);
+
+    allocate_variables(param, var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
+    bin_chkpt.read_array(*var.volume_old, "volume_old", var.nelem);
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
@@ -315,6 +302,24 @@ void restart(const Param& param, Variables& var)
 
     apply_vbcs(param, var, *var.vel);
 
+    // Initializing field variables
+    {
+        bin_save.read_array(*var.vel, "velocity", var.nnode);
+        bin_save.read_array(*var.temperature, "temperature", var.nnode);
+        bin_save.read_array(*var.strain_rate, "strain-rate", var.nelem);
+        bin_save.read_array(*var.strain, "strain", var.nelem);
+        bin_save.read_array(*var.stress, "stress", var.nelem);
+        bin_save.read_array(*var.plstrain, "plastic strain", var.nelem);
+    }
+
+    // Misc. items
+    {
+        double_vec tmp(3);
+        bin_chkpt.read_array(tmp, "time dt compensation_pressure", 3);
+        var.time = tmp[0];
+        var.dt  = tmp[1];
+        var.compensation_pressure = tmp[2];
+    }
 }
 
 
