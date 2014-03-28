@@ -58,7 +58,7 @@ private:
     void random_eta( double* );
     void append_marker( double *eta, int el, int mt );
     void random_markers( const Param&, Variables& );
-    void allocate_markerdata( const int, const int );
+    void allocate_markerdata( const int );
 
 };
 

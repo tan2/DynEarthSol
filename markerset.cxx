@@ -37,7 +37,7 @@ MarkerSet::MarkerSet(const Param& param, Variables& var)
 }
 
 
-void MarkerSet::allocate_markerdata( const int max_markers, const int mpe )
+void MarkerSet::allocate_markerdata( const int max_markers )
 {
     _reserved_space = max_markers;
     _eta = new shapefn( max_markers );
@@ -113,7 +113,7 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
     const int max_markers = num_markers * over_alloc_ratio;
 
     // allocate memory for data members.
-    allocate_markerdata( max_markers, mpe );
+    allocate_markerdata( max_markers );
     
     // initialize random seed:
     srand (time(NULL));
