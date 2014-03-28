@@ -43,7 +43,7 @@ class Dynearthsol:
     def read_info(self):
         tmp = np.fromfile(self.modelname + '.info', dtype=float, sep=' ')
         tmp.shape = (-1, 8)
-        self.frames = tmp[:,0].astype(int)
+        self.frames = list(tmp[:,0].astype(int))
         self.nnode_list = tmp[:,5].astype(int)
         self.nelem_list = tmp[:,6].astype(int)
         return
@@ -85,8 +85,9 @@ class Dynearthsol:
 
     def read_field(self, frame, name):
         pos = self.field_pos[name]
-        nnode = self.nnode_list[frame]
-        nelem = self.nelem_list[frame]
+        i = self.frames.index(frame)
+        nnode = self.nnode_list[i]
+        nelem = self.nelem_list[i]
 
         dtype = np.float64 if name != 'connectivity' else np.int32
         count = 0
@@ -136,16 +137,14 @@ def main(modelname, start, end):
 
     for i, frame in enumerate(des.frames[start:end]):
         des.read_header(frame)
-        # convert from numpy.int to python int
-        frame = int(frame)
         suffix = '{0:0=6}'.format(frame)
         print('Converting frame #{0}'.format(suffix))
 
         filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
         fvtu = open(filename, 'wb')
 
-        nnode = des.nnode_list[frame]
-        nelem = des.nelem_list[frame]
+        nnode = des.nnode_list[i]
+        nelem = des.nelem_list[i]
         try:
             vtu_header(fvtu, nnode, nelem)
 
@@ -262,7 +261,8 @@ def convert_vector(des, frame, name, fvtu):
     if des.ndims == 2:
         # VTK requires vector field (velocity, coordinate) has 3 components.
         # Allocating a 3-vector tmp array for VTK data output.
-        tmp = np.zeros((des.nnode_list[frame], 3), dtype=field.dtype)
+        i = des.frames.index(frame)
+        tmp = np.zeros((des.nnode_list[i], 3), dtype=field.dtype)
         tmp[:,:des.ndims] = field
     else:
         tmp = field
