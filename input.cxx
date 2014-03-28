@@ -44,6 +44,8 @@ static void declare_parameters(po::options_description &cfg,
 
         ("sim.checkpoint_frame_interval", po::value<int>(&p.sim.checkpoint_frame_interval)->default_value(10),
          "How frequent to write checkpoint file (used for restarting simulation)?")
+        ("sim.restarting_from_modelname", po::value<std::string>(&p.sim.restarting_from_modelname),
+         "Prefix for the checkpoint and save files for restarting.")
         ("sim.restarting_from_frame", po::value<int>(&p.sim.restarting_from_frame),
          "Which output frame to read for restarting?")
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
@@ -406,6 +408,19 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     if ( ! vm.count("sim.output_time_interval_in_yr") )
         p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();;
 
+    //
+    // These parameters are required when restarting
+    //
+    if (p.sim.is_restarting) {
+        if ( ! vm.count("sim.restarting_from_modelname") ) {
+            std::cerr << "Must provide sim.restarting_from_modelname when restarting.\n";
+            std::exit(1);
+        }
+        if ( ! vm.count("sim.restarting_from_frame") ) {
+            std::cerr << "Must provide sim.restarting_from_frame when restarting.\n";
+            std::exit(1);
+        }
+    }
 
     if (p.sim.output_averaged_fields == 1)
         p.sim.output_averaged_fields = p.mesh.quality_check_step_interval;

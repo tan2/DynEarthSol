@@ -227,7 +227,7 @@ void restart(const Param& param, Variables& var)
     /* Reading info file */
     {
         char filename[256];
-        std::snprintf(filename, 255, "%s.info", param.sim.modelname.c_str());
+        std::snprintf(filename, 255, "%s.info", param.sim.restarting_from_modelname.c_str());
         std::FILE *f = std::fopen(filename, "r");
         int frame, steps, nnode, nelem, nseg;
         bool found = false;
@@ -259,7 +259,7 @@ void restart(const Param& param, Variables& var)
     {
         char filename[256];
         std::snprintf(filename, 255, "%s.save.%06d",
-                      param.sim.modelname.c_str(), param.sim.restarting_from_frame);
+                      param.sim.restarting_from_modelname.c_str(), param.sim.restarting_from_frame);
         BinaryInput bin(filename);
         std::cout << "  Reading " << filename << "...\n";
 
@@ -281,7 +281,7 @@ void restart(const Param& param, Variables& var)
     {
         char filename[256];
         std::snprintf(filename, 255, "%s.chkpt.%06d",
-                      param.sim.modelname.c_str(), param.sim.restarting_from_frame);
+                      param.sim.restarting_from_modelname.c_str(), param.sim.restarting_from_frame);
         BinaryInput bin(filename);
         std::cout << "  Reading " << filename << "...\n";
 

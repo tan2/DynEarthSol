@@ -39,6 +39,7 @@ struct Sim {
     bool has_output_during_remeshing;
 
     std::string modelname;
+    std::string restarting_from_modelname;
 };
 
 struct Mesh {
