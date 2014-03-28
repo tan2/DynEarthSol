@@ -30,6 +30,4 @@ public:
 };
 
 
-void restart(const Param& param, Variables& var);
-
 #endif
