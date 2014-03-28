@@ -102,7 +102,7 @@ int main(int argc, const char* argv[])
         output.write(var, false);
     }
     else {
-        restart();
+        restart(param, var);
     }
 
     var.dt = compute_dt(param, var);

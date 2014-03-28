@@ -34,6 +34,7 @@ struct Sim {
     int output_step_interval;
     int output_averaged_fields;
     int checkpoint_frame_interval;
+    int restarting_from_frame;
     bool is_restarting;
     bool has_output_during_remeshing;
 

@@ -228,3 +228,18 @@ template
 void BinaryInput::read_array<double>(std::vector<double>& A, const char *name, int size);
 template
 void BinaryInput::read_array<double,NDIMS>(Array2D<double,NDIMS>& A, const char *name, int size);
+template
+void BinaryInput::read_array<double,NSTR>(Array2D<double,NSTR>& A, const char *name, int size);
+#ifdef THREED // when 2d, NSTR == NODES_PER_ELEM == 3
+template
+void BinaryInput::read_array<double,NODES_PER_ELEM>(Array2D<double,NODES_PER_ELEM>& A, const char *name, int size);
+#endif
+template
+void BinaryInput::read_array<double,1>(Array2D<double,1>& A, const char *name, int size);
+template
+void BinaryInput::read_array<int,NDIMS>(Array2D<int,NDIMS>& A, const char *name, int size);
+template
+void BinaryInput::read_array<int,NODES_PER_ELEM>(Array2D<int,NODES_PER_ELEM>& A, const char *name, int size);
+template
+void BinaryInput::read_array<int,1>(Array2D<int,1>& A, const char *name, int size);
+

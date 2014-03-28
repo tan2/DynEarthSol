@@ -44,6 +44,8 @@ static void declare_parameters(po::options_description &cfg,
 
         ("sim.checkpoint_frame_interval", po::value<int>(&p.sim.checkpoint_frame_interval)->default_value(10),
          "How frequent to write checkpoint file (used for restarting simulation)?")
+        ("sim.restarting_from_frame", po::value<int>(&p.sim.restarting_from_frame),
+         "Which output frame to read for restarting?")
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
          "Restarting from previous checkpoint file?")
 

@@ -14,6 +14,12 @@
 #include "matprops.hpp"
 #include "output.hpp"
 
+#include "bc.hpp"
+#include "fields.hpp"
+#include "geometry.hpp"
+#include "mesh.hpp"
+#include "utils.hpp"
+
 
 Output::Output(const Param& param, double start_time, int start_frame) :
     modelname(param.sim.modelname),
@@ -214,12 +220,95 @@ void Output::write_checkpoint(const Variables& var)
 }
 
 
-void restart()
+void restart(const Param& param, Variables& var)
 {
-    std::cerr << "Error: restarting not implemented.\n";
-    std::exit(1);
-
     std::cout << "Initializing mesh and field data from checkpoints...\n";
+
+    /* Reading info file */
+    {
+        char filename[256];
+        std::snprintf(filename, 255, "%s.info", param.sim.modelname.c_str());
+        std::FILE *f = std::fopen(filename, "r");
+        int frame, steps, nnode, nelem, nseg;
+        bool found = false;
+        while (!found) {
+            int n = std::fscanf(f, "%d %d %*f %*f %*f %d %d %d\n",
+                                &frame, &steps, &nnode, &nelem, &nseg);
+            if (n != 5) {
+                std::cerr << "Error: reading info file: " << filename << '\n';
+                std::exit(1);
+            }
+            if (frame == param.sim.restarting_from_frame)
+                found = true;
+        }
+
+        var.steps = steps;
+        var.nnode = nnode;
+        var.nelem = nelem;
+        var.nseg = nseg;
+
+        std::fclose(f);
+    }
+
+    allocate_variables(param, var);
+
+    /* Reading save file */
+    {
+        char filename[256];
+        std::snprintf(filename, 255, "%s.save.%06d",
+                      param.sim.modelname.c_str(), param.sim.restarting_from_frame);
+        BinaryInput bin(filename);
+        std::cout << "  Reading " << filename << "...\n";
+
+        var.coord = new array_t;
+        bin.read_array(*var.coord, "coordinate", var.nnode);
+        var.connectivity = new conn_t;
+        bin.read_array(*var.connectivity, "connectivity", var.nelem);
+
+        bin.read_array(*var.vel, "velocity", var.nnode);
+        bin.read_array(*var.temperature, "temperature", var.nnode);
+        bin.read_array(*var.plstrain, "plastic strain", var.nelem);
+        bin.read_array(*var.strain_rate, "strain-rate", var.nelem);
+        bin.read_array(*var.strain, "strain", var.nelem);
+        bin.read_array(*var.stress, "stress", var.nelem);
+
+        // print(std::cout, *var.connectivity);
+        // std::cout << '\n';
+    }
+
+    /* Reading checkpoint file */
+    {
+        char filename[256];
+        std::snprintf(filename, 255, "%s.chkpt.%06d",
+                      param.sim.modelname.c_str(), param.sim.restarting_from_frame);
+        BinaryInput bin(filename);
+        std::cout << "  Reading " << filename << "...\n";
+
+        var.segment = new segment_t;
+        bin.read_array(*var.segment, "segment", var.nseg);
+        var.segflag = new segflag_t;
+        bin.read_array(*var.segflag, "segflag", var.nseg);
+        var.regattr = new regattr_t;
+        bin.read_array(*var.regattr, "regattr", var.nelem);
+    }
+
+    std::exit(1);
+    create_boundary_flags(var);
+    create_boundary_nodes(var);
+    create_boundary_facets(var);
+    create_support(var);
+    create_elem_groups(var);
+    create_elemmarkers(param, var);
+
+    // TODO: read markers
+
+    compute_volume(*var.coord, *var.connectivity, *var.volume);
+    compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
+                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
+                     *var.shpdx, *var.shpdy, *var.shpdz);
+
+    apply_vbcs(param, var, *var.vel);
 }
 
 
