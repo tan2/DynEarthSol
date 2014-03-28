@@ -107,8 +107,9 @@ void restart(const Param& param, Variables& var)
         bin_chkpt.read_array(*var.segment, "segment", var.nseg);
         var.segflag = new segflag_t(var.nseg);
         bin_chkpt.read_array(*var.segflag, "segflag", var.nseg);
-        var.regattr = new regattr_t(var.nelem);
-        bin_chkpt.read_array(*var.regattr, "regattr", var.nelem);
+        // Note: regattr is not needed for restarting
+        // var.regattr = new regattr_t(var.nelem);
+        // bin_chkpt.read_array(*var.regattr, "regattr", var.nelem);
     }
 
     create_boundary_flags(var);

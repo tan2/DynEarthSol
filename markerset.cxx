@@ -128,8 +128,37 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
     // Generate particles in each element.
     for( int e = 0; e < ne; e++ )
         for( int m = 0; m < mpe; m++ ) {
-            int mt = (int)(*((*var.regattr)[e])); // mattype should take a reginal attribute assigned during meshing.
-            append_random_marker_in_elem(e, mt);
+            // random barycentric coordinate
+            double eta[NODES_PER_ELEM];
+            random_eta(eta);
+
+            // decide the mattype of markers
+            int mt;
+            if (param.ic.mattype_option == 0) {
+                mt = (int)(*((*var.regattr)[e])); // mattype should take a reginal attribute assigned during meshing.
+            }
+            else {
+                double p[NDIMS] = {0};
+                const int *conn = (*var.connectivity)[e];
+                for(int i=0; i<NDIMS; i++) {
+                    for(int j=0; j<NODES_PER_ELEM; j++)
+                        p[i] += (*var.coord)[ conn[j] ][i];
+                }
+                // modify mt according to the marker coordinate p
+                switch (param.ic.mattype_option) {
+                case 1:
+                    // lower half: 1; upper half: 0
+                    if (p[NDIMS-1] < -0.5 * param.mesh.zlength)
+                        mt = 1;
+                    else
+                        mt = 0;
+                    break;
+                default:
+                    std::cerr << "Error: unknown ic.mattype_option: " << param.ic.mattype_option << '\n';
+                    std::exit(1);
+                }
+            }
+            append_marker(eta, e, mt);
             ++(*var.elemmarkers)[e][mt];
         }
 }

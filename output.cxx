@@ -205,7 +205,8 @@ void Output::write_checkpoint(const Variables& var)
 
     bin.write_array(*var.segment, "segment");
     bin.write_array(*var.segflag, "segflag");
-    bin.write_array(*var.regattr, "regattr");
+    // Note: regattr is not needed for restarting
+    // bin.write_array(*var.regattr, "regattr");
 
     bin.write_array(*var.volume_old, "volume_old");
 

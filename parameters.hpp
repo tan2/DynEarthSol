@@ -101,6 +101,7 @@ struct BC {
 };
 
 struct IC {
+    int mattype_option;
     int weakzone_option;
     double weakzone_plstrain;
     double weakzone_azimuth;
