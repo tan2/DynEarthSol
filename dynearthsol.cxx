@@ -253,10 +253,10 @@ int main(int argc, const char* argv[])
             (((var.steps - starting_step) == next_regular_frame * param.sim.output_step_interval) ||
              ((var.time - starting_time) > next_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC)) ) {
 
-            output.write(var);
-
             if (next_regular_frame % param.sim.checkpoint_frame_interval == 0)
                 output.write_checkpoint(var);
+
+            output.write(var);
 
             next_regular_frame ++;
         }
