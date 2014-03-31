@@ -145,11 +145,10 @@ void restart(const Param& param, Variables& var)
 
     // Misc. items
     {
-        double_vec tmp(3);
-        bin_chkpt.read_array(tmp, "time dt compensation_pressure", 3);
+        double_vec tmp(2);
+        bin_chkpt.read_array(tmp, "time compensation_pressure", 2);
         var.time = tmp[0];
-        var.dt  = tmp[1];
-        var.compensation_pressure = tmp[2];
+        var.compensation_pressure = tmp[1];
 
         // the next two fields are not needed for restarting
         bin_save.read_array(*var.elquality, "mesh quality", var.nelem);
