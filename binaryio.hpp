@@ -19,6 +19,8 @@ public:
     BinaryOutput(const char *filename);
     ~BinaryOutput();
 
+    void close();
+
     template <typename T>
     void write_array(const std::vector<T>& A, const char *name);
 

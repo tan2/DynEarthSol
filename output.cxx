@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdio>
 #include <iostream>
 
@@ -139,12 +140,28 @@ void Output::write(const Variables& var, bool is_averaged)
 
     //bin.write_array(*var.bcflag, "bcflag");
 
+    bin.close();
     std::cout << "  Output # " << frame
               << ", step = " << var.steps
               << ", time = " << var.time / YEAR2SEC << " yr"
               << ", dt = " << dt / YEAR2SEC << " yr.\n";
 
     frame ++;
+
+    {
+        // check for NaN in coordinate
+        for (int i=0; i<var.nnode; i++)
+            for (int j=0; j<NDIMS; j++) {
+                if (std::isnan((*var.coord)[i][j])) {
+                    std::cerr << "Error: coordinate becomes NaN\n";
+                    std::exit(1);
+                }
+                if (std::isinf((*var.coord)[i][j])) {
+                    std::cerr << "Error: coordinate becomes Infinity\n";
+                    std::exit(1);
+                }
+            }
+    }
 }
 
 

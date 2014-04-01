@@ -50,12 +50,22 @@ BinaryOutput::BinaryOutput(const char *filename)
 
 BinaryOutput::~BinaryOutput()
 {
-    /* write header buffer to the beginning of file */
-    std::fseek(f, 0, SEEK_SET);
-    std::fwrite(header, sizeof(char), headerlen, f);
-    std::fclose(f);
+    close();
+}
+
+
+void BinaryOutput::close()
+{
+    if (f) {
+        /* write header buffer to the beginning of file */
+        std::fseek(f, 0, SEEK_SET);
+        std::fwrite(header, sizeof(char), headerlen, f);
+        std::fclose(f);
+        f = NULL;
+    }
 
     delete [] header;
+    header = NULL;
 }
 
 
