@@ -346,16 +346,16 @@ void MarkerSet::write(BinaryOutput &bin)
 void MarkerSet::read(Variables &var, BinaryInput &bin)
 {
     int_vec itmp(2);
-    bin.read_array(itmp, "markeset size", 2);
+    bin.read_array(itmp, "markeset size");
     _nmarkers = itmp[0];
     _last_id = itmp[1];
 
     allocate_markerdata(_nmarkers);
 
-    bin.read_array(*_eta, "markerset.eta", _nmarkers);
-    bin.read_array(*_elem, "markerset.elem", _nmarkers);
-    bin.read_array(*_mattype, "markerset.mattype", _nmarkers);
-    bin.read_array(*_id, "markerset.id", _nmarkers);
+    bin.read_array(*_eta, "markerset.eta");
+    bin.read_array(*_elem, "markerset.elem");
+    bin.read_array(*_mattype, "markerset.mattype");
+    bin.read_array(*_id, "markerset.id");
 
     for( int i = 0; i < _nmarkers; i++ ) {
         int e = (*_elem)[i];

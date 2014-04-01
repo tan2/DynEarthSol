@@ -99,14 +99,14 @@ void restart(const Param& param, Variables& var)
     // Reading mesh, replacing create_new_mesh()
     {
         var.coord = new array_t(var.nnode);
-        bin_save.read_array(*var.coord, "coordinate", var.nnode);
+        bin_save.read_array(*var.coord, "coordinate");
         var.connectivity = new conn_t(var.nelem);
-        bin_save.read_array(*var.connectivity, "connectivity", var.nelem);
+        bin_save.read_array(*var.connectivity, "connectivity");
 
         var.segment = new segment_t(var.nseg);
-        bin_chkpt.read_array(*var.segment, "segment", var.nseg);
+        bin_chkpt.read_array(*var.segment, "segment");
         var.segflag = new segflag_t(var.nseg);
-        bin_chkpt.read_array(*var.segflag, "segflag", var.nseg);
+        bin_chkpt.read_array(*var.segflag, "segflag");
         // Note: regattr is not needed for restarting
         // var.regattr = new regattr_t(var.nelem);
         // bin_chkpt.read_array(*var.regattr, "regattr", var.nelem);
@@ -125,7 +125,7 @@ void restart(const Param& param, Variables& var)
     allocate_variables(param, var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
-    bin_chkpt.read_array(*var.volume_old, "volume_old", var.nelem);
+    bin_chkpt.read_array(*var.volume_old, "volume_old");
     compute_mass(param, *var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
@@ -135,24 +135,24 @@ void restart(const Param& param, Variables& var)
 
     // Initializing field variables
     {
-        bin_save.read_array(*var.vel, "velocity", var.nnode);
-        bin_save.read_array(*var.temperature, "temperature", var.nnode);
-        bin_save.read_array(*var.strain_rate, "strain-rate", var.nelem);
-        bin_save.read_array(*var.strain, "strain", var.nelem);
-        bin_save.read_array(*var.stress, "stress", var.nelem);
-        bin_save.read_array(*var.plstrain, "plastic strain", var.nelem);
+        bin_save.read_array(*var.vel, "velocity");
+        bin_save.read_array(*var.temperature, "temperature");
+        bin_save.read_array(*var.strain_rate, "strain-rate");
+        bin_save.read_array(*var.strain, "strain");
+        bin_save.read_array(*var.stress, "stress");
+        bin_save.read_array(*var.plstrain, "plastic strain");
     }
 
     // Misc. items
     {
         double_vec tmp(2);
-        bin_chkpt.read_array(tmp, "time compensation_pressure", 2);
+        bin_chkpt.read_array(tmp, "time compensation_pressure");
         var.time = tmp[0];
         var.compensation_pressure = tmp[1];
 
         // the next two fields are not needed for restarting
-        bin_save.read_array(*var.elquality, "mesh quality", var.nelem);
-        bin_save.read_array(*var.force, "force", var.nnode);
+        bin_save.read_array(*var.elquality, "mesh quality");
+        bin_save.read_array(*var.force, "force");
     }
 }
 

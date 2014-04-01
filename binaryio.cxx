@@ -198,10 +198,13 @@ void BinaryInput::seek_to_array(const char *name)
 
 
 template <typename T>
-void BinaryInput::read_array(std::vector<T>& A, const char *name, int size)
+void BinaryInput::read_array(std::vector<T>& A, const char *name)
 {
-    if (A.size() != size) {
-        std::cerr << "Error: array size mismatches: " << name << ' ' << size << '\n';
+    /* The caller must ensure A is of right size to hold the array */
+
+    int size = A.size();
+    if (A.size() == 0) {
+        std::cerr << "Error: array size is 0: " << name << '\n';
         std::exit(1);
     }
 
@@ -216,10 +219,13 @@ void BinaryInput::read_array(std::vector<T>& A, const char *name, int size)
 
 
 template <typename T, int N>
-void BinaryInput::read_array(Array2D<T,N>& A, const char *name, int size)
+void BinaryInput::read_array(Array2D<T,N>& A, const char *name)
 {
-    if (A.size() != size) {
-        std::cerr << "Error: array size mismatches: " << name << ' ' << size << '\n';
+    /* The caller must ensure A is of right size to hold the array */
+
+    int size = A.size();
+    if (A.size() == 0) {
+        std::cerr << "Error: array size is 0: " << name << '\n';
         std::exit(1);
     }
 
@@ -235,23 +241,23 @@ void BinaryInput::read_array(Array2D<T,N>& A, const char *name, int size)
 
 // explicit instantiation
 template
-void BinaryInput::read_array<double>(std::vector<double>& A, const char *name, int size);
+void BinaryInput::read_array<double>(std::vector<double>& A, const char *name);
 template
-void BinaryInput::read_array<int>(std::vector<int>& A, const char *name, int size);
+void BinaryInput::read_array<int>(std::vector<int>& A, const char *name);
 template
-void BinaryInput::read_array<double,NDIMS>(Array2D<double,NDIMS>& A, const char *name, int size);
+void BinaryInput::read_array<double,NDIMS>(Array2D<double,NDIMS>& A, const char *name);
 template
-void BinaryInput::read_array<double,NSTR>(Array2D<double,NSTR>& A, const char *name, int size);
+void BinaryInput::read_array<double,NSTR>(Array2D<double,NSTR>& A, const char *name);
 #ifdef THREED // when 2d, NSTR == NODES_PER_ELEM == 3
 template
-void BinaryInput::read_array<double,NODES_PER_ELEM>(Array2D<double,NODES_PER_ELEM>& A, const char *name, int size);
+void BinaryInput::read_array<double,NODES_PER_ELEM>(Array2D<double,NODES_PER_ELEM>& A, const char *name);
 #endif
 template
-void BinaryInput::read_array<double,1>(Array2D<double,1>& A, const char *name, int size);
+void BinaryInput::read_array<double,1>(Array2D<double,1>& A, const char *name);
 template
-void BinaryInput::read_array<int,NDIMS>(Array2D<int,NDIMS>& A, const char *name, int size);
+void BinaryInput::read_array<int,NDIMS>(Array2D<int,NDIMS>& A, const char *name);
 template
-void BinaryInput::read_array<int,NODES_PER_ELEM>(Array2D<int,NODES_PER_ELEM>& A, const char *name, int size);
+void BinaryInput::read_array<int,NODES_PER_ELEM>(Array2D<int,NODES_PER_ELEM>& A, const char *name);
 template
-void BinaryInput::read_array<int,1>(Array2D<int,1>& A, const char *name, int size);
+void BinaryInput::read_array<int,1>(Array2D<int,1>& A, const char *name);
 

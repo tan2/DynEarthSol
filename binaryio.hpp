@@ -41,10 +41,10 @@ public:
     ~BinaryInput();
 
     template <typename T>
-    void read_array(std::vector<T>& A, const char *name, int size);
+    void read_array(std::vector<T>& A, const char *name);
 
     template <typename T, int N>
-    void read_array(Array2D<T,N>& A, const char *name, int size);
+    void read_array(Array2D<T,N>& A, const char *name);
 };
 
 #endif
