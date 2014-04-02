@@ -82,7 +82,9 @@ static void declare_parameters(po::options_description &cfg,
         ("mesh.resolution", po::value<double>(&p.mesh.resolution)->required(),
          "Spatial resolution (in meters)")
         ("mesh.smallest_size", po::value<double>(&p.mesh.smallest_size)->default_value(0.01),
-         "The size of smallest element relative to mesh resolution")
+         "The size of smallest element relative to an element with typical resolution")
+        ("mesh.largest_size", po::value<double>(&p.mesh.largest_size)->default_value(30),
+         "The size of largest element relative to an element with typical resolution")
         // for 2D only
         ("mesh.min_angle", po::value<double>(&p.mesh.min_angle)->default_value(32.),
          "Min. angle of all triangles (in degrees), for 2D only")
@@ -489,6 +491,12 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         p.mesh.refined_zonez.first = tmp[0];
         p.mesh.refined_zonez.second = tmp[1];
     }
+
+    if (p.mesh.smallest_size > p.mesh.largest_size) {
+        std::cerr << "Error: mesh.smallest_size is greater than mesh.largest_size.\n";
+        std::exit(1);
+    }
+
 
     //
     // bc

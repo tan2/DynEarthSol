@@ -312,7 +312,7 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
     const int nregions = (param.ic.mattype_option == 0) ? param.mat.nmat : 0;
     double *regattr = new double[nregions*attr_ndata]; // each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
 
-    double max_elem_size;
+    double elem_size;  // size of a typical element
     int vertex_per_polygon = 4;
 
 #ifndef THREED
@@ -352,7 +352,7 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
         init_segflags[2] = BOUNDX1;
         init_segflags[3] = BOUNDZ1;
 
-        max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
+        elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
 
         // Need to modify when nregions > 1.
         for (int i = 0; i < nregions; i++) {
@@ -454,7 +454,7 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
         init_segflags[4] = BOUNDY1;
         init_segflags[5] = BOUNDZ1;
 
-        max_elem_size = 0.7 * param.mesh.resolution
+        elem_size = 0.7 * param.mesh.resolution
             * param.mesh.resolution * param.mesh.resolution;
 
         // Need to modify when nregions > 1. Using .poly file might be better.
@@ -470,7 +470,7 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
 
     points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags, nregions, regattr,
-                   max_elem_size, vertex_per_polygon);
+                   elem_size, vertex_per_polygon);
 
     delete [] points;
     delete [] init_segments;
@@ -577,7 +577,8 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
         init_segflags[2] = BOUNDX1;
         init_segflags[3] = BOUNDZ1;
 
-        max_elem_size = 40 * d * d;
+        max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution
+            * param.mesh.largest_size;
 
         // Need to modify when nregions > 1.
         for (int i = 0; i < nregions; i++) {
@@ -695,7 +696,8 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
         init_segflags[4] = BOUNDY1;
         init_segflags[5] = BOUNDZ1;
 
-        max_elem_size = 40 * d * d * d;
+        max_elem_size = 0.7 * param.mesh.resolution * param.mesh.resolution
+            * param.mesh.resolution * param.mesh.largest_size;
 
         // Need to modify when nregions > 1.
         for (int i = 0; i < nregions; i++) {
