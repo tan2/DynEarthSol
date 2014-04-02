@@ -143,8 +143,8 @@ def main(modelname, start, end):
         filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
         fvtu = open(filename, 'wb')
 
-        nnode = des.nnode_list[i]
-        nelem = des.nelem_list[i]
+        nnode = des.nnode_list[i+start]
+        nelem = des.nelem_list[i+start]
         try:
             vtu_header(fvtu, nnode, nelem)
 
