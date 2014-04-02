@@ -327,6 +327,10 @@ static void read_parameters_from_file
         po::store(po::parse_config_file<char>(filename, cfg), vm);
         po::notify(vm);
     }
+    catch (const boost::program_options::multiple_occurrences& e) {
+        std::cerr << e.what() << " from option: " << e.get_option_name() << '\n';
+        std::exit(1);
+    }
     catch (std::exception& e) {
         std::cerr << "Error reading config_file '" << filename << "'\n";
         std::cerr << e.what() << "\n";
