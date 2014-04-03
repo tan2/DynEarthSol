@@ -122,14 +122,14 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
         /* not_found */
 
         {
-            // Situation: q is in the upper element, but its nearest point is o!
-            // we won't find the enclosing element with the method above
-            //     x
-            //    / \   <-- this is a large triangle
-            //   / q \
-            //  x---- x
-            //   \-o-/   <-- this is a small triangle
-            //
+            /* Situation: q is in the upper element, but its nearest point is o!
+             * we won't find the enclosing element with the method above
+             *     x
+             *    / \   <-- this is a large triangle
+             *   / q                            \
+             *  x---- x
+             *   \-o-/   <-- this is a small triangle
+             */
 
             // this array contains the elements that have been searched so far
             int_vec searched(nn_elem);
