@@ -94,7 +94,7 @@ void Output::write(const Variables& var, bool is_averaged)
         // average_strain_rate = delta_strain / delta_t
         delta_plstrain = &delta_plstrain_avg;
     }
-    for (int i=0; i<delta_plstrain_avg.size(); ++i) {
+    for (std::size_t i=0; i<delta_plstrain_avg.size(); ++i) {
         delta_plstrain_avg[i] *= inv_dt;
     }
     bin.write_array(*delta_plstrain, "plastic strain-rate");
@@ -201,7 +201,7 @@ void Output::average_fields(Variables& var)
         for (int i=0; i<stress_avg.num_elements(); ++i) {
             s_avg[i] += s[i];
         }
-        for (int i=0; i<delta_plstrain_avg.size(); ++i) {
+        for (std::size_t i=0; i<delta_plstrain_avg.size(); ++i) {
             delta_plstrain_avg[i] += (*var.delta_plstrain)[i];
         }
     }
