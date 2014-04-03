@@ -504,16 +504,16 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
     dz = m.zlength * (z1 - z0) / (nz - 1);
 
     int npoints;
-    if (NDIMS == 2) {
-        npoints = nx * nz + 4 * (NDIMS - 1);
-    }
-    else {
-        y0 = std::max(m.refined_zoney.first, d / m.ylength);
-        y1 = std::min(m.refined_zoney.second, 1 - d / m.ylength);
-        ny = m.ylength * (y1 - y0) / d + 1;
-        dy = m.ylength * (y1 - y0) / (ny - 1);
-        npoints = nx * ny * nz + 4 * (NDIMS - 1);
-    }
+#ifndef THREED
+    npoints = nx * nz + 4 * (NDIMS - 1);
+#else
+    y0 = std::max(m.refined_zoney.first, d / m.ylength);
+    y1 = std::min(m.refined_zoney.second, 1 - d / m.ylength);
+    ny = m.ylength * (y1 - y0) / d + 1;
+    dy = m.ylength * (y1 - y0) / (ny - 1);
+    npoints = nx * ny * nz + 4 * (NDIMS - 1);
+#endif
+
     double *points = new double[npoints*NDIMS];
 
     int n_init_segments = 2 * NDIMS; // 2D:4;  3D:6
