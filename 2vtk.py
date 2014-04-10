@@ -155,15 +155,14 @@ def main(modelname, start, end):
 
             # averaged velocity is more stable and is preferred
             try:
-                vel = des.read_field(frame, 'velocity averaged')
+                convert_field(des, frame, 'velocity averaged', fvtu)
             except KeyError:
-                vel = des.read_field(frame, 'velocity')
-            vtk_dataarray(fvtu, vel, 'velocity')
+                convert_field(des, frame, 'velocity', fvtu)
 
-            convert_vector(des, frame, 'force', fvtu)
+            convert_field(des, frame, 'force', fvtu)
 
-            convert_scalar(des, frame, 'temperature', fvtu)
-            #convert_scalar(des, frame, 'bcflag', fvtu)
+            convert_field(des, frame, 'temperature', fvtu)
+            #convert_field(des, frame, 'bcflag', fvtu)
 
             # node number for debugging
             vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node number')
@@ -174,9 +173,9 @@ def main(modelname, start, end):
             #
             fvtu.write(b'  <CellData>\n')
 
-            convert_scalar(des, frame, 'mesh quality', fvtu)
-            convert_scalar(des, frame, 'plastic strain', fvtu)
-            convert_scalar(des, frame, 'plastic strain-rate', fvtu)
+            convert_field(des, frame, 'mesh quality', fvtu)
+            convert_field(des, frame, 'plastic strain', fvtu)
+            convert_field(des, frame, 'plastic strain-rate', fvtu)
 
             strain_rate = des.read_field(frame, 'strain-rate')
             srII = second_invariant(strain_rate)
@@ -207,8 +206,8 @@ def main(modelname, start, end):
                 for d in range(des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + component[d])
 
-            convert_scalar(des, frame, 'density', fvtu)
-            convert_scalar(des, frame, 'viscosity', fvtu)
+            convert_field(des, frame, 'density', fvtu)
+            convert_field(des, frame, 'viscosity', fvtu)
             effvisc = tII / (srII + 1e-45)
             vtk_dataarray(fvtu, effvisc, 'effective viscosity')
 
@@ -221,14 +220,14 @@ def main(modelname, start, end):
             # node coordinate
             #
             fvtu.write(b'  <Points>\n')
-            convert_vector(des, frame, 'coordinate', fvtu)
+            convert_field(des, frame, 'coordinate', fvtu)
             fvtu.write(b'  </Points>\n')
 
             #
             # element connectivity & types
             #
             fvtu.write(b'  <Cells>\n')
-            convert_scalar(des, frame, 'connectivity', fvtu)
+            convert_field(des, frame, 'connectivity', fvtu)
             vtk_dataarray(fvtu, (des.ndims+1)*np.array(range(1, nelem+1), dtype=np.int32), 'offsets')
             if des.ndims == 2:
                 # VTK_ TRIANGLE == 5
@@ -250,23 +249,23 @@ def main(modelname, start, end):
     return
 
 
-def convert_scalar(des, frame, name, fvtu):
+def convert_field(des, frame, name, fvtu):
     field = des.read_field(frame, name)
-    vtk_dataarray(fvtu, field, name)
-    return
+    if name in ('coordinate', 'velocity', 'velocity averaged', 'force'):
+        if des.ndims == 2:
+            # VTK requires vector field (velocity, coordinate) has 3 components.
+            # Allocating a 3-vector tmp array for VTK data output.
+            i = des.frames.index(frame)
+            tmp = np.zeros((des.nnode_list[i], 3), dtype=field.dtype)
+            tmp[:,:des.ndims] = field
+        else:
+            tmp = field
 
+        #if name == 'velocity averaged': name = 'velocity'
 
-def convert_vector(des, frame, name, fvtu):
-    field = des.read_field(frame, name)
-    if des.ndims == 2:
-        # VTK requires vector field (velocity, coordinate) has 3 components.
-        # Allocating a 3-vector tmp array for VTK data output.
-        i = des.frames.index(frame)
-        tmp = np.zeros((des.nnode_list[i], 3), dtype=field.dtype)
-        tmp[:,:des.ndims] = field
+        vtk_dataarray(fvtu, tmp, name, 3)
     else:
-        tmp = field
-    vtk_dataarray(fvtu, tmp, name, 3)
+        vtk_dataarray(fvtu, field, name)
     return
 
 
