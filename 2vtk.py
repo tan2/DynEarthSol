@@ -18,7 +18,6 @@ import numpy as np
 
 # 2D or 3D data?
 ndims = 2
-nstr = 3
 
 # Save in ASCII or encoded binary.
 # Some old VTK programs cannot read binary VTK files.
@@ -71,6 +70,12 @@ class Dynearthsol:
 
         self.ndims = int(first[2].split('=')[1])
         self.revision = int(first[3].split('=')[1])
+        if self.ndims == 2:
+            self.nstr = 3
+            self.component_names = ('XX', 'ZZ', 'XZ')
+        else:
+            self.nstr = 6
+            self.component_names = ('XX', 'YY', 'ZZ', 'XY', 'XZ', 'YZ')
 
         # parsing other lines
         self.field_pos = {}
@@ -93,8 +98,8 @@ class Dynearthsol:
         count = 0
         shape = (-1,)
         if name in set(['strain', 'strain-rate', 'stress', 'stress averaged']):
-            count = nstr * nelem
-            shape = (nelem, nstr)
+            count = self.nstr * nelem
+            shape = (nelem, self.nstr)
         elif name in set(['density', 'mesh quality', 'plastic strain', 'plastic strain-rate',
                           'viscosity']):
             count = nelem
@@ -126,14 +131,6 @@ def main(modelname, start, end):
 
     if end == -1:
         end = len(des.frames)
-
-    # 2D or 3D data?
-    if des.ndims == 2:
-        nstr = 3
-        component = ('XX', 'ZZ', 'XZ')
-    else:
-        nstr = 6
-        component = ('XX', 'YY', 'ZZ', 'XY', 'XZ', 'YZ')
 
     for i, frame in enumerate(des.frames[start:end]):
         des.read_header(frame)
@@ -182,7 +179,7 @@ def main(modelname, start, end):
             vtk_dataarray(fvtu, np.log10(srII+1e-45), 'strain-rate II log10')
             if output_tensor_components:
                 for d in range(des.nstr):
-                    vtk_dataarray(fvtu, strain_rate[:,d], 'strain-rate ' + component[d])
+                    vtk_dataarray(fvtu, strain_rate[:,d], 'strain-rate ' + des.component_names[d])
 
             strain = des.read_field(frame, 'strain')
             sI = first_invariant(strain)
@@ -191,7 +188,7 @@ def main(modelname, start, end):
             vtk_dataarray(fvtu, sII, 'strain II')
             if output_tensor_components:
                 for d in range(des.nstr):
-                    vtk_dataarray(fvtu, strain[:,d], 'strain ' + component[d])
+                    vtk_dataarray(fvtu, strain[:,d], 'strain ' + des.component_names[d])
 
             # averaged stress is more stable and is preferred
             try:
@@ -204,7 +201,7 @@ def main(modelname, start, end):
             vtk_dataarray(fvtu, tII, 'stress II')
             if output_tensor_components:
                 for d in range(des.nstr):
-                    vtk_dataarray(fvtu, stress[:,d], 'stress ' + component[d])
+                    vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
 
             convert_field(des, frame, 'density', fvtu)
             convert_field(des, frame, 'viscosity', fvtu)
@@ -261,7 +258,8 @@ def convert_field(des, frame, name, fvtu):
         else:
             tmp = field
 
-        #if name == 'velocity averaged': name = 'velocity'
+        # Rename 'velocity averaged' to 'velocity'
+        if name == 'velocity averaged': name = 'velocity'
 
         vtk_dataarray(fvtu, tmp, name, 3)
     else:
