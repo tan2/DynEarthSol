@@ -20,12 +20,12 @@ const int NSTR = NDIMS * (NDIMS + 1) / 2;
 
 // Flags for boundary
 typedef unsigned int uint;
-const uint BOUNDX0 = 1 << 0;
-const uint BOUNDX1 = 1 << 1;
-const uint BOUNDY0 = 1 << 2;
-const uint BOUNDY1 = 1 << 3;
-const uint BOUNDZ0 = 1 << 4;
-const uint BOUNDZ1 = 1 << 5;
+const uint BOUNDX0 = 1 << 0;  //  1, left
+const uint BOUNDX1 = 1 << 1;  //  2, right
+const uint BOUNDY0 = 1 << 2;  //  4, front
+const uint BOUNDY1 = 1 << 3;  //  8, back
+const uint BOUNDZ0 = 1 << 4;  // 16, bottom
+const uint BOUNDZ1 = 1 << 5;  // 32, top
 
 static const uint bdry[6] =
     {BOUNDX0,
