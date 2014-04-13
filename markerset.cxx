@@ -142,7 +142,7 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
                 const int *conn = (*var.connectivity)[e];
                 for(int i=0; i<NDIMS; i++) {
                     for(int j=0; j<NODES_PER_ELEM; j++)
-                        p[i] += (*var.coord)[ conn[j] ][i];
+                        p[i] += (*var.coord)[ conn[j] ][i] * eta[j];
                 }
                 // modify mt according to the marker coordinate p
                 switch (param.ic.mattype_option) {
