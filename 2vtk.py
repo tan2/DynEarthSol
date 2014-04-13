@@ -100,7 +100,8 @@ class Dynearthsol:
         if name in set(['strain', 'strain-rate', 'stress', 'stress averaged']):
             count = self.nstr * nelem
             shape = (nelem, self.nstr)
-        elif name in set(['density', 'mesh quality', 'plastic strain', 'plastic strain-rate',
+        elif name in set(['density', 'material', 'mesh quality',
+                          'plastic strain', 'plastic strain-rate',
                           'viscosity']):
             count = nelem
         elif name in set(['connectivity']):
@@ -204,6 +205,7 @@ def main(modelname, start, end):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
 
             convert_field(des, frame, 'density', fvtu)
+            convert_field(des, frame, 'material', fvtu)
             convert_field(des, frame, 'viscosity', fvtu)
             effvisc = tII / (srII + 1e-45)
             vtk_dataarray(fvtu, effvisc, 'effective viscosity')

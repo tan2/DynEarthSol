@@ -1,5 +1,7 @@
+#include <algorithm>  // For std::max_element
 #include <cmath>
 #include <cstdio>
+#include <iterator>  // For std::distance
 #include <iostream>
 
 #ifdef USE_OMP
@@ -133,6 +135,13 @@ void Output::write(const Variables& var, bool is_averaged)
         tmp[e] = var.mat->visc(e);
     }
     bin.write_array(tmp, "viscosity");
+
+    for (int e=0; e<var.nelem; ++e) {
+        // Find the most abundant marker mattype in this element
+        int_vec &a = (*var.elemmarkers)[e];
+        tmp[e] = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
+    }
+    bin.write_array(tmp, "material");
 
     //bin.write_array(*var.volume, "volume");
 
