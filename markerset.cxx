@@ -333,7 +333,7 @@ void MarkerSet::write(BinaryOutput &bin)
     int_vec itmp(2);
     itmp[0] = _nmarkers;
     itmp[1] = _last_id;
-    bin.write_array(itmp, "markeset size");
+    bin.write_array(itmp, "markerset size");
 
     bin.write_array(*_eta, "markerset.eta");
     bin.write_array(*_elem, "markerset.elem");
@@ -346,7 +346,7 @@ void MarkerSet::write(BinaryOutput &bin)
 void MarkerSet::read(Variables &var, BinaryInput &bin)
 {
     int_vec itmp(2);
-    bin.read_array(itmp, "markeset size");
+    bin.read_array(itmp, "markerset size");
     _nmarkers = itmp[0];
     _last_id = itmp[1];
 
