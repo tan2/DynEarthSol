@@ -51,6 +51,8 @@ static void declare_parameters(po::options_description &cfg,
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
          "Restarting from previous checkpoint file?")
 
+        ("sim.has_marker_output", po::value<bool>(&p.sim.has_marker_output)->default_value(false),
+         "Output marker coordinate and material?")
         ("sim.has_output_during_remeshing", po::value<bool>(&p.sim.has_output_during_remeshing)->default_value(false),
          "Output immediately before and after remeshing?")
         ("sim.output_averaged_fields", po::value<int>(&p.sim.output_averaged_fields)->default_value(1),

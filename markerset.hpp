@@ -22,8 +22,9 @@ public:
     void append_random_marker_in_elem( int el, int mt );
     void remove_marker(int i);
     void resize(const int);
-    void write(BinaryOutput &bin);
-    void read(Variables &var, BinaryInput &bin);
+    void write_chkpt_file(BinaryOutput &bin);
+    void read_chkpt_file(Variables &var, BinaryInput &bin);
+    void write_save_file(const Variables &var, BinaryOutput &bin);
 
     inline int get_nmarkers() const { return _nmarkers; }
     inline void set_nmarkers(int n) { _nmarkers = n; }

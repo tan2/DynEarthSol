@@ -9,6 +9,7 @@ private:
     const std::string &modelname;
     const double start_time;
     const int average_interval;
+    const bool has_marker_output;
     int frame;
 
     // stuffs for averging fields

@@ -7,6 +7,7 @@ usage: 2vtk.py [-a -c -t -h] modelname [start [end]]
 options:
     -a          save data in ASCII format (default: binary)
     -c          save files in current directory
+    -m          save marker data
     -t          save all tensor components (default: no component)
     -h,--help   show this help
 '''
@@ -29,6 +30,8 @@ output_in_cwd = False
 # Save indivisual components?
 output_tensor_components = False
 
+# Save markers?
+output_markers = False
 
 class Dynearthsol:
     '''Read output file of 2D/3D DynEarthSol'''
@@ -118,6 +121,35 @@ class Dynearthsol:
             f.seek(pos)
             field = np.fromfile(f, dtype=dtype, count=count).reshape(shape)
         return field
+
+
+    def read_markers(self, frame):
+        'Read and return marker data'
+        fname = self.get_fn(frame)
+        with open(fname) as f:
+
+            pos = self.field_pos['markerset size']
+            f.seek(pos)
+            nmarkers = np.fromfile(f, dtype=np.int32, count=1)[0]
+
+            marker_data = {'size': nmarkers}
+
+            # floating point
+            for name in ('markerset.coord',):
+                pos = self.field_pos[name]
+                f.seek(pos)
+                tmp = np.fromfile(f, dtype=np.float64, count=nmarkers*self.ndims)
+                marker_data[name] = tmp.reshape(-1, self.ndims)
+                #print(marker_data[name].shape, marker_data[name])
+
+            # int
+            for name in ('markerset.elem', 'markerset.mattype', 'markerset.id'):
+                pos = self.field_pos[name]
+                f.seek(pos)
+                marker_data[name] = np.fromfile(f, dtype=np.int32, count=nmarkers)
+                #print(marker_data[name].shape, marker_data[name])
+
+        return marker_data
 
 
 def main(modelname, start, end):
@@ -245,6 +277,54 @@ def main(modelname, start, end):
             fvtu.close()
             os.remove(filename)
             raise
+
+        #
+        # Converting marker
+        #
+        if output_markers:
+            filename = '{0}.{1}.vtp'.format(output_prefix, suffix)
+            fvtp = open(filename, 'wb')
+
+            try:
+                # read data
+                marker_data = des.read_markers(frame)
+                nmarkers = marker_data['size']
+                # write vtp header
+                vtp_header(fvtp, nmarkers)
+
+                # point-based data
+                fvtp.write('  <PointData>\n')
+                name = 'markerset.mattype'
+                vtk_dataarray(fvtp, marker_data[name], name)
+                name = 'markerset.elem'
+                vtk_dataarray(fvtp, marker_data[name], name)
+                name = 'markerset.id'
+                vtk_dataarray(fvtp, marker_data[name], name)
+                fvtp.write('  </PointData>\n')
+
+                # point coordinates
+                fvtp.write('  <Points>\n')
+                field = marker_data['markerset.coord']
+                if des.ndims == 2:
+                    # VTK requires vector field (velocity, coordinate) has 3 components.
+                    # Allocating a 3-vector tmp array for VTK data output.
+                    tmp = np.zeros((nmarkers, 3), dtype=field.dtype)
+                    tmp[:,:des.ndims] = field
+                else:
+                    tmp = field
+
+                vtk_dataarray(fvtp, tmp, 'markerset.coord', 3)
+                fvtp.write('  </Points>\n')
+
+                vtp_footer(fvtp)
+                fvtp.close()
+
+            except:
+                # delete partial vtp file
+                fvtp.close()
+                os.remove(filename)
+                raise
+
     return
 
 
@@ -329,6 +409,25 @@ b'''</Piece>
     return
 
 
+def vtp_header(f, nmarkers):
+    f.write(
+'''<?xml version="1.0"?>
+<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
+<PolyData>
+<Piece NumberOfPoints="{0}">
+'''.format(nmarkers).encode('ascii'))
+    return
+
+
+def vtp_footer(f):
+    f.write(
+b'''</Piece>
+</PolyData>
+</VTKFile>
+''')
+    return
+
+
 def first_invariant(t):
     return np.sum(t[:,:ndims], axis=1) / ndims
 
@@ -364,6 +463,8 @@ if __name__ == '__main__':
         output_in_cwd = True
     if '-t' in sys.argv:
         output_tensor_components = True
+    if '-m' in sys.argv:
+        output_markers = True
 
     # delete options
     for i in range(len(sys.argv)):

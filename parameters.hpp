@@ -37,6 +37,7 @@ struct Sim {
     int restarting_from_frame;
     bool is_restarting;
     bool has_output_during_remeshing;
+    bool has_marker_output;
 
     std::string modelname;
     std::string restarting_from_modelname;

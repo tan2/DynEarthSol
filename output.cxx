@@ -22,6 +22,7 @@ Output::Output(const Param& param, double start_time, int start_frame) :
     modelname(param.sim.modelname),
     start_time(start_time),
     average_interval(param.sim.output_averaged_fields),
+    has_marker_output(param.sim.has_marker_output),
     frame(start_frame),
     time0(0)
 {}
@@ -149,6 +150,9 @@ void Output::write(const Variables& var, bool is_averaged)
 
     //bin.write_array(*var.bcflag, "bcflag");
 
+    if (has_marker_output)
+        var.markerset->write_save_file(var, bin);
+
     bin.close();
     std::cout << "  Output # " << frame
               << ", step = " << var.steps
@@ -236,6 +240,6 @@ void Output::write_checkpoint(const Variables& var)
     bin.write_array(*var.volume_old, "volume_old");
 
     MarkerSet &ms = *var.markerset;
-    ms.write(bin);
+    ms.write_chkpt_file(bin);
 }
 
