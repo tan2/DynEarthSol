@@ -226,7 +226,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
     ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
     const int k = std::min(20, var.nelem);  // how many nearest neighbors to search?
-    const double eps = 0.001 * param.mesh.resolution; // tolerance of distance error
+    const double eps = 0.001; // tolerance of distance error
     int *nn_idx = new int[k];
     double *dd = new double[k];
 
