@@ -30,6 +30,9 @@ MarkerSet::MarkerSet(const Param& param, Variables& var)
     case 1:
         random_markers(param, var);
         break;
+    case 2:
+        regularly_spaced_markers(param, var);
+        break;
     default:
         std::cerr << "Error: unknown init_marker_option: " << param.markers.init_marker_option << ". The only valid option is '1'.\n";
         break;
@@ -133,34 +136,127 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
             random_eta(eta);
 
             // decide the mattype of markers
-            int mt;
-            if (param.ic.mattype_option == 0) {
-                mt = (int)(*((*var.regattr)[e])); // mattype should take a reginal attribute assigned during meshing.
-            }
-            else {
-                double p[NDIMS] = {0};
-                const int *conn = (*var.connectivity)[e];
-                for(int i=0; i<NDIMS; i++) {
-                    for(int j=0; j<NODES_PER_ELEM; j++)
-                        p[i] += (*var.coord)[ conn[j] ][i] * eta[j];
-                }
-                // modify mt according to the marker coordinate p
-                switch (param.ic.mattype_option) {
-                case 1:
-                    // lower half: 1; upper half: 0
-                    if (p[NDIMS-1] < -0.5 * param.mesh.zlength)
-                        mt = 1;
-                    else
-                        mt = 0;
-                    break;
-                default:
-                    std::cerr << "Error: unknown ic.mattype_option: " << param.ic.mattype_option << '\n';
-                    std::exit(1);
-                }
-            }
+            int mt = initial_mattype(param, var, e, eta);
             append_marker(eta, e, mt);
             ++(*var.elemmarkers)[e][mt];
         }
+}
+
+
+void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
+{
+    const int d = param.markers.init_marker_spacing * param.mesh.resolution;
+
+    const int nx = param.mesh.xlength / d + 1;
+    const double x0 = 0.5 * (param.mesh.xlength - (nx-1)*d);
+    const int nz = param.mesh.zlength / d + 1;
+    const double z0 = 0.5 * (param.mesh.zlength - (nz-1)*d);
+#ifdef THREED
+    const int ny = param.mesh.ylength / d + 1;
+    const double y0 = 0.5 * (param.mesh.ylength - (ny-1)*d);
+#else
+    const int ny = 1;
+#endif
+
+    const int num_markers = nx * ny * nz;
+    const int max_markers = num_markers * over_alloc_ratio;
+
+    allocate_markerdata( max_markers );
+
+    // nearest-neighbor search structure
+    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
+    ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
+    const int k = std::min(10, var.nelem);  // how many nearest neighbors to search?
+    const double eps = 0.001; // tolerance of distance error
+    int *nn_idx = new int[k];
+    double *dd = new double[k];
+
+    double_vec new_volume( var.nelem );
+    compute_volume( *var.coord, *var.connectivity, new_volume );
+    Barycentric_transformation bary(*var.coord, *var.connectivity, new_volume);
+
+    for (int n=0; n< num_markers; ++n) {
+        int ix = n % nx;
+        int iy = (n / nx) % ny;
+        int iz = n / (nx * ny);
+
+        // Physical coordinate of new marker
+        double x[NDIMS] = { x0 + ix*d,
+#ifdef THREED
+                            y0 + iy*d,
+#endif
+                            -(z0 + iz*d) };
+        bool found = false;
+
+        // Look for nearby elements.
+        // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
+        kdtree.annkSearch(x, k, nn_idx, dd, eps);
+
+        for( int j=0; j<k; j++ ) {
+            int e = nn_idx[j];
+            double eta[NODES_PER_ELEM];
+
+            bary.transform(x, e, eta);
+
+            // Compute the last component of eta, with the constraint sum(eta)==1
+            double tmp = 1;
+            for( int d=0; d<NDIMS; ++d) {
+                tmp -= eta[d];
+            }
+            eta[NDIMS] = tmp;
+
+            if (bary.is_inside(eta)) {
+                int mt = initial_mattype(param, var, e, eta);
+                append_marker(eta, e, mt);
+                ++(*var.elemmarkers)[e][mt];
+                found = true;
+                break;
+            }
+        }
+
+        if (! found) {
+            // Is it possible?
+            std::cout << "Not found\n";
+            continue;
+        }
+    }
+
+    delete [] nn_idx;
+    delete [] dd;
+    delete [] centroid[0];
+    delete [] centroid;
+}
+
+
+int MarkerSet::initial_mattype( const Param& param, Variables &var,
+                                int elem, double eta[NODES_PER_ELEM])
+{
+    int mt;
+    if (param.ic.mattype_option == 0) {
+        mt = (int)(*((*var.regattr)[elem])); // mattype should take a reginal attribute assigned during meshing.
+    }
+    else {
+        double p[NDIMS] = {0};
+        const int *conn = (*var.connectivity)[elem];
+        for(int i=0; i<NDIMS; i++) {
+            for(int j=0; j<NODES_PER_ELEM; j++)
+                p[i] += (*var.coord)[ conn[j] ][i] * eta[j];
+        }
+        // modify mt according to the marker coordinate p
+        switch (param.ic.mattype_option) {
+        case 1:
+            // lower half: 1; upper half: 0
+            if (p[NDIMS-1] < -0.5 * param.mesh.zlength)
+                mt = 1;
+            else
+                mt = 0;
+            break;
+        default:
+            std::cerr << "Error: unknown ic.mattype_option: " << param.ic.mattype_option << '\n';
+            std::exit(1);
+        }
+    }
+    return mt;
 }
 
 

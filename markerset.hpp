@@ -61,8 +61,11 @@ private:
     void random_eta( double* );
     void append_marker( double *eta, int el, int mt );
     void random_markers( const Param&, Variables& );
+    void regularly_spaced_markers( const Param&, Variables& );
     void allocate_markerdata( const int );
 
+    int initial_mattype( const Param&, Variables&,
+                         int elem, double eta[NODES_PER_ELEM]);
 };
 
 void remap_markers(const Param&, Variables &, 

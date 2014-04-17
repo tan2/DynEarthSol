@@ -155,6 +155,7 @@ struct Mat {
 struct Markers {
     int init_marker_option;
     int markers_per_element;
+    double init_marker_spacing;
 };
 
 struct Param {

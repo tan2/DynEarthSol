@@ -133,10 +133,12 @@ static void declare_parameters(po::options_description &cfg,
     cfg.add_options()
         ("markers.init_marker_option", po::value<int>(&p.markers.init_marker_option)->default_value(1),
          "How to generate markers?\n"
-         "1: randomly distributed markers"
-         )
+         "1: randomly distributed markers.\n"
+         "2: regularly spaced markers.\n")
         ("markers.markers_per_element", po::value<int>(&p.markers.markers_per_element)->default_value(4),
-         "Number of marekrs per element. 4 by default.")
+         "Number of markers per element. Used when init_marker_option=1.")
+        ("markers.init_marker_spacing", po::value<double>(&p.markers.init_marker_spacing)->default_value(0.3),
+         "Spacing of markers (in unit of mesh.resolution). Used when init_marker_option=2.")
         ;
 
     cfg.add_options()
