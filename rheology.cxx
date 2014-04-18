@@ -35,11 +35,11 @@ static void principal_stresses3(const double* s, double p[3], double v[3][3])
         p[0] = p[1];
         p[1] = tmp;
         for (int i=0; i<3; ++i)
-            b[i] = v[0][i];
+            b[i] = v[i][0];
         for (int i=0; i<3; ++i)
-            v[0][i] = v[1][i];
+            v[i][0] = v[i][1];
         for (int i=0; i<3; ++i)
-            v[1][i] = b[i];
+            v[i][1] = b[i];
     }
     if (p[1] > p[2]) {
         double tmp, b[3];
@@ -47,11 +47,11 @@ static void principal_stresses3(const double* s, double p[3], double v[3][3])
         p[1] = p[2];
         p[2] = tmp;
         for (int i=0; i<3; ++i)
-            b[i] = v[1][i];
+            b[i] = v[i][1];
         for (int i=0; i<3; ++i)
-            v[1][i] = v[2][i];
+            v[i][1] = v[i][2];
         for (int i=0; i<3; ++i)
-            v[2][i] = b[i];
+            v[i][2] = b[i];
     }
     if (p[0] > p[1]) {
         double tmp, b[3];
@@ -59,11 +59,11 @@ static void principal_stresses3(const double* s, double p[3], double v[3][3])
         p[0] = p[1];
         p[1] = tmp;
         for (int i=0; i<3; ++i)
-            b[i] = v[0][i];
+            b[i] = v[i][0];
         for (int i=0; i<3; ++i)
-            v[0][i] = v[1][i];
+            v[i][0] = v[i][1];
         for (int i=0; i<3; ++i)
-            v[1][i] = b[i];
+            v[i][1] = b[i];
     }
 }
 
@@ -251,7 +251,7 @@ static void elasto_plastic(double bulkm, double shearm,
         for(int m=0; m<3; m++) {
             for(int n=m; n<3; n++) {
                 for(int k=0; k<3; k++) {
-                    ss[m][n] += v[k][m] * v[k][n] * p[k];
+                    ss[m][n] += v[m][k] * v[n][k] * p[k];
                 }
             }
         }

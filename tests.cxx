@@ -73,3 +73,57 @@ void test_sortindex()
         std::cout << i << ": " << list[idx[i]] << '\n';
     }
 }
+
+
+#include "3x3-C/dsyevh3.h"
+void test_eigen_decomposition()
+{
+    // s is a 3x3 tensor, only the upper part is needed.
+    double a[3][3] = {{0,0,0},{0,0,0},{0,0,0}};
+    a[0][0] = 3e4;
+    a[1][1] = -1;
+    a[2][2] = 3;
+    a[0][1] = 2;
+    a[0][2] = 4;
+    a[1][2] = 2;
+    // a[1][0] = a[0][1];
+    // a[2][0] = a[0][2];
+    // a[2][1] = a[1][2];
+
+    std::cout << "\noriginal matrix:";
+    print(std::cout, a[0], 3);
+    print(std::cout, a[1], 3);
+    print(std::cout, a[2], 3);
+    std::cout << "\n";
+
+    // p is eigenvalue, v is eigenvector
+    double p[3], v[3][3];
+
+    dsyevh3(a, v, p);
+
+    std::cout << "eigenvalue:";
+    print(std::cout, p, 3);
+    std::cout << "\neigenvector:";
+    print(std::cout, v[0], 3);
+    print(std::cout, v[1], 3);
+    print(std::cout, v[2], 3);
+    std::cout << "\n";
+
+    double ss[3][3] = {{0,0,0},{0,0,0},{0,0,0}};
+    for(int m=0; m<3; m++) {
+        //for(int n=0; n<3; n++) { // using this loop to recover whole matrix
+        for(int n=m; n<3; n++) { // using this loop to recover upper half matrix
+            for(int k=0; k<3; k++) {
+                ss[m][n] += v[m][k] * v[n][k] * p[k];
+            }
+        }
+    }
+    std::cout << "\nmatrix:";
+    print(std::cout, ss[0], 3);
+    print(std::cout, ss[1], 3);
+    print(std::cout, ss[2], 3);
+    std::cout << "\n";
+
+}
+
+
