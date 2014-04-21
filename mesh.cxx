@@ -721,6 +721,25 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 }
 
 
+void my_fgets(char *buffer, int size, std::FILE *fp,
+              int &lineno, const std::string &filename)
+{
+    char *s;
+    while (1) {
+        ++ lineno;
+        s = std::fgets(buffer, size, fp);
+        if (! s) {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << filename << "'\n";
+            std::exit(2);
+        }
+
+        // check for blank lines and comments
+        if (buffer[0] != '\n' && buffer[0] != '#') break;
+    }
+}
+
+
 void new_mesh_from_polyfile(const Param& param, Variables& var)
 {
     /* The format specifiction for the poly file can be found in:
@@ -744,20 +763,14 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         std::exit(2);
     }
 
-    int lineno = 1;
+    int lineno = 0;
     int n;
     char buffer[255];
-    char *s;
 
     // get header of node list
     int npoints;
     {
-        s = std::fgets(buffer, 255, fp);
-        if (! s) {
-            std::cerr << "Error: reading line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(2);
-        }
+        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int dim, nattr, nbdrym;
         n = std::sscanf(buffer, "%d %d %d %d", &npoints, &dim, &nattr, &nbdrym);
@@ -774,19 +787,12 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-
-        lineno ++;
     }
 
     // get node list
     double *points = new double[npoints * NDIMS];
     for (int i=0; i<npoints; i++) {
-        s = std::fgets(buffer, 255, fp);
-        if (! s) {
-            std::cerr << "Error: reading line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(2);
-        }
+        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int junk;
         double *x = &points[i*NDIMS];
@@ -800,19 +806,12 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-
-        lineno ++;
     }
 
     // get header of segment (facet) list
     int n_init_segments;
     {
-        s = std::fgets(buffer, 255, fp);
-        if (! s) {
-            std::cerr << "Error: reading line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(2);
-        }
+        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int has_bdryflag;
         n = std::sscanf(buffer, "%d %d", &n_init_segments, &has_bdryflag);
@@ -827,20 +826,13 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-
-        lineno ++;
     }
 
     // get segment (facet) list
     int *init_segments = new int[n_init_segments * NODES_PER_FACET];
     int *init_segflags = new int[n_init_segments];
     for (int i=0; i<n_init_segments; i++) {
-        s = std::fgets(buffer, 255, fp);
-        if (! s) {
-            std::cerr << "Error: reading line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(2);
-        }
+        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int *x = &init_segments[i*NODES_PER_FACET];
 
@@ -861,14 +853,8 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         }
 
         init_segflags[i] = bdryflag;
-        lineno ++;
 
-        s = std::fgets(buffer, 255, fp);
-        if (! s) {
-            std::cerr << "Error: reading line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(2);
-        }
+        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int nvertex;
         n = std::sscanf(buffer, "%d %d %d %d", &nvertex, x, x+1, x+2);
@@ -890,19 +876,12 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
             std::exit(1);
         }
 #endif
-
-        lineno ++;
     }
 
 
     // get header of hole list
     {
-        s = std::fgets(buffer, 255, fp);
-        if (! s) {
-            std::cerr << "Error: reading line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(2);
-        }
+        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int nholes;
         n = std::sscanf(buffer, "%d", &nholes);
@@ -917,20 +896,12 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-
-        lineno ++;
     }
 
     // get header of region list
     int nregions;
     {
-        s = std::fgets(buffer, 255, fp);
-        if (! s) {
-            std::cerr << "Error: reading line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(2);
-        }
-        
+        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         n = std::sscanf(buffer, "%d", &nregions);
         if (n != 1) {
@@ -944,19 +915,12 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-        
-        lineno ++;
     }
 
     // get region list
     double *regattr = new double[nregions * (NDIMS+2)]; // each region has 5 data fields: x, (y,) z, region marker (mat type), and volume.
     for (int i=0; i<nregions; i++) {
-        s = std::fgets(buffer, 255, fp);
-        if (! s) {
-            std::cerr << "Error: reading line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(2);
-        }
+        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int junk;
         double *x = &regattr[i*(NDIMS+2)];
@@ -976,8 +940,6 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
             std::cerr << "Note that this parameter is directly used as the index of mat. prop. arrays.\n";
             std::exit(1);
         }
-
-        lineno ++;
     }
 
     points_to_mesh(param, var, npoints, points,
