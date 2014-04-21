@@ -911,7 +911,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         }
         
         if (param.ic.mattype_option == 0 && nregions != param.mat.nmat) {
-            std::cerr << "Error: Number of regions should be exactly 'nmat' but a different value given in line " << lineno
+            std::cerr << "Error: Number of regions should be exactly 'mat.num_materials' but a different value is given in line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
@@ -936,7 +936,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         }
 
         if ( x[NDIMS] < 0 || x[NDIMS] >= param.mat.nmat ) {
-            std::cerr << "Error: "<<NDIMS+2<<"-th value in line "<<lineno<<" should be >=0 and < "<<param.mat.nmat<<" (=nmat) but is "<<x[NDIMS]<<"\n";
+            std::cerr << "Error: "<<NDIMS+2<<"-th value in line "<<lineno<<" should be >=0 and < "<<param.mat.nmat<<" (=mat.num_materials) but is "<<x[NDIMS]<<"\n";
             std::cerr << "Note that this parameter is directly used as the index of mat. prop. arrays.\n";
             std::exit(1);
         }
