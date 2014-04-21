@@ -66,7 +66,7 @@ void restart(const Param& param, Variables& var)
                                 &frame, &steps, &nnode, &nelem, &nseg);
             if (n != 5) {
                 std::cerr << "Error: reading info file: " << filename << '\n';
-                std::exit(1);
+                std::exit(2);
             }
             if (frame == param.sim.restarting_from_frame)
                 break;

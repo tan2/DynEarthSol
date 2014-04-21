@@ -32,5 +32,10 @@ Design notes:
 * Avoid C++ stream for bulk ouput, as stream is slower than C-style IO.
 * Avoid creating/destroying objects in inner for-loops.
 * Avoid static variables and global variables.
-
+* Meaning of error codes:
+   1: User input error
+   2: IO error
+  10: Triangulation/tetrahedralization error
+  11: Runtime error
+  12: Assertion error (due to programming)
 

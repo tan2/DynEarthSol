@@ -226,7 +226,7 @@ double compute_dt(const Param& param, const Variables& var)
     if (dt <= 0) {
         std::cerr << "Error: dt <= 0!  " << dt_maxwell << " " << dt_diffusion
                   << " " << dt_elastic << "\n";
-        std::exit(1);
+        std::exit(11);
     }
     return dt;
 }

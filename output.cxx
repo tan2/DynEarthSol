@@ -167,11 +167,11 @@ void Output::write(const Variables& var, bool is_averaged)
             for (int j=0; j<NDIMS; j++) {
                 if (std::isnan((*var.coord)[i][j])) {
                     std::cerr << "Error: coordinate becomes NaN\n";
-                    std::exit(1);
+                    std::exit(11);
                 }
                 if (std::isinf((*var.coord)[i][j])) {
                     std::cerr << "Error: coordinate becomes Infinity\n";
-                    std::exit(1);
+                    std::exit(11);
                 }
             }
     }

@@ -144,7 +144,7 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
         std::cout << "bottom corners: ";
         print(std::cout, bottom_corners);
         std::cout << '\n';
-        std::exit(1);
+        std::exit(11);
     }
 
     // move the corners to the same depth
@@ -428,7 +428,7 @@ void delete_facets(int &nseg, int *segment, int *segflag)
                 ) {
                 std::cerr << "Error: segment array is corrupted before delete_facets()!\n";
                 print(std::cerr, segment, nseg*NODES_PER_FACET);
-                std::exit(1);
+                std::exit(11);
             }
 
             // replace deleted segment with the last segment
@@ -457,7 +457,7 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
 {
 #ifdef THREED
     std::cerr << "delete_points_and_merge_segments() doesn't work in 3D!\n";
-    std::exit(1);
+    std::exit(12);
 #endif
 
     int *endsegment = segment + nseg * NODES_PER_FACET;
@@ -479,7 +479,7 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
             int *b = std::find(a+1, endsegment, *i);
             if (b == endsegment) {
                 std::cerr << "Error: segment array is corrupted when merging segment!\n";
-                std::exit(1);
+                std::exit(11);
             }
 
             // a could be the either first or second node of the segment,
@@ -559,7 +559,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 {
 #ifndef THREED
     std::cerr << "delete_points_and_merge_facets() doesn't work in 2D!\n";
-    std::exit(1);
+    std::exit(12);
 #else
 
     const int nbdry = 6;
@@ -691,11 +691,11 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                 std::cout << "new conn: ";
                 print(std::cout, pconnectivity, new_nelem*3);
                 std::cout << '\n';
-                std::exit(1);
+                std::exit(12);
             }
             if (new_nseg != new_polygon_size) {
                 std::cerr << "Error: ponits_to_new_surface is adding new segments!\n";
-                std::exit(1);
+                std::exit(12);
             }
 
             delete [] pcoord;
@@ -722,7 +722,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
     int nseg2 = std::accumulate(nfacets.begin(), nfacets.end(), 0);
     if (nseg2 > nseg) {
         std::cerr << "Error: ponits_to_new_surface too many segments!\n";
-        std::exit(1);
+        std::exit(12);
     }
     for (int i=0, n=0; i<nbdry; ++i) {
         for (int k=0; k<nfacets[i]; ++k, ++n) {

@@ -741,7 +741,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     std::FILE *fp = std::fopen(param.mesh.poly_filename.c_str(), "r");
     if (! fp) {
         std::cerr << "Error: Cannot open poly_filename '" << param.mesh.poly_filename << "'\n";
-        std::exit(1);
+        std::exit(2);
     }
 
     int lineno = 1;
@@ -756,7 +756,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
+            std::exit(2);
         }
 
         int dim, nattr, nbdrym;
@@ -785,7 +785,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
+            std::exit(2);
         }
 
         int junk;
@@ -811,7 +811,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
+            std::exit(2);
         }
 
         int has_bdryflag;
@@ -839,7 +839,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
+            std::exit(2);
         }
 
         int *x = &init_segments[i*NODES_PER_FACET];
@@ -867,7 +867,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
+            std::exit(2);
         }
 
         int nvertex;
@@ -901,7 +901,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
+            std::exit(2);
         }
 
         int nholes;
@@ -928,7 +928,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
+            std::exit(2);
         }
         
 
@@ -955,7 +955,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
+            std::exit(2);
         }
 
         int junk;

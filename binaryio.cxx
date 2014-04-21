@@ -37,7 +37,7 @@ BinaryOutput::BinaryOutput(const char *filename)
     f = std::fopen(filename, "w");
     if (f == NULL) {
         std::cerr << "Error: cannot open file: " << filename << '\n';
-        std::exit(1);
+        std::exit(2);
     }
 
     header = new char[headerlen]();
@@ -78,12 +78,12 @@ void BinaryOutput::write_header(const char *name)
     if (len >= bsize) {
         std::cerr << "Error: exceeding buffer length at Output::write_array, name=" << name
                   << " eof_position=" << eof_pos << '\n';
-        std::exit(1);
+        std::exit(12);
     }
     if (len >= headerlen - (hd_pos - header)*sizeof(char)) {
         std::cerr << "Error: exceeding header length at Output::write_array, name=" << name
                   << " eof_position=" << eof_pos << '\n';
-        std::exit(1);
+        std::exit(12);
     }
     hd_pos = std::strncat(hd_pos, buffer, len);
 }
@@ -137,7 +137,7 @@ BinaryInput::BinaryInput(const char *filename)
     f = std::fopen(filename, "r");
     if (f == NULL) {
         std::cerr << "Error: cannot open file: " << filename << '\n';
-        std::exit(1);
+        std::exit(2);
     }
     read_header();
 }
@@ -157,7 +157,7 @@ void BinaryInput::read_header()
     std::size_t n = std::fread(header, sizeof(char), headerlen, f);
     if (n != headerlen) {
         std::cerr << "Error: error reading file header\n";
-        std::exit(1);
+        std::exit(2);
     }
 
     /* Parse the content of header buffer */
