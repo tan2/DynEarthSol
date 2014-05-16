@@ -136,6 +136,11 @@ void Output::write(const Variables& var, bool is_averaged)
         tmp[e] = var.mat->visc(e);
     }
     bin.write_array(tmp, "viscosity");
+    // bin.write_array(*var.mass, "mass");
+    // bin.write_array(*var.tmass, "tmass");
+    // bin.write_array(*var.volume_n, "volume_n");
+    // bin.write_array(*var.volume, "volume");
+    // bin.write_array(*var.edvoldt, "edvoldt");
 
     for (int e=0; e<var.nelem; ++e) {
         // Find the most abundant marker mattype in this element
@@ -143,8 +148,6 @@ void Output::write(const Variables& var, bool is_averaged)
         tmp[e] = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
     }
     bin.write_array(tmp, "material");
-
-    //bin.write_array(*var.volume, "volume");
 
     bin.write_array(*var.force, "force");
 

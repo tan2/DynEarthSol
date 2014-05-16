@@ -105,7 +105,7 @@ class Dynearthsol:
             shape = (nelem, self.nstr)
         elif name in set(['density', 'material', 'mesh quality',
                           'plastic strain', 'plastic strain-rate',
-                          'viscosity']):
+                          'viscosity', 'edvoldt', 'volume']):
             count = nelem
         elif name in set(['connectivity']):
             count = (self.ndims + 1) * nelem
@@ -113,7 +113,7 @@ class Dynearthsol:
         elif name in set(['coordinate', 'velocity', 'velocity averaged', 'force']):
             count = self.ndims * nnode
             shape = (nnode, self.ndims)
-        elif name in set(['temperature']):
+        elif name in set(['temperature', 'mass', 'tmass', 'volume_n']):
             count = nnode
         else:
             raise NameError('uknown field name: ' + name)
@@ -195,6 +195,9 @@ def main(modelname, start, end):
 
             convert_field(des, frame, 'temperature', fvtu)
             #convert_field(des, frame, 'bcflag', fvtu)
+            #convert_field(des, frame, 'mass', fvtu)
+            #convert_field(des, frame, 'tmass', fvtu)
+            #convert_field(des, frame, 'volume_n', fvtu)
 
             # node number for debugging
             vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node number')
@@ -204,6 +207,9 @@ def main(modelname, start, end):
             # element-based field
             #
             fvtu.write(b'  <CellData>\n')
+
+            #convert_field(des, frame, 'volume', fvtu)
+            #convert_field(des, frame, 'edvoldt', fvtu)
 
             convert_field(des, frame, 'mesh quality', fvtu)
             convert_field(des, frame, 'plastic strain', fvtu)
