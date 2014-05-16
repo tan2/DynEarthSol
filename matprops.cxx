@@ -138,7 +138,7 @@ void MatProps::plastic_weakening(int e, double pls,
         int k = elemmarkers[e][m];
         if (k == 0) continue;
         n += k;
-        if (pls <= pls0[m]) {
+        if (pls < pls0[m]) {
             // no weakening yet
             c += cohesion0[m] * k;
             f += friction_angle0[m] * k;
