@@ -170,7 +170,7 @@ def main(modelname, start, end):
     for i, frame in enumerate(des.frames[start:end]):
         des.read_header(frame)
         suffix = '{0:0=6}'.format(frame)
-        print('Converting frame #{0}'.format(suffix))
+        print('Converting frame #{0}'.format(suffix), end='\r', file=sys.stderr)
 
         filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
         fvtu = open(filename, 'wb')
@@ -335,6 +335,7 @@ def main(modelname, start, end):
                 os.remove(filename)
                 raise
 
+    print()
     return
 
 
