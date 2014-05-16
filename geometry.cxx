@@ -218,14 +218,15 @@ double compute_dt(const Param& param, const Variables& var)
 	minl = std::min(minl, minh);
     }
 
+    double dt_advection = 0.5 * minl / var.max_vbc_val;
     double dt_elastic = (param.control.is_quasi_static) ?
         0.5 * minl / (var.max_vbc_val * param.control.inertial_scaling) :
         0.5 * minl / std::sqrt(var.mat->bulkm(0) / var.mat->rho(0));
     double dt = std::min(std::min(dt_elastic, dt_maxwell),
-                         dt_diffusion);
+                         std::min(dt_advection, dt_diffusion));
     if (dt <= 0) {
         std::cerr << "Error: dt <= 0!  " << dt_maxwell << " " << dt_diffusion
-                  << " " << dt_elastic << "\n";
+                  << " " << dt_advection << " " << dt_elastic << "\n";
         std::exit(11);
     }
     return dt;
