@@ -171,6 +171,9 @@ static void declare_parameters(po::options_description &cfg,
         ("control.surface_diffusivity", po::value<double>(&p.control.surface_diffusivity)->default_value(1e-6),
          "Diffusition coefficient of surface topography (m^2/s)")
 
+        ("control.has_thermal_diffusion", po::value<bool>(&p.control.has_thermal_diffusion)->default_value(true),
+         "Does the model have thermal diffusion? If not, temperature is advected, but not diffused.\n")
+
         ;
 
     cfg.add_options()

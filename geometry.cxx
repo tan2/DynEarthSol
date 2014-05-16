@@ -213,8 +213,9 @@ double compute_dt(const Param& param, const Variables& var)
 #endif
         dt_maxwell = std::min(dt_maxwell,
                               0.5 * var.mat->visc_min / (1e-40 + var.mat->shearm(e)));
-        dt_diffusion = std::min(dt_diffusion,
-                                0.5 * minh * minh / var.mat->therm_diff_max);
+        if (param.control.has_thermal_diffusion)
+            dt_diffusion = std::min(dt_diffusion,
+                                    0.5 * minh * minh / var.mat->therm_diff_max);
 	minl = std::min(minl, minh);
     }
 
@@ -260,7 +261,8 @@ void compute_mass(const Param &param,
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             volume_n[conn[i]] += volume[e];
             mass[conn[i]] += m;
-            tmass[conn[i]] += tm;
+            if (param.control.has_thermal_diffusion)
+                tmass[conn[i]] += tm;
         }
     }
         } // end of ee

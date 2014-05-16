@@ -77,6 +77,7 @@ struct Control {
     double surface_diffusivity;
 
     bool is_quasi_static;
+    bool has_thermal_diffusion;
 };
 
 struct BC {
