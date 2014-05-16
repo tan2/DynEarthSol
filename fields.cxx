@@ -403,7 +403,7 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 
             w2 = 0;
             for (int i=0; i<NODES_PER_ELEM; ++i)
-                w2 += 0.5 * (v[i][0] * shpdz[i] - v[i][NDIMS-1] * shpdx[i]);
+                w2 += 0.5 * (v[i][NDIMS-1] * shpdx[i] - v[i][0] * shpdz[i]);
         }
 
         jaumann_rate_2d(stress[e], var.dt, w2);
