@@ -229,12 +229,13 @@ int main(int argc, const char* argv[])
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
         update_stress(var, *var.stress, *var.strain, *var.plstrain,  *var.delta_plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
-        // elastic stress/strain are objective (frame-indifferent)
-        if (var.mat->rheol_type & MatProps::rh_elastic)
-            rotate_stress(var, *var.stress, *var.strain);
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel);
         update_mesh(param, var);
+
+        // elastic stress/strain are objective (frame-indifferent)
+        if (var.mat->rheol_type & MatProps::rh_elastic)
+            rotate_stress(var, *var.stress, *var.strain);
 
         // dt computation is expensive, and dt only changes slowly
         // don't have to do it every time step
