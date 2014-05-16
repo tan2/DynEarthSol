@@ -212,20 +212,22 @@ static void elasto_plastic(double bulkm, double shearm,
          * double deplsm = (depls1 + depls3) / 3;
          * depls = std::sqrt(((depls1-deplsm)*(depls1-deplsm) +
          *                    (-deplsm)*(-deplsm) +
-         *                    (depls3-deplsm)*(depls3-deplsm)) / 2);
+         *                    (depls3-deplsm)*(depls3-deplsm) +
+         *                    deplsm*deplsm) / 2);
          */
         // the equations above can be reduce to:
-        depls = std::fabs(alam) * std::sqrt((1 + anpsi + anpsi*anpsi) / 3);
+        depls = std::fabs(alam) * std::sqrt((7 + 4*anpsi + 7*anpsi*anpsi) / 18);
 #else
         /* // plastic strain in the principle directions
          * double depls1 = alam;
          * double depls2 = -alam * anpsi;
          * double deplsm = (depls1 + depls2) / 2;
          * depls = std::sqrt(((depls1-deplsm)*(depls1-deplsm) +
-         *                    (depls2-deplsm)*(depls2-deplsm)) / 2);
+         *                    (depls2-deplsm)*(depls2-deplsm) +
+         *                    deplsm*deplsm) / 2);
          */
         // the equations above can be reduce to:
-        depls = 0.5 * std::fabs(alam + alam * anpsi);
+        depls = std::fabs(alam) * std::sqrt((3 + 2*anpsi + 3*anpsi*anpsi) / 8);
 #endif
     }
     else {
@@ -239,10 +241,24 @@ static void elasto_plastic(double bulkm, double shearm,
 
         // 2nd invariant of plastic strain
 #ifdef THREED
-        depls = std::fabs(alam) / std::sqrt(3);
+        /* double depls1 = 0;
+         * double depls3 = alam;
+         * double deplsm = (depls1 + depls3) / 3;
+         * depls = std::sqrt(((depls1-deplsm)*(depls1-deplsm) +
+         *                    (-deplsm)*(-deplsm) +
+         *                    (depls3-deplsm)*(depls3-deplsm) +
+         *                    deplsm*deplsm) / 2);
+         */
+        depls = std::fabs(alam) * std::sqrt(7. / 18);
 #else
-	// TODO: is this correct?
-        depls = std::fabs(alam) / std::sqrt(2);
+        /* double depls1 = 0;
+         * double depls3 = alam;
+         * double deplsm = (depls1 + depls3) / 2;
+         * depls = std::sqrt(((depls1-deplsm)*(depls1-deplsm) +
+         *                    (depls2-deplsm)*(depls2-deplsm) +
+         *                    deplsm*deplsm) / 2);
+         */
+        depls = std::fabs(alam) * std::sqrt(3. / 8);
 #endif
     }
 
