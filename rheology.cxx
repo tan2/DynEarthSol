@@ -232,7 +232,9 @@ static void elasto_plastic(double bulkm, double shearm,
         // tensile failure
         alam = ft / a1;
         p[0] -= alam * a2;
+#ifdef THREED
         p[1] -= alam * a2;
+#endif
         p[NDIMS-1] -= alam * a1;
 
         // 2nd invariant of plastic strain
