@@ -235,7 +235,9 @@ def main(modelname, start, end):
             vtk_dataarray(fvtu, tI, 'stress I')
             vtk_dataarray(fvtu, tII, 'stress II')
             if output_tensor_components:
-                for d in range(des.nstr):
+                for d in range(des.ndims):
+                    vtk_dataarray(fvtu, stress[:,d] - tI, 'stress ' + des.component_names[d] + ' dev.')
+                for d in range(des.ndims, des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
 
             convert_field(des, frame, 'density', fvtu)
