@@ -197,7 +197,7 @@ static void elasto_plastic(double bulkm, double shearm,
     double alam;
     if (h < 0) {
         // shear failure
-        alam = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + hardn);
+        alam = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + 2*std::sqrt(anphi)*hardn);
         p[0] -= alam * (a1 - a2 * anpsi);
 #ifdef THREED
         p[1] -= alam * (a2 - a2 * anpsi);
