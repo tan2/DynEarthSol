@@ -115,6 +115,8 @@ class Dynearthsol:
             shape = (nnode, self.ndims)
         elif name in set(['temperature']):
             count = nnode
+        else:
+            raise NameError('uknown field name: ' + name)
 
         fname = self.get_fn(frame)
         with open(fname) as f:
