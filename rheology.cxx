@@ -154,7 +154,8 @@ static void viscous(double bulkm, double viscosity, double total_dv,
 static void elasto_plastic(double bulkm, double shearm,
                            double amc, double anphi, double anpsi,
                            double hardn, double ten_max,
-                           const double* de, double& depls, double* s)
+                           const double* de, double& depls, double* s,
+                           int &zzz)
 {
     /* Elasto-plasticity (Mohr-Coulomb criterion) */
 
@@ -290,14 +291,212 @@ static void elasto_plastic(double bulkm, double shearm,
 }
 
 
+static void elasto_plastic2d(double bulkm, double shearm,
+                             double amc, double anphi, double anpsi,
+                             double hardn, double ten_max,
+                             const double* de, double& depls, double* s,
+                             int &failure_mode)
+{
+    /* Elasto-plasticity (Mohr-Coulomb criterion) */
+
+    /* This function is derived from geoFLAC.
+     * The original code in geoFLAC assumes 2D plain strain formulation,
+     * i.e. there are 3 principal stresses and only 2 principal strains
+     * (Strain_yy, Strain_xy, Strain_yz must be 0).
+     * Here, the code is adopted to pure 2D or 3D plane strain.
+     */
+
+    depls = 0;
+    failure_mode = 0;
+
+    // elastic trial stress
+    double a1 = bulkm + 4. / 3 * shearm;
+    double a2 = bulkm - 2. / 3 * shearm;
+    double sxx = s[0] + de[1]*a2 + de[0]*a1;
+    double szz = s[1] + de[0]*a2 + de[1]*a1;
+    double sxz = s[2] + de[2]*2*shearm;
+    double syy = (de[0] + de[1]) * a2; // Stress YY component, plain strain
+
+
+    //
+    // transform to principal stress coordinate system
+    //
+    // eigenvalues (principal stresses)
+    double p[3];
+
+    // In 2D, we only construct the eigenvectors from
+    // cos(2*theta) and sin(2*theta) of Mohr circle
+    double cos2t, sin2t;
+    int n1, n2;
+
+    {
+        // center and radius of Mohr circle
+        double s0 = 0.5 * (sxx + szz);
+        double rad = 0.5 * std::sqrt((sxx-szz)*(sxx-szz) + 4*sxz*sxz);
+
+        // principal stresses in the X-Z plane
+        double si = s0 - rad;
+        double sii = s0 + rad;
+
+        // direction cosine and sine of 2*theta
+        const double eps = 1e-15;
+        double a = 0.5 * (sxx - szz);
+        double b = - rad; // always negative
+        if (b < -eps) {
+            cos2t = a / b;
+            sin2t = sxz / b;
+        }
+        else {
+            cos2t = 1;
+            sin2t = 0;
+        }
+
+        // sort p.s.
+#if 1
+        //
+        // 3d plane strain
+        //
+        if (syy > sii) {
+            // syy is minor p.s.
+            n1 = 0;
+            n2 = 1;
+            p[0] = si;
+            p[1] = sii;
+            p[2] = syy;
+        }
+        else if (syy < si) {
+            // syy is major p.s.
+            n1 = 1;
+            n2 = 2;
+            p[0] = syy;
+            p[1] = si;
+            p[2] = sii;
+        }
+        else {
+            // syy is intermediate
+            n1 = 0;
+            n2 = 2;
+            p[0] = si;
+            p[1] = syy;
+            p[2] = sii;
+        }
+#else
+        /* XXX: This case gives unreasonable result. Don't know why... */
+
+        //
+        // pure 2d case
+        //
+        n1 = 0;
+        n2 = 2;
+        p[0] = si;
+        p[1] = syy;
+        p[2] = sii;
+#endif
+    }
+
+    // Possible tensile failure scenarios
+    // 1. S1 (least tensional or greatest compressional principal stress) > ten_max:
+    //    all three principal stresses must be greater than ten_max.
+    //    Assign ten_max to all three and don't do anything further.
+    if( p[0] >= ten_max ) {
+        s[0] = ten_max;
+        s[1] = ten_max;
+        s[2] = 0.0;
+        failure_mode = 1;
+        return;
+    }
+
+    // 2. S2 (intermediate principal stress) > ten_max:
+    //    S2 and S3 must be greater than ten_max.
+    //    Assign ten_max to these two and continue to the shear failure block.
+    if( p[1] >= ten_max ) {
+        p[1] = p[2] = ten_max;
+        failure_mode = 2;
+    }
+
+    // 3. S3 (most tensional or least compressional principal stress) > ten_max:
+    //    Only this must be greater than ten_max.
+    //    Assign ten_max to S3 and continue to the shear failure block.
+    else if( p[2] >= ten_max ) {
+        p[2] = ten_max;
+        failure_mode = 3;
+    }
+
+
+    // shear yield criterion
+    double fs = p[0] - p[2] * anphi + amc;
+    if (fs >= 0.0) {
+        // Tensile failure case S2 or S3 could have happened!!
+        // XXX: Need to rationalize why exit without doing anything further.
+        s[0] = sxx;
+        s[1] = szz;
+        s[2] = sxz;
+        return;
+    }
+
+    failure_mode += 10;
+
+    // shear failure
+    const double alam = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + hardn);
+    p[0] -= alam * (a1 - a2 * anpsi);
+    p[1] -= alam * (a2 - a2 * anpsi);
+    p[2] -= alam * (a2 - a1 * anpsi);
+
+    // 2nd invariant of plastic strain
+    depls = 0.5 * std::fabs(alam + alam * anpsi);
+
+    //***********************************
+    // The following seems redundant but... this is how it goes in geoFLAC.
+    //
+    // Possible tensile failure scenarios
+    // 1. S1 (least tensional or greatest compressional principal stress) > ten_max:
+    //    all three principal stresses must be greater than ten_max.
+    //    Assign ten_max to all three and don't do anything further.
+    if( p[0] >= ten_max ) {
+        s[0] = ten_max;
+        s[1] = ten_max;
+        s[2] = 0.0;
+        failure_mode += 100;
+        return;
+    }
+
+    // 2. S2 (intermediate principal stress) > ten_max:
+    //    S2 and S3 must be greater than ten_max.
+    //    Assign ten_max to these two and continue to the shear failure block.
+    if( p[1] >= ten_max ) {
+        p[1] = p[2] = ten_max;
+        failure_mode += 100;
+    }
+
+    // 3. S3 (most tensional or least compressional principal stress) > ten_max:
+    //    Only this must be greater than ten_max.
+    //    Assign ten_max to S3 and continue to the shear failure block.
+    else if( p[2] >= ten_max ) {
+        p[2] = ten_max;
+        failure_mode += 100;
+    }
+    //***********************************
+
+
+    // rotate the principal stresses back to global axes
+    {
+        double dc2 = (p[n1] - p[n2]) * cos2t;
+        double dss = p[n1] + p[n2];
+        s[0] = 0.5 * (dss + dc2);
+        s[1] = 0.5 * (dss - dc2);
+        s[2] = 0.5 * (p[n1] - p[n2]) * sin2t;
+    }
+}
+
+
 void update_stress(const Variables& var, tensor_t& stress,
                    tensor_t& strain, double_vec& plstrain,
                    double_vec& delta_plstrain, tensor_t& strain_rate)
 {
     const int rheol_type = var.mat->rheol_type;
 
-    #pragma omp parallel for default(none)                              \
-        shared(var, stress, strain, plstrain, delta_plstrain, strain_rate, std::cerr)
+    // #pragma omp parallel for default(none)                              \
+    //     shared(var, stress, strain, plstrain, delta_plstrain, strain_rate, std::cerr)
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
         double* s = stress[e];
@@ -305,8 +504,9 @@ void update_stress(const Variables& var, tensor_t& stress,
         double* edot = strain_rate[e];
 
         // anti-mesh locking correction on strain rate
-        {
+        if(1){
             double div = trace(edot);
+            //double div2 = ((*var.volume)[e] / (*var.volume_old)[e] - 1) / var.dt;
             for (int i=0; i<NDIMS; ++i) {
                 edot[i] += ((*var.edvoldt)[e] - div) / NDIMS;
             }
@@ -356,8 +556,16 @@ void update_stress(const Variables& var, tensor_t& stress,
                 double amc, anphi, anpsi, hardn, ten_max;
                 var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
+#ifdef THREED
                 elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                de, depls, s);
+#else
+                int failure_mode;
+                elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                 de, depls, s, failure_mode);
+                //if (failure_mode > 100)
+                //    std::cerr << e << ' ' << failure_mode << '\n';
+#endif
                 plstrain[e] += depls;
                 delta_plstrain[e] = depls;
             }
@@ -381,8 +589,14 @@ void update_stress(const Variables& var, tensor_t& stress,
                 // stress due to elasto-plastic rheology
                 double sp[NSTR];
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
+#ifdef THREED
                 elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                de, depls, sp);
+#else
+                int failure_mode;
+                elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                 de, depls, sp, failure_mode);
+#endif
                 double spII = second_invariant2(sp);
 
                 // use the smaller as the final stress
