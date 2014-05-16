@@ -223,7 +223,7 @@ double compute_dt(const Param& param, const Variables& var)
         0.5 * minl / (var.max_vbc_val * param.control.inertial_scaling) :
         0.5 * minl / std::sqrt(var.mat->bulkm(0) / var.mat->rho(0));
     double dt = std::min(std::min(dt_elastic, dt_maxwell),
-                         std::min(dt_advection, dt_diffusion));
+                         std::min(dt_advection, dt_diffusion)) * param.control.dt_fraction;
     if (dt <= 0) {
         std::cerr << "Error: dt <= 0!  " << dt_maxwell << " " << dt_diffusion
                   << " " << dt_advection << " " << dt_elastic << "\n";

@@ -154,6 +154,8 @@ static void declare_parameters(po::options_description &cfg,
 
         ("control.is_quasi_static", po::value<bool>(&p.control.is_quasi_static)->default_value(true),
          "Is the simulation quasi-static or dynamic? If quasi-static, inertial scaling and strong damping is applied.\n")
+        ("control.dt_fraction", po::value<double>(&p.control.dt_fraction)->default_value(1.0),
+         "Take dt as a fraction of max. stable time step size (0-1).\n")
         ("control.inertial_scaling", po::value<double>(&p.control.inertial_scaling)->default_value(1e5),
          "Scaling factor for inertial (a large number)")
         ("control.damping_factor", po::value<double>(&p.control.damping_factor)->default_value(0.8),
@@ -532,6 +534,10 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     // control
     //
     {
+        if ( p.control.dt_fraction < 0 || p.control.dt_fraction > 1 ) {
+            std::cerr << "Error: control.dt_fraction must be between 0 and 1.\n";
+            std::exit(1);
+        }
         if ( p.control.damping_factor < 0 || p.control.damping_factor > 1 ) {
             std::cerr << "Error: control.damping_factor must be between 0 and 1.\n";
             std::exit(1);
