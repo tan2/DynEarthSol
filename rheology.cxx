@@ -556,11 +556,11 @@ void update_stress(const Variables& var, tensor_t& stress,
                 double amc, anphi, anpsi, hardn, ten_max;
                 var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
+                int failure_mode;
 #ifdef THREED
                 elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                               de, depls, s);
+                               de, depls, s, failure_mode);
 #else
-                int failure_mode;
                 elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                  de, depls, s, failure_mode);
                 //if (failure_mode > 100)
@@ -589,11 +589,11 @@ void update_stress(const Variables& var, tensor_t& stress,
                 // stress due to elasto-plastic rheology
                 double sp[NSTR];
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
+                int failure_mode;
 #ifdef THREED
                 elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                               de, depls, sp);
+                               de, depls, sp, failure_mode);
 #else
-                int failure_mode;
                 elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                  de, depls, sp, failure_mode);
 #endif
