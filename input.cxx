@@ -268,7 +268,9 @@ static void declare_parameters(po::options_description &cfg,
 
     cfg.add_options()
         ("mat.rheology_type", po::value<std::string>()->required(),
-         "Type of rheology, either 'elastic', 'viscous', 'maxwell', 'elasto-plastic', or 'elasto-visco-plastic'")
+         "Type of rheology, either 'elastic', 'viscous', 'maxwell', "
+         "'elasto-plastic' (general), 'elasto-plastic2d' (plane strain formulation, 2D only), "
+         "'elasto-visco-plastic' (general), or 'elasto-visco-plastic2d' (plane strain formulation, 2D only).")
         ("mat.phase_change_option", po::value<int>(&p.mat.phase_change_option)->default_value(0),
          "What kind of phase changes?\n"
          "0: no phase changes.\n"
@@ -572,12 +574,24 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             p.mat.rheol_type = MatProps::rh_maxwell;
         else if (str == std::string("elasto-plastic"))
             p.mat.rheol_type = MatProps::rh_ep;
+        else if (str == std::string("elasto-plastic2d"))
+            p.mat.rheol_type = MatProps::rh_ep2d;
         else if (str == std::string("elasto-visco-plastic"))
             p.mat.rheol_type = MatProps::rh_evp;
+        else if (str == std::string("elasto-visco-plastic2d"))
+            p.mat.rheol_type = MatProps::rh_evp2d;
         else {
             std::cerr << "Error: unknown rheology: '" << str << "'\n";
             std::exit(1);
         }
+
+#ifdef THREED
+        if (p.mat.rheol_type == MatProps::rh_ep2d ||
+            p.mat.rheol_type == MatProps::rh_evp2d) {
+            std::cerr << "Error:  " << str << " rheology cannot be used in 3D.\n";
+            std::exit(1);
+        }
+#endif
 
         if (p.mat.phase_change_option != 0 && p.mat.nmat == 1) {
             std::cerr << "Error: mat.phase_change_option is chosen but mat.num_materials is 1.\n";

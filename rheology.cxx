@@ -549,6 +549,7 @@ void update_stress(const Variables& var, tensor_t& stress,
             }
             break;
         case MatProps::rh_ep:
+        case MatProps::rh_ep2d:
             {
                 double depls = 0;
                 double bulkm = var.mat->bulkm(e);
@@ -557,20 +558,20 @@ void update_stress(const Variables& var, tensor_t& stress,
                 var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
                 int failure_mode;
-#ifdef THREED
-                elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                               de, depls, s, failure_mode);
-#else
-                elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                 de, depls, s, failure_mode);
-                //if (failure_mode > 100)
-                //    std::cerr << e << ' ' << failure_mode << '\n';
-#endif
+                if (rheol_type == MatProps::rh_ep) {
+                    elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                   de, depls, s, failure_mode);
+                }
+                else {
+                    elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                     de, depls, s, failure_mode);
+                }
                 plstrain[e] += depls;
                 delta_plstrain[e] = depls;
             }
             break;
         case MatProps::rh_evp:
+        case MatProps::rh_evp2d:
             {
                 double depls = 0;
                 double bulkm = var.mat->bulkm(e);
@@ -590,13 +591,14 @@ void update_stress(const Variables& var, tensor_t& stress,
                 double sp[NSTR];
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
                 int failure_mode;
-#ifdef THREED
-                elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                               de, depls, sp, failure_mode);
-#else
-                elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                 de, depls, sp, failure_mode);
-#endif
+                if (rheol_type == MatProps::rh_evp) {
+                    elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                   de, depls, s, failure_mode);
+                }
+                else {
+                    elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                     de, depls, s, failure_mode);
+                }
                 double spII = second_invariant2(sp);
 
                 // use the smaller as the final stress

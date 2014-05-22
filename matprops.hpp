@@ -32,9 +32,12 @@ public:
     const static int rh_elastic = 1 << 0;
     const static int rh_viscous = 1 << 1;
     const static int rh_plastic = 1 << 2;
+    const static int rh_plastic2d = rh_plastic | 1 << 3;
     const static int rh_maxwell = rh_elastic | rh_viscous;
     const static int rh_ep = rh_elastic | rh_plastic;
+    const static int rh_ep2d = rh_elastic | rh_plastic2d;
     const static int rh_evp = rh_elastic | rh_viscous | rh_plastic;
+    const static int rh_evp2d = rh_elastic | rh_viscous | rh_plastic2d;
 
 private:
 
