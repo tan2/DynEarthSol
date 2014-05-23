@@ -155,13 +155,20 @@ static void elasto_plastic(double bulkm, double shearm,
                            double amc, double anphi, double anpsi,
                            double hardn, double ten_max,
                            const double* de, double& depls, double* s,
-                           int &zzz)
+                           int &failure_mode)
 {
-    /* Elasto-plasticity (Mohr-Coulomb criterion) */
+    /* Elasto-plasticity (Mohr-Coulomb criterion)
+     *
+     * failure_mode --
+     *   0: no failure
+     *   1: tensile failure
+     *  10: shear failure
+     */
 
     // elastic trial stress
     elastic(bulkm, shearm, de, s);
     depls = 0;
+    failure_mode = 0;
 
     //
     // transform to principal stress coordinate system
@@ -198,6 +205,8 @@ static void elasto_plastic(double bulkm, double shearm,
     double alam;
     if (h < 0) {
         // shear failure
+        failure_mode = 10;
+
         alam = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + 2*std::sqrt(anphi)*hardn);
         p[0] -= alam * (a1 - a2 * anpsi);
 #ifdef THREED
@@ -233,6 +242,8 @@ static void elasto_plastic(double bulkm, double shearm,
     }
     else {
         // tensile failure
+        failure_mode = 1;
+
         alam = ft / a1;
         p[0] -= alam * a2;
 #ifdef THREED
@@ -301,9 +312,18 @@ static void elasto_plastic2d(double bulkm, double shearm,
 
     /* This function is derived from geoFLAC.
      * The original code in geoFLAC assumes 2D plain strain formulation,
-     * i.e. there are 3 principal stresses and only 2 principal strains
+     * i.e. there are 3 principal stresses (PSs) and only 2 principal strains
      * (Strain_yy, Strain_xy, Strain_yz must be 0).
      * Here, the code is adopted to pure 2D or 3D plane strain.
+     *
+     * failure_mode --
+     *   0: no failure
+     *   1: tensile failure, all PSs exceed tensile limit
+     *   2: tensile failure, 2 PSs exceed tensile limit
+     *   3: tensile failure, 1 PS exceeds tensile limit
+     *  10: pure shear failure
+     *  11, 12, 13: tensile + shear failure
+     *  20, 21, 22, 23: shear + tensile failure
      */
 
     depls = 0;
@@ -456,7 +476,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
         s[0] = ten_max;
         s[1] = ten_max;
         s[2] = 0.0;
-        failure_mode += 100;
+        failure_mode += 20;
         return;
     }
 
@@ -465,7 +485,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
     //    Assign ten_max to these two and continue to the shear failure block.
     if( p[1] >= ten_max ) {
         p[1] = p[2] = ten_max;
-        failure_mode += 100;
+        failure_mode += 20;
     }
 
     // 3. S3 (most tensional or least compressional principal stress) > ten_max:
@@ -473,7 +493,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
     //    Assign ten_max to S3 and continue to the shear failure block.
     else if( p[2] >= ten_max ) {
         p[2] = ten_max;
-        failure_mode += 100;
+        failure_mode += 20;
     }
     //***********************************
 
