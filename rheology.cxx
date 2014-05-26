@@ -515,8 +515,8 @@ void update_stress(const Variables& var, tensor_t& stress,
 {
     const int rheol_type = var.mat->rheol_type;
 
-    // #pragma omp parallel for default(none)                              \
-    //     shared(var, stress, strain, plstrain, delta_plstrain, strain_rate, std::cerr)
+    #pragma omp parallel for default(none)                           \
+        shared(var, stress, strain, plstrain, delta_plstrain, strain_rate, std::cerr)
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
         double* s = stress[e];
