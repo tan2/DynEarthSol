@@ -1028,6 +1028,73 @@ void points_to_new_surface(const Mesh &mesh, int npoints, const double *points,
 }
 
 
+void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity, segment_t &segment)
+{
+    /* Renumbering nodes and elements to enhance cache coherance and better parallel performace. */
+
+    const int nnode = coord.size();
+    const int nelem = connectivity.size();
+    const int nseg = segment.size();
+
+    //
+    // sort coordinate of nodes and element centers
+    //
+
+    //
+    double_vec wn(nnode);
+    double aspect_ratio_factor = 1e-6 * param.mesh.xlength / param.mesh.zlength;
+    for(int i=0; i<nnode; i++) {
+        wn[i] = coord[i][0] - aspect_ratio_factor * coord[i][NDIMS-1];
+    }
+
+    double_vec we(nelem);
+    for(int i=0; i<nelem; i++) {
+        const int *conn = connectivity[i];
+        we[i] = wn[conn[0]] + wn[conn[1]]
+#ifdef THREED
+            + wn[conn[2]]
+#endif
+            + wn[conn[NODES_PER_ELEM-1]];
+    }
+
+    // arrays to store the result of sorting
+    std::vector<std::size_t> nd_idx(nnode);
+    std::vector<std::size_t> el_idx(nelem);
+    sortindex(wn, nd_idx);
+    sortindex(we, el_idx);
+
+    //
+    // renumbering
+    //
+    array_t coord2(nnode);
+    for(int i=0; i<nnode; i++) {
+        int n = nd_idx[i];
+        for(int j=0; j<NDIMS; j++)
+            coord2[i][j] = coord[n][j];
+    }
+    coord.steal_ref(coord2);
+
+    conn_t conn2(nelem);
+    for(int i=0; i<nelem; i++) {
+        int n = el_idx[i];
+        for(int j=0; j<NODES_PER_ELEM; j++) {
+            int k = connectivity[n][j];
+            conn2[i][j] = std::find(nd_idx.begin(), nd_idx.end(), k) - nd_idx.begin();
+        }
+    }
+    connectivity.steal_ref(conn2);
+
+    segment_t seg2(nseg);
+    for(int i=0; i<nseg; i++) {
+        for(int j=0; j<NDIMS; j++) {
+            int k = segment[i][j];
+            seg2[i][j] = std::find(nd_idx.begin(), nd_idx.end(), k) - nd_idx.begin();
+        }
+    }
+    segment.steal_ref(seg2);
+}
+
+
 void create_boundary_flags2(uint_vec &bcflag, int nseg,
                             const int *psegment, const int *psegflag)
 {
@@ -1287,6 +1354,9 @@ void create_new_mesh(const Param& param, Variables& var)
         std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';
         std::exit(1);
     }
+
+    renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment);
+
     // std::cout << "segment:\n";
     // print(std::cout, *var.segment);
     // std::cout << '\n';
