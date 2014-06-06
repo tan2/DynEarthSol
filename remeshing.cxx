@@ -1132,7 +1132,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     std::copy(var.volume->begin(), var.volume->end(), var.volume_old->begin());
     compute_mass(param, var.egroup2, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, *var.egroups,
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroup2,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     if (param.sim.has_output_during_remeshing) {
