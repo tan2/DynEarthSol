@@ -140,7 +140,7 @@ void update_temperature(const Param &param, const Variables &var,
         }
     } elemf(var, temperature, tdot);
 
-    loop_all_elem(var.egroup2, elemf);
+    loop_all_elem(var.egroups, elemf);
 
      #pragma omp parallel for default(none)      \
          shared(var, param, tdot, temperature)
@@ -280,7 +280,7 @@ void update_force(const Param& param, const Variables& var, array_t& force)
         }
     } elemf(var, force, param.control.gravity);
 
-    loop_all_elem(var.egroup2, elemf);
+    loop_all_elem(var.egroups, elemf);
 
     apply_stress_bcs(param, var, force);
 

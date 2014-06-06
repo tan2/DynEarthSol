@@ -1204,9 +1204,9 @@ void create_support(Variables& var)
 }
 
 
-void create_elem_groups2(Variables& var)
+void create_elem_groups(Variables& var)
 {
-    var.egroup2.clear();
+    var.egroups.clear();
 
 #ifdef USE_OMP
 
@@ -1222,18 +1222,18 @@ void create_elem_groups2(Variables& var)
     int el_per_group = var.nelem / ngroups;
 
     for(int i=0; i<ngroups; i++)
-        var.egroup2.push_back(i*el_per_group);
-    var.egroup2.push_back(var.nelem);
+        var.egroups.push_back(i*el_per_group);
+    var.egroups.push_back(var.nelem);
 
 #else
 
     // Not using openmp, only need one group for all elements
-    var.egroup2.push_back(0);
-    var.egroup2.push_back(var.nelem);
+    var.egroups.push_back(0);
+    var.egroups.push_back(var.nelem);
 
 #endif
 
-    // print(std::cout, var.egroup2);
+    // print(std::cout, var.egroups);
 }
 
 

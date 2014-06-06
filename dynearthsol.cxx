@@ -30,7 +30,7 @@ void init(const Param& param, Variables& var)
     create_boundary_nodes(var);
     create_boundary_facets(var);
     create_support(var);
-    create_elem_groups2(var);
+    create_elem_groups(var);
     create_elemmarkers(param, var);
     create_markers(param, var);
 
@@ -38,9 +38,9 @@ void init(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     *var.volume_old = *var.volume;
-    compute_mass(param, var.egroup2, *var.connectivity, *var.volume, *var.mat,
+    compute_mass(param, var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroup2,
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     apply_vbcs(param, var, *var.vel);
@@ -116,7 +116,7 @@ void restart(const Param& param, Variables& var)
     create_boundary_nodes(var);
     create_boundary_facets(var);
     create_support(var);
-    create_elem_groups2(var);
+    create_elem_groups(var);
     create_elemmarkers(param, var);
 
     // Replacing create_markers()
@@ -126,9 +126,9 @@ void restart(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     bin_chkpt.read_array(*var.volume_old, "volume_old");
-    compute_mass(param, var.egroup2, *var.connectivity, *var.volume, *var.mat,
+    compute_mass(param, var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroup2,
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     apply_vbcs(param, var, *var.vel);
@@ -164,9 +164,9 @@ void update_mesh(const Param& param, Variables& var)
 
     var.volume->swap(*var.volume_old);
     compute_volume(*var.coord, *var.connectivity, *var.volume);
-    compute_mass(param, var.egroup2, *var.connectivity, *var.volume, *var.mat,
+    compute_mass(param, var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroup2,
+    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 }
 

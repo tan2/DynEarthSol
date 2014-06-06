@@ -200,7 +200,7 @@ struct Variables {
     std::vector< std::pair<int,int> > bfacets[6];
 
     int_vec2D *support, *elemmarkers;
-    int_vec egroup2;
+    int_vec egroups;
 
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;

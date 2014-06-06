@@ -15,29 +15,29 @@ public:
 };
 
 
-inline void loop_all_elem(const std::vector<int> &egroup2, ElemFunc &functor)
+inline void loop_all_elem(const std::vector<int> &egroups, ElemFunc &functor)
 {
 #ifdef USE_OMP
-    // See mesh.cxx::create_elem_group2() for parallel strategy
+    // See mesh.cxx::create_elem_groups() for parallel strategy
 
     // loop over elements in even element groups
-    #pragma omp parallel for default(none) shared(egroup2, functor)
-    for (std::size_t i=0; i<egroup2.size()-1; i+=2) {
-        for (int e=egroup2[i]; e<egroup2[i+1]; ++e)
+    #pragma omp parallel for default(none) shared(egroups, functor)
+    for (std::size_t i=0; i<egroups.size()-1; i+=2) {
+        for (int e=egroups[i]; e<egroups[i+1]; ++e)
             functor(e);
     }
 
     // loop over elements in odd element groups
-    #pragma omp parallel for default(none) shared(egroup2, functor)
-    for (std::size_t i=1; i<egroup2.size()-1; i+=2) {
-        for (int e=egroup2[i]; e<egroup2[i+1]; ++e)
+    #pragma omp parallel for default(none) shared(egroups, functor)
+    for (std::size_t i=1; i<egroups.size()-1; i+=2) {
+        for (int e=egroups[i]; e<egroups[i+1]; ++e)
             functor(e);
     }
 
 #else
 
     // loop over all elements sequentially
-    for (int e=egroup2[0]; e<egroup2[egroup2.size()-1]; ++e)
+    for (int e=egroups[0]; e<egroups[egroups.size()-1]; ++e)
         functor(e);
 
 #endif

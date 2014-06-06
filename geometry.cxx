@@ -139,7 +139,7 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
     } elemf(var, volume, dvoldt);
 
 
-    loop_all_elem(var.egroup2, elemf);
+    loop_all_elem(var.egroups, elemf);
 
 
     #pragma omp parallel for default(none)      \
@@ -244,7 +244,7 @@ double compute_dt(const Param& param, const Variables& var)
 
 
 void compute_mass(const Param &param,
-                  const int_vec &egroup2, const conn_t &connectivity,
+                  const int_vec &egroups, const conn_t &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double max_vbc_val, double_vec &volume_n,
                   double_vec &mass, double_vec &tmass)
@@ -293,12 +293,12 @@ void compute_mass(const Param &param,
     } elemf(mat, connectivity, volume, pseudo_speed, param.control.is_quasi_static,
             param.control.has_thermal_diffusion, volume_n, mass, tmass);
 
-    loop_all_elem(egroup2, elemf);
+    loop_all_elem(egroups, elemf);
 }
 
 
 void compute_shape_fn(const array_t &coord, const conn_t &connectivity,
-                      const double_vec &volume, const int_vec &egroup2,
+                      const double_vec &volume, const int_vec &egroups,
                       shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
 {
     class ElemFunc_shape_fn : public ElemFunc
@@ -383,7 +383,7 @@ void compute_shape_fn(const array_t &coord, const conn_t &connectivity,
         }
     } elemf(coord, connectivity, volume, shpdx, shpdy, shpdz);
 
-    loop_all_elem(egroup2, elemf);
+    loop_all_elem(egroups, elemf);
 }
 
 
