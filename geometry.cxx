@@ -1,6 +1,7 @@
 #include <cmath>
 #include <limits>
 #include <iostream>
+#include "omp.h"
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -114,24 +115,32 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dvoldt.begin(), var.nnode, 0);
 
-    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
-        #pragma omp parallel for default(none)                  \
-            shared(egroup, var, dvoldt, volume)
-        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
-            int e = (*egroup)[ee];
+    class ElemFunc_dvoldt : public ElemFunc
     {
-        const int *conn = (*var.connectivity)[e];
-        const double* strain_rate = (*var.strain_rate)[e];
-        // TODO: try another definition:
-        // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
-        double dj = trace(strain_rate);
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            int n = conn[i];
-            dvoldt[n] += dj * volume[e];
+    private:
+        const Variables &var;
+        const double_vec &volume;
+        double_vec &dvoldt;
+    public:
+        ElemFunc_dvoldt(const Variables &var, const double_vec &volume, double_vec &dvoldt) :
+            var(var), volume(volume), dvoldt(dvoldt) {};
+        void operator()(int e)
+        {
+            const int *conn = (*var.connectivity)[e];
+            const double* strain_rate = (*var.strain_rate)[e];
+            // TODO: try another definition:
+            // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
+            double dj = trace(strain_rate);
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                int n = conn[i];
+                dvoldt[n] += dj * volume[e];
+            }
         }
-    }
-        } // end of ee
-    }
+    } elemf(var, volume, dvoldt);
+
+
+    loop_all_elem(var.egroup2, elemf);
+
 
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, volume_n)
