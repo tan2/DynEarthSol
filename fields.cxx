@@ -242,39 +242,45 @@ void update_force(const Param& param, const Variables& var, array_t& force)
 {
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
 
-    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
-        #pragma omp parallel for default(none)                  \
-            shared(egroup, param, var, force)
-        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
-            int e = (*egroup)[ee];
+    class ElemFunc_force : public ElemFunc
     {
-        const int *conn = (*var.connectivity)[e];
-        const double *shpdx = (*var.shpdx)[e];
+    private:
+        const Variables &var;
+        array_t &force;
+        const double gravity;
+    public:
+        ElemFunc_force(const Variables &var, array_t &force, double gravity) :
+            var(var), force(force), gravity(gravity) {};
+        void operator()(int e)
+        {
+            const int *conn = (*var.connectivity)[e];
+            const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
-        const double *shpdy = (*var.shpdy)[e];
+            const double *shpdy = (*var.shpdy)[e];
 #endif
-        const double *shpdz = (*var.shpdz)[e];
-        double *s = (*var.stress)[e];
-        double vol = (*var.volume)[e];
+            const double *shpdz = (*var.shpdz)[e];
+            double *s = (*var.stress)[e];
+            double vol = (*var.volume)[e];
 
-        double buoy = 0;
-        if (param.control.gravity != 0)
-            buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+            double buoy = 0;
+            if (gravity != 0)
+                buoy = var.mat->rho(e) * gravity / NODES_PER_ELEM;
 
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            double *f = force[conn[i]];
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                double *f = force[conn[i]];
 #ifdef THREED
-            f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-            f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-            f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+                f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+                f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+                f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
 #else
-            f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-            f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+                f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+                f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
 #endif
+            }
         }
-    }
-        } // end of ee
-    }
+    } elemf(var, force, param.control.gravity);
+
+    loop_all_elem(var.egroup2, elemf);
 
     apply_stress_bcs(param, var, force);
 
