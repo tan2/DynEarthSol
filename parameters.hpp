@@ -199,7 +199,7 @@ struct Variables {
     int_vec bnodes[6];
     std::vector< std::pair<int,int> > bfacets[6];
 
-    int_vec2D *support, *egroups, *elemmarkers;
+    int_vec2D *support, *elemmarkers;
     int_vec egroup2;
 
     double_vec *volume, *volume_old, *volume_n;
