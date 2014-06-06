@@ -31,6 +31,7 @@ void init(const Param& param, Variables& var)
     create_boundary_facets(var);
     create_support(var);
     create_elem_groups(var);
+    create_elem_groups2(var);
     create_elemmarkers(param, var);
     create_markers(param, var);
 
@@ -117,6 +118,7 @@ void restart(const Param& param, Variables& var)
     create_boundary_facets(var);
     create_support(var);
     create_elem_groups(var);
+    create_elem_groups2(var);
     create_elemmarkers(param, var);
 
     // Replacing create_markers()

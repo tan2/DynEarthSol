@@ -4,6 +4,10 @@
 #include <cstring>
 #include <string>
 
+#ifdef USE_OMP
+#include <omp.h>
+#endif
+
 #ifdef THREED
 
 #define TETLIBRARY
@@ -1322,6 +1326,39 @@ void create_elem_groups(Variables& var)
 
     // print(std::cout, *var.egroups);
     // std::cout << '\n';
+}
+
+
+void create_elem_groups2(Variables& var)
+{
+    var.egroup2.clear();
+
+#ifdef USE_OMP
+
+    /* T: # of openmp threads
+     *
+     * Decompose the mesh into 2T bands.
+     * The band is ordered as: 0, 1, 2, ...., 2T-2, 2T-1.
+     * Band-N and Band-(N+2) will be disjoint and not sharing any nodes.
+     */
+
+    int nthreads = omp_get_max_threads();
+    int ngroups = 2 * nthreads;
+    int el_per_group = var.nelem / ngroups;
+
+    for(int i=0; i<ngroups; i++)
+        var.egroup2.push_back(i*el_per_group);
+    var.egroup2.push_back(var.nelem);
+
+#else
+
+    // Not using openmp, only need one group for all elements
+    var.egroup2.push_back(0);
+    var.egroup2.push_back(var.nelem);
+
+#endif
+
+    // print(std::cout, var.egroup2);
 }
 
 
