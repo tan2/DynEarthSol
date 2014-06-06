@@ -3,6 +3,7 @@
 #include "parameters.hpp"
 #include "bc.hpp"
 #include "matprops.hpp"
+#include "utils.hpp"
 #include "fields.hpp"
 
 
@@ -94,45 +95,52 @@ void reallocate_variables(const Param& param, Variables& var)
 void update_temperature(const Param &param, const Variables &var,
                         double_vec &temperature, double_vec &tdot)
 {
-    // diffusion matrix
-    double D[NODES_PER_ELEM][NODES_PER_ELEM];
-
     tdot.assign(var.nnode, 0);
-    for (auto egroup=var.egroups->begin(); egroup!=var.egroups->end(); egroup++) {
-        #pragma omp parallel for default(none)                                  \
-            shared(egroup, var, param, temperature, tdot) private(D)
-        for (std::size_t ee=0; ee<egroup->size(); ++ee) {
-            int e = (*egroup)[ee];
+
+    class ElemFunc_temperature : public ElemFunc
     {
-        const int *conn = (*var.connectivity)[e];
-        double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
-        const double *shpdx = (*var.shpdx)[e];
+    private:
+        const Variables &var;
+        const double_vec &temperature;
+        double_vec &tdot;
+    public:
+        ElemFunc_temperature(const Variables &var, const double_vec &temperature, double_vec &tdot) :
+            var(var), temperature(temperature), tdot(tdot) {};
+        void operator()(int e)
+        {
+            // diffusion matrix
+            double D[NODES_PER_ELEM][NODES_PER_ELEM];
+
+            const int *conn = (*var.connectivity)[e];
+            double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
+            const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
-        const double *shpdy = (*var.shpdy)[e];
+            const double *shpdy = (*var.shpdy)[e];
 #endif
-        const double *shpdz = (*var.shpdz)[e];
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            for (int j=0; j<NODES_PER_ELEM; ++j) {
+            const double *shpdz = (*var.shpdz)[e];
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                for (int j=0; j<NODES_PER_ELEM; ++j) {
 #ifdef THREED
-                D[i][j] = (shpdx[i] * shpdx[j] +
-                           shpdy[i] * shpdy[j] +
-                           shpdz[i] * shpdz[j]);
+                    D[i][j] = (shpdx[i] * shpdx[j] +
+                               shpdy[i] * shpdy[j] +
+                               shpdz[i] * shpdz[j]);
 #else
-                D[i][j] = (shpdx[i] * shpdx[j] +
-                           shpdz[i] * shpdz[j]);
+                    D[i][j] = (shpdx[i] * shpdx[j] +
+                               shpdz[i] * shpdz[j]);
 #endif
+                }
+            }
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                double diffusion = 0;
+                for (int j=0; j<NODES_PER_ELEM; ++j)
+                    diffusion += D[i][j] * temperature[conn[j]];
+
+                tdot[conn[i]] += diffusion * kv;
             }
         }
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            double diffusion = 0;
-            for (int j=0; j<NODES_PER_ELEM; ++j)
-                diffusion += D[i][j] * temperature[conn[j]];
+    } elemf(var, temperature, tdot);
 
-            tdot[conn[i]] += diffusion * kv;
-        }
-    }
-        }
-    }
+    loop_all_elem(var.egroup2, elemf);
 
      #pragma omp parallel for default(none)      \
          shared(var, param, tdot, temperature)
