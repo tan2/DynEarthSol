@@ -273,8 +273,9 @@ void compute_mass(const Param &param,
                       double pseudo_speed, bool is_quasi_static, bool has_thermal_diffusion,
                       double_vec &volume_n, double_vec &mass, double_vec &tmass) :
             mat(mat), connectivity(connectivity), volume(volume),
-            pseudo_speed(pseudo_speed), is_quasi_static(is_quasi_static), has_thermal_diffusion(has_thermal_diffusion),
-            volume_n(volume_n), mass(mass), tmass(tmass) {};
+            volume_n(volume_n), mass(mass), tmass(tmass),
+            pseudo_speed(pseudo_speed), is_quasi_static(is_quasi_static),
+            has_thermal_diffusion(has_thermal_diffusion) {};
         void operator()(int e)
         {
             double rho = (is_quasi_static) ?
