@@ -613,11 +613,11 @@ void update_stress(const Variables& var, tensor_t& stress,
                 int failure_mode;
                 if (rheol_type == MatProps::rh_evp) {
                     elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                   de, depls, s, failure_mode);
+                                   de, depls, sp, failure_mode);
                 }
                 else {
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                     de, depls, s, failure_mode);
+                                     de, depls, sp, failure_mode);
                 }
                 double spII = second_invariant2(sp);
 
