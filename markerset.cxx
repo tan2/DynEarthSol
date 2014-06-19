@@ -233,7 +233,7 @@ int MarkerSet::initial_mattype( const Param& param, Variables &var,
 {
     int mt;
     if (param.ic.mattype_option == 0) {
-        mt = (int)(*((*var.regattr)[elem])); // mattype should take a reginal attribute assigned during meshing.
+        mt = (*var.regattr)[elem][0]; // mattype should take a reginal attribute assigned during meshing.
     }
     else {
         double p[NDIMS] = {0};
