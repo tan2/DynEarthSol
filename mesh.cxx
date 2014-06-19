@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <string>
 
 #ifdef USE_OMP
@@ -1224,6 +1225,69 @@ void create_elem_groups(Variables& var)
     for(int i=0; i<ngroups; i++)
         var.egroups.push_back(i*el_per_group);
     var.egroups.push_back(var.nelem);
+
+    //
+    // check that Group N and N+2 do not share nodes
+    //
+
+    int_vec min_idx(ngroups), max_idx(ngroups); // the smallest/largest node number in the group
+    for(int i=0; i<ngroups; i++) {
+        int ndmin = std::numeric_limits<int>::max();
+        int ndmax = -1;
+        for(int e=var.egroups[i]; e<var.egroups[i+1]; ++e) {
+            const int *conn = (*var.connectivity)[e];
+            for(int j=0; j<NODES_PER_ELEM; j++) {
+                ndmin = std::min(ndmin, conn[j]);
+                ndmax = std::max(ndmax, conn[j]);
+            }
+        }
+        min_idx[i] = ndmin;
+        max_idx[i] = ndmax;
+    }
+
+    for(int i=0; i<ngroups-2; i+=2) {
+        if(max_idx[i] >= min_idx[i+2]) {
+            // a loud warning
+            std::cerr << "\n\n****************************************************************\n"
+                      << "*    Warning: egroup-" << i << " and egroup-" << i+2 << " might share common nodes.\n"
+                      << "*             There is some risk of racing conditions.\n"
+                      << "*             Please either increase the resolution or\n"
+                      << "*             decrease the number OpenMP threads.\n"
+                      << "****************************************************************\n\n";
+
+            std::cerr << "egroups: ";
+            print(std::cerr, var.egroups);
+            std::cerr << '\n';
+            std::cerr << "Max. node number in the egroup: ";
+            print(std::cerr, max_idx);
+            std::cerr << '\n';
+            std::cerr << "Min. node number in the egroup: ";
+            print(std::cerr, min_idx);
+            std::cerr << '\n';
+        }
+    }
+    for(int i=1; i<ngroups-1; i+=2) {
+        if(max_idx[i] >= min_idx[i+2]) {
+            // a loud warning
+            std::cerr << "\n\n****************************************************************\n"
+                      << "*    Warning: egroup-" << i << " and egroup-" << i+2 << " might share common nodes.\n"
+                      << "*             There is some risk of racing conditions.\n"
+                      << "*             Please either increase the resolution or\n"
+                      << "*             decrease the number OpenMP threads.\n"
+                      << "****************************************************************\n\n";
+
+            std::cerr << "egroups: ";
+            print(std::cerr, var.egroups);
+            std::cerr << '\n';
+            std::cerr << "Max. node number in the egroup: ";
+            print(std::cerr, max_idx);
+            std::cerr << '\n';
+            std::cerr << "Min. node number in the egroup: ";
+            print(std::cerr, min_idx);
+            std::cerr << '\n';
+        }
+    }
+
 
 #else
 
