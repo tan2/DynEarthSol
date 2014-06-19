@@ -126,12 +126,9 @@ static void maxwell(double bulkm, double shearm, double viscosity, double dt,
     double dev = trace(de) / NDIMS;
     double s0 = trace(s) / NDIMS;
 
-    // istropic stress is elastic
-    s0 += bulkm * dv;
-
     // convert back to total stress
     for (int i=0; i<NDIMS; ++i)
-        s[i] = ((s[i] - s0) * f1 + 2 * shearm * (de[i] - dev)) * f2 + s0;
+        s[i] = ((s[i] - s0) * f1 + 2 * shearm * (de[i] - dev)) * f2 + s0 + bulkm * dv;
     for (int i=NDIMS; i<NSTR; ++i)
         s[i] = (s[i] * f1 + 2 * shearm * de[i]) * f2;
 }
