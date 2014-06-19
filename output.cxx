@@ -51,7 +51,19 @@ void Output::write_info(const Variables& var, double dt)
         f = std::fopen(filename.c_str(), "w");
     else
         f = std::fopen(filename.c_str(), "a");
-    std::fputs(buffer, f);
+
+    if (f == NULL) {
+        std::cerr << "Error: cannot open file '" << filename << "' for writing\n";
+        std::exit(2);
+    }
+
+    if (std::fputs(buffer, f) == EOF) {
+        std::cerr << "Error: failed writing to file '" << filename << "'\n";
+        std::cerr << "\tbuffer written:\n";
+        std::cerr << buffer << '\n';
+        std::exit(2);
+    }
+
     std::fclose(f);
 }
 
