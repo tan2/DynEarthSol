@@ -633,8 +633,8 @@ void update_stress(const Variables& var, tensor_t& stress,
             std::exit(1);
             break;
         }
-        // std::cout << "stress " << e << ": ";
-        // print(std::cout, s, NSTR);
-        // std::cout << '\n';
+        // std::cerr << "stress " << e << ": ";
+        // print(std::cerr, s, NSTR);
+        // std::cerr << '\n';
     }
 }
