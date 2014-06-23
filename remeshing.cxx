@@ -1095,7 +1095,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         new_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
 
-        renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment);
+        renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr);
 
         // interpolating fields defined on elements
         nearest_neighbor_interpolation(var, old_coord, old_connectivity);
