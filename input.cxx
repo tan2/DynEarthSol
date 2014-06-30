@@ -391,7 +391,7 @@ static int read_numbers(const std::string &input, double_vec &vec, int len)
 
 
 static void get_numbers(const po::variables_map &vm, const char *name,
-                        double_vec &values, int len)
+                        double_vec &values, int len, int optional_size=0)
 {
     if ( ! vm.count(name) ) {
         std::cerr << "Error: " << name << " is not provided.\n";
@@ -400,8 +400,8 @@ static void get_numbers(const po::variables_map &vm, const char *name,
 
     std::string str = vm[name].as<std::string>();
     int err = read_numbers(str, values, len);
-    if (err) {
-        err = read_numbers(str, values, 1);
+    if (err && optional_size) {
+        err = read_numbers(str, values, optional_size);
     }
 
     if (err) {
@@ -605,27 +605,27 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::exit(1);
         }
 
-        get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat);
-        get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat);
+        get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat, 1);
 
-        get_numbers(vm, "mat.bulk_modulus", p.mat.bulk_modulus, p.mat.nmat);
-        get_numbers(vm, "mat.shear_modulus", p.mat.shear_modulus, p.mat.nmat);
+        get_numbers(vm, "mat.bulk_modulus", p.mat.bulk_modulus, p.mat.nmat, 1);
+        get_numbers(vm, "mat.shear_modulus", p.mat.shear_modulus, p.mat.nmat, 1);
 
-        get_numbers(vm, "mat.visc_exponent", p.mat.visc_exponent, p.mat.nmat);
-        get_numbers(vm, "mat.visc_coefficient", p.mat.visc_coefficient, p.mat.nmat);
-        get_numbers(vm, "mat.visc_activation_energy", p.mat.visc_activation_energy, p.mat.nmat);
+        get_numbers(vm, "mat.visc_exponent", p.mat.visc_exponent, p.mat.nmat, 1);
+        get_numbers(vm, "mat.visc_coefficient", p.mat.visc_coefficient, p.mat.nmat, 1);
+        get_numbers(vm, "mat.visc_activation_energy", p.mat.visc_activation_energy, p.mat.nmat, 1);
 
-        get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat);
-        get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat);
+        get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat, 1);
+        get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat, 1);
 
-        get_numbers(vm, "mat.pls0", p.mat.pls0, p.mat.nmat);
-        get_numbers(vm, "mat.pls1", p.mat.pls1, p.mat.nmat);
-        get_numbers(vm, "mat.cohesion0", p.mat.cohesion0, p.mat.nmat);
-        get_numbers(vm, "mat.cohesion1", p.mat.cohesion1, p.mat.nmat);
-        get_numbers(vm, "mat.friction_angle0", p.mat.friction_angle0, p.mat.nmat);
-        get_numbers(vm, "mat.friction_angle1", p.mat.friction_angle1, p.mat.nmat);
-        get_numbers(vm, "mat.dilation_angle0", p.mat.dilation_angle0, p.mat.nmat);
-        get_numbers(vm, "mat.dilation_angle1", p.mat.dilation_angle1, p.mat.nmat);
+        get_numbers(vm, "mat.pls0", p.mat.pls0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.pls1", p.mat.pls1, p.mat.nmat, 1);
+        get_numbers(vm, "mat.cohesion0", p.mat.cohesion0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.cohesion1", p.mat.cohesion1, p.mat.nmat, 1);
+        get_numbers(vm, "mat.friction_angle0", p.mat.friction_angle0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.friction_angle1", p.mat.friction_angle1, p.mat.nmat, 1);
+        get_numbers(vm, "mat.dilation_angle0", p.mat.dilation_angle0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.dilation_angle1", p.mat.dilation_angle1, p.mat.nmat, 1);
     }
 
 }
