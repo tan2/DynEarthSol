@@ -36,6 +36,7 @@ struct Sim {
     int checkpoint_frame_interval;
     int restarting_from_frame;
     bool is_restarting;
+    bool has_initial_checkpoint;
     bool has_output_during_remeshing;
     bool has_marker_output;
 
