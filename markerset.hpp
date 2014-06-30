@@ -67,6 +67,9 @@ private:
     int initial_mattype( const Param&, const Variables&,
                          int elem, const double eta[NODES_PER_ELEM],
                          const double *x=NULL );
+    int layered_initial_mattype( const Param& param, const Variables &var,
+                                 int elem, const double eta[NODES_PER_ELEM],
+                                 const double *x);
     int custom_initial_mattype( const Param& param, const Variables &var,
                                 int elem, const double eta[NODES_PER_ELEM],
                                 const double *x );

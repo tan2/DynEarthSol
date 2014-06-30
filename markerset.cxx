@@ -251,11 +251,7 @@ int MarkerSet::initial_mattype( const Param& param, const Variables &var,
         // modify mt according to the marker coordinate p
         switch (param.ic.mattype_option) {
         case 1:
-            // lower half: 1; upper half: 0
-            if (p[NDIMS-1] < -0.5 * param.mesh.zlength)
-                mt = 1;
-            else
-                mt = 0;
+            mt = layered_initial_mattype(param, var, elem, eta, p);
             break;
         case 101:
             mt = custom_initial_mattype(param, var, elem, eta, p);
@@ -265,6 +261,20 @@ int MarkerSet::initial_mattype( const Param& param, const Variables &var,
             std::exit(1);
         }
     }
+    return mt;
+}
+
+
+int MarkerSet::layered_initial_mattype( const Param& param, const Variables &var,
+                                        int elem, const double eta[NODES_PER_ELEM],
+                                        const double *x)
+{
+    int mt;
+    // lower half: 1; upper half: 0
+    if (x[NDIMS-1] < -0.5 * param.mesh.zlength)
+        mt = 1;
+    else
+        mt = 0;
     return mt;
 }
 
