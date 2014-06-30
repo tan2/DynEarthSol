@@ -228,7 +228,8 @@ static void declare_parameters(po::options_description &cfg,
         ("ic.mattype_option", po::value<int>(&p.ic.mattype_option)->default_value(0),
          "How to set the initial material type of markers?\n"
          "0: marker's mattype is determined by regional attribute in meshing.\n"
-         "1: marker's mattype is determined by its location.\n")
+         "1: marker's mattype is determined by its location.\n"
+         "101: custom mattype.")
 
         ("ic.weakzone_option", po::value<int>(&p.ic.weakzone_option)->default_value(1),
          "How to set the initial weak zone?\n"

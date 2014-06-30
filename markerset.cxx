@@ -257,11 +257,25 @@ int MarkerSet::initial_mattype( const Param& param, const Variables &var,
             else
                 mt = 0;
             break;
+        case 101:
+            mt = custom_initial_mattype(param, var, elem, eta, p);
+            break;
         default:
             std::cerr << "Error: unknown ic.mattype_option: " << param.ic.mattype_option << '\n';
             std::exit(1);
         }
     }
+    return mt;
+}
+
+
+int MarkerSet::custom_initial_mattype( const Param& param, const Variables &var,
+                                       int elem, const double eta[NODES_PER_ELEM],
+                                       const double *x )
+{
+    /* User defined function */
+    int mt = 0;
+
     return mt;
 }
 

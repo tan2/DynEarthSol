@@ -67,6 +67,10 @@ private:
     int initial_mattype( const Param&, const Variables&,
                          int elem, const double eta[NODES_PER_ELEM],
                          const double *x=NULL );
+    int custom_initial_mattype( const Param& param, const Variables &var,
+                                int elem, const double eta[NODES_PER_ELEM],
+                                const double *x );
+
 };
 
 void remap_markers(const Param&, Variables &, 
