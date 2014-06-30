@@ -64,8 +64,9 @@ private:
     void regularly_spaced_markers( const Param&, Variables& );
     void allocate_markerdata( const int );
 
-    int initial_mattype( const Param&, Variables&,
-                         int elem, double eta[NODES_PER_ELEM]);
+    int initial_mattype( const Param&, const Variables&,
+                         int elem, const double eta[NODES_PER_ELEM],
+                         const double *x=NULL );
 };
 
 void remap_markers(const Param&, Variables &, 

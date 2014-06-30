@@ -206,7 +206,7 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
             eta[NDIMS] = tmp;
 
             if (bary.is_inside(eta)) {
-                int mt = initial_mattype(param, var, e, eta);
+                int mt = initial_mattype(param, var, e, eta, x);
                 append_marker(eta, e, mt);
                 ++(*var.elemmarkers)[e][mt];
                 found = true;
@@ -228,8 +228,9 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
 }
 
 
-int MarkerSet::initial_mattype( const Param& param, Variables &var,
-                                int elem, double eta[NODES_PER_ELEM])
+int MarkerSet::initial_mattype( const Param& param, const Variables &var,
+                                int elem, const double eta[NODES_PER_ELEM],
+                                const double *x)
 {
     int mt;
     if (param.ic.mattype_option == 0) {
@@ -237,10 +238,15 @@ int MarkerSet::initial_mattype( const Param& param, Variables &var,
     }
     else {
         double p[NDIMS] = {0};
-        const int *conn = (*var.connectivity)[elem];
-        for(int i=0; i<NDIMS; i++) {
-            for(int j=0; j<NODES_PER_ELEM; j++)
-                p[i] += (*var.coord)[ conn[j] ][i] * eta[j];
+        if (x) {
+            std::memcpy(p, x, NDIMS*sizeof(double));
+        }
+        else {
+            const int *conn = (*var.connectivity)[elem];
+            for(int i=0; i<NDIMS; i++) {
+                for(int j=0; j<NODES_PER_ELEM; j++)
+                    p[i] += (*var.coord)[ conn[j] ][i] * eta[j];
+            }
         }
         // modify mt according to the marker coordinate p
         switch (param.ic.mattype_option) {
