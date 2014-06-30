@@ -1,3 +1,4 @@
+#include <algorithm>  // For std::is_sorted
 #include <cstdio>
 #include <iostream>
 #include <limits>
@@ -230,6 +231,8 @@ static void declare_parameters(po::options_description &cfg,
          "0: marker's mattype is determined by regional attribute in meshing.\n"
          "1: marker's mattype is determined by its location.\n"
          "101: custom mattype.")
+        ("ic.mattype_layer_depths", po::value<std::string>()->default_value("[0.5]"),
+         "Depths of the interfaces of each material layer '[d0, d1, d2, ...]', d0<=d1<=d2..., (in unit of zlength)")
 
         ("ic.weakzone_option", po::value<int>(&p.ic.weakzone_option)->default_value(1),
          "How to set the initial weak zone?\n"
@@ -555,6 +558,21 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::exit(1);
         }
 
+    }
+
+    //
+    // ic
+    //
+    {
+        if ( p.ic.mattype_option == 1) {
+            get_numbers(vm, "ic.mattype_layer_depths", p.ic.mattype_layer_depths, p.mat.nmat-1);
+            // mattype_layer_depths must be already sorted
+            if (! std::is_sorted(p.ic.mattype_layer_depths.begin(), p.ic.mattype_layer_depths.end())) {
+                std::cerr << "Error: the content of ic.mattype_layer_depths is not ordered from"
+                    " small to big values.\n";
+                std::exit(1);
+            }
+        }
     }
 
     //

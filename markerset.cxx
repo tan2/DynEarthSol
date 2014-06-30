@@ -269,12 +269,14 @@ int MarkerSet::layered_initial_mattype( const Param& param, const Variables &var
                                         int elem, const double eta[NODES_PER_ELEM],
                                         const double *x)
 {
-    int mt;
-    // lower half: 1; upper half: 0
-    if (x[NDIMS-1] < -0.5 * param.mesh.zlength)
-        mt = 1;
-    else
-        mt = 0;
+    int mt = param.mat.nmat - 1;
+    const double_vec &layers = param.ic.mattype_layer_depths;
+    for (int i=0; i<layers.size(); ++i) {
+        if (x[NDIMS-1] >= -param.mesh.zlength * layers[i]) {
+            mt = i;
+            break;
+        }
+    }
     return mt;
 }
 
