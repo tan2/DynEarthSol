@@ -398,6 +398,10 @@ static void get_numbers(const po::variables_map &vm, const char *name,
     std::string str = vm[name].as<std::string>();
     int err = read_numbers(str, values, len);
     if (err) {
+        err = read_numbers(str, values, 1);
+    }
+
+    if (err) {
         std::cerr << "Error: incorrect format for " << name << ",\n"
                   << "       must be '[d0, d1, d2, ...]'\n";
         std::exit(1);
