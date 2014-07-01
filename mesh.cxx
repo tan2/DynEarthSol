@@ -1034,7 +1034,7 @@ void points_to_new_surface(const Mesh &mesh, int npoints, const double *points,
 
 
 void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
-                      segment_t &segment, regattr_t &regattr)
+                      segment_t &segment, regattr_t &regattr, int option)
 {
     /* Renumbering nodes and elements to enhance cache coherance and better parallel performace. */
 
@@ -1099,12 +1099,14 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
     }
     segment.steal_ref(seg2);
 
-    regattr_t regattr2(nelem);
-    for(int i=0; i<nelem; i++) {
-        int n = el_idx[i];
-        regattr2[i][0] = regattr[n][0];
+    if (option == 1) {
+        regattr_t regattr2(nelem);
+        for(int i=0; i<nelem; i++) {
+            int n = el_idx[i];
+            regattr2[i][0] = regattr[n][0];
+        }
+        regattr.steal_ref(regattr2);
     }
-    regattr.steal_ref(regattr2);
 }
 
 
@@ -1339,7 +1341,7 @@ void create_new_mesh(const Param& param, Variables& var)
         std::exit(1);
     }
 
-    renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr);
+    renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr, 1);
 
     // std::cout << "segment:\n";
     // print(std::cout, *var.segment);
