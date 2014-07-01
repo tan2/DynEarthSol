@@ -36,6 +36,7 @@ struct Sim {
     int checkpoint_frame_interval;
     int restarting_from_frame;
     bool is_restarting;
+    bool has_initial_checkpoint;
     bool has_output_during_remeshing;
     bool has_marker_output;
 
@@ -107,6 +108,8 @@ struct BC {
 struct IC {
     int mattype_option;
     int weakzone_option;
+    double_vec mattype_layer_depths;
+
     double weakzone_plstrain;
     double weakzone_azimuth;
     double weakzone_inclination;

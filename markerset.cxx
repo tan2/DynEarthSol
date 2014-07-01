@@ -206,7 +206,7 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
             eta[NDIMS] = tmp;
 
             if (bary.is_inside(eta)) {
-                int mt = initial_mattype(param, var, e, eta);
+                int mt = initial_mattype(param, var, e, eta, x);
                 append_marker(eta, e, mt);
                 ++(*var.elemmarkers)[e][mt];
                 found = true;
@@ -228,8 +228,9 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
 }
 
 
-int MarkerSet::initial_mattype( const Param& param, Variables &var,
-                                int elem, double eta[NODES_PER_ELEM])
+int MarkerSet::initial_mattype( const Param& param, const Variables &var,
+                                int elem, const double eta[NODES_PER_ELEM],
+                                const double *x)
 {
     int mt;
     if (param.ic.mattype_option == 0) {
@@ -237,25 +238,56 @@ int MarkerSet::initial_mattype( const Param& param, Variables &var,
     }
     else {
         double p[NDIMS] = {0};
-        const int *conn = (*var.connectivity)[elem];
-        for(int i=0; i<NDIMS; i++) {
-            for(int j=0; j<NODES_PER_ELEM; j++)
-                p[i] += (*var.coord)[ conn[j] ][i] * eta[j];
+        if (x) {
+            std::memcpy(p, x, NDIMS*sizeof(double));
+        }
+        else {
+            const int *conn = (*var.connectivity)[elem];
+            for(int i=0; i<NDIMS; i++) {
+                for(int j=0; j<NODES_PER_ELEM; j++)
+                    p[i] += (*var.coord)[ conn[j] ][i] * eta[j];
+            }
         }
         // modify mt according to the marker coordinate p
         switch (param.ic.mattype_option) {
         case 1:
-            // lower half: 1; upper half: 0
-            if (p[NDIMS-1] < -0.5 * param.mesh.zlength)
-                mt = 1;
-            else
-                mt = 0;
+            mt = layered_initial_mattype(param, var, elem, eta, p);
+            break;
+        case 101:
+            mt = custom_initial_mattype(param, var, elem, eta, p);
             break;
         default:
             std::cerr << "Error: unknown ic.mattype_option: " << param.ic.mattype_option << '\n';
             std::exit(1);
         }
     }
+    return mt;
+}
+
+
+int MarkerSet::layered_initial_mattype( const Param& param, const Variables &var,
+                                        int elem, const double eta[NODES_PER_ELEM],
+                                        const double *x)
+{
+    int mt = param.mat.nmat - 1;
+    const double_vec &layers = param.ic.mattype_layer_depths;
+    for (int i=0; i<layers.size(); ++i) {
+        if (x[NDIMS-1] >= -param.mesh.zlength * layers[i]) {
+            mt = i;
+            break;
+        }
+    }
+    return mt;
+}
+
+
+int MarkerSet::custom_initial_mattype( const Param& param, const Variables &var,
+                                       int elem, const double eta[NODES_PER_ELEM],
+                                       const double *x )
+{
+    /* User defined function */
+    int mt = 0;
+
     return mt;
 }
 
@@ -327,18 +359,18 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     double *dd = new double[k];
 
     // Loop over all the old markers and identify a containing element in the new mesh.
-    MarkerSet *ms = var.markerset; // alias to var.markerset
-    int last_marker = ms->get_nmarkers();
+    MarkerSet &ms = *var.markerset; // alias to var.markerset
+    int last_marker = ms.get_nmarkers();
     int i = 0;
     while (i < last_marker) {
         bool found = false;
 
         // 1. Get physical coordinates, x, of an old marker.
-        int eold = ms->get_elem(i);
+        int eold = ms.get_elem(i);
         double x[NDIMS] = {0};
         for (int j = 0; j < NDIMS; j++)
             for (int k = 0; k < NODES_PER_ELEM; k++)
-                x[j] += ms->get_eta(i)[k]*
+                x[j] += ms.get_eta(i)[k]*
                     old_coord[ old_connectivity[eold][k] ][j];
 
         if (DEBUG) {
@@ -363,9 +395,9 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             }
 
             if (bary.is_inside(r)) {
-                ms->set_eta(i, r);
-                ms->set_elem(i, e);
-                ++(*(var.elemmarkers))[e][ms->get_mattype(i)];
+                ms.set_eta(i, r);
+                ms.set_elem(i, e);
+                ++(*(var.elemmarkers))[e][ms.get_mattype(i)];
             
                 found = true;
                 ++i;
@@ -387,7 +419,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             // Since no containing element has been found, delete this marker.
             // Note i is not inc'd.
             --last_marker;
-            ms->remove_marker(i);
+            ms.remove_marker(i);
         }
     }
 
@@ -414,7 +446,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                 // Determine new marker's matttype based on cpdf
                 auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
                 const int mt = upper - cpdf.begin();
-                ms->append_random_marker_in_elem(e, mt);
+                ms.append_random_marker_in_elem(e, mt);
 
                 ++(*var.elemmarkers)[e][mt];
                 ++num_marker_in_elem;

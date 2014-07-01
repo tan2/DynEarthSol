@@ -1,3 +1,4 @@
+#include <algorithm>  // For std::is_sorted
 #include <cstdio>
 #include <iostream>
 #include <limits>
@@ -51,6 +52,8 @@ static void declare_parameters(po::options_description &cfg,
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
          "Restarting from previous checkpoint file?")
 
+        ("sim.has_initial_checkpoint", po::value<bool>(&p.sim.has_initial_checkpoint)->default_value(false),
+         "Output checkpoint file at 0th step?")
         ("sim.has_marker_output", po::value<bool>(&p.sim.has_marker_output)->default_value(false),
          "Output marker coordinate and material?")
         ("sim.has_output_during_remeshing", po::value<bool>(&p.sim.has_output_during_remeshing)->default_value(false),
@@ -226,7 +229,10 @@ static void declare_parameters(po::options_description &cfg,
         ("ic.mattype_option", po::value<int>(&p.ic.mattype_option)->default_value(0),
          "How to set the initial material type of markers?\n"
          "0: marker's mattype is determined by regional attribute in meshing.\n"
-         "1: marker's mattype is determined by its location.\n")
+         "1: marker's mattype is determined by its location.\n"
+         "101: custom mattype.")
+        ("ic.mattype_layer_depths", po::value<std::string>()->default_value("[0.5]"),
+         "Depths of the interfaces of each material layer '[d0, d1, d2, ...]', d0<=d1<=d2..., (in unit of zlength)")
 
         ("ic.weakzone_option", po::value<int>(&p.ic.weakzone_option)->default_value(1),
          "How to set the initial weak zone?\n"
@@ -388,7 +394,7 @@ static int read_numbers(const std::string &input, double_vec &vec, int len)
 
 
 static void get_numbers(const po::variables_map &vm, const char *name,
-                        double_vec &values, int len)
+                        double_vec &values, int len, int optional_size=0)
 {
     if ( ! vm.count(name) ) {
         std::cerr << "Error: " << name << " is not provided.\n";
@@ -397,6 +403,10 @@ static void get_numbers(const po::variables_map &vm, const char *name,
 
     std::string str = vm[name].as<std::string>();
     int err = read_numbers(str, values, len);
+    if (err && optional_size) {
+        err = read_numbers(str, values, optional_size);
+    }
+
     if (err) {
         std::cerr << "Error: incorrect format for " << name << ",\n"
                   << "       must be '[d0, d1, d2, ...]'\n";
@@ -551,6 +561,21 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     }
 
     //
+    // ic
+    //
+    {
+        if ( p.ic.mattype_option == 1) {
+            get_numbers(vm, "ic.mattype_layer_depths", p.ic.mattype_layer_depths, p.mat.nmat-1);
+            // mattype_layer_depths must be already sorted
+            if (! std::is_sorted(p.ic.mattype_layer_depths.begin(), p.ic.mattype_layer_depths.end())) {
+                std::cerr << "Error: the content of ic.mattype_layer_depths is not ordered from"
+                    " small to big values.\n";
+                std::exit(1);
+            }
+        }
+    }
+
+    //
     // marker
     //
     {
@@ -598,27 +623,27 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::exit(1);
         }
 
-        get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat);
-        get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat);
+        get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat, 1);
 
-        get_numbers(vm, "mat.bulk_modulus", p.mat.bulk_modulus, p.mat.nmat);
-        get_numbers(vm, "mat.shear_modulus", p.mat.shear_modulus, p.mat.nmat);
+        get_numbers(vm, "mat.bulk_modulus", p.mat.bulk_modulus, p.mat.nmat, 1);
+        get_numbers(vm, "mat.shear_modulus", p.mat.shear_modulus, p.mat.nmat, 1);
 
-        get_numbers(vm, "mat.visc_exponent", p.mat.visc_exponent, p.mat.nmat);
-        get_numbers(vm, "mat.visc_coefficient", p.mat.visc_coefficient, p.mat.nmat);
-        get_numbers(vm, "mat.visc_activation_energy", p.mat.visc_activation_energy, p.mat.nmat);
+        get_numbers(vm, "mat.visc_exponent", p.mat.visc_exponent, p.mat.nmat, 1);
+        get_numbers(vm, "mat.visc_coefficient", p.mat.visc_coefficient, p.mat.nmat, 1);
+        get_numbers(vm, "mat.visc_activation_energy", p.mat.visc_activation_energy, p.mat.nmat, 1);
 
-        get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat);
-        get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat);
+        get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat, 1);
+        get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat, 1);
 
-        get_numbers(vm, "mat.pls0", p.mat.pls0, p.mat.nmat);
-        get_numbers(vm, "mat.pls1", p.mat.pls1, p.mat.nmat);
-        get_numbers(vm, "mat.cohesion0", p.mat.cohesion0, p.mat.nmat);
-        get_numbers(vm, "mat.cohesion1", p.mat.cohesion1, p.mat.nmat);
-        get_numbers(vm, "mat.friction_angle0", p.mat.friction_angle0, p.mat.nmat);
-        get_numbers(vm, "mat.friction_angle1", p.mat.friction_angle1, p.mat.nmat);
-        get_numbers(vm, "mat.dilation_angle0", p.mat.dilation_angle0, p.mat.nmat);
-        get_numbers(vm, "mat.dilation_angle1", p.mat.dilation_angle1, p.mat.nmat);
+        get_numbers(vm, "mat.pls0", p.mat.pls0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.pls1", p.mat.pls1, p.mat.nmat, 1);
+        get_numbers(vm, "mat.cohesion0", p.mat.cohesion0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.cohesion1", p.mat.cohesion1, p.mat.nmat, 1);
+        get_numbers(vm, "mat.friction_angle0", p.mat.friction_angle0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.friction_angle1", p.mat.friction_angle1, p.mat.nmat, 1);
+        get_numbers(vm, "mat.dilation_angle0", p.mat.dilation_angle0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.dilation_angle1", p.mat.dilation_angle1, p.mat.nmat, 1);
     }
 
 }

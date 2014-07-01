@@ -206,6 +206,9 @@ int main(int argc, const char* argv[])
 
     if (! param.sim.is_restarting) {
         init(param, var);
+
+        if (param.sim.has_initial_checkpoint)
+            output.write_checkpoint(var);
     }
     else {
         restart(param, var);

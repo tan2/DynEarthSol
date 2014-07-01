@@ -3,6 +3,17 @@
 
 #include "parameters.hpp"
 
+class VectorBase
+{
+public:
+    // factory method
+    static VectorBase* create(const double_vec&, int);
+    virtual ~VectorBase() {};
+    virtual double operator[] (std::size_t) const = 0;
+    virtual std::size_t size() const = 0;
+};
+
+
 class MatProps
 {
 public:
@@ -41,15 +52,6 @@ public:
 
 private:
 
-    const double_vec &rho0, &alpha;
-    const double_vec &bulk_modulus, &shear_modulus;
-    const double_vec &visc_exponent, &visc_coefficient, &visc_activation_energy;
-    const double_vec &heat_capacity, &therm_cond;
-    const double_vec &pls0, &pls1;
-    const double_vec &cohesion0, &cohesion1;
-    const double_vec &friction_angle0, &friction_angle1;
-    const double_vec &dilation_angle0, &dilation_angle1;
-
     // alias to field variables in var
     // ie. var.mat.temperature == var.temperature
     const array_t &coord;
@@ -58,6 +60,15 @@ private:
     const tensor_t &stress;
     const tensor_t &strain_rate;
     const int_vec2D &elemmarkers;
+
+    const VectorBase *rho0, *alpha;
+    const VectorBase *bulk_modulus, *shear_modulus;
+    const VectorBase *visc_exponent, *visc_coefficient, *visc_activation_energy;
+    const VectorBase *heat_capacity, *therm_cond;
+    const VectorBase *pls0, *pls1;
+    const VectorBase *cohesion0, *cohesion1;
+    const VectorBase *friction_angle0, *friction_angle1;
+    const VectorBase *dilation_angle0, *dilation_angle1;
 
     void plastic_weakening(int e, double pls,
                            double &cohesion, double &friction_angle,
