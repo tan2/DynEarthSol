@@ -359,18 +359,18 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     double *dd = new double[k];
 
     // Loop over all the old markers and identify a containing element in the new mesh.
-    MarkerSet *ms = var.markerset; // alias to var.markerset
-    int last_marker = ms->get_nmarkers();
+    MarkerSet &ms = *var.markerset; // alias to var.markerset
+    int last_marker = ms.get_nmarkers();
     int i = 0;
     while (i < last_marker) {
         bool found = false;
 
         // 1. Get physical coordinates, x, of an old marker.
-        int eold = ms->get_elem(i);
+        int eold = ms.get_elem(i);
         double x[NDIMS] = {0};
         for (int j = 0; j < NDIMS; j++)
             for (int k = 0; k < NODES_PER_ELEM; k++)
-                x[j] += ms->get_eta(i)[k]*
+                x[j] += ms.get_eta(i)[k]*
                     old_coord[ old_connectivity[eold][k] ][j];
 
         if (DEBUG) {
@@ -395,9 +395,9 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             }
 
             if (bary.is_inside(r)) {
-                ms->set_eta(i, r);
-                ms->set_elem(i, e);
-                ++(*(var.elemmarkers))[e][ms->get_mattype(i)];
+                ms.set_eta(i, r);
+                ms.set_elem(i, e);
+                ++(*(var.elemmarkers))[e][ms.get_mattype(i)];
             
                 found = true;
                 ++i;
@@ -419,7 +419,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             // Since no containing element has been found, delete this marker.
             // Note i is not inc'd.
             --last_marker;
-            ms->remove_marker(i);
+            ms.remove_marker(i);
         }
     }
 
@@ -446,7 +446,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                 // Determine new marker's matttype based on cpdf
                 auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
                 const int mt = upper - cpdf.begin();
-                ms->append_random_marker_in_elem(e, mt);
+                ms.append_random_marker_in_elem(e, mt);
 
                 ++(*var.elemmarkers)[e][mt];
                 ++num_marker_in_elem;
