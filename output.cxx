@@ -254,7 +254,6 @@ void Output::write_checkpoint(const Variables& var)
 
     bin.write_array(*var.volume_old, "volume_old");
 
-    MarkerSet &ms = *var.markerset;
-    ms.write_chkpt_file(bin);
+    var.markerset->write_chkpt_file(bin);
 }
 
