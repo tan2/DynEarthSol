@@ -458,7 +458,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
 }
 
 
-void MarkerSet::write_chkpt_file(BinaryOutput &bin)
+void MarkerSet::write_chkpt_file(BinaryOutput &bin) const
 {
     int_vec itmp(2);
     itmp[0] = _nmarkers;
@@ -495,7 +495,7 @@ void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
 }
 
 
-void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin)
+void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
 {
     int_vec itmp(1);
     itmp[0] = _nmarkers;
