@@ -120,7 +120,7 @@ void restart(const Param& param, Variables& var)
     create_elemmarkers(param, var);
 
     // Replacing create_markers()
-    var.markerset = new MarkerSet(param, var, bin_chkpt);
+    var.markerset = new MarkerSet(param, var, bin_chkpt, "markerset");
 
     allocate_variables(param, var);
 

@@ -1,6 +1,9 @@
 #ifndef DYNEARTHSOL3D_MARKERSET_HPP
 #define DYNEARTHSOL3D_MARKERSET_HPP
 
+#include <string>
+
+
 // forward declaration
 class BinaryOutput;
 class BinaryInput;
@@ -9,8 +12,8 @@ class MarkerSet
 {
 
 public:
-    MarkerSet( const Param& param, Variables& var );
-    MarkerSet( const Param& param, Variables& var, BinaryInput& bin );
+    MarkerSet( const Param& param, Variables& var, const std::string name );
+    MarkerSet( const Param& param, Variables& var, BinaryInput& bin, const std::string name );
     ~MarkerSet()
     { 
         delete _id;
@@ -42,6 +45,8 @@ public:
     inline void set_eta( const int i, const double r[NDIMS] );
 
 private:
+    const std::string name;
+
     // Didn't create a data type for an individual marker to follow the "structure of arrays" concept.
     // Number of markers (may change during remeshing)
 

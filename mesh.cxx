@@ -1320,7 +1320,7 @@ void create_elemmarkers(const Param& param, Variables& var)
 
 void create_markers(const Param& param, Variables& var)
 {
-    var.markerset = new MarkerSet( param, var );
+    var.markerset = new MarkerSet( param, var, "markerset" );
 }
 
 

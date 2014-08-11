@@ -22,7 +22,8 @@ namespace {
 }
 
 
-MarkerSet::MarkerSet(const Param& param, Variables& var)
+MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string name_) :
+    name(name_)
 {
     _last_id = _nmarkers = 0;
 
@@ -40,7 +41,8 @@ MarkerSet::MarkerSet(const Param& param, Variables& var)
 }
 
 
-MarkerSet::MarkerSet(const Param& param, Variables& var, BinaryInput& bin)
+MarkerSet::MarkerSet(const Param& param, Variables& var, BinaryInput& bin, const std::string name_) :
+    name(name_)
 {
     // init from checkpoint file
     read_chkpt_file(var, bin);
@@ -461,12 +463,12 @@ void MarkerSet::write_chkpt_file(BinaryOutput &bin)
     int_vec itmp(2);
     itmp[0] = _nmarkers;
     itmp[1] = _last_id;
-    bin.write_array(itmp, "markerset size");
+    bin.write_array(itmp, (name + " size").c_str());
 
-    bin.write_array(*_eta, "markerset.eta");
-    bin.write_array(*_elem, "markerset.elem");
-    bin.write_array(*_mattype, "markerset.mattype");
-    bin.write_array(*_id, "markerset.id");
+    bin.write_array(*_eta, (name + ".eta").c_str());
+    bin.write_array(*_elem, (name + ".elem").c_str());
+    bin.write_array(*_mattype, (name + ".mattype").c_str());
+    bin.write_array(*_id, (name + ".id").c_str());
 
 }
 
@@ -474,16 +476,16 @@ void MarkerSet::write_chkpt_file(BinaryOutput &bin)
 void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
 {
     int_vec itmp(2);
-    bin.read_array(itmp, "markerset size");
+    bin.read_array(itmp, (name + " size").c_str());
     _nmarkers = itmp[0];
     _last_id = itmp[1];
 
     allocate_markerdata(_nmarkers);
 
-    bin.read_array(*_eta, "markerset.eta");
-    bin.read_array(*_elem, "markerset.elem");
-    bin.read_array(*_mattype, "markerset.mattype");
-    bin.read_array(*_id, "markerset.id");
+    bin.read_array(*_eta, (name + ".eta").c_str());
+    bin.read_array(*_elem, (name + ".elem").c_str());
+    bin.read_array(*_mattype, (name + ".mattype").c_str());
+    bin.read_array(*_id, (name + ".id").c_str());
 
     for( int i = 0; i < _nmarkers; i++ ) {
         int e = (*_elem)[i];
@@ -497,7 +499,7 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin)
 {
     int_vec itmp(1);
     itmp[0] = _nmarkers;
-    bin.write_array(itmp, "markerset size");
+    bin.write_array(itmp, (name + " size").c_str());
 
     array_t mcoord(_nmarkers, 0);
     const array_t &coord = *var.coord;
@@ -516,10 +518,10 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin)
         // std::cout << "\n";
     }
 
-    bin.write_array(mcoord, "markerset.coord");
-    bin.write_array(*_elem, "markerset.elem");
-    bin.write_array(*_mattype, "markerset.mattype");
-    bin.write_array(*_id, "markerset.id");
+    bin.write_array(mcoord, (name + ".coord").c_str());
+    bin.write_array(*_elem, (name + ".elem").c_str());
+    bin.write_array(*_mattype, (name + ".mattype").c_str());
+    bin.write_array(*_id, (name + ".id").c_str());
 
 }
 
