@@ -166,7 +166,7 @@ void Output::write(const Variables& var, bool is_averaged)
     //bin.write_array(*var.bcflag, "bcflag");
 
     if (has_marker_output)
-        var.markerset->write_save_file(var, bin);
+        var.markersets[0].write_save_file(var, bin);
 
     bin.close();
     std::cout << "  Output # " << frame
@@ -254,6 +254,6 @@ void Output::write_checkpoint(const Variables& var)
 
     bin.write_array(*var.volume_old, "volume_old");
 
-    var.markerset->write_chkpt_file(bin);
+    var.markersets[0].write_chkpt_file(bin);
 }
 

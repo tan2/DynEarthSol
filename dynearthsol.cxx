@@ -120,7 +120,7 @@ void restart(const Param& param, Variables& var)
     create_elemmarkers(param, var);
 
     // Replacing create_markers()
-    var.markerset = new MarkerSet(param, var, bin_chkpt, "markerset");
+    var.markersets.emplace_back(param, var, bin_chkpt, "markerset");
 
     allocate_variables(param, var);
 
@@ -247,7 +247,7 @@ int main(int argc, const char* argv[])
         if (var.steps % 10 == 0) var.dt = compute_dt(param, var);
 
         // ditto for phase changes
-        if (var.steps % 10 == 0) phase_changes(param, var, *var.markerset, *var.elemmarkers);
+        if (var.steps % 10 == 0) phase_changes(param, var, var.markersets[0], *var.elemmarkers);
 
         if (param.sim.output_averaged_fields)
             output.average_fields(var);

@@ -218,7 +218,7 @@ struct Variables {
 
     MatProps *mat;
 
-    MarkerSet *markerset;
+    std::vector<MarkerSet> markersets;
 };
 
 #endif

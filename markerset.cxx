@@ -361,7 +361,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     double *dd = new double[k];
 
     // Loop over all the old markers and identify a containing element in the new mesh.
-    MarkerSet &ms = *var.markerset; // alias to var.markerset
+    MarkerSet &ms = var.markersets[0]; // alias to var.markerset
     int last_marker = ms.get_nmarkers();
     int i = 0;
     while (i < last_marker) {
