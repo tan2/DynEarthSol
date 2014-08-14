@@ -121,6 +121,10 @@ void restart(const Param& param, Variables& var)
 
     // Replacing create_markers()
     var.markersets.emplace_back(param, var, bin_chkpt, "markerset");
+    if (param.control.has_hydration_processes) {
+        var.hydrous_marker_index = var.markersets.size();
+        var.markersets.emplace_back(param, var, bin_chkpt, "hydrous-markerset");
+    }
 
     allocate_variables(param, var);
 

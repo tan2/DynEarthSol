@@ -177,6 +177,8 @@ static void declare_parameters(po::options_description &cfg,
         ("control.has_thermal_diffusion", po::value<bool>(&p.control.has_thermal_diffusion)->default_value(true),
          "Does the model have thermal diffusion? If not, temperature is advected, but not diffused.\n")
 
+        ("control.has_hydration_processes", po::value<bool>(&p.control.has_hydration_processes)->default_value(false),
+         "Does ")
         ;
 
     cfg.add_options()

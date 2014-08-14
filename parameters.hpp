@@ -79,6 +79,7 @@ struct Control {
 
     bool is_quasi_static;
     bool has_thermal_diffusion;
+    bool has_hydration_processes;
 };
 
 struct BC {
@@ -219,6 +220,7 @@ struct Variables {
     MatProps *mat;
 
     std::vector<MarkerSet> markersets;
+    int hydrous_marker_index;
 };
 
 #endif
