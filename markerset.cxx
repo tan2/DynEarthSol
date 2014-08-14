@@ -22,6 +22,14 @@ namespace {
 }
 
 
+MarkerSet::MarkerSet(const std::string name_) :
+    name(name_)
+{
+    _last_id = _nmarkers = 0;
+    allocate_markerdata(4 * 1024); // pre-allocate a small amount of markers
+}
+
+
 MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string name_) :
     name(name_)
 {
