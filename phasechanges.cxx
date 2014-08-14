@@ -7,6 +7,49 @@
 
 namespace {
 
+    int simple_subduction_phase_changes(const Param& param, const Variables& var,
+                                        const MarkerSet& ms, int m)
+    {
+        //
+        enum {
+            mt_mantle = 0,
+            mt_serpentinized_mantle = 1,
+            mt_oceanic_crust = 2,
+            mt_ecologite = 3,
+            mt_sediment = 4,
+            mt_schist = 5,
+            mt_continental_crust = 6
+        };
+
+
+        int current_mt = ms.get_mattype(m);
+        int e = ms.get_elem(m);
+        const double* eta = ms.get_eta(m);
+
+        // Get temperature at the marker
+        double T = 0;
+        const int *conn = (*var.connectivity)[e];
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            T += (*var.temperature)[conn[i]] * eta[i];
+        }
+
+        // Get pressure, which is constant in the element
+        double P = trace((*var.stress)[e]) / NDIMS;
+
+        // Set new mattype the same as current mattype for now
+        int new_mt = current_mt;
+
+        switch (current_mt) {
+        case mt_mantle:
+            break;
+        case 1:
+            break;
+        }
+
+        return new_mt;
+    }
+
+
     // A template to implement phase_change_fn
     int custom_phase_changes(const Param& param, const Variables& var,
                              const MarkerSet& ms, int m)
@@ -48,6 +91,9 @@ void phase_changes(const Param& param, const Variables& var,
 
     int (*phase_change_fn)(const Param&, const Variables&, const MarkerSet&, int) = NULL;
     switch (param.mat.phase_change_option) {
+    case 1:
+        phase_change_fn = simple_subduction_phase_changes;
+        break;
     case 101:
         phase_change_fn = custom_phase_changes;
         break;
