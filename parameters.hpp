@@ -203,7 +203,7 @@ struct Variables {
     int_vec bnodes[6];
     std::vector< std::pair<int,int> > bfacets[6];
 
-    int_vec2D *support, *elemmarkers;
+    int_vec2D *support;
     int_vec egroups;
 
     double_vec *volume, *volume_old, *volume_n;
@@ -221,6 +221,9 @@ struct Variables {
 
     std::vector<MarkerSet> markersets;
     int hydrous_marker_index;
+
+    int_vec2D *elemmarkers; // for marksersets[0] (mattype markers)
+    Array2D<int,1> *hydrous_elemmarkers; // for markersets[hydrous_marker_index] (hydrous markers)
 };
 
 #endif

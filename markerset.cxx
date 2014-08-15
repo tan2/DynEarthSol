@@ -348,11 +348,96 @@ void MarkerSet::resize( const int newsize )
 }
 
 
-void remap_markers(const Param& param, Variables &var, const array_t &old_coord, 
+namespace {
+
+    template <class T>
+    void find_markers_in_element(MarkerSet& ms, T& elemmarkers,
+                                 ANNkd_tree& kdtree, const Barycentric_transformation &bary,
+                                 const array_t& old_coord, const conn_t &old_connectivity)
+    {
+        const int k = std::min((std::size_t) 20, old_connectivity.size());  // how many nearest neighbors to search?
+        const double eps = 0.001; // tolerance of distance error
+        int *nn_idx = new int[k];
+        double *dd = new double[k];
+
+        // Loop over all the old markers and identify a containing element in the new mesh.
+        int last_marker = ms.get_nmarkers();
+        int i = 0;
+        while (i < last_marker) {
+            bool found = false;
+
+            // 1. Get physical coordinates, x, of an old marker.
+            int eold = ms.get_elem(i);
+            double x[NDIMS] = {0};
+            for (int j = 0; j < NDIMS; j++)
+                for (int k = 0; k < NODES_PER_ELEM; k++)
+                    x[j] += ms.get_eta(i)[k]*
+                        old_coord[ old_connectivity[eold][k] ][j];
+
+            if (DEBUG) {
+                std::cout << "marker #" << i << " old_elem " << eold << " x: ";
+                print(std::cout, x, NDIMS);
+            }
+
+            // 2. look for nearby elements.
+            // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
+            kdtree.annkSearch(x, k, nn_idx, dd, eps);
+
+            for( int j = 0; j < k; j++ ) {
+                int e = nn_idx[j];
+                double r[NDIMS];
+
+                bary.transform(x, e, r);
+
+                // change this if-condition to (i == N) to debug the N-th marker
+                if (0) {
+                    std::cout << '\n' << j << " check elem #" << e << ' ';
+                    print(std::cout, r, NDIMS);
+                }
+
+                if (bary.is_inside(r)) {
+                    ms.set_eta(i, r);
+                    ms.set_elem(i, e);
+                    ++elemmarkers[e][ms.get_mattype(i)];
+            
+                    found = true;
+                    ++i;
+                    if (DEBUG) {
+                        std::cout << " in element " << e << '\n';
+                    }
+                    break;
+                }
+            }
+
+            if( found ) continue;
+
+            if (DEBUG) {
+                std::cout << " not in any element" << '\n';
+            }
+
+            /* not found */
+            {
+                // Since no containing element has been found, delete this marker.
+                // Note i is not inc'd.
+                --last_marker;
+                ms.remove_marker(i);
+            }
+        }
+
+        delete [] nn_idx;
+        delete [] dd;
+    }
+
+} // anonymous namespace
+
+
+void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                    const conn_t &old_connectivity)
 {
     // Re-create elemmarkers
     delete var.elemmarkers;
+    if (param.control.has_hydration_processes)
+        delete var.hydrous_elemmarkers;
     create_elemmarkers( param, var );
 
     double_vec new_volume( var.nelem );
@@ -363,78 +448,13 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     // nearest-neighbor search structure
     double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
     ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
-    const int k = std::min(20, var.nelem);  // how many nearest neighbors to search?
-    const double eps = 0.001; // tolerance of distance error
-    int *nn_idx = new int[k];
-    double *dd = new double[k];
 
-    // Loop over all the old markers and identify a containing element in the new mesh.
-    MarkerSet &ms = var.markersets[0]; // alias to var.markerset
-    int last_marker = ms.get_nmarkers();
-    int i = 0;
-    while (i < last_marker) {
-        bool found = false;
+    find_markers_in_element(var.markersets[0], *var.elemmarkers,
+                            kdtree, bary, old_coord, old_connectivity);
+    if (param.control.has_hydration_processes)
+        find_markers_in_element(var.markersets[var.hydrous_marker_index], *var.hydrous_elemmarkers,
+                                kdtree, bary, old_coord, old_connectivity);
 
-        // 1. Get physical coordinates, x, of an old marker.
-        int eold = ms.get_elem(i);
-        double x[NDIMS] = {0};
-        for (int j = 0; j < NDIMS; j++)
-            for (int k = 0; k < NODES_PER_ELEM; k++)
-                x[j] += ms.get_eta(i)[k]*
-                    old_coord[ old_connectivity[eold][k] ][j];
-
-        if (DEBUG) {
-            std::cout << "marker #" << i << " old_elem " << eold << " x: ";
-            print(std::cout, x, NDIMS);
-        }
-
-        // 2. look for nearby elements.
-        // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
-        kdtree.annkSearch(x, k, nn_idx, dd, eps);
-
-        for( int j = 0; j < k; j++ ) {
-            int e = nn_idx[j];
-            double r[NDIMS];
-
-            bary.transform(x, e, r);
-
-            // change this if-condition to (i == N) to debug the N-th marker
-            if (0) {
-                std::cout << '\n' << j << " check elem #" << e << ' ';
-                print(std::cout, r, NDIMS);
-            }
-
-            if (bary.is_inside(r)) {
-                ms.set_eta(i, r);
-                ms.set_elem(i, e);
-                ++(*(var.elemmarkers))[e][ms.get_mattype(i)];
-            
-                found = true;
-                ++i;
-                if (DEBUG) {
-                    std::cout << " in element " << e << '\n';
-                }
-                break;
-            }
-        }
-
-        if( found ) continue;
-
-        if (DEBUG) {
-            std::cout << " not in any element" << '\n';
-        }
-
-        /* not found */
-        {
-            // Since no containing element has been found, delete this marker.
-            // Note i is not inc'd.
-            --last_marker;
-            ms.remove_marker(i);
-        }
-    }
-
-    delete [] nn_idx;
-    delete [] dd;
     delete [] centroid[0];
     delete [] centroid;
 
@@ -456,7 +476,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                 // Determine new marker's matttype based on cpdf
                 auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
                 const int mt = upper - cpdf.begin();
-                ms.append_random_marker_in_elem(e, mt);
+                var.markersets[0].append_random_marker_in_elem(e, mt);
 
                 ++(*var.elemmarkers)[e][mt];
                 ++num_marker_in_elem;

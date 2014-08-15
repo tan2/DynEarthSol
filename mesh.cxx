@@ -1314,6 +1314,8 @@ void create_elem_groups(Variables& var)
 void create_elemmarkers(const Param& param, Variables& var)
 {
     var.elemmarkers = new int_vec2D( var.nelem, std::vector<int>(param.mat.nmat, 0) );
+    if (param.control.has_hydration_processes)
+        var.hydrous_elemmarkers = new Array2D<int,1>( var.nelem, 0 );
 
 }
 

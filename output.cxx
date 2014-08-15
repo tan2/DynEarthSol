@@ -161,6 +161,8 @@ void Output::write(const Variables& var, bool is_averaged)
     }
     bin.write_array(tmp, "material");
 
+    //XXX: output var.hydrous_markersets
+
     bin.write_array(*var.force, "force");
 
     //bin.write_array(*var.bcflag, "bcflag");
