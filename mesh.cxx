@@ -1322,10 +1322,10 @@ void create_elemmarkers(const Param& param, Variables& var)
 
 void create_markers(const Param& param, Variables& var)
 {
-    var.markersets.emplace_back(param, var, "markerset");
+    var.markersets.emplace_back(param, var, std::string("markerset"));
     if (param.control.has_hydration_processes) {
         var.hydrous_marker_index = var.markersets.size();
-        var.markersets.emplace_back("hydrous-markerset");
+        var.markersets.emplace_back(std::string("hydrous-markerset"));
     }
 }
 

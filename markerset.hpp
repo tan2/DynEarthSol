@@ -12,9 +12,9 @@ class MarkerSet
 {
 
 public:
-    MarkerSet( const std::string name );
-    MarkerSet( const Param& param, Variables& var, const std::string name );
-    MarkerSet( const Param& param, Variables& var, BinaryInput& bin, const std::string name );
+    MarkerSet( const std::string& name );
+    MarkerSet( const Param& param, Variables& var, const std::string& name );
+    MarkerSet( const Param& param, Variables& var, BinaryInput& bin, const std::string& name );
     ~MarkerSet()
     { 
         delete _id;

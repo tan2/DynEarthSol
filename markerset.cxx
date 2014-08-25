@@ -22,7 +22,7 @@ namespace {
 }
 
 
-MarkerSet::MarkerSet(const std::string name_) :
+MarkerSet::MarkerSet(const std::string& name_) :
     name(name_)
 {
     _last_id = _nmarkers = 0;
@@ -30,7 +30,7 @@ MarkerSet::MarkerSet(const std::string name_) :
 }
 
 
-MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string name_) :
+MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string& name_) :
     name(name_)
 {
     _last_id = _nmarkers = 0;
@@ -49,7 +49,7 @@ MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string name_
 }
 
 
-MarkerSet::MarkerSet(const Param& param, Variables& var, BinaryInput& bin, const std::string name_) :
+MarkerSet::MarkerSet(const Param& param, Variables& var, BinaryInput& bin, const std::string& name_) :
     name(name_)
 {
     // init from checkpoint file
