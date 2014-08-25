@@ -44,6 +44,9 @@ namespace {
 
     class SimpleSubduction : public PhaseChange
     {
+        MarkerSet &hydms;
+        Array2D<int,1> &hydem;
+
         // mattype --> lithology
         enum {
             mt_mantle = 0,
@@ -57,8 +60,9 @@ namespace {
         };
 
     public:
-        SimpleSubduction(const Param& param, const Variables& var, const MarkerSet& ms) :
-            PhaseChange(param, var, ms)
+        SimpleSubduction(const Param& param, const Variables& var, const MarkerSet& ms,
+                         MarkerSet& hydms_, Array2D<int,1>& hydem_) :
+            PhaseChange(param, var, ms), hydms(hydms_), hydem(hydem_)
         {}
 
         int operator()(int m)
@@ -70,6 +74,7 @@ namespace {
 
             // Set new mattype the same as current mattype for now
             int new_mt = current_mt;
+            int hyd_inc = 0;
 
             switch (current_mt) {
             case mt_oceanic_crust:
@@ -80,7 +85,7 @@ namespace {
                     const double transition_pressure = -0.3e9 + 2.2e6*T;
                     if (T > min_eclogite_T && P > transition_pressure) {
                         new_mt = mt_eclogite;
-                        // XXX: dehydration
+                        hyd_inc = 1;
                     }
                 }
                 break;
@@ -92,7 +97,7 @@ namespace {
                     const double min_schist_Z = -20e3;
                     if (T > min_schist_T && Z < min_schist_Z) {
                         new_mt = mt_schist;
-                        // XXX: dehydration
+                        hyd_inc = 1;
                     }
                 }
                 break;
@@ -105,18 +110,56 @@ namespace {
                     const double min_serpentine_T = 550 + 273;
                     if (T > min_serpentine_T && P > transition_pressure) {
                         new_mt = mt_mantle;
-                        // XXX: dehydration
+                        hyd_inc = 1;
                     }
                 }
                 break;
             case mt_mantle:
-                // XXX: hydration
+                {
+                    const double min_serpentine_T = 550 + 273;
+                    const int el = ms.get_elem(m);
+                    if (T <= min_serpentine_T && hydem[el][0]) {
+                        new_mt = mt_serpentinized_mantle;
+                        hyd_inc = -1;
+                    }
+                }
                 break;
+            }
+
+            if (hyd_inc == 1) {
+                // Dehydration metamorphism, hydrous marker is released.
+                const int el = ms.get_elem(m);
+                const double *eta = ms.get_eta(m);
+                #pragma omp critical(phase_change_simple_subduction)
+                {
+                    // Add new marker, which has the same coordinate as the dehydrated marker
+                    hydms.append_marker(eta, el, 0);
+                    ++hydem[el][0];
+                }
+            }
+            else if (hyd_inc == -1) {
+                const int el = ms.get_elem(m);
+                // Find the hydrous marker belong to el
+                int mh;
+                for (mh=0; mh<hydms.get_nmarkers(); mh++) {
+                    if (hydms.get_elem(mh) == el) break;
+                }
+                if (mh >= hydms.get_nmarkers()) {
+                    std::cerr << "Error: hydrous marker phase change\n";
+                    std::exit(12);
+                }
+                #pragma omp critical(phase_change_simple_subduction)
+                {
+                    // delete the marker
+                    hydms.remove_marker(mh);
+                    --hydem[el][0];
+                }
             }
 
             return new_mt;
         }
     };
+
 
     // A template to phase change function
     class Custom_PhCh : public PhaseChange
@@ -160,7 +203,9 @@ void phase_changes(const Param& param, Variables& var)
     PhaseChange *phch = NULL;
     switch (param.mat.phase_change_option) {
     case 1:
-        phch = new SimpleSubduction(param, var, ms);
+        phch = new SimpleSubduction(param, var, ms,
+                                    *var.markersets[var.hydrous_marker_index],
+                                    *var.hydrous_elemmarkers);
         break;
     case 101:
         phch = new Custom_PhCh(param, var, ms);
@@ -181,11 +226,10 @@ void phase_changes(const Param& param, Variables& var)
 
             // update marker count
             int e = ms.get_elem(m);
-            #pragma omp critical (phase_changes) // prevent concurrent modification on elemmarkers
-            {
-                --elemmarkers[e][current_mt];
-                ++elemmarkers[e][new_mt];
-            }
+            #pragma omp atomic update // prevent concurrent modification on elemmarkers
+            --elemmarkers[e][current_mt];
+            #pragma omp atomic update // prevent concurrent modification on elemmarkers
+            ++elemmarkers[e][new_mt];
         }
 
     }

@@ -85,7 +85,7 @@ void MarkerSet::random_eta( double *eta )
 }
 
 
-void MarkerSet::append_marker( double *eta, int el, int mt )
+void MarkerSet::append_marker( const double *eta, int el, int mt )
 {
     // Ensure sufficient array size
     if( _nmarkers == _reserved_space ) {

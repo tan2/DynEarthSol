@@ -180,7 +180,7 @@ static void declare_parameters(po::options_description &cfg,
          "Does the model have thermal diffusion? If not, temperature is advected, but not diffused.\n")
 
         ("control.has_hydration_processes", po::value<bool>(&p.control.has_hydration_processes)->default_value(false),
-         "Does ")
+         "Does the model have hydration processes? It is required to model some types of phase changes.")
         ;
 
     cfg.add_options()
@@ -288,6 +288,7 @@ static void declare_parameters(po::options_description &cfg,
         ("mat.phase_change_option", po::value<int>(&p.mat.phase_change_option)->default_value(0),
          "What kind of phase changes?\n"
          "0: no phase changes.\n"
+         "1: simple rules of subduction-related phase changes. control.has_hydration_processes must be enabled.\n"
          "101: custom phase changes.")
         ("mat.num_materials", po::value<int>(&p.mat.nmat)->default_value(1),
          "Number of material types")
@@ -626,7 +627,15 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
 #endif
 
         if (p.mat.phase_change_option != 0 && p.mat.nmat == 1) {
-            std::cerr << "Error: mat.phase_change_option is chosen but mat.num_materials is 1.\n";
+            std::cerr << "Error: mat.phase_change_option is chosen, but mat.num_materials is 1.\n";
+            std::exit(1);
+        }
+        if (p.mat.phase_change_option == 1 && !p.control.has_hydration_processes) {
+            std::cerr << "Error: mat.phase_change_option is 1, but control.has_hydration_processes is not enabled.\n";
+            std::exit(1);
+        }
+        if (p.mat.phase_change_option == 1 && p.mat.nmat < 8) {
+            std::cerr << "Error: mat.phase_change_option is 1, but mat.num_materials is less than 8.\n";
             std::exit(1);
         }
 

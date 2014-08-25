@@ -24,6 +24,7 @@ public:
     }
 
     void append_random_marker_in_elem( int el, int mt );
+    void append_marker( const double *eta, int el, int mt );
     void remove_marker(int i);
     void resize(const int);
     void write_chkpt_file(BinaryOutput &bin) const;
@@ -65,7 +66,6 @@ private:
     int_vec *_id;
 
     void random_eta( double* );
-    void append_marker( double *eta, int el, int mt );
     void random_markers( const Param&, Variables& );
     void regularly_spaced_markers( const Param&, Variables& );
     void allocate_markerdata( const int );
