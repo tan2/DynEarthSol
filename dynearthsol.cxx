@@ -251,7 +251,7 @@ int main(int argc, const char* argv[])
         if (var.steps % 10 == 0) var.dt = compute_dt(param, var);
 
         // ditto for phase changes
-        if (var.steps % 10 == 0) phase_changes(param, var, var.markersets[0], *var.elemmarkers);
+        if (var.steps % 10 == 0) phase_changes(param, var);
 
         if (param.sim.output_averaged_fields)
             output.average_fields(var);
