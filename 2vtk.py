@@ -2,7 +2,7 @@
 # encoding: utf-8
 '''Convert the binary output of DynEarthSol3D to VTK files.
 
-usage: 2vtk.py [-a -c -t -h] modelname [start [end]]
+usage: 2vtk.py [-a -c -m -t -h] modelname [start [end]]
 
 options:
     -a          save data in ASCII format (default: binary)
@@ -46,6 +46,8 @@ class Dynearthsol:
         tmp = np.fromfile(self.modelname + '.info', dtype=float, sep=' ')
         tmp.shape = (-1, 8)
         self.frames = list(tmp[:,0].astype(int))
+        self.steps = list(tmp[:,1].astype(int))
+        self.time = list(tmp[:,2].astype(float))
         self.nnode_list = tmp[:,5].astype(int)
         self.nelem_list = tmp[:,6].astype(int)
         return
