@@ -2,7 +2,7 @@
 # encoding: utf-8
 '''Convert the binary output of DynEarthSol3D to VTK files.
 
-usage: 2vtk.py [-a -c -m -t -h] modelname [start [end]]
+usage: 2vtk.py [-a -c -m -t -h] modelname [start [end [delta]]]]
 
 options:
     -a          save data in ASCII format (default: binary)
@@ -156,7 +156,7 @@ class Dynearthsol:
         return marker_data
 
 
-def main(modelname, start, end):
+def main(modelname, start, end, delta):
     prefix = modelname
     if output_in_cwd:
         output_prefix = os.path.basename(modelname)
@@ -169,7 +169,7 @@ def main(modelname, start, end):
     if end == -1:
         end = len(des.frames)
 
-    for i, frame in enumerate(des.frames[start:end]):
+    for i, frame in enumerate(des.frames[start:end:delta]):
         des.read_header(frame)
         suffix = '{0:0=6}'.format(frame)
         print('Converting frame #{0}'.format(suffix), end='\r', file=sys.stderr)
@@ -499,4 +499,9 @@ if __name__ == '__main__':
     else:
         end = int(sys.argv[3]) + 1
 
-    main(modelname, start, end)
+    if len(sys.argv) < 5:
+        delta = 1
+    else:
+        delta = int(sys.argv[4])
+
+    main(modelname, start, end, delta)
