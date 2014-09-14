@@ -449,10 +449,10 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
     ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
 
-    find_markers_in_element(var.markersets[0], *var.elemmarkers,
+    find_markers_in_element(*var.markersets[0], *var.elemmarkers,
                             kdtree, bary, old_coord, old_connectivity);
     if (param.control.has_hydration_processes)
-        find_markers_in_element(var.markersets[var.hydrous_marker_index], *var.hydrous_elemmarkers,
+        find_markers_in_element(*var.markersets[var.hydrous_marker_index], *var.hydrous_elemmarkers,
                                 kdtree, bary, old_coord, old_connectivity);
 
     delete [] centroid[0];
@@ -476,7 +476,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                 // Determine new marker's matttype based on cpdf
                 auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
                 const int mt = upper - cpdf.begin();
-                var.markersets[0].append_random_marker_in_elem(e, mt);
+                var.markersets[0]->append_random_marker_in_elem(e, mt);
 
                 ++(*var.elemmarkers)[e][mt];
                 ++num_marker_in_elem;

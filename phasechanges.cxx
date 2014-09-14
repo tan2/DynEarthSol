@@ -150,7 +150,7 @@ void phase_changes(const Param& param, Variables& var)
 {
     if (param.mat.nmat == 1 || param.mat.phase_change_option == 0) return;
 
-    MarkerSet& ms = var.markersets[0];
+    MarkerSet& ms = *(var.markersets[0]);
     int_vec2D& elemmarkers = *var.elemmarkers;
 
     PhaseChange *phch = NULL;

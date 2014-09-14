@@ -221,7 +221,7 @@ struct Variables {
 
     MatProps *mat;
 
-    std::vector<MarkerSet> markersets;
+    std::vector<MarkerSet*> markersets;
     int hydrous_marker_index;
 
     int_vec2D *elemmarkers; // for marksersets[0] (mattype markers)
