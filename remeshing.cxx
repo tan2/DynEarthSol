@@ -1103,6 +1103,9 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         // interpolating fields defined on nodes
         barycentric_node_interpolation(var, old_coord, old_connectivity);
 
+        delete var.support;
+        create_support(var);
+
         // remap markers. elemmarkers are updated here, too.
         remap_markers(param, var, old_coord, old_connectivity);
   
@@ -1121,8 +1124,10 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     }
     create_boundary_nodes(var);
     create_boundary_facets(var);
-    delete var.support;
-    create_support(var);
+    /* // moved before remap_markers()
+     * delete var.support;
+     * create_support(var);
+     */
     create_elem_groups(var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);

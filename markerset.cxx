@@ -466,17 +466,56 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             num_marker_in_elem += (*(var.elemmarkers))[e][i];
 
         if (num_marker_in_elem < mpe / 2) {  // mpe must >= 2
-            // cumulative probability density function of mattype in this element
-            double_vec cpdf(param.mat.nmat);
-            cpdf[0] = (*(var.elemmarkers))[e][0] / double(num_marker_in_elem);
-            for( int i = 1; i < param.mat.nmat - 1; i++ )
-                cpdf[i] = cpdf[i-1] + (*(var.elemmarkers))[e][i] / double(num_marker_in_elem);
+            // cummulative probability density function of mattype
+            double_vec cpdf(param.mat.nmat, 0);
+
+            if (num_marker_in_elem > 0) {
+                // cpdf of this element
+                cpdf[0] = (*(var.elemmarkers))[e][0] / double(num_marker_in_elem);
+                for( int i = 1; i < param.mat.nmat - 1; i++ )
+                    cpdf[i] = cpdf[i-1] + (*(var.elemmarkers))[e][i] / double(num_marker_in_elem);
+            }
+            else {
+                // No markers in this element.
+                // Construct cpdf from neighboring elements
+                int num_markers_in_nbr_elems = 0;
+                // Looping over all neighboring elements (excluding self)
+                for( int kk = 0; kk < NODES_PER_ELEM; kk++) {
+                    int n = (*var.connectivity)[e][kk]; // node of this element
+                    for( auto ee = (*var.support)[n].begin(); ee < (*var.support)[n].end(); ++ee) {
+                        if (*ee == e) continue;
+                        // Note: some (NODES_PER_ELEM) elements will be iterated
+                        // more than once (NDIMS times). These elements are direct neighbors,
+                        // i.e. they share facets (3D) or edges (2D) with element e.
+                        // So they are counted multiple times to reprensent a greater weight.
+                        for( int i = 0; i < param.mat.nmat; i++ ) {
+                            cpdf[i] += (*(var.elemmarkers))[*ee][i];
+                            num_markers_in_nbr_elems += (*(var.elemmarkers))[*ee][i];
+                        }
+                    }
+                }
+                for( int i = 1; i < param.mat.nmat - 1; i++ )
+                    cpdf[i] += cpdf[i-1];
+                for( int i = 0; i < param.mat.nmat - 1; i++ )
+                    cpdf[i] = cpdf[i] / double(num_markers_in_nbr_elems);
+            }
+
             cpdf[param.mat.nmat - 1] = 1; // fix to 1 to avoid round-off error
+            if (DEBUG > 1) {
+                std::cout << num_marker_in_elem << " markers in element " << e << '\n'
+                          << "  cpdf: ";
+                print(std::cout, cpdf);
+                std::cout << '\n';
+            }
+
             while( num_marker_in_elem < mpe / 2 ) {
                 // Determine new marker's matttype based on cpdf
                 auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
                 const int mt = upper - cpdf.begin();
                 var.markersets[0]->append_random_marker_in_elem(e, mt);
+                if (DEBUG) {
+                    std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
+                }
 
                 ++(*var.elemmarkers)[e][mt];
                 ++num_marker_in_elem;
