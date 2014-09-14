@@ -314,7 +314,7 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
     int *init_segflags = new int[n_init_segments];
 
     const int attr_ndata = NDIMS+2;
-    const int nregions = (param.ic.mattype_option == 0) ? param.mat.nmat : 0;
+    const int nregions = (param.ic.mattype_option == 0) ? param.mat.nmat : 1;
     double *regattr = new double[nregions*attr_ndata]; // each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
 
     double elem_size;  // size of a typical element
@@ -527,7 +527,7 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
     int *init_segflags = new int[n_init_segments];
 
     const int attr_ndata = NDIMS+2;
-    const int nregions = (param.ic.mattype_option == 0) ? param.mat.nmat : 0;
+    const int nregions = (param.ic.mattype_option == 0) ? param.mat.nmat : 1;
     double *regattr = new double[nregions*attr_ndata]; // each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
 
     double max_elem_size;
