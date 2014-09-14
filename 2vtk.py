@@ -494,7 +494,7 @@ if __name__ == '__main__':
     else:
         start = int(sys.argv[2])
 
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 4 or int(sys.argv[3]) == -1:
         end = -1
     else:
         end = int(sys.argv[3]) + 1
