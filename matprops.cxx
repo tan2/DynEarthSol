@@ -84,7 +84,7 @@ namespace {
 
 VectorBase* VectorBase::create(const double_vec &a, int len)
 {
-    if (a.size() == len)
+    if (static_cast<int>(a.size()) == len)
         return new Vector(a, len);
     if (a.size() == 1 && len != 1)
         return new Vector1(a, len);

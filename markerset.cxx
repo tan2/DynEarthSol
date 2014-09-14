@@ -281,7 +281,7 @@ int MarkerSet::layered_initial_mattype( const Param& param, const Variables &var
 {
     int mt = param.mat.nmat - 1;
     const double_vec &layers = param.ic.mattype_layer_depths;
-    for (int i=0; i<layers.size(); ++i) {
+    for (std::size_t i=0; i<layers.size(); ++i) {
         if (x[NDIMS-1] >= -param.mesh.zlength * layers[i]) {
             mt = i;
             break;
