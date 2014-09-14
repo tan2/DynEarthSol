@@ -230,9 +230,13 @@ static void declare_parameters(po::options_description &cfg,
     cfg.add_options()
         ("ic.mattype_option", po::value<int>(&p.ic.mattype_option)->default_value(0),
          "How to set the initial material type of markers?\n"
-         "0: marker's mattype is determined by regional attribute in meshing.\n"
-         "1: marker's mattype is determined by its location.\n"
+         "0: marker's mattype is determined by regional attribute (currently can be modified only in the code or in a poly file).\n"
+         "1: marker's mattype is layered.\n"
          "101: custom mattype.")
+        ("ic.num_mattype_layers", po::value<int>(&p.ic.num_mattype_layers)->default_value(2),
+         "Number of material layers")
+        ("ic.layer_mattypes", po::value<std::string>()->default_value("[0,1]"),
+         "Material type of each material layer '[d0, d1, d2, ...]', d0<=d1<=d2...")
         ("ic.mattype_layer_depths", po::value<std::string>()->default_value("[0.5]"),
          "Depths of the interfaces of each material layer '[d0, d1, d2, ...]', d0<=d1<=d2..., (in unit of zlength)")
 
@@ -358,7 +362,8 @@ static void read_parameters_from_file
 }
 
 
-static int read_numbers(const std::string &input, double_vec &vec, int len)
+template<class T>
+static int read_numbers(const std::string &input, std::vector<T> &vec, int len)
 {
     /* Read 'len' numbers from input.
      * The format of input must be '[n0, n1, n2]' or '[n0, n1, n2,]' (with a trailing ,),
@@ -395,8 +400,9 @@ static int read_numbers(const std::string &input, double_vec &vec, int len)
 }
 
 
+template<class T>
 static void get_numbers(const po::variables_map &vm, const char *name,
-                        double_vec &values, int len, int optional_size=0)
+                        std::vector<T> &values, int len, int optional_size=0)
 {
     if ( ! vm.count(name) ) {
         std::cerr << "Error: " << name << " is not provided.\n";
@@ -567,7 +573,8 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     //
     {
         if ( p.ic.mattype_option == 1) {
-            get_numbers(vm, "ic.mattype_layer_depths", p.ic.mattype_layer_depths, p.mat.nmat-1);
+            get_numbers(vm, "ic.layer_mattypes", p.ic.layer_mattypes, p.ic.num_mattype_layers);
+            get_numbers(vm, "ic.mattype_layer_depths", p.ic.mattype_layer_depths, p.ic.num_mattype_layers-1);
             // mattype_layer_depths must be already sorted
             if (! std::is_sorted(p.ic.mattype_layer_depths.begin(), p.ic.mattype_layer_depths.end())) {
                 std::cerr << "Error: the content of ic.mattype_layer_depths is not ordered from"

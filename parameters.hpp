@@ -108,9 +108,11 @@ struct BC {
 
 struct IC {
     int mattype_option;
-    int weakzone_option;
+    int num_mattype_layers;
+    int_vec layer_mattypes;
     double_vec mattype_layer_depths;
 
+    int weakzone_option;
     double weakzone_plstrain;
     double weakzone_azimuth;
     double weakzone_inclination;
