@@ -163,6 +163,7 @@ struct Mat {
 struct Markers {
     int init_marker_option;
     int markers_per_element;
+    int min_num_markers_in_element;
     double init_marker_spacing;
 };
 

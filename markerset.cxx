@@ -459,13 +459,12 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     delete [] centroid;
 
     // If any new element has too few markers, generate markers in them.
-    const int mpe = param.markers.markers_per_element;
     for( int e = 0; e < var.nelem; e++ ) {
         int num_marker_in_elem = 0;
         for( int i = 0; i < param.mat.nmat; i++ )
             num_marker_in_elem += (*(var.elemmarkers))[e][i];
 
-        if (num_marker_in_elem < mpe / 2) {  // mpe must >= 2
+        if (num_marker_in_elem < param.markers.min_num_markers_in_element) {
             // cummulative probability density function of mattype
             double_vec cpdf(param.mat.nmat, 0);
 
@@ -508,7 +507,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
                 std::cout << '\n';
             }
 
-            while( num_marker_in_elem < mpe / 2 ) {
+            while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
                 // Determine new marker's matttype based on cpdf
                 auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
                 const int mt = upper - cpdf.begin();

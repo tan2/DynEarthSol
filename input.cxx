@@ -142,6 +142,8 @@ static void declare_parameters(po::options_description &cfg,
          "Number of markers per element. Used when init_marker_option=1.")
         ("markers.init_marker_spacing", po::value<double>(&p.markers.init_marker_spacing)->default_value(0.3),
          "Spacing of markers (in unit of mesh.resolution). Used when init_marker_option=2.")
+        ("markers.min_num_markers_in_element", po::value<int>(&p.markers.min_num_markers_in_element)->default_value(3),
+         "When the number of markers in an element is less than this number, a new marker will be created in the element.")
         ;
 
     cfg.add_options()
@@ -588,10 +590,6 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     // marker
     //
     {
-        if ( p.markers.markers_per_element <= 2 ) {
-            std::cerr << "Error: markers.markers.markers_per_element must be greater than 2.\n";
-            std::exit(1);
-        }
 
     }
 
