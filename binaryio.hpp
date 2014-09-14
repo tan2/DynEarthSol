@@ -22,10 +22,10 @@ public:
     void close();
 
     template <typename T>
-    void write_array(const std::vector<T>& A, const char *name);
+    void write_array(const std::vector<T>& A, const char *name, std::size_t size=0);
 
     template <typename T, int N>
-    void write_array(const Array2D<T,N>& A, const char *name);
+    void write_array(const Array2D<T,N>& A, const char *name, std::size_t size=0);
 };
 
 

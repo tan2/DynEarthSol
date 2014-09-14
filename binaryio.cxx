@@ -90,45 +90,47 @@ void BinaryOutput::write_header(const char *name)
 
 
 template <typename T>
-void BinaryOutput::write_array(const std::vector<T>& A, const char *name)
+void BinaryOutput::write_array(const std::vector<T>& A, const char *name, std::size_t size)
 {
+    if (size == 0) size = A.size();
     write_header(name);
-    std::size_t n = std::fwrite(A.data(), sizeof(T), A.size(), f);
+    std::size_t n = std::fwrite(A.data(), sizeof(T), size, f);
     eof_pos += n * sizeof(T);
 }
 
 
 template <typename T, int N>
-void BinaryOutput::write_array(const Array2D<T,N>& A, const char *name)
+void BinaryOutput::write_array(const Array2D<T,N>& A, const char *name, std::size_t size)
 {
+    if (size == 0) size = A.size();
     write_header(name);
-    std::size_t n = std::fwrite(A.data(), sizeof(T), A.num_elements(), f);
+    std::size_t n = std::fwrite(A.data(), sizeof(T), size*N, f);
     eof_pos += n * sizeof(T);
 }
 
 
 // explicit instantiation
 template
-void BinaryOutput::write_array<int>(const std::vector<int>& A, const char *name);
+void BinaryOutput::write_array<int>(const std::vector<int>& A, const char *name, std::size_t);
 template
-void BinaryOutput::write_array<double>(const std::vector<double>& A, const char *name);
+void BinaryOutput::write_array<double>(const std::vector<double>& A, const char *name, std::size_t);
 
 template
-void BinaryOutput::write_array<double,NDIMS>(const Array2D<double,NDIMS>& A, const char *name);
+void BinaryOutput::write_array<double,NDIMS>(const Array2D<double,NDIMS>& A, const char *name, std::size_t);
 template
-void BinaryOutput::write_array<double,NSTR>(const Array2D<double,NSTR>& A, const char *name);
+void BinaryOutput::write_array<double,NSTR>(const Array2D<double,NSTR>& A, const char *name, std::size_t);
 #ifdef THREED // when 2d, NSTR == NODES_PER_ELEM == 3
 template
-void BinaryOutput::write_array<double,NODES_PER_ELEM>(const Array2D<double,NODES_PER_ELEM>& A, const char *name);
+void BinaryOutput::write_array<double,NODES_PER_ELEM>(const Array2D<double,NODES_PER_ELEM>& A, const char *name, std::size_t);
 #endif
 template
-void BinaryOutput::write_array<double,1>(const Array2D<double,1>& A, const char *name);
+void BinaryOutput::write_array<double,1>(const Array2D<double,1>& A, const char *name, std::size_t);
 template
-void BinaryOutput::write_array<int,NODES_PER_ELEM>(const Array2D<int,NODES_PER_ELEM>& A, const char *name);
+void BinaryOutput::write_array<int,NODES_PER_ELEM>(const Array2D<int,NODES_PER_ELEM>& A, const char *name, std::size_t);
 template
-void BinaryOutput::write_array<int,NDIMS>(const Array2D<int,NDIMS>& A, const char *name);
+void BinaryOutput::write_array<int,NDIMS>(const Array2D<int,NDIMS>& A, const char *name, std::size_t);
 template
-void BinaryOutput::write_array<int,1>(const Array2D<int,1>& A, const char *name);
+void BinaryOutput::write_array<int,1>(const Array2D<int,1>& A, const char *name, std::size_t);
 
 //////////////////////////////////////////////////////////////////////////////
 

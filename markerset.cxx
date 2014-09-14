@@ -332,7 +332,7 @@ void MarkerSet::resize( const int newsize )
 
         double *new_eta = new double[NODES_PER_ELEM * newsize];
         std::copy( (*_eta)[0], (*_eta)[_nmarkers], new_eta );
-        _eta->reset( new_eta, _nmarkers );
+        _eta->reset( new_eta, newsize );
 
         _elem->resize( newsize );
         _mattype->resize( newsize );
@@ -493,10 +493,10 @@ void MarkerSet::write_chkpt_file(BinaryOutput &bin) const
     itmp[1] = _last_id;
     bin.write_array(itmp, (name + " size").c_str());
 
-    bin.write_array(*_eta, (name + ".eta").c_str());
-    bin.write_array(*_elem, (name + ".elem").c_str());
-    bin.write_array(*_mattype, (name + ".mattype").c_str());
-    bin.write_array(*_id, (name + ".id").c_str());
+    bin.write_array(*_eta, (name + ".eta").c_str(), _nmarkers);
+    bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
+    bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
+    bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);
 
 }
 
@@ -547,9 +547,9 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
     }
 
     bin.write_array(mcoord, (name + ".coord").c_str());
-    bin.write_array(*_elem, (name + ".elem").c_str());
-    bin.write_array(*_mattype, (name + ".mattype").c_str());
-    bin.write_array(*_id, (name + ".id").c_str());
+    bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
+    bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
+    bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);
 
 }
 
