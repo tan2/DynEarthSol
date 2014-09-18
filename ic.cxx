@@ -128,8 +128,8 @@ double get_prem_pressure(double depth)
     }
 
     // linear interpolation
-    double pressure = ref_pressure[n-1] + depth *
-        (ref_pressure[n] - ref_pressure[n-1]) / (ref_depth[n] - ref_depth[n-1]);
+    double pressure = ref_pressure[n-1] + (ref_pressure[n] - ref_pressure[n-1]) *
+        (depth - ref_depth[n-1]) / (ref_depth[n] - ref_depth[n-1]);
 
     return pressure;
 }
