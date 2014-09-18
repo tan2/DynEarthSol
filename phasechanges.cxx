@@ -24,7 +24,7 @@ namespace {
             int e = ms.get_elem(m);
 
             // Get pressure, which is constant in the element
-            P = trace((*var.stress)[e]) / NDIMS;
+            P = - trace((*var.stress)[e]) / NDIMS;
 
             // Get depth and temperature at the marker
             Z = T = 0;
