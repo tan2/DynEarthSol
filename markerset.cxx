@@ -564,7 +564,7 @@ void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
 
 namespace {
 
-    Barycentric_transformation* get_bary_from_cache(std::unordered_map<int,Barycentric_transformation> &cache,
+    Barycentric_transformation* get_bary_from_cache(std::unordered_map<int, Barycentric_transformation*> &cache,
                                                     int el, const array_t &coordinate, const int *conn,
                                                     double volume)
     {
@@ -575,13 +575,11 @@ namespace {
             for(int j=0; j<NODES_PER_ELEM; j++) {
                 coord[j] = coordinate[ conn[j] ];
             }
-            auto p = cache.emplace(std::piecewise_construct,
-                                   std::forward_as_tuple(el),
-                                   std::forward_as_tuple(coord, volume));
-            bary = &(std::get<0>(p)->second);
+            bary = new Barycentric_transformation(coord, volume);
+            cache[el] =  bary;
         }
         else {
-            bary = &(search->second);
+            bary = search->second;
         }
         return bary;
     }
@@ -591,7 +589,7 @@ namespace {
 void advect_hydrous_markers(const Param& param, const Variables& var, double dt_subtotal,
                             MarkerSet& hydms, Array2D<int,1>& hydem)
 {
-    std::unordered_map<int,Barycentric_transformation> cache;
+    std::unordered_map<int, Barycentric_transformation*> cache;
     Barycentric_transformation *bary;
 
     int last_marker = hydms.get_nmarkers();
@@ -637,8 +635,14 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
             hydms.remove_marker(m);
         }
     }
- end:;
+ end:
+    // clean up all Barycentric_transformation instances
+    for (auto i=cache.begin(); i!=cache.end(); ++i) {
+        delete i->second;
+    }
 }
+
+
 void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
 {
     int_vec itmp(1);
