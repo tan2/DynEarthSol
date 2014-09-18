@@ -11,10 +11,10 @@ To-do list:
 High priority:
 * Simple benchmarks for rheology
 * Advanced Interpolation
-* Pressure regularization
+* Local remeshing
+* different init_marker_spacing in regions
 
 Low priority:
-* Restart
 * Save output as vtk format directly
 * Stress BC, esp no-stress sidewall
 * Heatflux BC
@@ -22,8 +22,6 @@ Low priority:
 * Adiabatic cooling (adiabatic temperature profile)
 * Internal heating
 * Volume changed induced stress
-* Initial weak zone location & geometry
-
 
 =============================================================================
 
