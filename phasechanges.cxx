@@ -1,5 +1,6 @@
 #include "constants.hpp"
 #include "parameters.hpp"
+#include "ic.hpp"
 #include "markerset.hpp"
 #include "utils.hpp"
 
@@ -23,9 +24,6 @@ namespace {
         {
             int e = ms.get_elem(m);
 
-            // Get pressure, which is constant in the element
-            P = - trace((*var.stress)[e]) / NDIMS;
-
             // Get depth and temperature at the marker
             Z = T = 0;
             const double* eta = ms.get_eta(m);
@@ -34,6 +32,12 @@ namespace {
                 Z += (*var.coord)[conn[i]][NDIMS-1] * eta[i];
                 T += (*var.temperature)[conn[i]] * eta[i];
             }
+
+            // Get pressure, which is constant in the element
+            // P = - trace((*var.stress)[e]) / NDIMS;
+
+            // Get pressure at this depth from PREM
+            P = get_prem_pressure(-Z);
         }
     };
 
