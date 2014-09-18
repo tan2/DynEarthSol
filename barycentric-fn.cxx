@@ -30,6 +30,24 @@ Barycentric_transformation::Barycentric_transformation(const array_t &coord,
 }
 
 
+Barycentric_transformation::Barycentric_transformation(const double** coord,
+                                                       const double volume)
+    : coeff_(1)
+{
+    const double *a = coord[0];
+    const double *b = coord[1];
+    const double *c = coord[2];
+
+#ifdef THREED
+    const double *d = coord[3];
+
+    compute_coeff3d(a, b, c, d, volume, coeff_[0]);
+#else
+    compute_coeff2d(a, b, c, volume, coeff_[0]);
+#endif
+}
+
+
 Barycentric_transformation::~Barycentric_transformation() {};
 
 

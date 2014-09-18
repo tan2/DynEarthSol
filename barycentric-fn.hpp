@@ -20,6 +20,8 @@ public:
     Barycentric_transformation(const array_t &coord,
                                const conn_t &connectivity,
                                const double_vec &volume);
+    Barycentric_transformation(const double** coord,
+                               const double volume);
     ~Barycentric_transformation();
 
     void transform(const double *point, int e, double *result) const;
