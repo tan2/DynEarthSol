@@ -165,9 +165,10 @@ void Output::write(const Variables& var, bool is_averaged)
 
     //bin.write_array(*var.bcflag, "bcflag", var.bcflag->size());
 
-
-    if (has_marker_output)
-        var.markersets[0]->write_save_file(var, bin);
+    if (has_marker_output) {
+        for (auto ms=var.markersets.begin(); ms!=var.markersets.end(); ++ms)
+            (*ms)->write_save_file(var, bin);
+    }
 
     bin.close();
     std::cout << "  Output # " << frame

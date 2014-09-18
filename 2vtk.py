@@ -127,19 +127,19 @@ class Dynearthsol:
         return field
 
 
-    def read_markers(self, frame):
+    def read_markers(self, frame, markername):
         'Read and return marker data'
         fname = self.get_fn(frame)
         with open(fname) as f:
 
-            pos = self.field_pos['markerset size']
+            pos = self.field_pos[markername+' size']
             f.seek(pos)
             nmarkers = np.fromfile(f, dtype=np.int32, count=1)[0]
 
             marker_data = {'size': nmarkers}
 
             # floating point
-            for name in ('markerset.coord',):
+            for name in (markername+'.coord',):
                 pos = self.field_pos[name]
                 f.seek(pos)
                 tmp = np.fromfile(f, dtype=np.float64, count=nmarkers*self.ndims)
@@ -147,7 +147,7 @@ class Dynearthsol:
                 #print(marker_data[name].shape, marker_data[name])
 
             # int
-            for name in ('markerset.elem', 'markerset.mattype', 'markerset.id'):
+            for name in (markername+'.elem', markername+'.mattype', markername+'.id'):
                 pos = self.field_pos[name]
                 f.seek(pos)
                 marker_data[name] = np.fromfile(f, dtype=np.int32, count=nmarkers)
@@ -294,50 +294,62 @@ def main(modelname, start, end, delta):
         # Converting marker
         #
         if output_markers:
+            # ordinary markerset
             filename = '{0}.{1}.vtp'.format(output_prefix, suffix)
-            fvtp = open(filename, 'wb')
+            output_vtp_file(des, frame, filename, 'markerset')
 
-            try:
-                # read data
-                marker_data = des.read_markers(frame)
-                nmarkers = marker_data['size']
-                # write vtp header
-                vtp_header(fvtp, nmarkers)
-
-                # point-based data
-                fvtp.write('  <PointData>\n')
-                name = 'markerset.mattype'
-                vtk_dataarray(fvtp, marker_data[name], name)
-                name = 'markerset.elem'
-                vtk_dataarray(fvtp, marker_data[name], name)
-                name = 'markerset.id'
-                vtk_dataarray(fvtp, marker_data[name], name)
-                fvtp.write('  </PointData>\n')
-
-                # point coordinates
-                fvtp.write('  <Points>\n')
-                field = marker_data['markerset.coord']
-                if des.ndims == 2:
-                    # VTK requires vector field (velocity, coordinate) has 3 components.
-                    # Allocating a 3-vector tmp array for VTK data output.
-                    tmp = np.zeros((nmarkers, 3), dtype=field.dtype)
-                    tmp[:,:des.ndims] = field
-                else:
-                    tmp = field
-
-                vtk_dataarray(fvtp, tmp, 'markerset.coord', 3)
-                fvtp.write('  </Points>\n')
-
-                vtp_footer(fvtp)
-                fvtp.close()
-
-            except:
-                # delete partial vtp file
-                fvtp.close()
-                os.remove(filename)
-                raise
+            # hydrous markerset
+            if 'hydrous-markerset size' in des.field_pos:
+                filename = '{0}.hyd-ms.{1}.vtp'.format(output_prefix, suffix)
+                output_vtp_file(des, frame, filename, 'hydrous-markerset')
 
     print()
+    return
+
+
+def output_vtp_file(des, frame, filename, markersetname):
+    fvtp = open(filename, 'wb')
+
+    try:
+        # read data
+        marker_data = des.read_markers(frame, markersetname)
+        nmarkers = marker_data['size']
+        # write vtp header
+        vtp_header(fvtp, nmarkers)
+
+        # point-based data
+        fvtp.write('  <PointData>\n')
+        name = markersetname + '.mattype'
+        vtk_dataarray(fvtp, marker_data[name], name)
+        name = markersetname + '.elem'
+        vtk_dataarray(fvtp, marker_data[name], name)
+        name = markersetname + '.id'
+        vtk_dataarray(fvtp, marker_data[name], name)
+        fvtp.write('  </PointData>\n')
+
+        # point coordinates
+        fvtp.write('  <Points>\n')
+        field = marker_data[markersetname + '.coord']
+        if des.ndims == 2:
+            # VTK requires vector field (velocity, coordinate) has 3 components.
+            # Allocating a 3-vector tmp array for VTK data output.
+            tmp = np.zeros((nmarkers, 3), dtype=field.dtype)
+            tmp[:,:des.ndims] = field
+        else:
+            tmp = field
+
+        vtk_dataarray(fvtp, tmp, markersetname + '.coord', 3)
+        fvtp.write('  </Points>\n')
+
+        vtp_footer(fvtp)
+        fvtp.close()
+
+    except:
+        # delete partial vtp file
+        fvtp.close()
+        os.remove(filename)
+        raise
+
     return
 
 
