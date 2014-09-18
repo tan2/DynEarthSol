@@ -181,6 +181,8 @@ static void declare_parameters(po::options_description &cfg,
 
         ("control.has_hydration_processes", po::value<bool>(&p.control.has_hydration_processes)->default_value(false),
          "Does the model have hydration processes? It is required to model some types of phase changes.")
+        ("control.hydration_migration_speed", po::value<double>(&p.control.hydration_migration_speed)->default_value(3e-9),
+         "The uppward migration speed of hydrous fluid (in m/s).\n")
         ;
 
     cfg.add_options()

@@ -79,7 +79,9 @@ struct Control {
 
     bool is_quasi_static;
     bool has_thermal_diffusion;
+
     bool has_hydration_processes;
+    double hydration_migration_speed;
 };
 
 struct BC {

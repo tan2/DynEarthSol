@@ -2,6 +2,7 @@
 #include <iostream> // for std::cerr
 #include <time.h> // for time()
 #include <assert.h>
+#include <unordered_map>
 
 #include "ANN/ANN.h"
 
@@ -561,6 +562,83 @@ void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
 }
 
 
+namespace {
+
+    Barycentric_transformation* get_bary_from_cache(std::unordered_map<int,Barycentric_transformation> &cache,
+                                                    int el, const array_t &coordinate, const int *conn,
+                                                    double volume)
+    {
+        Barycentric_transformation *bary;
+        auto search = cache.find(el);
+        if (search == cache.end()) {
+            const double *coord[NODES_PER_ELEM];
+            for(int j=0; j<NODES_PER_ELEM; j++) {
+                coord[j] = coordinate[ conn[j] ];
+            }
+            auto p = cache.emplace(std::piecewise_construct,
+                                   std::forward_as_tuple(el),
+                                   std::forward_as_tuple(coord, volume));
+            bary = &(std::get<0>(p)->second);
+        }
+        else {
+            bary = &(search->second);
+        }
+        return bary;
+    }
+}
+
+
+void advect_hydrous_markers(const Param& param, const Variables& var, double dt_subtotal,
+                            MarkerSet& hydms, Array2D<int,1>& hydem)
+{
+    std::unordered_map<int,Barycentric_transformation> cache;
+    Barycentric_transformation *bary;
+
+    int last_marker = hydms.get_nmarkers();
+    int m = 0;
+    while (m < last_marker) {
+        // Find physical coordinate of the marker
+        int el = hydms.get_elem(m);
+        double x[NDIMS] = {0};
+        const int *conn = (*var.connectivity)[el];
+        for(int i=0; i<NDIMS; i++) {
+            for(int j=0; j<NODES_PER_ELEM; j++)
+                x[i] += hydms.get_eta(m)[j] * (*var.coord)[ conn[j] ][i];
+        }
+
+        // Advect the marker
+        x[NDIMS-1] += dt_subtotal * param.control.hydration_migration_speed;
+
+        // Transform back to barycentric coordinate
+        double r[NDIMS];
+        bary = get_bary_from_cache(cache, el, *var.coord, conn, (*var.volume)[el]);
+        bary->transform(x, el, r);
+        if (! bary->is_inside(r)) {
+            // Marker has moved out of el. Find the new containing element.
+            for(int j=0; j<NODES_PER_ELEM; j++) {
+                const int_vec& supp = (*var.support)[ conn[j] ];
+                for (std::size_t k=0; k<supp.size(); k++) {
+                    bary = get_bary_from_cache(cache, k, *var.coord, conn, (*var.volume)[k]);
+                    bary->transform(x, k, r);
+                    if (bary->is_inside(r)) {
+                        el = k;
+                        hydms.set_eta(el, r);
+                        ++m;
+                        goto end;
+                    }
+                }
+            }
+            // Since no containing element has been found, delete this marker.
+            // Note m is not inc'd.
+            if (DEBUG) {
+                std::cout << m << "-th hydrous marker not in any element\n";
+            }
+            --last_marker;
+            hydms.remove_marker(m);
+        }
+    }
+ end:;
+}
 void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
 {
     int_vec itmp(1);
