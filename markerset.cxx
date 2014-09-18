@@ -349,6 +349,74 @@ void MarkerSet::resize( const int newsize )
 }
 
 
+void MarkerSet::write_chkpt_file(BinaryOutput &bin) const
+{
+    int_vec itmp(2);
+    itmp[0] = _nmarkers;
+    itmp[1] = _last_id;
+    bin.write_array(itmp, (name + " size").c_str(), itmp.size());
+
+    bin.write_array(*_eta, (name + ".eta").c_str(), _nmarkers);
+    bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
+    bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
+    bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);
+
+}
+
+
+void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
+{
+    int_vec itmp(2);
+    bin.read_array(itmp, (name + " size").c_str());
+    _nmarkers = itmp[0];
+    _last_id = itmp[1];
+
+    allocate_markerdata(_nmarkers);
+
+    bin.read_array(*_eta, (name + ".eta").c_str());
+    bin.read_array(*_elem, (name + ".elem").c_str());
+    bin.read_array(*_mattype, (name + ".mattype").c_str());
+    bin.read_array(*_id, (name + ".id").c_str());
+
+    for( int i = 0; i < _nmarkers; i++ ) {
+        int e = (*_elem)[i];
+        int mt = (*_mattype)[i];
+        ++(*var.elemmarkers)[e][mt];
+    }
+}
+
+
+void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
+{
+    int_vec itmp(1);
+    itmp[0] = _nmarkers;
+    bin.write_array(itmp, (name + " size").c_str(), itmp.size());
+
+    array_t mcoord(_nmarkers, 0);
+    const array_t &coord = *var.coord;
+
+    for (int i=0; i<_nmarkers; ++i) {
+        int e = (*_elem)[i];
+        const int *conn = (*var.connectivity)[e];
+        const double *eta = (*_eta)[i];
+        double *x = mcoord[i];
+        for (int j = 0; j < NDIMS; j++)
+            for (int k = 0; k < NODES_PER_ELEM; k++)
+                x[j] += eta[k] * coord[ conn[k] ][j];
+
+        // std::cout << i << '\t';
+        // print(std::cout, x, NDIMS);
+        // std::cout << "\n";
+    }
+
+    bin.write_array(mcoord, (name + ".coord").c_str(), _nmarkers);
+    bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
+    bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
+    bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);
+
+}
+
+
 namespace {
 
     template <class T>
@@ -525,43 +593,6 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
 }
 
 
-void MarkerSet::write_chkpt_file(BinaryOutput &bin) const
-{
-    int_vec itmp(2);
-    itmp[0] = _nmarkers;
-    itmp[1] = _last_id;
-    bin.write_array(itmp, (name + " size").c_str(), itmp.size());
-
-    bin.write_array(*_eta, (name + ".eta").c_str(), _nmarkers);
-    bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
-    bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
-    bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);
-
-}
-
-
-void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
-{
-    int_vec itmp(2);
-    bin.read_array(itmp, (name + " size").c_str());
-    _nmarkers = itmp[0];
-    _last_id = itmp[1];
-
-    allocate_markerdata(_nmarkers);
-
-    bin.read_array(*_eta, (name + ".eta").c_str());
-    bin.read_array(*_elem, (name + ".elem").c_str());
-    bin.read_array(*_mattype, (name + ".mattype").c_str());
-    bin.read_array(*_id, (name + ".id").c_str());
-
-    for( int i = 0; i < _nmarkers; i++ ) {
-        int e = (*_elem)[i];
-        int mt = (*_mattype)[i];
-        ++(*var.elemmarkers)[e][mt];
-    }
-}
-
-
 namespace {
 
     Barycentric_transformation* get_bary_from_cache(std::unordered_map<int, Barycentric_transformation*> &cache,
@@ -649,37 +680,6 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
     for (auto i=cache.begin(); i!=cache.end(); ++i) {
         delete i->second;
     }
-}
-
-
-void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
-{
-    int_vec itmp(1);
-    itmp[0] = _nmarkers;
-    bin.write_array(itmp, (name + " size").c_str(), itmp.size());
-
-    array_t mcoord(_nmarkers, 0);
-    const array_t &coord = *var.coord;
-
-    for (int i=0; i<_nmarkers; ++i) {
-        int e = (*_elem)[i];
-        const int *conn = (*var.connectivity)[e];
-        const double *eta = (*_eta)[i];
-        double *x = mcoord[i];
-        for (int j = 0; j < NDIMS; j++)
-            for (int k = 0; k < NODES_PER_ELEM; k++)
-                x[j] += eta[k] * coord[ conn[k] ][j];
-
-        // std::cout << i << '\t';
-        // print(std::cout, x, NDIMS);
-        // std::cout << "\n";
-    }
-
-    bin.write_array(mcoord, (name + ".coord").c_str(), _nmarkers);
-    bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
-    bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
-    bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);
-
 }
 
 
