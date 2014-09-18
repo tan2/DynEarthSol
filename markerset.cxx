@@ -566,7 +566,7 @@ namespace {
 
     Barycentric_transformation* get_bary_from_cache(std::unordered_map<int, Barycentric_transformation*> &cache,
                                                     int el, const array_t &coordinate, const int *conn,
-                                                    double volume)
+                                                    double_vec &volume)
     {
         Barycentric_transformation *bary;
         auto search = cache.find(el);
@@ -575,7 +575,7 @@ namespace {
             for(int j=0; j<NODES_PER_ELEM; j++) {
                 coord[j] = coordinate[ conn[j] ];
             }
-            bary = new Barycentric_transformation(coord, volume);
+            bary = new Barycentric_transformation(coord, volume[el]);
             cache[el] =  bary;
         }
         else {
@@ -609,7 +609,7 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
 
         // Transform back to barycentric coordinate
         double r[NDIMS];
-        bary = get_bary_from_cache(cache, el, *var.coord, conn, (*var.volume)[el]);
+        bary = get_bary_from_cache(cache, el, *var.coord, conn, *var.volume);
         bary->transform(x, 0, r); // always (local) 0-th element for bary
 
         if (bary->is_inside(r)) {
@@ -624,7 +624,7 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
                 for (std::size_t k=0; k<supp.size(); k++) {
                     int ee = supp[k];
                     conn = (*var.connectivity)[ee];
-                    bary = get_bary_from_cache(cache, ee, *var.coord, conn, (*var.volume)[ee]);
+                    bary = get_bary_from_cache(cache, ee, *var.coord, conn, *var.volume);
                     bary->transform(x, 0, r);
                     if (bary->is_inside(r)) {
                         hydms.set_elem(m, ee);
