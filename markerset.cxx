@@ -313,7 +313,7 @@ void MarkerSet::remove_marker(int i)
     (*_mattype)[i] = (*_mattype)[_nmarkers];
 }
 
-    
+
 void MarkerSet::set_eta( const int i, const double r[NDIMS] ) {
     double sum = 0.0;
     for( int j = 0; j < NDIMS; j++ ) {
@@ -610,19 +610,27 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
         // Transform back to barycentric coordinate
         double r[NDIMS];
         bary = get_bary_from_cache(cache, el, *var.coord, conn, (*var.volume)[el]);
-        bary->transform(x, el, r);
-        if (! bary->is_inside(r)) {
+        bary->transform(x, 0, r); // always (local) 0-th element for bary
+
+        if (bary->is_inside(r)) {
+            hydms.set_eta(m, r);
+            ++m;
+            goto next;
+        }
+        else {
             // Marker has moved out of el. Find the new containing element.
             for(int j=0; j<NODES_PER_ELEM; j++) {
                 const int_vec& supp = (*var.support)[ conn[j] ];
                 for (std::size_t k=0; k<supp.size(); k++) {
-                    bary = get_bary_from_cache(cache, k, *var.coord, conn, (*var.volume)[k]);
-                    bary->transform(x, k, r);
+                    int ee = supp[k];
+                    conn = (*var.connectivity)[ee];
+                    bary = get_bary_from_cache(cache, ee, *var.coord, conn, (*var.volume)[ee]);
+                    bary->transform(x, 0, r);
                     if (bary->is_inside(r)) {
-                        el = k;
-                        hydms.set_eta(el, r);
+                        hydms.set_elem(m, ee);
+                        hydms.set_eta(m, r);
                         ++m;
-                        goto end;
+                        goto next;
                     }
                 }
             }
@@ -634,8 +642,9 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
             --last_marker;
             hydms.remove_marker(m);
         }
+    next:;
     }
- end:
+
     // clean up all Barycentric_transformation instances
     for (auto i=cache.begin(); i!=cache.end(); ++i) {
         delete i->second;
