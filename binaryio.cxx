@@ -92,7 +92,6 @@ void BinaryOutput::write_header(const char *name)
 template <typename T>
 void BinaryOutput::write_array(const std::vector<T>& A, const char *name, std::size_t size)
 {
-    if (size == 0) size = A.size();
     write_header(name);
     std::size_t n = std::fwrite(A.data(), sizeof(T), size, f);
     eof_pos += n * sizeof(T);
@@ -102,7 +101,6 @@ void BinaryOutput::write_array(const std::vector<T>& A, const char *name, std::s
 template <typename T, int N>
 void BinaryOutput::write_array(const Array2D<T,N>& A, const char *name, std::size_t size)
 {
-    if (size == 0) size = A.size();
     write_header(name);
     std::size_t n = std::fwrite(A.data(), sizeof(T), size*N, f);
     eof_pos += n * sizeof(T);

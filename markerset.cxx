@@ -529,7 +529,7 @@ void MarkerSet::write_chkpt_file(BinaryOutput &bin) const
     int_vec itmp(2);
     itmp[0] = _nmarkers;
     itmp[1] = _last_id;
-    bin.write_array(itmp, (name + " size").c_str());
+    bin.write_array(itmp, (name + " size").c_str(), itmp.size());
 
     bin.write_array(*_eta, (name + ".eta").c_str(), _nmarkers);
     bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
@@ -565,7 +565,7 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
 {
     int_vec itmp(1);
     itmp[0] = _nmarkers;
-    bin.write_array(itmp, (name + " size").c_str());
+    bin.write_array(itmp, (name + " size").c_str(), itmp.size());
 
     array_t mcoord(_nmarkers, 0);
     const array_t &coord = *var.coord;
@@ -584,7 +584,7 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
         // std::cout << "\n";
     }
 
-    bin.write_array(mcoord, (name + ".coord").c_str());
+    bin.write_array(mcoord, (name + ".coord").c_str(), _nmarkers);
     bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
     bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
     bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);

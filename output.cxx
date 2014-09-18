@@ -82,10 +82,10 @@ void Output::write(const Variables& var, bool is_averaged)
     std::snprintf(filename, 255, "%s.save.%06d", modelname.c_str(), frame);
     BinaryOutput bin(filename);
 
-    bin.write_array(*var.coord, "coordinate");
-    bin.write_array(*var.connectivity, "connectivity");
+    bin.write_array(*var.coord, "coordinate", var.coord->size());
+    bin.write_array(*var.connectivity, "connectivity", var.connectivity->size());
 
-    bin.write_array(*var.vel, "velocity");
+    bin.write_array(*var.vel, "velocity", var.vel->size());
     if (average_interval && is_averaged) {
         // average_velocity = displacement / delta_t
         double *c0 = coord0.data();
@@ -93,14 +93,14 @@ void Output::write(const Variables& var, bool is_averaged)
         for (int i=0; i<coord0.num_elements(); ++i) {
             c0[i] = (c[i] - c0[i]) * inv_dt;
         }
-        bin.write_array(coord0, "velocity averaged");
+        bin.write_array(coord0, "velocity averaged", coord0.size());
     }
 
-    bin.write_array(*var.temperature, "temperature");
+    bin.write_array(*var.temperature, "temperature", var.temperature->size());
 
 
-    bin.write_array(*var.elquality, "mesh quality");
-    bin.write_array(*var.plstrain, "plastic strain");
+    bin.write_array(*var.elquality, "mesh quality", var.elquality->size());
+    bin.write_array(*var.plstrain, "plastic strain", var.plstrain->size());
 
     // Strain rate and plastic strain rate do not need to be checkpointed,
     // so we don't have to distinguish averged/non-averaged variants.
@@ -112,7 +112,7 @@ void Output::write(const Variables& var, bool is_averaged)
     for (std::size_t i=0; i<delta_plstrain_avg.size(); ++i) {
         delta_plstrain_avg[i] *= inv_dt;
     }
-    bin.write_array(*delta_plstrain, "plastic strain-rate");
+    bin.write_array(*delta_plstrain, "plastic strain-rate", delta_plstrain->size());
 
     tensor_t *strain_rate = var.strain_rate;
     if (average_interval && is_averaged) {
@@ -124,10 +124,10 @@ void Output::write(const Variables& var, bool is_averaged)
             s0[i] = (s[i] - s0[i]) * inv_dt;
         }
     }
-    bin.write_array(*strain_rate, "strain-rate");
+    bin.write_array(*strain_rate, "strain-rate", strain_rate->size());
 
-    bin.write_array(*var.strain, "strain");
-    bin.write_array(*var.stress, "stress");
+    bin.write_array(*var.strain, "strain", var.strain->size());
+    bin.write_array(*var.stress, "stress", var.stress->size());
 
     if (average_interval && is_averaged) {
         double *s = stress_avg.data();
@@ -135,37 +135,36 @@ void Output::write(const Variables& var, bool is_averaged)
         for (int i=0; i<stress_avg.num_elements(); ++i) {
             s[i] *= tmp;
         }
-        bin.write_array(stress_avg, "stress averaged");
+        bin.write_array(stress_avg, "stress averaged", stress_avg.size());
     }
 
     double_vec tmp(var.nelem);
     for (int e=0; e<var.nelem; ++e) {
         tmp[e] = var.mat->rho(e);
     }
-    bin.write_array(tmp, "density");
+    bin.write_array(tmp, "density", tmp.size());
 
     for (int e=0; e<var.nelem; ++e) {
         tmp[e] = var.mat->visc(e);
     }
-    bin.write_array(tmp, "viscosity");
-    // bin.write_array(*var.mass, "mass");
-    // bin.write_array(*var.tmass, "tmass");
-    // bin.write_array(*var.volume_n, "volume_n");
-    // bin.write_array(*var.volume, "volume");
-    // bin.write_array(*var.edvoldt, "edvoldt");
+    bin.write_array(tmp, "viscosity", tmp.size());
+    // bin.write_array(*var.mass, "mass", var.mass->size());
+    // bin.write_array(*var.tmass, "tmass", var.tmass->size());
+    // bin.write_array(*var.volume_n, "volume_n", var.volume_n->size());
+    // bin.write_array(*var.volume, "volume", var.volume->size());
+    // bin.write_array(*var.edvoldt, "edvoldt", var.edvoldt->size());
 
     for (int e=0; e<var.nelem; ++e) {
         // Find the most abundant marker mattype in this element
         int_vec &a = (*var.elemmarkers)[e];
         tmp[e] = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
     }
-    bin.write_array(tmp, "material");
+    bin.write_array(tmp, "material", tmp.size());
 
-    //XXX: output var.hydrous_markersets
+    bin.write_array(*var.force, "force", var.force->size());
 
-    bin.write_array(*var.force, "force");
+    //bin.write_array(*var.bcflag, "bcflag", var.bcflag->size());
 
-    //bin.write_array(*var.bcflag, "bcflag");
 
     if (has_marker_output)
         var.markersets[0]->write_save_file(var, bin);
@@ -247,14 +246,14 @@ void Output::write_checkpoint(const Variables& var)
     double_vec tmp(2);
     tmp[0] = var.time;
     tmp[1] = var.compensation_pressure;
-    bin.write_array(tmp, "time compensation_pressure");
+    bin.write_array(tmp, "time compensation_pressure", tmp.size());
 
-    bin.write_array(*var.segment, "segment");
-    bin.write_array(*var.segflag, "segflag");
+    bin.write_array(*var.segment, "segment", var.segment->size());
+    bin.write_array(*var.segflag, "segflag", var.segflag->size());
     // Note: regattr is not needed for restarting
-    // bin.write_array(*var.regattr, "regattr");
+    // bin.write_array(*var.regattr, "regattr", var.regattr->size());
 
-    bin.write_array(*var.volume_old, "volume_old");
+    bin.write_array(*var.volume_old, "volume_old", var.volume_old->size());
 
     var.markersets[0]->write_chkpt_file(bin);
 }
