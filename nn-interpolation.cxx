@@ -109,7 +109,7 @@ namespace {
                             // find the old element that is enclosing x
                             double r[NDIMS];
                             int old_e;
-                            for (std::size_t jj=0; jj<max_el; jj++) {
+                            for (int jj=0; jj<max_el; jj++) {
                                 old_e = nn_idx[jj];
                                 bary.transform(x, old_e, r);
                                 if (bary.is_inside(r)) {
