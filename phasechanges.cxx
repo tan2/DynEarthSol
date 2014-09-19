@@ -226,9 +226,9 @@ void phase_changes(const Param& param, Variables& var)
 
             // update marker count
             int e = ms.get_elem(m);
-            #pragma omp atomic update // prevent concurrent modification on elemmarkers
+            #pragma omp atomic  // prevent concurrent modification on elemmarkers
             --elemmarkers[e][current_mt];
-            #pragma omp atomic update // prevent concurrent modification on elemmarkers
+            #pragma omp atomic  // prevent concurrent modification on elemmarkers
             ++elemmarkers[e][new_mt];
         }
 
