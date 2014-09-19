@@ -1101,7 +1101,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
             Barycentric_transformation bary(old_coord, old_connectivity, *var.volume);
 
             // interpolating fields defined on elements
-            nearest_neighbor_interpolation(var, old_coord, old_connectivity);
+            nearest_neighbor_interpolation(var, bary, old_coord, old_connectivity);
 
             // interpolating fields defined on nodes
             barycentric_node_interpolation(var, bary, old_coord, old_connectivity);
