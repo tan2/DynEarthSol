@@ -11,7 +11,8 @@
 namespace {
 
     void find_nearest_neighbor(Variables &var, const array_t &old_coord,
-                               const conn_t &old_connectivity, int_vec &idx)
+                               const conn_t &old_connectivity,
+                               int_vec &idx, int_vec &is_changed)
     {
         std::cout << "Constructing a kd-tree.\n";
         // kdtree requires the coordinate as double**
@@ -22,7 +23,7 @@ namespace {
         double **new_center = elem_center(*var.coord, *var.connectivity);
 
         const int k = 1;
-        const double eps = 0;
+        const double eps = 1e-15;
         int *nn_idx = new int[k];
         double *dd = new double[k];
         // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
@@ -30,6 +31,7 @@ namespace {
             double *q = new_center[e];
             kdtree.annkSearch(q, k, nn_idx, dd, eps);
             idx[e] = nn_idx[0];
+            is_changed[e] = (dd[0] < eps)? 0 : 1;
         }
 
         delete [] nn_idx;
@@ -101,8 +103,10 @@ namespace {
 void nearest_neighbor_interpolation(Variables &var, const array_t &old_coord,
                                     const conn_t &old_connectivity)
 {
-    int_vec idx(var.nelem);
-    find_nearest_neighbor(var, old_coord, old_connectivity, idx);
+
+    int_vec idx(var.nelem); // nearest element
+    int_vec is_changed(var.nelem); // is the element changed during remeshing?
+    find_nearest_neighbor(var, old_coord, old_connectivity, idx, is_changed);
 
     nn_interpolate_elem_fields(var, idx);
 
