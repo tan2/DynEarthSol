@@ -1097,11 +1097,15 @@ void remesh(const Param &param, Variables &var, int bad_quality)
 
         renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr);
 
-        // interpolating fields defined on elements
-        nearest_neighbor_interpolation(var, old_coord, old_connectivity);
+        {
+            Barycentric_transformation bary(old_coord, old_connectivity, *var.volume);
 
-        // interpolating fields defined on nodes
-        barycentric_node_interpolation(var, old_coord, old_connectivity);
+            // interpolating fields defined on elements
+            nearest_neighbor_interpolation(var, old_coord, old_connectivity);
+
+            // interpolating fields defined on nodes
+            barycentric_node_interpolation(var, bary, old_coord, old_connectivity);
+        }
 
         delete var.support;
         create_support(var);

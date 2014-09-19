@@ -51,13 +51,13 @@ void interpolate_field(const brc_t &brc, const int_vec &el, const conn_t &connec
 }
 
 
-void prepare_interpolation(const Variables &var, const array_t &old_coord,
+void prepare_interpolation(const Variables &var,
+                           const Barycentric_transformation &bary,
+                           const array_t &old_coord,
                            const conn_t &old_connectivity,
                            brc_t &brc, int_vec &el)
 {
     // for each new coord point, find the enclosing old element
-
-    Barycentric_transformation bary(old_coord, old_connectivity, *var.volume);
 
     // ANN requires double** as input
     double **points = new double*[old_coord.size()];
@@ -194,12 +194,14 @@ void prepare_interpolation(const Variables &var, const array_t &old_coord,
 } // end of anonymous namespace
 
 
-void barycentric_node_interpolation(Variables &var, const array_t &old_coord,
+void barycentric_node_interpolation(Variables &var,
+                                    const Barycentric_transformation &bary,
+                                    const array_t &old_coord,
                                     const conn_t &old_connectivity)
 {
     int_vec el(var.nnode);
     brc_t brc(var.nnode);
-    prepare_interpolation(var, old_coord, old_connectivity, brc, el);
+    prepare_interpolation(var, bary, old_coord, old_connectivity, brc, el);
 
     double_vec *a = new double_vec(var.nnode);
     interpolate_field(brc, el, old_connectivity, *var.temperature, *a);
