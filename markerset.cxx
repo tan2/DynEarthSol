@@ -655,6 +655,8 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
                     if (bary->is_inside(r)) {
                         hydms.set_elem(m, ee);
                         hydms.set_eta(m, r);
+                        --hydem[el][0];
+                        ++hydem[ee][0];
                         ++m;
                         goto next;
                     }
@@ -667,6 +669,7 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
             }
             --last_marker;
             hydms.remove_marker(m);
+            --hydem[el][0];
         }
     next:;
     }

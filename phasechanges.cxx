@@ -120,7 +120,7 @@ namespace {
                     const int el = ms.get_elem(m);
                     if (T <= min_serpentine_T && hydem[el][0]) {
                         new_mt = mt_serpentinized_mantle;
-                        hyd_inc = -1;
+                        //hyd_inc = -1;
                     }
                 }
                 break;
@@ -137,6 +137,8 @@ namespace {
                     ++hydem[el][0];
                 }
             }
+
+            /*** Disable hyd marker deletion
             else if (hyd_inc == -1) {
                 const int el = ms.get_elem(m);
                 // Find the hydrous marker belong to el
@@ -155,6 +157,7 @@ namespace {
                     --hydem[el][0];
                 }
             }
+            */
 
             return new_mt;
         }
