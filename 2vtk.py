@@ -310,10 +310,17 @@ def main(modelname, start, end, delta):
 def output_vtp_file(des, frame, filename, markersetname):
     fvtp = open(filename, 'wb')
 
+    class MarkerSizeError(RuntimeError):
+        pass
+
     try:
         # read data
         marker_data = des.read_markers(frame, markersetname)
         nmarkers = marker_data['size']
+
+        if nmarkers <= 0:
+            raise MarkerSizeError()
+
         # write vtp header
         vtp_header(fvtp, nmarkers)
 
@@ -343,6 +350,12 @@ def output_vtp_file(des, frame, filename, markersetname):
 
         vtp_footer(fvtp)
         fvtp.close()
+
+    except MarkerSizeError:
+        # delete partial vtp file
+        fvtp.close()
+        os.remove(filename)
+        # skip this frame
 
     except:
         # delete partial vtp file
