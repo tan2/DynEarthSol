@@ -70,8 +70,8 @@ void prepare_interpolation(const Variables &var,
 
     const int k = 1;
     const double eps = 0;
-    int *nn_idx = new int[k];
-    double *dd = new double[k];
+    int nn_idx[k];
+    double dd[k];
 
     // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
     for (int i=0; i<var.nnode; i++) {
@@ -179,8 +179,6 @@ void prepare_interpolation(const Variables &var,
         brc[i][NODES_PER_ELEM-1] = 1 - sum;
     }
 
-    delete [] nn_idx;
-    delete [] dd;
     delete [] points;
 
     // print(std::cout, *var.coord);

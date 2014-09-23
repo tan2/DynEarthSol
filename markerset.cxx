@@ -179,8 +179,8 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
     ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
     const int k = std::min(10, var.nelem);  // how many nearest neighbors to search?
     const double eps = 0.001; // tolerance of distance error
-    int *nn_idx = new int[k];
-    double *dd = new double[k];
+    int nn_idx[k];
+    double dd[k];
 
     double_vec new_volume( var.nelem );
     compute_volume( *var.coord, *var.connectivity, new_volume );
@@ -232,8 +232,6 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
         }
     }
 
-    delete [] nn_idx;
-    delete [] dd;
     delete [] centroid[0];
     delete [] centroid;
 }
@@ -426,8 +424,8 @@ namespace {
     {
         const int k = std::min((std::size_t) 20, old_connectivity.size());  // how many nearest neighbors to search?
         const double eps = 0.001; // tolerance of distance error
-        int *nn_idx = new int[k];
-        double *dd = new double[k];
+        int nn_idx[k];
+        double dd[k];
 
         // Loop over all the old markers and identify a containing element in the new mesh.
         int last_marker = ms.get_nmarkers();
@@ -492,9 +490,6 @@ namespace {
                 ms.remove_marker(i);
             }
         }
-
-        delete [] nn_idx;
-        delete [] dd;
     }
 
 } // anonymous namespace

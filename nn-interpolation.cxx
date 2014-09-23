@@ -24,8 +24,8 @@ namespace {
 
         const int k = 1;
         const double eps = 1e-15;
-        int *nn_idx = new int[k];
-        double *dd = new double[k];
+        int nn_idx[k];
+        double dd[k];
         // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
         for(int e=0; e<var.nelem; e++) {
             double *q = new_center[e];
@@ -36,8 +36,6 @@ namespace {
 
         delete [] new_center[0];
         delete [] new_center;
-        delete [] nn_idx;
-        delete [] dd;
     }
 
 
@@ -56,8 +54,8 @@ namespace {
         const double spacing2 = 1.0 / neta2;
         const int max_el = 32;
         const double eps = 0;
-        int *nn_idx = new int[max_el];
-        double *dd = new double[max_el];
+        int nn_idx[max_el];
+        double dd[max_el];
 
         const int nelem_changed = std::accumulate(is_changed.begin(), is_changed.end(), 0);
         elems_vec.reserve(nelem_changed);
@@ -176,9 +174,6 @@ namespace {
                 elem_count.clear();
             }
         }
-
-        delete [] nn_idx;
-        delete [] dd;
     }
 
 
