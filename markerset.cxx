@@ -177,7 +177,7 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
     // nearest-neighbor search structure
     double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
     ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
-    const int k = std::min(10, var.nelem);  // how many nearest neighbors to search?
+    const int k = std::min(20, var.nelem);  // how many nearest neighbors to search?
     const double eps = 0.001; // tolerance of distance error
     int nn_idx[k];
     double dd[k];
