@@ -10,7 +10,6 @@ To-do list:
 
 High priority:
 * Simple benchmarks for rheology
-* Advanced Interpolation
 * Local remeshing
 * different init_marker_spacing in regions
 

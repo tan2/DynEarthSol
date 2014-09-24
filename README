@@ -1,4 +1,3 @@
-
 DynEarthSol3D is a finite element code that solves the momentum balance and 
 the heat transfer in Lagrangian form using unstructured meshes. It can be
 used to study the long-term deformation of Earth's lithosphere and problems
@@ -30,15 +29,15 @@ Build procedure:
 * Run "make opt=0" to build a debugging executable.
 * Run "make openmp=0" to build the executable without OpenMP. This is
   necessary to debug the code under valgrind.
-* Run "make gprof=1" to build the executable with profiling support.
 
 
 ===========
 Run
 ===========
 
-* "dynearthsol2d inputfile"
-* An example of input file is provided as 'defaults.cfg'
+* Execute "dynearthsol2d inputfile".
+* An example input file is provided as 'defaults.cfg'.
+* More benchmark examples can be found under 'benchmarks/' directory.
 * Execute the executable with '-h' flag to see the available input parameters
   and their descriptions.
 
@@ -48,6 +47,7 @@ Plot
 ===========
 
 * Run "2vtk.py modelname" to convert the binary output to VTK files.
+* Execute 2vtk.py with '-h' flag to see more usage information.
 * Some of the simulation outputs might be disabled. Edit 2vtk.py and
   output.cxx to disable/enable them.
 * Plot the VTK files with Paraview or LLNL's Visit program.
@@ -83,4 +83,4 @@ The files under the subdirectories 3x3-C/, ann/, tetgen/, and
 triangles/ are distributed by their own license(s).
 
 
-by Eh Tan, Dec. 2013
+by Eh Tan, Sept. 2014
