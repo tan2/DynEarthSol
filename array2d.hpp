@@ -45,6 +45,21 @@ public:
     std::size_t size() const {return n_;}
     int num_elements() const {return N*n_;}
 
+    void resize(int n) {
+        if (n <= n_) {
+            // shrink
+            n_ = n;
+        }
+        else {
+            // expand
+            T* tmp = new T[N*n];
+            std::memcpy(tmp, a_, sizeof(T)*N*n);
+            delete [] a_;
+            a_ = tmp;
+            n_ = n;
+        }
+    }
+
     // steal the pointer from other, leave a NULL to other
     void steal_ref(Array2D& other) {
         delete [] a_;
