@@ -1033,6 +1033,33 @@ void points_to_new_surface(const Mesh &mesh, int npoints, const double *points,
 }
 
 
+void discard_internal_segments(int &nseg, segment_t &segment, segflag_t &segflag)
+{
+    const uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
+
+    //int last_segment = nseg;
+    int n = 0;
+    while (n < nseg) {
+        if (segflag[n][0] & flag) {
+            // This is a boundary segment, go to next.
+            n++;
+        }
+        else {
+            // This is an internal boundary segment, replace it with the last segment.
+            nseg--;
+            segflag[n][0] = segflag[nseg][0];
+            for (int i=0; i<NDIMS; i++) {
+                segment[n][i] = segment[nseg][i];
+            }
+        }
+    }
+
+    segment.resize(nseg);
+    segflag.resize(nseg);
+
+}
+
+
 void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
                       segment_t &segment, regattr_t &regattr, int option)
 {
@@ -1346,6 +1373,9 @@ void create_new_mesh(const Param& param, Variables& var)
         std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';
         std::exit(1);
     }
+
+    if (param.mesh.discard_internal_segments)
+        discard_internal_segments(var.nseg, *var.segment, *var.segflag);
 
     renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr, 1);
 

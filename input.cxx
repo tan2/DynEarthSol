@@ -131,6 +131,11 @@ static void declare_parameters(po::options_description &cfg,
          "10: no modification on any boundary, except small boundary segments might get merged.\n"
          "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments"
          "    might get merged.\n")
+
+        ("mesh.discard_internal_segments", po::value<bool>(&p.mesh.discard_internal_segments)->default_value(false),
+         "Discarding internal segments after initial mesh is created? "
+         "Using it when remeshing process can modify segments (e.g. remeshing_option=11).")
+
         ;
 
     cfg.add_options()
