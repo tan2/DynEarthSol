@@ -1037,7 +1037,6 @@ void discard_internal_segments(int &nseg, segment_t &segment, segflag_t &segflag
 {
     const uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
 
-    //int last_segment = nseg;
     int n = 0;
     while (n < nseg) {
         if (segflag[n][0] & flag) {
