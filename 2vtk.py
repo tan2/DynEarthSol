@@ -169,7 +169,11 @@ def main(modelname, start, end, delta):
     if end == -1:
         end = len(des.frames)
 
-    for i, frame in enumerate(des.frames[start:end:delta]):
+    for i in range(start, end, delta):
+        frame = des.frames[i]
+        nnode = des.nnode_list[i]
+        nelem = des.nelem_list[i]
+
         des.read_header(frame)
         suffix = '{0:0=6}'.format(frame)
         print('Converting frame #{0}'.format(suffix), end='\r', file=sys.stderr)
@@ -177,8 +181,6 @@ def main(modelname, start, end, delta):
         filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
         fvtu = open(filename, 'wb')
 
-        nnode = des.nnode_list[i+start]
-        nelem = des.nelem_list[i+start]
         try:
             vtu_header(fvtu, nnode, nelem)
 
