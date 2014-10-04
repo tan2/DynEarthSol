@@ -19,6 +19,8 @@
 #include "markerset.hpp"
 #include "remeshing.hpp"
 
+#include "libmmg3d.h"
+
 namespace {
 
 
@@ -1019,6 +1021,216 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     var.segflag->reset(psegflag, var.nseg);
 }
 
+#ifdef THREED
+void optimize_mesh(const Param &param, Variables &var, int bad_quality,
+              const array_t &original_coord, const conn_t &original_connectivity,
+              const segment_t &original_segment, const segflag_t &original_segflag)
+{
+    // We don't want to refine large elements during remeshing,
+    // so using negative size as the max area
+    const double max_elem_size = -1;
+    const int vertex_per_polygon = 3;
+    const double min_dist = std::pow(param.mesh.smallest_size*sizefactor, 1./NDIMS) * param.mesh.resolution;
+    Mesh mesh_param = param.mesh;
+    mesh_param.poly_filename = "";
+
+    int_vec facet_polygons[6];
+    assemble_facet_polygons(var, original_coord, facet_polygons);
+
+    // create a copy of original_coord and original_segment
+    array_t old_coord(original_coord);
+    conn_t old_connectivity(original_connectivity);
+    segment_t old_segment(original_segment);
+    segflag_t old_segflag(original_segflag);
+
+    double *qcoord = old_coord.data();
+    int *qconn = old_connectivity.data();
+    int *qsegment = old_segment.data();
+    int *qsegflag = old_segflag.data();
+
+    int old_nnode = old_coord.size();
+    int old_nelem = old_connectivity.size();
+    int old_nseg = old_segment.size();
+
+    // copy
+    double_vec old_volume(*var.volume);
+    uint_vec old_bcflag(*var.bcflag);
+    int_vec old_bnodes[6];
+    for (int i=0; i<6; ++i) {
+        old_bnodes[i] = var.bnodes[i];
+    }
+
+    int_vec points_to_delete;
+    bool (*excl_func)(uint) = NULL; // function pointer indicating which point cannot be deleted
+
+#if 0
+    /* choosing which way to remesh the boundary */
+    switch (param.mesh.remeshing_option) {
+    case 0:
+        // DO NOT change the boundary
+        excl_func = &is_boundary;
+        break;
+    case 1:
+        excl_func = &is_boundary;
+        flatten_bottom(old_bcflag, qcoord, -param.mesh.zlength,
+                       points_to_delete, min_dist);
+        break;
+    case 2:
+        excl_func = &is_boundary;
+        new_bottom(old_bcflag, qcoord, -param.mesh.zlength,
+                   points_to_delete, min_dist, qsegment, qsegflag, old_nseg);
+        break;
+    case 10:
+        excl_func = &is_corner;
+        break;
+    case 11:
+        excl_func = &is_corner;
+        flatten_bottom(old_bcflag, qcoord, -param.mesh.zlength,
+                       points_to_delete, min_dist);
+        break;
+    default:
+        std::cerr << "Error: unknown remeshing_option: " << param.mesh.remeshing_option << '\n';
+        std::exit(1);
+    }
+#endif
+
+    // prepare arguments for mmg3d
+    int opt[9];
+    MMG_pMesh mymmgmesh;
+    MMG_pSol  sol;
+
+    opt[0] = 0; // mesh optimization. 1 for mesh generation and optimization.
+    opt[1] = 0; // non-debugging mode. 1 for debugging mode
+    opt[2] = 64; // bucket size. default 64.
+    opt[3] = 1; // edge swap not allowed. If 0, allowed.
+    opt[4] = 1; // don't keep the node number constant. If 0, keep constant.
+    opt[5] = 0; // allow point relocation. If 1, not allowed.
+    opt[6] = 3; // verbosity level.
+    opt[7] = 3; // 0: no renumbering. 1: renumbering at beginning. 2: renumbering at the end.
+                // 3: renumbering both at beginning and at end.
+    opt[8] = 500; // the number of vertices by box(?).
+
+    // MMG_Mesh definition block.
+    mymmgmesh = (MMG_pMesh)calloc(1, sizeof(MMG_Mesh));
+    
+    mymmgmesh->np = var.nnode;
+    mymmgmesh->nt = var.nseg;
+    mymmgmesh->ne = var.nelem;
+
+    mymmgmesh->npmax = 2*var.nnode;
+    mymmgmesh->ntmax = 2*var.nseg;
+    mymmgmesh->nemax = 2*var.nelem;
+
+    mymmgmesh->point = (MMG_pPoint)calloc(mymmgmesh->npmax+1, sizeof(MMG_Point));
+    mymmgmesh->tetra = (MMG_pTetra)calloc(mymmgmesh->nemax+1, sizeof(MMG_Tetra));
+    mymmgmesh->tria = (MMG_pTria)calloc(mymmgmesh->ntmax+1, sizeof(MMG_Tria));
+    mymmgmesh->adja = (int *)calloc(4*mymmgmesh->nemax+5, sizeof(int));
+    mymmgmesh->disp = (MMG_pDispl)calloc(mymmgmesh->npmax+1, sizeof(MMG_Displ));
+    mymmgmesh->disp->mv = (double *)calloc(3*(mymmgmesh->npmax+1), sizeof(double));
+    mymmgmesh->disp->alpha = (short *)calloc(mymmgmesh->npmax+1, sizeof(short));
+
+    for(int k=1; k <= mymmgmesh->np; k++ ) {
+        MMG_pPoint ppt = &mymmgmesh->point[k];
+        ppt->c[0] = coord[k][0];
+        ppt->c[0] = coord[k][0];
+        ppt->c[0] = coord[k][0];
+        ppt->ref = logic;
+    }
+
+    for(int k=1; k <= mymmgmesh->ne; k++ ) {
+        MMG_pTetra ptetra = &mymmgmesh->tetra[k];
+        ptetra->v[0] = connectivity[k][0];
+        ptetra->v[1] = connectivity[k][1];
+        ptetra->v[2] = connectivity[k][2];
+        ptetra->v[3] = connectivity[k][3];
+        ptetra->ref = logic;
+    }
+
+    for(int k=1; k <= mymmgmesh->nt; k++ ) {
+        MMG_pTria ptria = &mymmgmesh->tria[k];
+        const int *segment = var.segment->data()[k];
+        ptria->v[0] = segment[0];
+        ptria->v[1] = segment[1];
+        ptria->v[2] = segment[2];
+        ptria->ref = logic;
+    }
+
+    // MMG_sol definition block.
+    sol = (MMG_pSol)calloc(1, sizeof(MMG_Sol));
+    sol->np = mymmgmesh->np;
+    sol->npmax = mymmgmesh->npmax;
+
+    int new_nnode, new_nelem, new_nseg;
+    double *pcoord, *pregattr;
+    int *pconnectivity, *psegment, *psegflag;
+
+    int nloops = 0;
+    while (1) {
+
+        if (bad_quality == 3) {
+            // lessen the quality constraint so that less new points got inserted to the mesh
+            // and less chance of having tiny elements
+            mesh_param.min_angle *= 0.9;
+            mesh_param.max_ratio *= 0.9;
+            mesh_param.min_tet_angle *= 1.1;
+        }
+
+        pregattr = NULL;
+
+        // new mesh
+        points_to_new_mesh(mesh_param, old_nnode, qcoord,
+                           old_nseg, qsegment, qsegflag,
+                           0, pregattr,
+                           max_elem_size, vertex_per_polygon,
+                           new_nnode, new_nelem, new_nseg,
+                           pcoord, pconnectivity, psegment, psegflag, pregattr);
+
+        array_t new_coord(pcoord, new_nnode);
+        conn_t new_connectivity(pconnectivity, new_nelem);
+
+        uint_vec new_bcflag(new_nnode);
+        create_boundary_flags2(new_bcflag, new_nseg, psegment, psegflag);
+
+        // deleting (non-boundary) nodes to avoid having tiny elements
+        double_vec new_volume(new_nelem);
+        compute_volume(new_coord, new_connectivity, new_volume);
+
+        const double smallest_vol = param.mesh.smallest_size * sizefactor * std::pow(param.mesh.resolution, NDIMS);
+        bad_quality = 0;
+        for (int e=0; e<var.nelem; e++) {
+            if (new_volume[e] < smallest_vol) {
+                bad_quality = 3;
+                break;
+            }
+        }
+
+        new_coord.nullify();
+        new_connectivity.nullify();
+        if (! bad_quality) break;
+
+        nloops ++;
+        if (nloops > 5) {
+            std::cout << "Warning: exceeding loop limit in remeshing. Proceeding with risks.\n";
+            break;
+        }
+
+        delete [] pcoord;
+        delete [] pconnectivity;
+        delete [] psegment;
+        delete [] psegflag;
+        delete [] pregattr;
+    }
+
+    var.nnode = new_nnode;
+    var.nelem = new_nelem;
+    var.nseg = new_nseg;
+    var.coord->reset(pcoord, new_nnode);
+    var.connectivity->reset(pconnectivity, new_nelem);
+    var.segment->reset(psegment, var.nseg);
+    var.segflag->reset(psegflag, var.nseg);
+}
+#endif
+
 } // anonymous namespace
 
 
@@ -1092,8 +1304,13 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         old_segment.steal_ref(*var.segment);
         old_segflag.steal_ref(*var.segflag);
 
+#ifdef THREED
+        optimize_mesh(param, var, bad_quality, old_coord, old_connectivity,
+                 old_segment, old_segflag);
+#else
         new_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
+#endif
 
         renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr);
 

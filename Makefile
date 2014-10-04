@@ -11,15 +11,15 @@
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openmp = 1: enable OpenMP
 
-ndims = 2
-opt = 2
-openmp = 1
+ndims = 3
+opt = 0
+openmp = 0
 
 ## Select C++ compiler
-CXX = g++
+CXX = g++-mp-4.8
 
 ## Boost location and library name
-BOOST_ROOT_DIR =
+BOOST_ROOT_DIR = /Users/eunseo/opt/boost_1_56_0
 
 ########################################################################
 ## Select compiler and linker flags
@@ -28,9 +28,8 @@ BOOST_ROOT_DIR =
 
 BOOST_LDFLAGS = -lboost_program_options
 ifdef BOOST_ROOT_DIR
-	BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
-	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/lib
-	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/stage/lib
+        BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
+        BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath,$(BOOST_ROOT_DIR)/stage/lib
 endif
 
 ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
@@ -129,6 +128,12 @@ ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
 
+MMG3D_DIR = mmg3d4-4.0.1-Source
+MMG3D_INC = $(MMG3D_DIR)/src
+MMG3D_LIB = $(MMG3D_DIR)/lib
+MMG3D_LIBNAME = mmg3d4
+CXXFLAGS += -I$(MMG3D_INC)
+
 ## Action
 
 .PHONY: all clean take-snapshot
@@ -137,7 +142,7 @@ all: $(EXE) take-snapshot
 
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
 	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
-		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) -o $@
+		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) -L$(MMG3D_DIR)/lib -l$(MMG3D_LIBNAME) -o $@
 
 take-snapshot:
 	@# snapshot of the code for building the executable
