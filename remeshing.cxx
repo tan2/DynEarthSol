@@ -1132,8 +1132,8 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     for(int k=1; k <= mymmgmesh->np; k++ ) {
         MMG_pPoint ppt = &mymmgmesh->point[k];
         ppt->c[0] = coord[k][0];
-        ppt->c[0] = coord[k][0];
-        ppt->c[0] = coord[k][0];
+        ppt->c[1] = coord[k][1];
+        ppt->c[2] = coord[k][2];
         ppt->ref = logic;
     }
 
@@ -1160,67 +1160,53 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     sol->np = mymmgmesh->np;
     sol->npmax = mymmgmesh->npmax;
 
+    sol->offset = 1; // 6 for an anisotropic metric
+    sol->met = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
+    sol->metold = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
+
+    double hsqrinv = 1.0/var.resolution*var.resolution;
+    for(int k = 1; k <= mesh->np; k++ ) {
+        isol = (k-1) * sol->offset + 1;
+        for(int i=0; i < sol->offset; i++)
+            sol->mat[isol+i] = hsqrinv;
+
     int new_nnode, new_nelem, new_nseg;
     double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;
 
-    int nloops = 0;
-    while (1) {
+    pregattr = NULL;
 
-        if (bad_quality == 3) {
-            // lessen the quality constraint so that less new points got inserted to the mesh
-            // and less chance of having tiny elements
-            mesh_param.min_angle *= 0.9;
-            mesh_param.max_ratio *= 0.9;
-            mesh_param.min_tet_angle *= 1.1;
-        }
+    // new mesh
+    int MMG_mmg3dlib( opt, mymmgmesh, sol );
 
-        pregattr = NULL;
+#if 0
+    points_to_new_mesh(mesh_param, old_nnode, qcoord,
+                       old_nseg, qsegment, qsegflag,
+                       0, pregattr,
+                       max_elem_size, vertex_per_polygon,
+                       new_nnode, new_nelem, new_nseg,
+                       pcoord, pconnectivity, psegment, psegflag, pregattr);
+#endif
 
-        // new mesh
-        points_to_new_mesh(mesh_param, old_nnode, qcoord,
-                           old_nseg, qsegment, qsegflag,
-                           0, pregattr,
-                           max_elem_size, vertex_per_polygon,
-                           new_nnode, new_nelem, new_nseg,
-                           pcoord, pconnectivity, psegment, psegflag, pregattr);
+    array_t new_coord(pcoord, new_nnode);
+    conn_t new_connectivity(pconnectivity, new_nelem);
 
-        array_t new_coord(pcoord, new_nnode);
-        conn_t new_connectivity(pconnectivity, new_nelem);
+    uint_vec new_bcflag(new_nnode);
+    create_boundary_flags2(new_bcflag, new_nseg, psegment, psegflag);
+    
+    // deleting (non-boundary) nodes to avoid having tiny elements
+    double_vec new_volume(new_nelem);
+    compute_volume(new_coord, new_connectivity, new_volume);
+    
+    new_coord.nullify();
+    new_connectivity.nullify();
 
-        uint_vec new_bcflag(new_nnode);
-        create_boundary_flags2(new_bcflag, new_nseg, psegment, psegflag);
-
-        // deleting (non-boundary) nodes to avoid having tiny elements
-        double_vec new_volume(new_nelem);
-        compute_volume(new_coord, new_connectivity, new_volume);
-
-        const double smallest_vol = param.mesh.smallest_size * sizefactor * std::pow(param.mesh.resolution, NDIMS);
-        bad_quality = 0;
-        for (int e=0; e<var.nelem; e++) {
-            if (new_volume[e] < smallest_vol) {
-                bad_quality = 3;
-                break;
-            }
-        }
-
-        new_coord.nullify();
-        new_connectivity.nullify();
-        if (! bad_quality) break;
-
-        nloops ++;
-        if (nloops > 5) {
-            std::cout << "Warning: exceeding loop limit in remeshing. Proceeding with risks.\n";
-            break;
-        }
-
-        delete [] pcoord;
-        delete [] pconnectivity;
-        delete [] psegment;
-        delete [] psegflag;
-        delete [] pregattr;
-    }
-
+    delete [] pcoord;
+    delete [] pconnectivity;
+    delete [] psegment;
+    delete [] psegflag;
+    delete [] pregattr;
+    
     var.nnode = new_nnode;
     var.nelem = new_nelem;
     var.nseg = new_nseg;
