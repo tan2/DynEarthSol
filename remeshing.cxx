@@ -1159,7 +1159,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     sol->np = mymmgmesh->np;
     sol->npmax = mymmgmesh->npmax;
 
-    sol->offset = 1; // 6 for an anisotropic metric
+    sol->offset = 1; // 6 for an anisotropic metric: [m11,m21,m22,m31,m32,m33].
     sol->met = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
     sol->metold = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
 
