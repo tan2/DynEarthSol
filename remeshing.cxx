@@ -19,7 +19,7 @@
 #include "markerset.hpp"
 #include "remeshing.hpp"
 
-#include "libmmg3d.h"
+#include "libmmg3d4.h"
 
 namespace {
 
@@ -1131,28 +1131,27 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
 
     for(int k=1; k <= mymmgmesh->np; k++ ) {
         MMG_pPoint ppt = &mymmgmesh->point[k];
-        ppt->c[0] = coord[k][0];
-        ppt->c[1] = coord[k][1];
-        ppt->c[2] = coord[k][2];
-        ppt->ref = logic;
+        ppt->c[0] = (*var.coord)[k][0];
+        ppt->c[1] = (*var.coord)[k][1];
+        ppt->c[2] = (*var.coord)[k][2];
+        //ppt->ref = logic;
     }
 
     for(int k=1; k <= mymmgmesh->ne; k++ ) {
         MMG_pTetra ptetra = &mymmgmesh->tetra[k];
-        ptetra->v[0] = connectivity[k][0];
-        ptetra->v[1] = connectivity[k][1];
-        ptetra->v[2] = connectivity[k][2];
-        ptetra->v[3] = connectivity[k][3];
-        ptetra->ref = logic;
+        ptetra->v[0] = (*var.connectivity)[k][0];
+        ptetra->v[1] = (*var.connectivity)[k][1];
+        ptetra->v[2] = (*var.connectivity)[k][2];
+        ptetra->v[3] = (*var.connectivity)[k][3];
+        //ptetra->ref = logic;
     }
 
     for(int k=1; k <= mymmgmesh->nt; k++ ) {
         MMG_pTria ptria = &mymmgmesh->tria[k];
-        const int *segment = var.segment->data()[k];
-        ptria->v[0] = segment[0];
-        ptria->v[1] = segment[1];
-        ptria->v[2] = segment[2];
-        ptria->ref = logic;
+        ptria->v[0] = (*var.segment)[k][0];
+        ptria->v[1] = (*var.segment)[k][1];
+        ptria->v[2] = (*var.segment)[k][2];
+        //ptria->ref = logic;
     }
 
     // MMG_sol definition block.
@@ -1164,11 +1163,12 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     sol->met = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
     sol->metold = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
 
-    double hsqrinv = 1.0/var.resolution*var.resolution;
-    for(int k = 1; k <= mesh->np; k++ ) {
-        isol = (k-1) * sol->offset + 1;
+    double hsqrinv = 1.0/(param.mesh.resolution*param.mesh.resolution);
+    for(int k = 1; k <= mymmgmesh->np; k++ ) {
+        int isol = (k-1) * sol->offset + 1;
         for(int i=0; i < sol->offset; i++)
-            sol->mat[isol+i] = hsqrinv;
+            sol->met[isol+i] = hsqrinv;
+    }
 
     int new_nnode, new_nelem, new_nseg;
     double *pcoord, *pregattr;
@@ -1177,7 +1177,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     pregattr = NULL;
 
     // new mesh
-    int MMG_mmg3dlib( opt, mymmgmesh, sol );
+    int mesh_opt_error = mmg3d::MMG_mmg3dlib( opt, mymmgmesh, sol );
 
 #if 0
     points_to_new_mesh(mesh_param, old_nnode, qcoord,
