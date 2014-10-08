@@ -1373,7 +1373,7 @@ void create_new_mesh(const Param& param, Variables& var)
         std::exit(1);
     }
 
-    if (param.mesh.discard_internal_segments)
+    if (param.mesh.is_discarding_internal_segments)
         discard_internal_segments(var.nseg, *var.segment, *var.segflag);
 
     renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr, 1);
