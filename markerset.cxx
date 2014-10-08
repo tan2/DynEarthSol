@@ -589,7 +589,14 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             num_marker_in_elem += (*(var.elemmarkers))[e][i];
 
         if (num_marker_in_elem < param.markers.min_num_markers_in_element) {
-            replenish_markers_with_mattype_from_cpdf(param, var, e, num_marker_in_elem);
+            switch (param.markers.replenishment_option) {
+            case 1:
+                replenish_markers_with_mattype_from_cpdf(param, var, e, num_marker_in_elem);
+                break;
+            default:
+                std::cerr << "Error: unknown markers.replenishment_option: " << param.markers.replenishment_option << '\n';
+                std::exit(1);
+            }
         }
     }
 }
