@@ -1,4 +1,3 @@
-
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -67,6 +66,10 @@ void set_volume_str(std::string &vol, double max_volume)
     if (max_volume > 0) {
         vol += 'a';
         vol += std::to_string((long double)max_volume);
+    }
+    else if (max_volume == 0) {
+        // max_volume is set inside regional attributes (usu. read from poly files)
+        vol += 'a';
     }
 }
 
@@ -754,12 +757,11 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
      * Note that the poly file in 3D has a more complicated format.
      */
 
-    double max_elem_size;
 #ifdef THREED
-    max_elem_size = 0.7 * param.mesh.resolution
+    const double std_elem_size = 0.7 * param.mesh.resolution
         * param.mesh.resolution * param.mesh.resolution;
 #else
-    max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
+    const double std_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
 #endif
 
     std::FILE *fp = std::fopen(param.mesh.poly_filename.c_str(), "r");
@@ -929,16 +931,11 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-        
-        if (param.ic.mattype_option == 0 && nregions != param.mat.nmat) {
-            std::cerr << "Error: Number of regions should be exactly 'mat.num_materials' but a different value is given in line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
-        }
     }
 
     // get region list
-    double *regattr = new double[nregions * (NDIMS+2)]; // each region has 5 data fields: x, (y,) z, region marker (mat type), and volume.
+    double *regattr = new double[nregions * (NDIMS+2)]; // each region has these data fields: x, (y,) z, region marker (mattype), and volume.
+    bool has_max_size = false;
     for (int i=0; i<nregions; i++) {
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
@@ -960,7 +957,14 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
             std::cerr << "Note that this parameter is directly used as the index of mat. prop. arrays.\n";
             std::exit(1);
         }
+
+        if ( x[NDIMS+1] > 0 ) {
+            has_max_size = true; // max area is set for this region
+        }
     }
+
+    double max_elem_size = std_elem_size;
+    if ( has_max_size ) max_elem_size = 0; // special value, see set_volume_str() above.
 
     points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags, nregions, regattr,
