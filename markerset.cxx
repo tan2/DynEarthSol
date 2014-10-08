@@ -493,8 +493,24 @@ namespace {
     }
 
 
+    void replenish_markers_with_mattype_0(const Param& param, Variables &var,
+                                          int e, int num_marker_in_elem)
+    {
+        while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
+            const int mt = 0;
+            var.markersets[0]->append_random_marker_in_elem(e, mt);
+            if (DEBUG) {
+                std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
+            }
+
+            ++(*var.elemmarkers)[e][mt];
+            ++num_marker_in_elem;
+        }
+    }
+
+
     void replenish_markers_with_mattype_from_cpdf(const Param& param, Variables &var,
-                                     int e, int num_marker_in_elem)
+                                                  int e, int num_marker_in_elem)
     {
         // cummulative probability density function of mattype
         double_vec cpdf(param.mat.nmat, 0);
@@ -590,6 +606,9 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
 
         if (num_marker_in_elem < param.markers.min_num_markers_in_element) {
             switch (param.markers.replenishment_option) {
+            case 0:
+                replenish_markers_with_mattype_0(param, var, e, num_marker_in_elem);
+                break;
             case 1:
                 replenish_markers_with_mattype_from_cpdf(param, var, e, num_marker_in_elem);
                 break;

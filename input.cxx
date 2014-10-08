@@ -150,6 +150,7 @@ static void declare_parameters(po::options_description &cfg,
          "When the number of markers in an element is less than this number, a new marker will be replenished in the element.")
         ("markers.replenishment_option", po::value<int>(&p.markers.replenishment_option)->default_value(1),
          "How to determine the mattype of replenished markers?\n"
+         "0: always set to 0 (fastest option).\n"
          "1: by the probability of marker mattype of the element or surrounding elements.\n")
         ;
 
