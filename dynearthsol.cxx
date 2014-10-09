@@ -278,16 +278,6 @@ int main(int argc, const char* argv[])
         }
 
         if (var.steps % param.mesh.quality_check_step_interval == 0) {
-            if (param.sim.has_output_during_remeshing) {
-                output.write(var, false);
-            }
-            
-            remesh(param, var, 1);
-            
-            if (param.sim.has_output_during_remeshing) {
-                output.write(var, false);
-            }
-#if 0
             int quality_is_bad, bad_quality_index;
             quality_is_bad = bad_mesh_quality(param, var, bad_quality_index);
             if (quality_is_bad) {
@@ -302,7 +292,6 @@ int main(int argc, const char* argv[])
                     output.write(var, false);
                 }
             }
-#endif
         }
 
     } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time_in_yr * YEAR2SEC);

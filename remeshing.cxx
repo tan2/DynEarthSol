@@ -1064,7 +1064,6 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     int_vec points_to_delete;
     bool (*excl_func)(uint) = NULL; // function pointer indicating which point cannot be deleted
 
-#if 0
     /* choosing which way to remesh the boundary */
     switch (param.mesh.remeshing_option) {
     case 0:
@@ -1093,7 +1092,6 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         std::cerr << "Error: unknown remeshing_option: " << param.mesh.remeshing_option << '\n';
         std::exit(1);
     }
-#endif
 
     // prepare arguments for mmg3d
     int opt[9];
@@ -1101,7 +1099,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     MMG_pSol  sol;
 
     opt[0] = 0; // mesh optimization. 1 for mesh generation and optimization.
-    opt[1] = 0; // non-debugging mode. 1 for debugging mode
+    opt[1] = 1; // non-debugging mode. 1 for debugging mode
     opt[2] = 64; // bucket size. default 64.
     opt[3] = 1; // edge swap not allowed. If 0, allowed.
     opt[4] = 1; // don't keep the node number constant. If 0, keep constant.
@@ -1135,14 +1133,13 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         MMG_pPoint ppt = &mymmgmesh->point[k];
         for(int i=0; i < NDIMS; i++ )
             ppt->c[i] = qcoord[(k-1)*NDIMS + i];
-        //ppt->ref = logic;
     }
     
     // copy tet connectivity to MMG_pMesh.
     for(int k=1; k <= mymmgmesh->ne; k++ ) {
         MMG_pTetra ptetra = &mymmgmesh->tetra[k];
         for(int i=0; i < NODES_PER_ELEM; i++ )
-            ptetra->v[i] = qconn[(k-1)*NODES_PER_ELEM + i];
+            ptetra->v[i] = qconn[(k-1)*NODES_PER_ELEM + i]+1;
         //ptetra->ref = logic;
     }
 
@@ -1150,8 +1147,8 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     for(int k=1; k <= mymmgmesh->nt; k++ ) {
         MMG_pTria ptria = &mymmgmesh->tria[k];
         for(int i=0; i < NODES_PER_FACET; i++ )
-            ptria->v[i] = qsegment[(k-1)*NODES_PER_FACET + i];
-        //ptria->ref = logic;
+            ptria->v[i] = qsegment[(k-1)*NODES_PER_FACET + i]+1;
+        ptria->ref = qsegflag[k-1];
     }
 
     // MMG_sol definition block.
@@ -1182,49 +1179,35 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     array_t new_coord( var.nnode );
     conn_t new_connectivity( var.nelem );
     segment_t new_segment( var.nseg );
+    segflag_t new_segflag( var.nseg );
 
 
     // copy optimized node coordinates to dynearthsol3d.
     for(int k=1; k <= mymmgmesh->np; k++ ) {
         MMG_pPoint ppt = &mymmgmesh->point[k];
-        new_coord[k][0] = ppt->c[0];
-        new_coord[k][1] = ppt->c[1];
-        new_coord[k][2] = ppt->c[2];
-        //ppt->ref = logic;
+        for(int i=0; i < NDIMS; i++ )
+            new_coord[k-1][i] = ppt->c[i];
     }
 
     // copy optimized tet connectivity to dynearthsol3d.
     for(int k=1; k <= mymmgmesh->ne; k++ ) {
         MMG_pTetra ptetra = &mymmgmesh->tetra[k];
-        new_connectivity[k][0] = ptetra->v[0];
-        new_connectivity[k][1] = ptetra->v[1];
-        new_connectivity[k][2] = ptetra->v[2];
-        new_connectivity[k][3] = ptetra->v[3];
-        //ptetra->ref = logic;
+        for(int i=0; i < NODES_PER_ELEM; i++ )
+            new_connectivity[k-1][i] = ptetra->v[i]-1;
     }
 
     // copy optimized surface triangle connectivity to dynearthsol3d.
     for(int k=1; k <= mymmgmesh->nt; k++ ) {
         MMG_pTria ptria = &mymmgmesh->tria[k];
-        new_segment[k][0] = ptria->v[0];
-        new_segment[k][1] = ptria->v[1];
-        new_segment[k][2] = ptria->v[2];
-        //ptria->ref = logic;
+        for(int i=0; i < NODES_PER_FACET; i++ )
+            new_segment[k-1][i] = ptria->v[i]-1;
+        new_segflag.data()[k-1] = ptria->ref;
     }
-
 
     var.coord->steal_ref( new_coord );
     var.connectivity->steal_ref( new_connectivity );
     var.segment->steal_ref( new_segment );
-    var.segflag->steal_ref( old_segflag );
-    var.segflag->resize( var.nseg );
-
-    // TO-DO
-    // 1. take care of boundary flags...
-    // uint_vec new_bcflag(new_nnode);
-    // create_boundary_flags2(new_bcflag, new_nseg, psegment, psegflag);
-    // var.segflag->reset(psegflag, var.nseg);
-    //
+    var.segflag->steal_ref( new_segflag );
 
     free( mymmgmesh->point );
     free( mymmgmesh->tetra ); 
@@ -1323,7 +1306,6 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr);
 #endif
 
-#if 0
         {
             Barycentric_transformation bary(old_coord, old_connectivity, *var.volume);
 
@@ -1333,14 +1315,13 @@ void remesh(const Param &param, Variables &var, int bad_quality)
             // interpolating fields defined on nodes
             barycentric_node_interpolation(var, bary, old_coord, old_connectivity);
         }
-#endif
+
         delete var.support;
         create_support(var);
 
-#if 0
         // remap markers. elemmarkers are updated here, too.
         remap_markers(param, var, old_coord, old_connectivity);
-#endif
+
         // old_coord et al. are destroyed before exiting this block
     }
 
