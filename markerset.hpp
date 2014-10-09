@@ -23,6 +23,7 @@ public:
         delete _mattype;
     }
 
+    void random_eta( double* );
     void append_random_marker_in_elem( int el, int mt );
     void append_marker( const double *eta, int el, int mt );
     void remove_marker(int i);
@@ -65,7 +66,6 @@ private:
     // Unique id
     int_vec *_id;
 
-    void random_eta( double* );
     void random_markers( const Param&, Variables& );
     void regularly_spaced_markers( const Param&, Variables& );
     void allocate_markerdata( const int );

@@ -568,6 +568,75 @@ namespace {
         }
     }
 
+
+    void replenish_markers_with_mattype_from_nn_preparation(const Param& param, const Variables &var,
+                                                            ANNkd_tree *&kdtree, double **&points)
+    {
+        const MarkerSet &ms = *var.markersets[0];
+        const int nmarkers = ms.get_nmarkers();
+
+        double *tmp = new double[nmarkers*NDIMS];
+        points = new double*[nmarkers];
+        // The caller is responsible to delete [] points[0] and points!
+
+        for (int n=0; n<nmarkers; n++) {
+            const int e = ms.get_elem(n);
+            const double* eta = ms.get_eta(n);
+            const int* conn = (*var.connectivity)[e];
+
+            points[n] = tmp + n*NDIMS;
+            for(int d=0; d<NDIMS; d++) {
+                double sum = 0;
+                for(int k=0; k<NODES_PER_ELEM; k++) {
+                    sum += (*var.coord)[ conn[k] ][d] * eta[k];
+                }
+                points[n][d] = sum;
+            }
+        }
+
+        kdtree = new ANNkd_tree(points, nmarkers, NDIMS);
+    }
+
+
+    void replenish_markers_with_mattype_from_nn(const Param& param, Variables &var,
+                                                ANNkd_tree &kdtree,
+                                                int e, int num_marker_in_elem)
+    {
+        MarkerSet &ms = *var.markersets[0];
+        while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
+            double eta[NODES_PER_ELEM];
+            ms.random_eta(eta);
+
+            double x[NDIMS] = {0};
+            const int *conn = (*var.connectivity)[e];
+            for (int d=0; d<NDIMS; d++) {
+                for (int i=0; i<NODES_PER_ELEM; i++) {
+                    x[d] += (*var.coord)[ conn[i] ][d] * eta[i];
+                }
+            }
+
+            const int k = 1;  // how many nearest neighbors to search?
+            const double eps = 0; // tolerance of distance error
+            int nn_idx[k];
+            double dd[k];
+
+            // Look for nearest marker.
+            // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
+            kdtree.annkSearch(x, k, nn_idx, dd, eps);
+
+            int m = nn_idx[0]; // nearest marker
+            const int mt = ms.get_mattype(m);
+
+            ms.append_marker(eta, e, mt);
+            if (DEBUG) {
+                std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
+            }
+
+            ++(*var.elemmarkers)[e][mt];
+            ++num_marker_in_elem;
+        }
+    }
+
 } // anonymous namespace
 
 
@@ -580,25 +649,34 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         delete var.hydrous_elemmarkers;
     create_elemmarkers( param, var );
 
-    double_vec new_volume( var.nelem );
-    compute_volume( *var.coord, *var.connectivity, new_volume );
+    // Locating markers in new elements
+    {
+        double_vec new_volume( var.nelem );
+        compute_volume( *var.coord, *var.connectivity, new_volume );
 
-    Barycentric_transformation bary( *var.coord, *var.connectivity, new_volume );
+        Barycentric_transformation bary( *var.coord, *var.connectivity, new_volume );
 
-    // nearest-neighbor search structure
-    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
-    ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
+        // nearest-neighbor search structure
+        double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
+        ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
 
-    find_markers_in_element(*var.markersets[0], *var.elemmarkers,
-                            kdtree, bary, old_coord, old_connectivity);
-    if (param.control.has_hydration_processes)
-        find_markers_in_element(*var.markersets[var.hydrous_marker_index], *var.hydrous_elemmarkers,
+        find_markers_in_element(*var.markersets[0], *var.elemmarkers,
                                 kdtree, bary, old_coord, old_connectivity);
+        if (param.control.has_hydration_processes)
+            find_markers_in_element(*var.markersets[var.hydrous_marker_index], *var.hydrous_elemmarkers,
+                                    kdtree, bary, old_coord, old_connectivity);
 
-    delete [] centroid[0];
-    delete [] centroid;
+        delete [] centroid[0];
+        delete [] centroid;
+    }
 
     // If any new element has too few markers, generate markers in them.
+    ANNkd_tree *kdtree = NULL;
+    double **points = NULL; // coordinate of markers
+    if (param.markers.replenishment_option == 2) {
+        replenish_markers_with_mattype_from_nn_preparation(param, var, kdtree, points);
+    }
+
     for( int e = 0; e < var.nelem; e++ ) {
         int num_marker_in_elem = 0;
         for( int i = 0; i < param.mat.nmat; i++ )
@@ -612,11 +690,20 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
             case 1:
                 replenish_markers_with_mattype_from_cpdf(param, var, e, num_marker_in_elem);
                 break;
+            case 2:
+                replenish_markers_with_mattype_from_nn(param, var, *kdtree, e, num_marker_in_elem);
+                break;
             default:
                 std::cerr << "Error: unknown markers.replenishment_option: " << param.markers.replenishment_option << '\n';
                 std::exit(1);
             }
         }
+    }
+
+    if (param.markers.replenishment_option == 2) {
+        delete kdtree;
+        delete [] points[0];
+        delete [] points;
     }
 }
 

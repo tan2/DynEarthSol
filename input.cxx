@@ -148,10 +148,11 @@ static void declare_parameters(po::options_description &cfg,
          "Spacing of markers (in unit of mesh.resolution). Used when init_marker_option=2.")
         ("markers.min_num_markers_in_element", po::value<int>(&p.markers.min_num_markers_in_element)->default_value(3),
          "When the number of markers in an element is less than this number, a new marker will be replenished in the element.")
-        ("markers.replenishment_option", po::value<int>(&p.markers.replenishment_option)->default_value(1),
+        ("markers.replenishment_option", po::value<int>(&p.markers.replenishment_option)->default_value(2),
          "How to determine the mattype of replenished markers?\n"
          "0: always set to 0 (fastest option).\n"
-         "1: by the probability of marker mattype of the element or surrounding elements.\n")
+         "1: by the probability of marker mattype of the element or surrounding elements.\n"
+         "2: same as the mattype of the nearest marker (slowest option).")
         ;
 
     cfg.add_options()
