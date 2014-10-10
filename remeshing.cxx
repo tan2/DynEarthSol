@@ -1099,12 +1099,12 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     MMG_pSol  sol;
 
     opt[0] = 0; // mesh optimization. 1 for mesh generation and optimization.
-    opt[1] = 1; // non-debugging mode. 1 for debugging mode
+    opt[1] = 0; // non-debugging mode. 1 for debugging mode
     opt[2] = 64; // bucket size. default 64.
     opt[3] = 1; // edge swap not allowed. If 0, allowed.
     opt[4] = 1; // don't keep the node number constant. If 0, keep constant.
     opt[5] = 0; // allow point relocation. If 1, not allowed.
-    opt[6] = 3; // verbosity level.
+    opt[6] = 1; // verbosity level.
     opt[7] = 3; // 0: no renumbering. 1: renumbering at beginning. 2: renumbering at the end.
                 // 3: renumbering both at beginning and at end.
     opt[8] = 500; // the number of vertices by box(?).
