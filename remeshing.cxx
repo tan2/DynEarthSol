@@ -639,17 +639,14 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
             int *segflag = new int[polygon.size()]; // all 0
             int *segment = new int[2 * polygon.size()];
             const int_vec& inv = inverse[i];
-            std::cout << "size: " << inv.size() << ' ' << polygon.size() << '\n';
             std::size_t j = 0;
             int new_polygon_size = 1;
             while (j < polygon.size() - 1) {
                 std::size_t ia = std::find(inv.begin(), inv.end(), polygon[j]) - inv.begin();
-                std::cout << j << ' ' << ia << '\n';
                 while (ia == inv.size()) {
                     // this point is to be deleted
                     ++j;
                     ia = std::find(inv.begin(), inv.end(), polygon[j]) - inv.begin();
-                    std::cout << j << ' ' << ia << '\n';
                 }
 
                 segment[2*new_polygon_size-1] = segment[2*new_polygon_size] = ia;
