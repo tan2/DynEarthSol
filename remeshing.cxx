@@ -909,7 +909,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     }
 
     if (bad_quality == 3) {
-        // marker (non-boundary) points of small elements to be deleted later
+        // Marking (non-boundary) points of small elements, which will be deleted later
         int_vec tiny_elems;
         find_tiny_element(param, old_volume, tiny_elems);
 
@@ -1044,11 +1044,11 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
         param.mesh.remeshing_option == 2 ||
         param.mesh.remeshing_option == 11) {
         double bottom = - param.mesh.zlength;
-        const double dist_ratio = 0.25;
+        const double dist = param.mesh.max_boundary_distortion * param.mesh.resolution;
         for (int i=0; i<var.nnode; ++i) {
             if (is_bottom((*var.bcflag)[i])) {
                 double z = (*var.coord)[i][NDIMS-1];
-                if (std::fabs(z - bottom) > dist_ratio * param.mesh.resolution) {
+                if (std::fabs(z - bottom) > dist) {
                     index = i;
                     std::cout << "    Node #" << i << " is too far from the bottm: z = " << z << "\n";
                     return 2;

@@ -54,11 +54,10 @@ struct Mesh {
     double resolution;
     double smallest_size;
     double largest_size;
-    // for 2D only
-    double min_angle;
-    // for 3D only
-    double min_tet_angle, max_ratio;
+    double min_angle;  // for 2D only
+    double min_tet_angle, max_ratio; // for 3D only
     double min_quality;
+    double max_boundary_distortion;
 
     double_pair refined_zonex, refined_zoney, refined_zonez;
     std::string poly_filename;

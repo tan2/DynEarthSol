@@ -122,6 +122,8 @@ static void declare_parameters(po::options_description &cfg,
          "How often to check mesh quality?")
         ("mesh.min_quality", po::value<double>(&p.mesh.min_quality)->default_value(0.4),
          "Min. mesh quality before remeshing (between 0 and 1)")
+        ("mesh.max_boundary_distortion", po::value<double>(&p.mesh.max_boundary_distortion)->default_value(0.25),
+         "Max. distance of boundary distortion before remeshing (in unit of mesh.resolution).")
 
         ("mesh.remeshing_option", po::value<int>(&p.mesh.remeshing_option)->default_value(0),
          "How to deal with the boundaries during remeshing?\n"
