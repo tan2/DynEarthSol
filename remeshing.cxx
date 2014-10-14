@@ -956,9 +956,9 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         if (bad_quality == 3) {
             // lessen the quality constraint so that less new points got inserted to the mesh
             // and less chance of having tiny elements
-            mesh_param.min_angle *= 0.9;
-            mesh_param.max_ratio *= 0.9;
-            mesh_param.min_tet_angle *= 1.1;
+            mesh_param.min_angle *= 0.8;
+            mesh_param.max_ratio *= 0.8;
+            mesh_param.min_tet_angle *= 1.25;
         }
 
         pregattr = NULL;
