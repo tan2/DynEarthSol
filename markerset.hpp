@@ -49,7 +49,7 @@ public:
     inline void set_eta( const int i, const double r[NDIMS] );
 
 private:
-    const std::string name;
+    const std::string _name;
 
     // Didn't create a data type for an individual marker to follow the "structure of arrays" concept.
     // Number of markers (may change during remeshing)
