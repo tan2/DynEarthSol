@@ -23,7 +23,8 @@ public:
         delete _mattype;
     }
 
-    void random_eta( double* );
+    static void random_eta( double* ); // class method
+
     void append_random_marker_in_elem( int el, int mt );
     void append_marker( const double *eta, int el, int mt );
     void remove_marker(int i);
