@@ -799,15 +799,20 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     for (int i=0; i<npoints; i++) {
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
-        int junk;
+        int k;
         double *x = &points[i*NDIMS];
 #ifdef THREED
-        n = std::sscanf(buffer, "%d %lf %lf %lf", &junk, x, x+1, x+2);
+        n = std::sscanf(buffer, "%d %lf %lf %lf", &k, x, x+1, x+2);
 #else
-        n = std::sscanf(buffer, "%d %lf %lf", &junk, x, x+1);
+        n = std::sscanf(buffer, "%d %lf %lf", &k, x, x+1);
 #endif
         if (n != NDIMS+1) {
             std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+        if (k != i) {
+            std::cerr << "Error: node number is continuous from 0 at line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
@@ -882,7 +887,17 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         }
 #endif
     }
-
+    for (int i=0; i<n_init_segments; i++) {
+        int *x = &init_segments[i*NODES_PER_FACET];
+        for (int j=0; j<NODES_PER_FACET; j++) {
+            if (x[j] < 0 || x[j] >= npoints) {
+                std::cerr << "Error: segment contains out-of-range node # [0-" << npoints
+                          <<"] in line " << lineno << " of '"
+                          << param.mesh.poly_filename << "'\n";
+                std::exit(1);
+            }
+        }
+    }
 
     // get header of hole list
     {
