@@ -291,6 +291,9 @@ static void declare_parameters(po::options_description &cfg,
 
         ("ic.oceanic_plate_age_in_yr", po::value<double>(&p.ic.oceanic_plate_age_in_yr)->default_value(60e6),
          "Age of the oceanic plate (in years), used for the temperature profile on the plate.\n")
+
+        ("ic.isostasy_adjustment_time_in_yr", po::value<double>(&p.ic.isostasy_adjustment_time_in_yr)->default_value(0),
+         "Time for spinning up isostasy adjustment.\n")
         ;
 
     cfg.add_options()

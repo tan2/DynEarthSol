@@ -175,6 +175,39 @@ void update_mesh(const Param& param, Variables& var)
 }
 
 
+void isostasy_adjustment(const Param &param, Variables &var)
+{
+    std::cout << "Adjusting isostasy for " << param.ic.isostasy_adjustment_time_in_yr << " yrs...\n";
+
+    var.dt = compute_dt(param, var);
+    int iso_steps = param.ic.isostasy_adjustment_time_in_yr*YEAR2SEC / var.dt;
+
+    for (int i=0; i<iso_steps; i++) {
+        update_strain_rate(var, *var.strain_rate);
+        compute_dvoldt(var, *var.ntmp);
+        compute_edvoldt(var, *var.ntmp, *var.edvoldt);
+        update_stress(var, *var.stress, *var.strain, *var.plstrain,  *var.delta_plstrain, *var.strain_rate);
+        update_force(param, var, *var.force);
+        update_velocity(var, *var.vel);
+
+        // do not apply vbc to allow free boundary
+
+        // displacment is vertical only
+        #pragma omp parallel for default(none)          \
+            shared(var)
+        for (int i=0; i<var.nnode; ++i) {
+            for (int j=0; j<NDIMS-1; ++j) {
+                (*var.vel)[i][j] = 0;
+            }
+        }
+
+        update_mesh(param, var);
+
+    }
+    std::cout << "Adjusted isostasy for " << iso_steps << " steps.\n";
+}
+
+
 int main(int argc, const char* argv[])
 {
     double start_time = 0;
@@ -211,6 +244,10 @@ int main(int argc, const char* argv[])
     if (! param.sim.is_restarting) {
         init(param, var);
 
+        if (param.ic.isostasy_adjustment_time_in_yr > 0) {
+            // output.write(var, false);
+            isostasy_adjustment(param, var);
+        }
         if (param.sim.has_initial_checkpoint)
             output.write_checkpoint(var);
     }
