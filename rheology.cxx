@@ -302,15 +302,16 @@ static void elasto_plastic(double bulkm, double shearm,
 static void elasto_plastic2d(double bulkm, double shearm,
                              double amc, double anphi, double anpsi,
                              double hardn, double ten_max,
-                             const double* de, double& depls, double* s,
+                             const double* de, double& depls,
+                             double* s, double &syy,
                              int &failure_mode)
 {
     /* Elasto-plasticity (Mohr-Coulomb criterion) */
 
     /* This function is derived from geoFLAC.
-     * The original code in geoFLAC assumes 2D plain strain formulation,
+     * The original code in geoFLAC assumes 2D plane strain formulation,
      * i.e. there are 3 principal stresses (PSs) and only 2 principal strains
-     * (Strain_yy, Strain_xy, Strain_yz must be 0).
+     * (Strain_yy, Strain_xy, and Strain_yz all must be 0).
      * Here, the code is adopted to pure 2D or 3D plane strain.
      *
      * failure_mode --
@@ -332,7 +333,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
     double sxx = s[0] + de[1]*a2 + de[0]*a1;
     double szz = s[1] + de[0]*a2 + de[1]*a1;
     double sxz = s[2] + de[2]*2*shearm;
-    double syy = (de[0] + de[1]) * a2; // Stress YY component, plain strain
+    syy += (de[0] + de[1]) * a2; // Stress YY component, plane strain
 
 
     //
@@ -344,7 +345,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
     // In 2D, we only construct the eigenvectors from
     // cos(2*theta) and sin(2*theta) of Mohr circle
     double cos2t, sin2t;
-    int n1, n2;
+    int n1, n2, n3;
 
     {
         // center and radius of Mohr circle
@@ -357,11 +358,9 @@ static void elasto_plastic2d(double bulkm, double shearm,
 
         // direction cosine and sine of 2*theta
         const double eps = 1e-15;
-        double a = 0.5 * (sxx - szz);
-        double b = - rad; // always negative
-        if (b < -eps) {
-            cos2t = a / b;
-            sin2t = sxz / b;
+        if (rad > eps) {
+            cos2t = 0.5 * (szz - sxx) / rad;
+            sin2t = -sxz / rad;
         }
         else {
             cos2t = 1;
@@ -377,6 +376,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
             // syy is minor p.s.
             n1 = 0;
             n2 = 1;
+            n3 = 2;
             p[0] = si;
             p[1] = sii;
             p[2] = syy;
@@ -385,6 +385,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
             // syy is major p.s.
             n1 = 1;
             n2 = 2;
+            n3 = 0;
             p[0] = syy;
             p[1] = si;
             p[2] = sii;
@@ -393,6 +394,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
             // syy is intermediate
             n1 = 0;
             n2 = 2;
+            n3 = 1;
             p[0] = si;
             p[1] = syy;
             p[2] = sii;
@@ -416,8 +418,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
     //    all three principal stresses must be greater than ten_max.
     //    Assign ten_max to all three and don't do anything further.
     if( p[0] >= ten_max ) {
-        s[0] = ten_max;
-        s[1] = ten_max;
+        s[0] = s[1] = syy = ten_max;
         s[2] = 0.0;
         failure_mode = 1;
         return;
@@ -454,13 +455,13 @@ static void elasto_plastic2d(double bulkm, double shearm,
     failure_mode += 10;
 
     // shear failure
-    const double alam = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + hardn);
-    p[0] -= alam * (a1 - a2 * anpsi);
-    p[1] -= alam * (a2 - a2 * anpsi);
-    p[2] -= alam * (a2 - a1 * anpsi);
+    const double alams = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + hardn);
+    p[0] -= alams * (a1 - a2 * anpsi);
+    p[1] -= alams * (a2 - a2 * anpsi);
+    p[2] -= alams * (a2 - a1 * anpsi);
 
     // 2nd invariant of plastic strain
-    depls = 0.5 * std::fabs(alam + alam * anpsi);
+    depls = 0.5 * std::fabs(alams + alams * anpsi);
 
     //***********************************
     // The following seems redundant but... this is how it goes in geoFLAC.
@@ -470,8 +471,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
     //    all three principal stresses must be greater than ten_max.
     //    Assign ten_max to all three and don't do anything further.
     if( p[0] >= ten_max ) {
-        s[0] = ten_max;
-        s[1] = ten_max;
+        s[0] = s[1] = syy = ten_max;
         s[2] = 0.0;
         failure_mode += 20;
         return;
@@ -502,21 +502,25 @@ static void elasto_plastic2d(double bulkm, double shearm,
         s[0] = 0.5 * (dss + dc2);
         s[1] = 0.5 * (dss - dc2);
         s[2] = 0.5 * (p[n1] - p[n2]) * sin2t;
+        syy = p[n3];
     }
 }
 
 
 void update_stress(const Variables& var, tensor_t& stress,
+                   double_vec& stressyy,
                    tensor_t& strain, double_vec& plstrain,
                    double_vec& delta_plstrain, tensor_t& strain_rate)
 {
     const int rheol_type = var.mat->rheol_type;
 
     #pragma omp parallel for default(none)                           \
-        shared(var, stress, strain, plstrain, delta_plstrain, strain_rate, std::cerr)
+        shared(var, stress, stressyy, strain, plstrain, delta_plstrain, \
+               strain_rate, std::cerr)
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
         double* s = stress[e];
+        double& syy = stressyy[e];
         double* es = strain[e];
         double* edot = strain_rate[e];
 
@@ -525,7 +529,7 @@ void update_stress(const Variables& var, tensor_t& stress,
             double div = trace(edot);
             //double div2 = ((*var.volume)[e] / (*var.volume_old)[e] - 1) / var.dt;
             for (int i=0; i<NDIMS; ++i) {
-                edot[i] += ((*var.edvoldt)[e] - div) / NDIMS;
+                edot[i] += ((*var.edvoldt)[e] - div) / NDIMS;  // XXX: should NDIMS -> 3 in plane strain?
             }
         }
 
@@ -566,7 +570,6 @@ void update_stress(const Variables& var, tensor_t& stress,
             }
             break;
         case MatProps::rh_ep:
-        case MatProps::rh_ep2d:
             {
                 double depls = 0;
                 double bulkm = var.mat->bulkm(e);
@@ -575,20 +578,19 @@ void update_stress(const Variables& var, tensor_t& stress,
                 var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
                 int failure_mode;
-                if (rheol_type == MatProps::rh_ep) {
-                    elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                   de, depls, s, failure_mode);
+                if (var.mat->is_plane_strain) {
+                    elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                     de, depls, s, syy, failure_mode);
                 }
                 else {
-                    elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                     de, depls, s, failure_mode);
+                    elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                   de, depls, s, failure_mode);
                 }
                 plstrain[e] += depls;
                 delta_plstrain[e] = depls;
             }
             break;
         case MatProps::rh_evp:
-        case MatProps::rh_evp2d:
             {
                 double depls = 0;
                 double bulkm = var.mat->bulkm(e);
@@ -605,16 +607,17 @@ void update_stress(const Variables& var, tensor_t& stress,
                 var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
                 // stress due to elasto-plastic rheology
-                double sp[NSTR];
+                double sp[NSTR], spyy;
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
                 int failure_mode;
-                if (rheol_type == MatProps::rh_evp) {
-                    elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                   de, depls, sp, failure_mode);
+                if (var.mat->is_plane_strain) {
+                    spyy = syy;
+                    elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                     de, depls, sp, spyy, failure_mode);
                 }
                 else {
-                    elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                     de, depls, sp, failure_mode);
+                    elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                   de, depls, sp, failure_mode);
                 }
                 double spII = second_invariant2(sp);
 
@@ -625,6 +628,7 @@ void update_stress(const Variables& var, tensor_t& stress,
                     for (int i=0; i<NSTR; ++i) s[i] = sp[i];
                     plstrain[e] += depls;
                     delta_plstrain[e] = depls;
+                    syy = spyy;
                 }
             }
             break;

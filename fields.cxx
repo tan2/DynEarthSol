@@ -29,6 +29,7 @@ void allocate_variables(const Param &param, Variables& var)
         var.vel = new array_t(n, 0);
         var.strain = new tensor_t(e, 0);
         var.stress = new tensor_t(e, 0);
+        var.stressyy = new double_vec(e, 0);
     }
 
     var.ntmp= new double_vec(n);

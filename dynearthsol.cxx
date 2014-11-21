@@ -83,7 +83,7 @@ void init(const Param& param, Variables& var)
     apply_vbcs(param, var, *var.vel);
     // temperature should be init'd before stress and strain
     initial_temperature(param, var, *var.temperature);
-    initial_stress_state(param, var, *var.stress, *var.strain, var.compensation_pressure);
+    initial_stress_state(param, var, *var.stress, *var.stressyy, *var.strain, var.compensation_pressure);
     initial_weak_zone(param, var, *var.plstrain);
 }
 
@@ -222,7 +222,8 @@ void isostasy_adjustment(const Param &param, Variables &var)
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        update_stress(var, *var.stress, *var.strain, *var.plstrain,  *var.delta_plstrain, *var.strain_rate);
+        update_stress(var, *var.stress, *var.stressyy, *var.strain,
+                      *var.plstrain, *var.delta_plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
 
@@ -309,7 +310,8 @@ int main(int argc, const char* argv[])
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        update_stress(var, *var.stress, *var.strain, *var.plstrain,  *var.delta_plstrain, *var.strain_rate);
+        update_stress(var, *var.stress, *var.stressyy, *var.strain,
+                      *var.plstrain, *var.delta_plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel);

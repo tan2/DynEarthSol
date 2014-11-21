@@ -292,6 +292,11 @@ namespace {
         inject_field(idx, is_changed, elems_vec, ratios_vec, *var.stress, *b);
         delete var.stress;
         var.stress = b;
+
+        a = new double_vec(e);
+        inject_field(idx, is_changed, elems_vec, ratios_vec, *var.stressyy, *a);
+        delete var.stressyy;
+        var.stressyy = a;
     }
 
 } // anonymous namespace

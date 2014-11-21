@@ -93,7 +93,7 @@ namespace {
 
 
 void initial_stress_state(const Param &param, const Variables &var,
-                          tensor_t &stress, tensor_t &strain,
+                          tensor_t &stress, double_vec &stressyy, tensor_t &strain,
                           double &compensation_pressure)
 {
     if (param.control.gravity == 0) {
@@ -123,6 +123,8 @@ void initial_stress_state(const Param &param, const Variables &var,
             stress[e][i] = -p;
             strain[e][i] = -p / ks / NDIMS;
         }
+        if (param.mat.is_plane_strain)
+            stressyy[e] = -p;
     }
 
     compensation_pressure = ref_pressure(param, -param.mesh.zlength);

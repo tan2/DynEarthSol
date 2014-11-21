@@ -148,6 +148,7 @@ struct Mat {
     int rheol_type;
     int phase_change_option;
     int nmat;
+    bool is_plane_strain;
     double visc_min;
     double visc_max;
     double tension_max;
@@ -231,6 +232,7 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
+    double_vec *stressyy;
     double_vec *ntmp;
 
     array_t *vel, *force;

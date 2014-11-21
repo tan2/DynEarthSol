@@ -201,6 +201,7 @@ double ref_pressure(const Param& param, double z)
 MatProps::MatProps(const Param& p, const Variables& var) :
   rheol_type(p.mat.rheol_type),
   nmat(p.mat.nmat),
+  is_plane_strain(p.mat.is_plane_strain),
   visc_min(p.mat.visc_min),
   visc_max(p.mat.visc_max),
   tension_max(p.mat.tension_max),
