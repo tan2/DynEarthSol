@@ -606,17 +606,17 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                               << bdry_nodes[j] << ' ' << bdeleting[k] << '\n';
                 }
 
-                if (bdry[i] & (BOUNDZ0 | BOUNDZ1)) {
+                if (i == iboundz0 || i == iboundz1) {
                     // top or bottom
                     coord2d[n][0] = points[bdry_nodes[j]*NDIMS + 0];
                     coord2d[n][1] = points[bdry_nodes[j]*NDIMS + 1];
                 }
-                else if (bdry[i] & (BOUNDX0 | BOUNDX1)) {
+                else if (i == iboundx0 || i == iboundx1) {
                     // left or right sides
                     coord2d[n][0] = points[bdry_nodes[j]*NDIMS + 1];
                     coord2d[n][1] = points[bdry_nodes[j]*NDIMS + 2];
                 }
-                else if (bdry[i] & (BOUNDY0 | BOUNDY1)) {
+                else if (i == iboundy0 || i == iboundy1) {
                     // front or back sides
                     coord2d[n][0] = points[bdry_nodes[j]*NDIMS + 0];
                     coord2d[n][1] = points[bdry_nodes[j]*NDIMS + 2];

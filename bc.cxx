@@ -309,7 +309,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
     // hydrostatic water loading for the surface boundary
     if (param.bc.has_water_loading && param.control.gravity != 0) {
 
-        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const int top_bdry = iboundz1;
         const auto& top = var.bfacets[top_bdry];
         const auto& coord = *var.coord;
         // loops over all top facets
@@ -348,7 +348,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
     // Wrinkler foundation for the bottom boundary
     if (param.bc.has_wrinkler_foundation && param.control.gravity != 0) {
-        const int bottom_bdry = bdry_order.find(BOUNDZ0)->second;
+        const int bottom_bdry = iboundz0;
         const auto& bottom = var.bfacets[bottom_bdry];
         const auto& coord = *var.coord;
         // loops over all bottom facets
@@ -391,7 +391,7 @@ namespace {
          * sedimentation.
          */
 
-        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const int top_bdry = iboundz1;
         const auto& top = var.bfacets[top_bdry];
 
         const int_vec& top_nodes = var.bnodes[top_bdry];
@@ -512,7 +512,7 @@ namespace {
 
     void custom_surface_processes(const Variables& var, array_t& coord)
     {
-        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const int top_bdry = iboundz1;
         const int_vec& top_nodes = var.bnodes[top_bdry];
         const std::size_t ntop = top_nodes.size();
 

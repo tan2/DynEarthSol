@@ -1186,7 +1186,7 @@ void create_boundary_nodes(Variables& var)
     for (std::size_t i=0; i<var.bcflag->size(); ++i) {
         uint f = (*var.bcflag)[i];
         for (int j=0; j<6; ++j) {
-            if (f & bdry[j]) {
+            if (f & (1<<j)) {
                 // this node belongs to a boundary
                 (var.bnodes[j]).push_back(i);
             }
@@ -1218,8 +1218,16 @@ void create_boundary_facets(Variables& var)
             }
             if (flag) {
                 // this facet belongs to a boundary
-                int n = bdry_order.find(flag)->second;
-                var.bfacets[n].push_back(std::make_pair(e, i));
+                int ibound;
+                for (ibound=0; ibound<6; ibound++) {
+                    if (flag == (1<<ibound))
+                        goto found;
+                }
+                std::cerr << "Error: facet " << i << " of element " << e
+                          << " belongs to more than one boundary!\n";
+                std::exit(1);
+            found:
+                var.bfacets[ibound].push_back(std::make_pair(e, i));
             }
         }
     }
