@@ -30,7 +30,7 @@ const double sizefactor = 0.433;
 #endif
 
 const int DELETED_FACET = -1;
-const int DEBUG = 0;
+const int DEBUG = 2;
 
 bool is_boundary(uint flag)
 {
@@ -110,6 +110,15 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
      * excluding nodes on the side walls
      */
 
+#ifdef THREED
+    /* In 3D, if bottom nodes were deleted, the facets on the side boundaries
+     * near the bottom are affected as well. The code does not deal with this
+     * complexity and can only work in 2D.
+     */
+    std::cerr << "Error: new_bottom() does not work in 3D.\n";
+    std::exit(1);
+#endif
+
     int_vec bottom_corners;
     for (std::size_t i=0; i<old_bcflag.size(); ++i) {
         uint flag = old_bcflag[i];
@@ -137,10 +146,10 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
         std::cout << '\n';
     }
 
-    // must have 2 corners in 2D, 4 corners in 3D
-    if (bottom_corners.size() != (2 << (NDIMS-2))) {
+    // must have 2 bottom corners in 2D
+    if (bottom_corners.size() != 2) {
         std::cerr << "Error: cannot find all bottom corners before remeshing. n_bottom_corners = "
-                  << bottom_corners.size() << '\n';
+                  << bottom_corners.size() << " (2 expected).\n";
         std::cout << "bottom corners: ";
         print(std::cout, bottom_corners);
         std::cout << '\n';
@@ -161,20 +170,12 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
         }
     }
 
-    // create new bottom facets from corner nodes
-    // XXX: Assuming square box, 1 facet (segment) in 2D, 2 facets in 3D
-    // XXX: Assuming the order of bottom nodes in 3D is
-    //      0 -- 1
-    //      |    |
-    //      2 -- 3
-    for (int i=0, nfacets=0, offset=0; nfacets<(NDIMS-1) && i<nseg; ++i) {
+    // create new bottom segments from corner nodes
+    for (int i=0; i<nseg; ++i) {
         if (static_cast<uint>(segflag[i]) == BOUNDZ0) {
-            for (int j=0; j<NODES_PER_FACET; j++)
-                segment[i*NODES_PER_FACET + j] = bottom_corners[offset + j];
-
+            segment[i*NODES_PER_FACET + 0] = bottom_corners[0];
+            segment[i*NODES_PER_FACET + 1] = bottom_corners[1];
             segflag[i] = BOUNDZ0;
-            nfacets ++;
-            offset ++;
         }
     }
 

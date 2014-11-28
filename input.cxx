@@ -129,7 +129,7 @@ static void declare_parameters(po::options_description &cfg,
          "How to deal with the boundaries during remeshing?\n"
          " 0: no modification on any boundary.\n"
          " 1: move all bottom nodes to initial depth, other boundaries are intact.\n"
-         " 2: create a new bottom boundary at the initial depth, other boundaries are intact.\n"
+         " 2: create a new bottom boundary at the initial depth, other boundaries are intact (2D only).\n"
          "10: no modification on any boundary, except small boundary segments might get merged.\n"
          "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments might get merged.\n")
 
@@ -549,6 +549,12 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         std::exit(1);
     }
 
+#ifdef THREED
+    if (p.mesh.remeshing_option == 2) {
+        std::cerr << "Error: mesh.remeshing_option=2 is not available in 3D.\n";
+        std::exit(1);
+    }
+#endif
 
     //
     // bc
