@@ -3,7 +3,7 @@
 #include <functional>
 #include <iostream>
 #include <numeric>
-#include <set>
+#include <unordered_map>
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -30,7 +30,7 @@ const double sizefactor = 0.433;
 #endif
 
 const int DELETED_FACET = -1;
-const int DEBUG = 2;
+const int DEBUG = 0;
 
 bool is_boundary(uint flag)
 {
@@ -190,123 +190,135 @@ struct cmp {
 };
 
 
-void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int_vec (&facet_polygons)[nbdrytypes])
+typedef std::pair<int,int> edge_t;
+struct equal_to1
+{
+    bool operator()(const edge_t &lhs, const edge_t &rhs) const {
+        return (lhs.first == rhs.first && lhs.second == rhs.second);
+    }
+};
+
+
+struct hash1
+{
+    std::size_t operator()(const edge_t &k) const {
+        // first as the upper half
+        const int halfbytes = 4;
+        return (static_cast<std::size_t>(k.first) << sizeof(std::size_t)*halfbytes) | k.second;
+    }
+};
+
+
+void assemble_facet_polygons(const Variables &var, const array_t &old_coord,
+                             const conn_t &old_connectivity,
+                             int_vec (&facet_polygons)[nbdrytypes])
 {
     /* facet_polygons[i] contains a list of vertex which enclose the i-th boundary facet */
+
 #ifdef THREED
-    // 3d remeshing might need additional info on edge connection
-    const int nedges = 12;
-    int_vec edgenodes[nedges];
+    const int nodes_per_edge = 2;  // an edge has 2 nodes
+    const int edges_per_facet = 3;  // a facet has 3 edges
+    const int edgenodes[edges_per_facet][nodes_per_edge] = { {1, 2}, {2, 0}, {0, 1} };
 
-    /* Expanded diagram of the brick, # vertex, E# edge, F# facet
-     *         4----E3-----7
-     *         |           |
-     *         |    F3     |
-     *         |           |
-     *   4-E10-5----E1-----6-E11-7----E3-----4
-     * E6|     |E4         |E5   |E7         |E6
-     *   | F0  |    F4     | F1  |     F5    |
-     *   |     |           |     |           |
-     *   0-E8--1----E0-----2-E9--3----E2-----0
-     *         |           |
-     *         |    F3     |
-     *         |           |
-     *         0----E2-----3
-     */
+    for (int ibound=0; ibound<nbdrytypes; ibound++) {
+        if (var.bnodes[ibound].size() == 0) continue;  // skip empty boundary
 
-    //
-    // Collecting edge nodes for each edge.
-    //
+        //
+        // Collecting edges on each boundary.
+        //
 
-    // WARNING: this part has hardcoded numbers for boundary and edges
-    // MIGHT BREAK when the domain is not a brick
-    for (int j=0; j<2; ++j) {
-        const int_vec &bnode = var.bnodes[j];
-        for (std::size_t i=0; i<bnode.size(); ++i) {
-            uint f = (*var.bcflag)[bnode[i]];
-            if (f & BOUNDZ0) {
-                edgenodes[j+4].push_back(bnode[i]);
-            }
-            if (f & BOUNDZ1) {
-                edgenodes[j+6].push_back(bnode[i]);
-            }
-            if (f & BOUNDY0) {
-                edgenodes[j+8].push_back(bnode[i]);
-            }
-            if (f & BOUNDY1) {
-                edgenodes[j+10].push_back(bnode[i]);
+        std::unordered_map<edge_t, int, hash1, equal_to1> edges;
+        for (std::size_t i=0; i<var.bfacets[ibound].size(); i++) {
+            const auto &facet = var.bfacets[ibound][i];
+            int e = facet.first;
+            int f = facet.second;
+            const int *conn = old_connectivity[e];
+
+            for (int j=0; j<edges_per_facet; j++) {
+                int n0 = conn[ NODE_OF_FACET[f][ edgenodes[j][0] ] ];
+                int n1 = conn[ NODE_OF_FACET[f][ edgenodes[j][1] ] ];
+                if (n0 > n1) {  // ensure n0 < n1
+                    int tmp;
+                    tmp = n0;
+                    n0 = n1;
+                    n1 = tmp;
+                }
+                edge_t g = std::make_pair(n0, n1);
+                auto search = edges.find(g);
+                if (search == edges.end()) {
+                    edges[g] = 1;
+                }
+                else {
+                    search->second ++;
+                }
             }
         }
-    }
-    for (int j=2; j<4; ++j) {
-        const int_vec &bnode = var.bnodes[j];
-        for (std::size_t i=0; i<bnode.size(); ++i) {
-            uint f = (*var.bcflag)[bnode[i]];
-            if (f & BOUNDZ0) {
-                edgenodes[j-2].push_back(bnode[i]);
+        if (DEBUG > 1) {
+            std::cout << ibound << "-th edge:\n";
+            for (auto kk=edges.begin(); kk!=edges.end(); ++kk) {
+                std::cout << kk->first.first << ",\t" << kk->first.second << "\t: " << kk->second << '\n';
             }
-            if (f & BOUNDZ1) {
-                edgenodes[j+0].push_back(bnode[i]);
-            }
-        }
-    }
-
-    //
-    // Ordering nodes on each edge
-    //
-
-    // ordering the edge nodes by sorting the coordinate along the the corresponding dimension
-    // edge 0~3 along X; edge 4~7 along Y; edge 8~11 along Z
-    for (int i=0; i<nedges; ++i) {
-        int_vec &enodes = edgenodes[i];
-        int dim = i / 4;
-        std::sort(enodes.begin(), enodes.end(), cmp(old_coord, dim));
-    }
-
-    if (DEBUG > 1) {
-        for (int j=0; j<nedges; ++j) {
-            std::cout << "edge " << j << '\n';
-            print(std::cout, edgenodes[j]);
             std::cout << '\n';
         }
-    }
 
-    //
-    // Connecting edges to form a polygon
-    //
+        //
+        // Collecting edges enclosing the boundary
+        //
+        std::vector<const edge_t*> enclosing_edges;
+        for (auto kk=edges.begin(); kk!=edges.end(); ++kk) {
+            int count = kk->second;
+            if (count == 2) {
+                // this is an "internal" edge
+                continue;
+            }
+            else if (count == 1) {
+                // this edge encloses the boundary
+                enclosing_edges.push_back(&(kk->first));
+            }
+            else {
+                // no possible
+                std::cout << "Error: an edge belongs to more than 2 facets. The mesh is corrupted.\n";
+                std::exit(11);
+            }
+        }
 
-    // polygons that enclosing each boundary facets (orientation is outward normal)
-    const int edgelist[nbdrytypes][4] = {{ 8, 6,10, 4},
-                                { 5,11, 7, 9},
-                                { 0, 9, 2, 8},
-                                {10, 3,11, 1},
-                                { 4, 1, 5, 0},
-                                { 2, 7, 3, 6}};
+        //
+        // Connecting edges to form a polygon
+        //
 
-    for (int n=0; n<nbdrytypes; ++n) {
-        int j;
-        j = edgelist[n][0];
-        // ending at end()-1 to avoid duplicating corner nodes
-        for (auto i=edgenodes[j].begin(); i!=edgenodes[j].end()-1; ++i) facet_polygons[n].push_back(*i);
-        j = edgelist[n][1];
-        for (auto i=edgenodes[j].begin(); i!=edgenodes[j].end()-1; ++i) facet_polygons[n].push_back(*i);
-        j = edgelist[n][2];
-        // using reversed iterator to maintain orientation
-        for (auto i=edgenodes[j].rbegin(); i!=edgenodes[j].rend()-1; ++i) facet_polygons[n].push_back(*i);
-        j = edgelist[n][3];
-        for (auto i=edgenodes[j].rbegin(); i!=edgenodes[j].rend()-1; ++i) facet_polygons[n].push_back(*i);
-    }
+        int_vec &polygon = facet_polygons[ibound];
+        const auto g0 = enclosing_edges.begin();
+        int head = (*g0)->first;
+        int tail = (*g0)->second;
+        polygon.push_back(head);
+        polygon.push_back(tail);
+        auto g1 = g0+1;
+        while (head != tail) {
+            for (auto g=g1; g!=enclosing_edges.end(); ++g) {
+                if ((*g)->first == tail) {
+                    tail = (*g)->second;
+                    polygon.push_back(tail);
+                }
+                else if ((*g)->second == tail) {
+                    tail = (*g)->first;
+                    polygon.push_back(tail);
+                }
+            }
+        }
+        if (polygon.front() != polygon.back()) {
+            std::cout << "Error: boundary polygon is not closed. The mesh is corrupted.\n";
+            std::exit(11);
+        }
+        polygon.pop_back();
 
-    if (DEBUG > 1) {
-        for (int j=0; j<nbdrytypes; ++j) {
-            std::cout << "facet polygon nodes " << j << '\n';
-            print(std::cout, facet_polygons[j]);
+        if (DEBUG > 1) {
+            std::cout << "facet polygon nodes " << ibound << '\n';
+            print(std::cout, polygon);
             std::cout << '\n';
         }
     }
 
 #endif
-    return;
 }
 
 
@@ -552,6 +564,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                                     const int_vec (&bnodes)[nbdrytypes],
                                     const int_vec (&facet_polygons)[nbdrytypes],
                                     const int_vec (&bdrynode_deleting)[nbdrytypes],
+                                    const double (&bnormals)[nbdrytypes][NDIMS],
                                     int &npoints,
                                     int &nseg, double *points,
                                     int *segment, int *segflag,
@@ -570,11 +583,23 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
     for (int i=0; i<nbdrytypes; ++i) {  // looping over all possible boundaries
         const int_vec& bdeleting = bdrynode_deleting[i];  // nodes to be deleted on this boundary, sorted
         const int_vec& bdry_nodes = bnodes[i];  // all nodes on this boundary, sorted
+        if (bdry_nodes.size() == 0) continue;
 
         if (DEBUG) {
             std::cout << i << "-th boundary to be merged: ";
             print(std::cout, bdeleting);
             std::cout << '\n';
+        }
+
+        int major_direction = 0;  // largest component of normal vector
+        if (i >= iboundn0) { // slant boundaries start at iboundn0
+            double max = 0;
+            for (int d=0; d<NDIMS; d++) {
+                if (std::abs(bnormals[i][d]) > max) {
+                    max = std::abs(bnormals[i][d]);
+                    major_direction = d;
+                }
+            }
         }
 
         // 3d coordinate -> 2d
@@ -618,6 +643,15 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                     // front or back sides
                     coord2d[n][0] = points[bdry_nodes[j]*NDIMS + 0];
                     coord2d[n][1] = points[bdry_nodes[j]*NDIMS + 2];
+                }
+                else {
+                    // for iboundn?
+                    int dd = 0;
+                    for (int d=0; d<NDIMS; d++) {
+                        if (d == major_direction) continue;
+                        coord2d[n][dd] = points[bdry_nodes[j]*NDIMS + d];
+                        dd++;
+                    }
                 }
                 n++;
             }
@@ -777,6 +811,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 void delete_points_on_boundary(int_vec &points_to_delete,
                                const int_vec (&bnodes)[nbdrytypes],
                                const int_vec (&facet_polygons)[nbdrytypes],
+                               const double (&bnormals)[nbdrytypes][NDIMS],
                                int &npoints,
                                int &nseg, double *points,
                                int *segment, int *segflag,
@@ -816,7 +851,7 @@ void delete_points_on_boundary(int_vec &points_to_delete,
     }
 
     delete_points_and_merge_facets(points_to_delete, bnodes, facet_polygons,
-                                   bdrynode_deleting, npoints, nseg,
+                                   bdrynode_deleting, bnormals, npoints, nseg,
                                    points, segment, segflag, bcflag, min_size);
     delete_facets(nseg, segment, segflag);
 #else
@@ -849,7 +884,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     mesh_param.poly_filename = "";
 
     int_vec facet_polygons[nbdrytypes];
-    assemble_facet_polygons(var, original_coord, facet_polygons);
+    assemble_facet_polygons(var, original_coord, original_connectivity, facet_polygons);
 
     // create a copy of original_coord and original_segment
     array_t old_coord(original_coord);
@@ -938,7 +973,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     case 10:
     case 11:
         // deleting points, some of them might be on the boundary
-        delete_points_on_boundary(points_to_delete, old_bnodes, facet_polygons,
+        delete_points_on_boundary(points_to_delete, old_bnodes, facet_polygons, var.bnormals,
                                   old_nnode, old_nseg,
                                   qcoord, qsegment, qsegflag, old_bcflag, min_dist);
         break;

@@ -240,6 +240,12 @@ static void declare_parameters(po::options_description &cfg,
          "Value of boundary condtition for bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_z1", po::value<double>(&p.bc.vbc_val_z1)->default_value(0),
          "Value of boundary condtition for top side (if velocity, unit is m/s; if stress, unit is Pa)")
+
+        ("bc.vbc_n0", po::value<int>(&p.bc.vbc_n0)->default_value(1),
+         "Type of boundary condtition for slant boundary #0 (only type 1, 3 are supported).")
+        ("bc.vbc_val_n0", po::value<double>(&p.bc.vbc_val_n0)->default_value(0),
+         "Value of boundary condtition for slant boundary #0 (if velocity, unit is m/s, "
+         "outward normal direction is positive; if stress, unit is Pa)")
         ;
 
     cfg.add_options()
@@ -565,7 +571,7 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Warning: no gravity, Wrinkler foundation is turned off.\n";
         }
         if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z0 != 0 ) {
-            std::cerr << "Error: vbc_z0 is not 0, but Wrinkler foundation is turned on.\n";
+            std::cerr << "Error: bc.vbc_z0 is not 0, but Wrinkler foundation is turned on.\n";
             std::exit(1);
         }
         if ( p.bc.has_water_loading && p.control.gravity == 0 ) {
@@ -573,7 +579,12 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Warning: no gravity, water loading is turned off.\n";
         }
         if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z1 != 0 ) {
-            std::cerr << "Error: vbc_z1 is not 0, but water loading is turned on.\n";
+            std::cerr << "Error: bc.vbc_z1 is not 0, but water loading is turned on.\n";
+            std::exit(1);
+        }
+
+        if ( p.bc.vbc_n0 != 1 && p.bc.vbc_n0 != 3 ) {
+            std::cerr << "Error: bc.vbc_n0 is not 1, or 3.\n";
             std::exit(1);
         }
     }

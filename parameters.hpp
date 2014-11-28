@@ -99,6 +99,7 @@ struct BC {
     int vbc_y1;
     int vbc_z0;
     int vbc_z1;
+    int vbc_n0;
 
     double vbc_val_x0;
     double vbc_val_x1;
@@ -106,6 +107,7 @@ struct BC {
     double vbc_val_y1;
     double vbc_val_z0;
     double vbc_val_z1;
+    double vbc_val_n0;
 };
 
 struct IC {
@@ -209,6 +211,7 @@ struct Variables {
     uint_vec *bcflag;
     int_vec bnodes[nbdrytypes];
     std::vector< std::pair<int,int> > bfacets[nbdrytypes];
+    double bnormals[nbdrytypes][NDIMS];
 
     int_vec2D *support;
     int_vec egroups;
