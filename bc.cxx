@@ -52,7 +52,7 @@ void normal_vector_of_facet(int f, const int *conn, const array_t &coord,
 bool is_on_boundary(const Variables &var, int node)
 {
     uint flag = (*var.bcflag)[node];
-    return flag & (BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1);
+    return flag & BOUND_ANY;
 }
 
 

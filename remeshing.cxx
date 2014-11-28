@@ -34,7 +34,7 @@ const int DEBUG = 2;
 
 bool is_boundary(uint flag)
 {
-    return flag & (BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1);
+    return flag & BOUND_ANY;
 }
 
 

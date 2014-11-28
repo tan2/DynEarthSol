@@ -25,7 +25,8 @@ const int iboundy0 = 2;
 const int iboundy1 = 3;
 const int iboundz0 = 4;
 const int iboundz1 = 5;
-const int nbdrytypes = 6;
+const int iboundn0 = 6;
+const int nbdrytypes = 7;
 
 typedef unsigned int uint;
 const uint BOUNDX0 = 1 << iboundx0;  //  1, left
@@ -34,6 +35,9 @@ const uint BOUNDY0 = 1 << iboundy0;  //  4, front
 const uint BOUNDY1 = 1 << iboundy1;  //  8, back
 const uint BOUNDZ0 = 1 << iboundz0;  // 16, bottom
 const uint BOUNDZ1 = 1 << iboundz1;  // 32, top
+const uint BOUNDN0 = 1 << iboundn0;  // 64, arbitrary (not parallel to x,y,z)
+
+const uint BOUND_ANY = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1 | BOUNDN0;
 
 // # of facets (edges) per element, 3 for 2D, 4 for 3D
 const int FACETS_PER_ELEM = NDIMS + 1;

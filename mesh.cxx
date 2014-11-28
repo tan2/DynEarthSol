@@ -1054,11 +1054,9 @@ void points_to_new_surface(const Mesh &mesh, int npoints, const double *points,
 
 void discard_internal_segments(int &nseg, segment_t &segment, segflag_t &segflag)
 {
-    const uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
-
     int n = 0;
     while (n < nseg) {
-        if (segflag[n][0] & flag) {
+        if (segflag[n][0] & BOUND_ANY) {
             // This is a boundary segment, go to next.
             n++;
         }
@@ -1210,7 +1208,7 @@ void create_boundary_facets(Variables& var)
         const int *conn = (*var.connectivity)[e];
         for (int i=0; i<FACETS_PER_ELEM; ++i) {
             // set all bits to 1
-            uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
+            uint flag = BOUND_ANY;
             for (int j=0; j<NODES_PER_FACET; ++j) {
                 // find common flags
                 int n = NODE_OF_FACET[i][j];
