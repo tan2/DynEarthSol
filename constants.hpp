@@ -29,10 +29,10 @@ const int iboundn0 = 6;
 const int nbdrytypes = 7;
 
 typedef unsigned int uint;
-const uint BOUNDX0 = 1 << iboundx0;  //  1, left
-const uint BOUNDX1 = 1 << iboundx1;  //  2, right
-const uint BOUNDY0 = 1 << iboundy0;  //  4, front
-const uint BOUNDY1 = 1 << iboundy1;  //  8, back
+const uint BOUNDX0 = 1 << iboundx0;  //  1, western (left in 2D)
+const uint BOUNDX1 = 1 << iboundx1;  //  2, eastern (right in 2D)
+const uint BOUNDY0 = 1 << iboundy0;  //  4, southern
+const uint BOUNDY1 = 1 << iboundy1;  //  8, northern
 const uint BOUNDZ0 = 1 << iboundz0;  // 16, bottom
 const uint BOUNDZ1 = 1 << iboundz1;  // 32, top
 const uint BOUNDN0 = 1 << iboundn0;  // 64, arbitrary (not parallel to x,y,z)

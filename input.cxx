@@ -209,7 +209,7 @@ static void declare_parameters(po::options_description &cfg,
          "Applying water loading for top boundary that is below sea level?")
 
         ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
-         "Type of boundary condtition for left side. Possible type is \n"
+         "Type of boundary condition for the left/western side. Possible type is \n"
          "0: all components free;\n"
          "1: normal component fixed, shear components free;\n"
          "2: normal component free, shear components fixed at 0;\n"
@@ -217,34 +217,34 @@ static void declare_parameters(po::options_description &cfg,
          "4: normal component free, shear component (not z) fixed, only in 3D;\n"
          "5: normal component fixed at 0, shear component (not z) fixed, only in 3D;\n")
         ("bc.vbc_x1", po::value<int>(&p.bc.vbc_x1)->default_value(1),
-         "Type of boundary condtition for right side")
+         "Type of boundary condition for the right/eastern side")
         ("bc.vbc_val_x0", po::value<double>(&p.bc.vbc_val_x0)->default_value(-1e-9),
-         "Value of boundary condtition for left side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for left/western side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_x1", po::value<double>(&p.bc.vbc_val_x1)->default_value(1e-9),
-         "Value of boundary condtition for right side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the right/eastern side (if velocity, unit is m/s; if stress, unit is Pa)")
 
         ("bc.vbc_y0", po::value<int>(&p.bc.vbc_y0)->default_value(0),
-         "Type of boundary condtition for back side")
+         "Type of boundary condition for the southern side")
         ("bc.vbc_y1", po::value<int>(&p.bc.vbc_y1)->default_value(0),
-         "Type of boundary condtition for front side")
+         "Type of boundary condition for the northern side")
         ("bc.vbc_val_y0", po::value<double>(&p.bc.vbc_val_y0)->default_value(0),
-         "Value of boundary condtition for back side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the southern side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_y1", po::value<double>(&p.bc.vbc_val_y1)->default_value(0),
-         "Value of boundary condtition for front side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the northern side (if velocity, unit is m/s; if stress, unit is Pa)")
 
         ("bc.vbc_z0", po::value<int>(&p.bc.vbc_z0)->default_value(0),
-         "Type of boundary condtition for bottom side")
+         "Type of boundary condition for the bottom side")
         ("bc.vbc_z1", po::value<int>(&p.bc.vbc_z1)->default_value(0),
-         "Type of boundary condtition for top side")
+         "Type of boundary condition for the top side")
         ("bc.vbc_val_z0", po::value<double>(&p.bc.vbc_val_z0)->default_value(0),
-         "Value of boundary condtition for bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_z1", po::value<double>(&p.bc.vbc_val_z1)->default_value(0),
-         "Value of boundary condtition for top side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the top side (if velocity, unit is m/s; if stress, unit is Pa)")
 
         ("bc.vbc_n0", po::value<int>(&p.bc.vbc_n0)->default_value(1),
-         "Type of boundary condtition for slant boundary #0 (only type 1, 3 are supported).")
+         "Type of boundary condition for slant boundary #0 (only type 1, 3 are supported).")
         ("bc.vbc_val_n0", po::value<double>(&p.bc.vbc_val_n0)->default_value(0),
-         "Value of boundary condtition for slant boundary #0 (if velocity, unit is m/s, "
+         "Value of boundary condition for slant boundary #0 (if velocity, unit is m/s, "
          "outward normal direction is positive; if stress, unit is Pa)")
         ;
 
