@@ -214,6 +214,9 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int
      *         0----E2-----3
      */
 
+    //
+    // Collecting edge nodes for each edge.
+    //
 
     // WARNING: this part has hardcoded numbers for boundary and edges
     // MIGHT BREAK when the domain is not a brick
@@ -248,6 +251,10 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int
         }
     }
 
+    //
+    // Ordering nodes on each edge
+    //
+
     // ordering the edge nodes by sorting the coordinate along the the corresponding dimension
     // edge 0~3 along X; edge 4~7 along Y; edge 8~11 along Z
     for (int i=0; i<nedges; ++i) {
@@ -263,6 +270,10 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int
             std::cout << '\n';
         }
     }
+
+    //
+    // Connecting edges to form a polygon
+    //
 
     // polygons that enclosing each boundary facets (orientation is outward normal)
     const int edgelist[nbdrytypes][4] = {{ 8, 6,10, 4},
@@ -530,7 +541,7 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
         npoints --;
     }
 
-    /* PS: We don't check whether the merged segments are belong the same boundary or not,
+    /* PS: We don't check whether the merged segments belong to the same boundary or not,
      *     e.g., one segment is on the top boundary while the other segment is on the left
      *     boundary. The check is performed in delete_facets() instead.
      */
@@ -556,9 +567,9 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 
     // before deleting boundary points, create a new triangulation
     // TODO: skip boundary bdrynode_deleting.size()==0, but retaining its facets
-    for (int i=0; i<nbdrytypes; ++i) {
-        const int_vec& bdeleting = bdrynode_deleting[i];
-        const int_vec& bdry_nodes = bnodes[i];
+    for (int i=0; i<nbdrytypes; ++i) {  // looping over all possible boundaries
+        const int_vec& bdeleting = bdrynode_deleting[i];  // nodes to be deleted on this boundary, sorted
+        const int_vec& bdry_nodes = bnodes[i];  // all nodes on this boundary, sorted
 
         if (DEBUG) {
             std::cout << i << "-th boundary to be merged: ";
