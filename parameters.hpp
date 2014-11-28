@@ -207,8 +207,8 @@ struct Variables {
     regattr_t *regattr;
 
     uint_vec *bcflag;
-    int_vec bnodes[6];
-    std::vector< std::pair<int,int> > bfacets[6];
+    int_vec bnodes[nbdrytypes];
+    std::vector< std::pair<int,int> > bfacets[nbdrytypes];
 
     int_vec2D *support;
     int_vec egroups;

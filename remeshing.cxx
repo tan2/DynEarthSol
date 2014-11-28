@@ -202,7 +202,7 @@ struct cmp {
 };
 
 
-void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int_vec (&facet_polygons)[6])
+void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int_vec (&facet_polygons)[nbdrytypes])
 {
     /* facet_polygons[i] contains a list of vertex which enclose the i-th boundary facet */
 #ifdef THREED
@@ -277,14 +277,14 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int
     }
 
     // polygons that enclosing each boundary facets (orientation is outward normal)
-    const int edgelist[6][4] = {{ 8, 6,10, 4},
+    const int edgelist[nbdrytypes][4] = {{ 8, 6,10, 4},
                                 { 5,11, 7, 9},
                                 { 0, 9, 2, 8},
                                 {10, 3,11, 1},
                                 { 4, 1, 5, 0},
                                 { 2, 7, 3, 6}};
 
-    for (int n=0; n<6; ++n) {
+    for (int n=0; n<nbdrytypes; ++n) {
         int j;
         j = edgelist[n][0];
         // ending at end()-1 to avoid duplicating corner nodes
@@ -299,7 +299,7 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord, int
     }
 
     if (DEBUG > 1) {
-        for (int j=0; j<6; ++j) {
+        for (int j=0; j<nbdrytypes; ++j) {
             std::cout << "facet polygon nodes " << j << '\n';
             print(std::cout, facet_polygons[j]);
             std::cout << '\n';
@@ -550,9 +550,9 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
 
 
 void delete_points_and_merge_facets(const int_vec &points_to_delete,
-                                    const int_vec (&bnodes)[6],
-                                    const int_vec (&edge_polygons)[6],
-                                    const int_vec (&bdrynode_deleting)[6],
+                                    const int_vec (&bnodes)[nbdrytypes],
+                                    const int_vec (&edge_polygons)[nbdrytypes],
+                                    const int_vec (&bdrynode_deleting)[nbdrytypes],
                                     int &npoints,
                                     int &nseg, double *points,
                                     int *segment, int *segflag,
@@ -563,13 +563,12 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
     std::exit(12);
 #else
 
-    const int nbdry = 6;
-    int_vec inverse[nbdry], nfacets;
+    int_vec inverse[nbdrytypes], nfacets;
     std::vector<int*> facet;
 
     // before deleting boundary points, create a new triangulation
     // TODO: skip boundary bdrynode_deleting.size()==0, but retaining its facets
-    for (int i=0; i<nbdry; ++i) {
+    for (int i=0; i<nbdrytypes; ++i) {
         const int_vec& bdeleting = bdrynode_deleting[i];
         const int_vec& bdry_nodes = bnodes[i];
 
@@ -722,7 +721,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
         std::cerr << "Error: ponits_to_new_surface too many segments!\n";
         std::exit(12);
     }
-    for (int i=0, n=0; i<nbdry; ++i) {
+    for (int i=0, n=0; i<nbdrytypes; ++i) {
         for (int k=0; k<nfacets[i]; ++k, ++n) {
             for (int j=0; j<NODES_PER_FACET; ++j)
                 segment[n*NODES_PER_FACET + j] = facet[i][k*NODES_PER_FACET + j];
@@ -736,7 +735,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
     }
     nseg = nseg2;
 
-    for (int i=0; i<nbdry; ++i) {
+    for (int i=0; i<nbdrytypes; ++i) {
         delete [] facet[i];
     }
 
@@ -777,8 +776,8 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 
 
 void delete_points_on_boundary(int_vec &points_to_delete,
-                               const int_vec (&bnodes)[6],
-                               const int_vec (&edge_polygons)[6],
+                               const int_vec (&bnodes)[nbdrytypes],
+                               const int_vec (&edge_polygons)[nbdrytypes],
                                int &npoints,
                                int &nseg, double *points,
                                int *segment, int *segflag,
@@ -796,12 +795,11 @@ void delete_points_on_boundary(int_vec &points_to_delete,
 #ifdef THREED
     // are there any points in points_to_delete on the boundary? and on which boundary?
     // if the deleted point is a boundary point, store its index
-    const int nbdry = 6;
     bool changed = 0;
-    int_vec bdrynode_deleting[nbdry];
+    int_vec bdrynode_deleting[nbdrytypes];
     for (auto i=points_to_delete.begin(); i<points_to_delete.end(); ++i) {
         uint flag = bcflag[*i];
-        for (int j=0; j<nbdry; ++j) {
+        for (int j=0; j<nbdrytypes; ++j) {
             uint bc = 1 << j;
             if (flag & bc) {
                 bdrynode_deleting[j].push_back(*i);
@@ -851,7 +849,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     Mesh mesh_param = param.mesh;
     mesh_param.poly_filename = "";
 
-    int_vec facet_polygons[6];
+    int_vec facet_polygons[nbdrytypes];
     assemble_facet_polygons(var, original_coord, facet_polygons);
 
     // create a copy of original_coord and original_segment
@@ -872,8 +870,8 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     // copy
     double_vec old_volume(*var.volume);
     uint_vec old_bcflag(*var.bcflag);
-    int_vec old_bnodes[6];
-    for (int i=0; i<6; ++i) {
+    int_vec old_bnodes[nbdrytypes];
+    for (int i=0; i<nbdrytypes; ++i) {
         old_bnodes[i] = var.bnodes[i];
     }
 
@@ -1120,7 +1118,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     // updating other arrays
     delete var.bcflag;
     create_boundary_flags(var);
-    for (int i=0; i<6; ++i) {
+    for (int i=0; i<nbdrytypes; ++i) {
         var.bnodes[i].clear();
         var.bfacets[i].clear();
     }

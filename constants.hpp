@@ -25,6 +25,7 @@ const int iboundy0 = 2;
 const int iboundy1 = 3;
 const int iboundz0 = 4;
 const int iboundz1 = 5;
+const int nbdrytypes = 6;
 
 typedef unsigned int uint;
 const uint BOUNDX0 = 1 << iboundx0;  //  1, left

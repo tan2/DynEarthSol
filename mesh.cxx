@@ -1185,7 +1185,7 @@ void create_boundary_nodes(Variables& var)
      */
     for (std::size_t i=0; i<var.bcflag->size(); ++i) {
         uint f = (*var.bcflag)[i];
-        for (int j=0; j<6; ++j) {
+        for (int j=0; j<nbdrytypes; ++j) {
             if (f & (1<<j)) {
                 // this node belongs to a boundary
                 (var.bnodes[j]).push_back(i);
@@ -1193,7 +1193,7 @@ void create_boundary_nodes(Variables& var)
         }
     }
 
-    // for (int j=0; j<6; ++j) {
+    // for (int j=0; j<nbdrytypes; ++j) {
     //     std::cout << "boundary " << j << '\n';
     //     print(std::cout, var.bnodes[j]);
     //     std::cout << '\n';
@@ -1219,7 +1219,7 @@ void create_boundary_facets(Variables& var)
             if (flag) {
                 // this facet belongs to a boundary
                 int ibound;
-                for (ibound=0; ibound<6; ibound++) {
+                for (ibound=0; ibound<nbdrytypes; ibound++) {
                     if (flag == (1<<ibound))
                         goto found;
                 }
@@ -1232,7 +1232,7 @@ void create_boundary_facets(Variables& var)
         }
     }
 
-    // for (int n=0; n<6; ++n) {
+    // for (int n=0; n<nbdrytypes; ++n) {
     //     std::cout << "boundary facet " << n << ":\n";
     //     print(std::cout, var.bfacets[n]);
     //     std::cout << '\n';
