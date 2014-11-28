@@ -539,7 +539,7 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
 
 void delete_points_and_merge_facets(const int_vec &points_to_delete,
                                     const int_vec (&bnodes)[nbdrytypes],
-                                    const int_vec (&edge_polygons)[nbdrytypes],
+                                    const int_vec (&facet_polygons)[nbdrytypes],
                                     const int_vec (&bdrynode_deleting)[nbdrytypes],
                                     int &npoints,
                                     int &nseg, double *points,
@@ -623,7 +623,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
             Mesh mesh_param;
             mesh_param.min_angle = 0;
             mesh_param.meshing_verbosity = 0;
-            const int_vec& polygon = edge_polygons[i];
+            const int_vec& polygon = facet_polygons[i];
             int *segflag = new int[polygon.size()]; // all 0
             int *segment = new int[2 * polygon.size()];
             const int_vec& inv = inverse[i];
@@ -765,7 +765,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 
 void delete_points_on_boundary(int_vec &points_to_delete,
                                const int_vec (&bnodes)[nbdrytypes],
-                               const int_vec (&edge_polygons)[nbdrytypes],
+                               const int_vec (&facet_polygons)[nbdrytypes],
                                int &npoints,
                                int &nseg, double *points,
                                int *segment, int *segflag,
@@ -804,7 +804,7 @@ void delete_points_on_boundary(int_vec &points_to_delete,
         return;
     }
 
-    delete_points_and_merge_facets(points_to_delete, bnodes, edge_polygons,
+    delete_points_and_merge_facets(points_to_delete, bnodes, facet_polygons,
                                    bdrynode_deleting, npoints, nseg,
                                    points, segment, segflag, bcflag, min_size);
     delete_facets(nseg, segment, segflag);
@@ -814,7 +814,7 @@ void delete_points_on_boundary(int_vec &points_to_delete,
     delete_facets(nseg, segment, segflag);
     // silence 'unused variable' complier warning
     (void) bnodes;
-    (void) edge_polygons;
+    (void) facet_polygons;
 #endif
 
     if (DEBUG > 1) {
