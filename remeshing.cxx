@@ -1093,7 +1093,7 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
     // check element distortion
     int worst_elem;
     double q = worst_elem_quality(*var.coord, *var.connectivity,
-                                  *var.volume, *var.elquality, worst_elem);
+                                  *var.volume, worst_elem);
 #ifdef THREED
     // normalizing q so that its magnitude is about the same in 2D and 3D
     q = std::pow(q, 1.0/3);
@@ -1177,9 +1177,6 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         // outputing right after remeshing
         update_strain_rate(var, *var.strain_rate);
         update_force(param, var, *var.force);
-        int junk;
-        worst_elem_quality(*var.coord, *var.connectivity,
-                           *var.volume, *var.elquality, junk);
     }
 
     std::cout << "  Remeshing finished.\n";

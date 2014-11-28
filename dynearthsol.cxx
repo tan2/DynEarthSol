@@ -155,8 +155,7 @@ void restart(const Param& param, Variables& var)
         var.time = tmp[0];
         var.compensation_pressure = tmp[1];
 
-        // the next two fields are not needed for restarting
-        bin_save.read_array(*var.elquality, "mesh quality");
+        // the following fields are not required for restarting
         bin_save.read_array(*var.force, "force");
     }
 }

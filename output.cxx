@@ -13,6 +13,7 @@
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "binaryio.hpp"
+#include "geometry.hpp"
 #include "markerset.hpp"
 #include "matprops.hpp"
 #include "output.hpp"
@@ -98,8 +99,6 @@ void Output::write(const Variables& var, bool is_averaged)
 
     bin.write_array(*var.temperature, "temperature", var.temperature->size());
 
-
-    bin.write_array(*var.elquality, "mesh quality", var.elquality->size());
     bin.write_array(*var.plstrain, "plastic strain", var.plstrain->size());
 
     // Strain rate and plastic strain rate do not need to be checkpointed,
@@ -143,6 +142,11 @@ void Output::write(const Variables& var, bool is_averaged)
         tmp[e] = var.mat->rho(e);
     }
     bin.write_array(tmp, "density", tmp.size());
+
+    for (int e=0; e<var.nelem; ++e) {
+        tmp[e] = elem_quality(*var.coord, *var.connectivity, *var.volume, e);
+    }
+    bin.write_array(tmp, "mesh quality", tmp.size());
 
     for (int e=0; e<var.nelem; ++e) {
         tmp[e] = var.mat->visc(e);
