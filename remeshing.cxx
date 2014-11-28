@@ -46,33 +46,21 @@ bool is_bottom(uint flag)
 
 bool is_corner(uint flag)
 {
-    const std::set<uint> corner_set =
-        {
-#ifdef THREED
-            BOUNDX0 | BOUNDY0 | BOUNDZ0,
-            BOUNDX0 | BOUNDY0 | BOUNDZ1,
-            BOUNDX0 | BOUNDY1 | BOUNDZ0,
-            BOUNDX0 | BOUNDY1 | BOUNDZ1,
-            BOUNDX1 | BOUNDY0 | BOUNDZ0,
-            BOUNDX1 | BOUNDY0 | BOUNDZ1,
-            BOUNDX1 | BOUNDY1 | BOUNDZ0,
-            BOUNDX1 | BOUNDY1 | BOUNDZ1,
-#else
-            BOUNDX0 | BOUNDZ0,
-            BOUNDX0 | BOUNDZ1,
-            BOUNDX1 | BOUNDZ0,
-            BOUNDX1 | BOUNDZ1,
-#endif
-        };
-
-    uint f = flag & (BOUNDX0 | BOUNDX1 |
-                     BOUNDY0 | BOUNDY1 |
-                     BOUNDZ0 | BOUNDZ1);
-
+    uint f = flag & BOUND_ANY;
     if (!f) return 0;
 
-    if (corner_set.find(f) == corner_set.end()) return 0;
-    return 1;
+    // A corner node will have multiple bits (2 in 2D; 3 or more in 3D) set in its flag.
+    int nbits = 0;
+    for (int j=0; j<nbdrytypes; j++) {
+        // counting how many bits are set
+        if (f & (1<<j)) nbits++;
+    }
+
+#ifdef THREED
+    return (nbits >= NDIMS);
+#else
+    return (nbits == NDIMS);
+#endif
 }
 
 
