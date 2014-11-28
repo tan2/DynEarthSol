@@ -142,6 +142,9 @@ void update_temperature(const Param &param, const Variables &var,
 
     loop_all_elem(var.egroups, elemf);
 
+    // Combining temperature update and bc in the same loop for efficiency,
+    // since only the top boundary has Dirichlet bc, and all the other boundaries
+    // have no heat flux bc.
      #pragma omp parallel for default(none)      \
          shared(var, param, tdot, temperature)
      for (int n=0; n<var.nnode; ++n) {
