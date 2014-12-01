@@ -158,13 +158,31 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
 {
     const int d = param.markers.init_marker_spacing * param.mesh.resolution;
 
-    const int nx = param.mesh.xlength / d + 1;
-    const double x0 = 0.5 * (param.mesh.xlength - (nx-1)*d);
-    const int nz = param.mesh.zlength / d + 1;
-    const double z0 = 0.5 * (param.mesh.zlength - (nz-1)*d);
+    double domain_min[NDIMS], domain_max[NDIMS];
+    {
+        for (int d=0; d<NDIMS; d++)
+            domain_min[d] = domain_max[d] = (*var.coord)[0][d];
+
+        for (int i=1; i<var.nnode; i++) {
+            for (int d=0; d<NDIMS; d++) {
+                domain_min[d] = std::min(domain_min[d], (*var.coord)[i][d]);
+                domain_max[d] = std::max(domain_max[d], (*var.coord)[i][d]);
+            }
+        }
+        // print(std::cout, domain_min, NDIMS);
+        // print(std::cout, domain_max, NDIMS);
+    }
+
+    const double xlength = domain_max[0] - domain_min[0];
+    const int nx = xlength / d + 1;
+    const double x0 = domain_min[0] + 0.5 * (xlength - (nx-1)*d);
+    const double zlength = domain_max[NDIMS-1] - domain_min[NDIMS-1];
+    const int nz = zlength / d + 1;
+    const double z0 = domain_min[NDIMS-1] + 0.5 * (zlength - (nz-1)*d);
 #ifdef THREED
-    const int ny = param.mesh.ylength / d + 1;
-    const double y0 = 0.5 * (param.mesh.ylength - (ny-1)*d);
+    const double ylength = domain_max[1] - domain_min[1];
+    const int ny = ylength / d + 1;
+    const double y0 = domain_min[1] + 0.5 * (ylength - (ny-1)*d);
 #else
     const int ny = 1;
 #endif
@@ -196,7 +214,7 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
 #ifdef THREED
                             y0 + iy*d,
 #endif
-                            -(z0 + iz*d) };
+                            z0 + iz*d };
         bool found = false;
 
         // Look for nearby elements.
@@ -226,8 +244,7 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
         }
 
         if (! found) {
-            // Is it possible?
-            std::cout << "Not found\n";
+            // x is outside the domain (ex: the domain is not rectangular)
             continue;
         }
     }
