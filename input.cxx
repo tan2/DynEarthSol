@@ -672,6 +672,16 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::exit(1);
         }
 
+        if (p.mat.nmat < 1) {
+            std::cerr << "Error: mat.num_materials must be greater than 0.\n";
+            std::exit(1);
+        }
+
+        if (p.mat.nmat == 1 && p.markers.replenishment_option != 1) {
+            p.markers.replenishment_option = 1;
+            std::cerr << "Warning: mat.num_materials is 1, using simplest markers.replenishment_option.\n";
+        }
+
         get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat, 1);
         get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat, 1);
 
