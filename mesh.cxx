@@ -3,6 +3,7 @@
 #include <cstring>
 #include <limits>
 #include <string>
+#include <sstream>
 
 #ifdef USE_OMP
 #include <omp.h>
@@ -181,17 +182,18 @@ void set_3d_quality_str(std::string &quality, double max_ratio,
 }
 
 
+#ifdef THREED
 void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
  int vertex_per_polygon, int meshing_verbosity, int optlevel,
  int npoints, int nsegments,
  const double *points, const int *segments, const int *segflags,
+ const tetgenio::facet *facets,
  const int nregions, const double *regionattributes,
  int *noutpoints, int *ntriangles, int *noutsegments,
  double **outpoints, int **triangles,
  int **outsegments, int **outsegflags, double **outregattr)
 {
-#ifdef THREED
     //
     // Setting Tetgen options.
     //
@@ -221,18 +223,25 @@ void tetrahedralize_polyhedron
     in.pointlist = const_cast<double*>(points);
     in.numberofpoints = npoints;
 
-    tetgenio::polygon *polys = new tetgenio::polygon[nsegments];
-    for (int i=0; i<nsegments; ++i) {
-        polys[i].vertexlist = const_cast<int*>(&segments[i*vertex_per_polygon]);
-        polys[i].numberofvertices = vertex_per_polygon;
-    }
+    tetgenio::polygon *polys;
+    tetgenio::facet *fl;
+    if (facets == NULL) {
+        polys = new tetgenio::polygon[nsegments];
+        for (int i=0; i<nsegments; ++i) {
+            polys[i].vertexlist = const_cast<int*>(&segments[i*vertex_per_polygon]);
+            polys[i].numberofvertices = vertex_per_polygon;
+        }
 
-    tetgenio::facet *fl = new tetgenio::facet[nsegments];
-    for (int i=0; i<nsegments; ++i) {
-        fl[i].polygonlist = &polys[i];
-        fl[i].numberofpolygons = 1;
-        fl[i].holelist = NULL;
-        fl[i].numberofholes = 0;
+        fl = new tetgenio::facet[nsegments];
+        for (int i=0; i<nsegments; ++i) {
+            fl[i].polygonlist = &polys[i];
+            fl[i].numberofpolygons = 1;
+            fl[i].holelist = NULL;
+            fl[i].numberofholes = 0;
+        }
+    }
+    else {
+        fl = const_cast<tetgenio::facet*>(facets);
     }
 
     in.facetlist = fl;
@@ -259,8 +268,10 @@ void tetrahedralize_polyhedron
     in.facetmarkerlist = NULL;
     in.facetlist = NULL;
     in.regionlist = NULL;
-    delete [] polys;
-    delete [] fl;
+    if (facets == NULL) {
+        delete [] polys;
+        delete [] fl;
+    }
 
     *noutpoints = out.numberofpoints;
     *outpoints = out.pointlist;
@@ -278,8 +289,8 @@ void tetrahedralize_polyhedron
     out.trifacemarkerlist = NULL;
     out.tetrahedronattributelist = NULL;
 
-#endif
 }
+#endif
 
 
 void points_to_mesh(const Param &param, Variables &var,
@@ -841,15 +852,13 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     }
 
     // get segment (facet) list
-    int *init_segments = new int[n_init_segments * NODES_PER_FACET];
+#ifdef THREED
+    auto facets = new tetgenio::facet[n_init_segments];
     int *init_segflags = new int[n_init_segments];
     for (int i=0; i<n_init_segments; i++) {
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
-        int *x = &init_segments[i*NODES_PER_FACET];
-
-        int junk;
-#ifdef THREED
+        auto &f = facets[i];
         int npolygons, nholes, bdryflag;
         n = std::sscanf(buffer, "%d %d %d", &npolygons, &nholes, &bdryflag);
         if (n != 3) {
@@ -857,7 +866,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-        if (npolygons != 1 ||
+        if (npolygons <= 0 ||
             nholes != 0) {
             std::cerr << "Error: unsupported value in line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
@@ -866,28 +875,51 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 
         init_segflags[i] = bdryflag;
 
+        f.polygonlist = new tetgenio::polygon[npolygons];
+        f.numberofpolygons = npolygons;
+        f.holelist = NULL;
+        f.numberofholes = 0;
+
+        for (int j=0; j<npolygons; j++) {
+            my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
+
+            std::istringstream inbuf(std::string(buffer, 255));
+            int nvertex;
+            inbuf >> nvertex;
+            if (nvertex < NODES_PER_FACET || nvertex > 9999) {
+                std::cerr << "Error: unsupported number of polygon points in line " << lineno
+                          << " of '" << param.mesh.poly_filename << "'\n";
+                std::exit(1);
+            }
+
+            f.polygonlist[j].vertexlist = new int[nvertex];
+            f.polygonlist[j].numberofvertices = nvertex;
+            for (int k=0; k<nvertex; k++) {
+                inbuf >> f.polygonlist[j].vertexlist[k];
+                if (f.polygonlist[j].vertexlist[k] < 0 ||
+                    f.polygonlist[j].vertexlist[k] >= npoints) {
+                    std::cerr << "Error: segment contains out-of-range node # [0-" << npoints
+                              <<"] in line " << lineno << " of '"
+                              << param.mesh.poly_filename << "'\n";
+                    std::exit(1);
+                }
+            }
+        }
+    }
+#else
+    int *init_segments = new int[n_init_segments * NODES_PER_FACET];
+    int *init_segflags = new int[n_init_segments];
+    for (int i=0; i<n_init_segments; i++) {
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
-        int nvertex;
-        n = std::sscanf(buffer, "%d %d %d %d", &nvertex, x, x+1, x+2);
-        if (nvertex != NODES_PER_FACET) {
-            std::cerr << "Error: unsupported value in line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
-        }
-        if (n != NODES_PER_FACET+1) {
-            std::cerr << "Error: parsing line " << lineno << " of '"
-                      << param.mesh.poly_filename << "'\n";
-            std::exit(1);
-        }
-#else
+        int *x = &init_segments[i*NODES_PER_FACET];
+        int junk;
         n = std::sscanf(buffer, "%d %d %d %d", &junk, x, x+1, init_segflags+i);
         if (n != NODES_PER_FACET+2) {
             std::cerr << "Error: parsing line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-#endif
     }
     for (int i=0; i<n_init_segments; i++) {
         int *x = &init_segments[i*NODES_PER_FACET];
@@ -900,6 +932,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
             }
         }
     }
+#endif
 
     // get header of hole list
     {
@@ -966,12 +999,48 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     double max_elem_size = std_elem_size;
     if ( has_max_size ) max_elem_size = 0; // special value, see set_volume_str() above.
 
+#ifdef THREED
+    // shortcutting points_to_mesh() for polygon boundary
+    double *pcoord, *pregattr;
+    int *pconnectivity, *psegment, *psegflag;
+
+    tetrahedralize_polyhedron(param.mesh.max_ratio,
+                              param.mesh.min_tet_angle, max_elem_size,
+                              0,
+                              param.mesh.meshing_verbosity,
+                              param.mesh.tetgen_optlevel,
+                              npoints, n_init_segments, points,
+                              NULL, init_segflags,
+                              facets,
+                              nregions, regattr,
+                              &var.nnode, &var.nelem, &var.nseg,
+                              &pcoord, &pconnectivity,
+                              &psegment, &psegflag, &pregattr);
+
+    var.coord = new array_t(pcoord, var.nnode);
+    var.connectivity = new conn_t(pconnectivity, var.nelem);
+    var.segment = new segment_t(psegment, var.nseg);
+    var.segflag = new segflag_t(psegflag, var.nseg);
+    var.regattr = new regattr_t(pregattr, var.nelem);
+#else
     points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags, nregions, regattr,
                    max_elem_size, NODES_PER_FACET);
+#endif
 
     delete [] points;
+#ifdef THREED
+    for (int i=0; i<n_init_segments; i++) {
+        auto f = facets[i];
+        for (int j=0; j<f.numberofpolygons; j++) {
+            delete [] f.polygonlist[j].vertexlist;
+        }
+        delete [] f.polygonlist;
+    }
+    delete [] facets;
+#else
     delete [] init_segments;
+#endif
     delete [] init_segflags;
     delete [] regattr;
 }
@@ -995,6 +1064,7 @@ void points_to_new_mesh(const Mesh &mesh, int npoints, const double *points,
                               mesh.tetgen_optlevel,
                               npoints, n_init_segments, points,
                               init_segments, init_segflags,
+                              NULL,
                               n_regions, regattr,
                               &nnode, &nelem, &nseg,
                               &pcoord, &pconnectivity,

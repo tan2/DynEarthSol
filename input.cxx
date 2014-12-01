@@ -114,8 +114,8 @@ static void declare_parameters(po::options_description &cfg,
          "The file format is described in\n"
          "http://www.cs.cmu.edu/~quake/triangle.poly.html (2D) and\n"
          "http://wias-berlin.de/software/tetgen/fformats.poly.html (3D).\n"
-         "Limitation: no point attributes, no boundary marker for points, no holes,\n"
-         "no regional attributes, and only triangles can be used for facets (3D).\n"
+         "Limitation: no point attributes, no boundary marker for points, no holes, "
+         "and no regional attributes.\n"
          "Users still need to provide these parameters: mesh.xlength, mesh.ylength, and mesh.zlength.")
 
         ("mesh.quality_check_step_interval", po::value<int>(&p.mesh.quality_check_step_interval)->default_value(100),
