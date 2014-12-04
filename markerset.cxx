@@ -45,7 +45,20 @@ MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string& name
         break;
     default:
         std::cerr << "Error: unknown init_marker_option: " << param.markers.init_marker_option << ". The only valid option is '1'.\n";
+        std::exit(1);
         break;
+    }
+
+    for( int e = 0; e < var.nelem; e++ ) {
+        int num_markers_in_elem = 0;
+        for( int i = 0; i < param.mat.nmat; i++ )
+            num_markers_in_elem += (*(var.elemmarkers))[e][i];
+
+        if (num_markers_in_elem <= 0) {
+            std::cerr << "Error: no marker in element #" << e
+                      << ". Please increase the number of markers.\n";
+            std::exit(1);
+        }
     }
 }
 
