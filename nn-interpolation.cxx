@@ -18,8 +18,6 @@ namespace {
     void find_nearest_neighbor(const Variables &var, ANNkd_tree &kdtree,
                                int_vec &idx, int_vec &is_changed)
     {
-        std::cout << "Searching nearest neighbor in the kd-tree.\n";
-
         double **new_center = elem_center(*var.coord, *var.connectivity);
 
         const int k = 1;
@@ -186,7 +184,6 @@ namespace {
                                std::vector<int_vec> &elems_vec,
                                std::vector<double_vec> &ratios_vec)
     {
-        std::cout << "Constructing a kd-tree.\n";
         // kdtree requires the coordinate as double**
         double **old_center = elem_center(old_coord, old_connectivity);
         ANNkd_tree kdtree(old_center, old_connectivity.size(), NDIMS);

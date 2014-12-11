@@ -1128,6 +1128,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr);
 
         {
+            std::cout << "    Interpolating fields.\n";
             Barycentric_transformation bary(old_coord, old_connectivity, *var.volume);
 
             // interpolating fields defined on elements
@@ -1140,6 +1141,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         delete var.support;
         create_support(var);
 
+        std::cout << "    Remapping markers.\n";
         // remap markers. elemmarkers are updated here, too.
         remap_markers(param, var, old_coord, old_connectivity);
   
