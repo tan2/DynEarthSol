@@ -1156,14 +1156,30 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
     const int nseg = segment.size();
 
     //
-    // sort coordinate of nodes and element centers
+    // find the longest/shortest dimension
     //
+    double_vec lengths = {param.mesh.xlength,
+#ifdef THREED
+                          param.mesh.ylength,
+#endif
+                          param.mesh.zlength};
+    std::vector<std::size_t> idx(NDIMS);
+    sortindex(lengths, idx);
+    const int dmin = idx[0];
+    const int dmid = idx[1];
+    const int dmax = idx[NDIMS-1];
 
     //
+    // sort coordinate of nodes and element centers
+    //
     double_vec wn(nnode);
-    double aspect_ratio_factor = 1e-6 * param.mesh.xlength / param.mesh.zlength;
+    const double f = 1e-3;
     for(int i=0; i<nnode; i++) {
-        wn[i] = coord[i][0] - aspect_ratio_factor * coord[i][NDIMS-1];
+        wn[i] = coord[i][dmax]
+#ifdef THREED
+            + f * coord[i][dmid]
+#endif
+            + f * f * coord[i][dmin];
     }
 
     double_vec we(nelem);
