@@ -37,7 +37,10 @@ namespace {
             // P = - trace((*var.stress)[e]) / NDIMS;
 
             // Get pressure at this depth from PREM
-            P = get_prem_pressure(-Z);
+            if (param.control.ref_pressure_option == 1)
+                P = get_prem_pressure(-Z);
+            else if (param.control.ref_pressure_option == 2)
+                P = get_prem_pressure_modified(-Z);
         }
     };
 
