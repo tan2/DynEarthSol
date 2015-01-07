@@ -442,6 +442,41 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             }
         }
     }
+
+    for (int i=0; i<nbdrytypes; i++) {
+        if (i==iboundz0 || i==iboundz1) continue; //skip top and bottom boundaries
+
+        if (var.vbc_types[i] != 0 &&
+            var.vbc_types[i] != 2 &&
+            var.vbc_types[i] != 4) continue;
+
+        const auto& bdry = var.bfacets[i];
+        const auto& coord = *var.coord;
+        // loops over all bdry facets
+        for (std::size_t i=0; i<bdry.size(); ++i) {
+            // this facet belongs to element e
+            int e = bdry[i].first;
+            // this facet is the f-th facet of e
+            int f = bdry[i].second;
+            const int *conn = (*var.connectivity)[e];
+
+            // the outward-normal vector
+            double normal[NDIMS];
+            // the z-coordinate of the facet center
+            double zcenter;
+
+            normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
+            double p = ref_pressure(param, zcenter);
+
+            // lithostatc support - Archimed force (normal to the surface)
+            for (int j=0; j<NODES_PER_FACET; ++j) {
+                int n = conn[NODE_OF_FACET[f][j]];
+                for (int i=0; i<NDIMS; ++i) {
+                    force[n][i] -= p * normal[i] / NODES_PER_FACET;
+                }
+            }
+        }
+    }
 }
 
 

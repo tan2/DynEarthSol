@@ -212,8 +212,8 @@ static void declare_parameters(po::options_description &cfg,
          "Applying water loading for top boundary that is below sea level?")
 
         ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
-         "Type of boundary condition for the left/western side. Possible type is \n"
-         "0: all components free;\n"
+         "Type of velocity boundary condition for the left/western side. Possible type is \n"
+         "0: all velocity components free;\n"
          "1: normal component fixed, shear components free;\n"
          "2: normal component free, shear components fixed at 0;\n"
          "3: normal component fixed, shear components fixed at 0;\n"
