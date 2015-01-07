@@ -680,6 +680,10 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::exit(1);
         }
 
+        if (p.mat.nmat == 1 && p.control.ref_pressure_option != 0) {
+            p.control.ref_pressure_option = 0;
+            std::cerr << "Warning: mat.num_materials is 1, using simplest control.ref_pressure_option.\n";
+        }
         if (p.mat.nmat == 1 && p.markers.replenishment_option != 1) {
             p.markers.replenishment_option = 1;
             std::cerr << "Warning: mat.num_materials is 1, using simplest markers.replenishment_option.\n";

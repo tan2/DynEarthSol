@@ -2,6 +2,7 @@
 #include "parameters.hpp"
 #include "ic.hpp"
 #include "markerset.hpp"
+#include "matprops.hpp"
 #include "utils.hpp"
 
 #include "phasechanges.hpp"
@@ -35,12 +36,7 @@ namespace {
 
             // Get pressure, which is constant in the element
             // P = - trace((*var.stress)[e]) / NDIMS;
-
-            // Get pressure at this depth from PREM
-            if (param.control.ref_pressure_option == 1)
-                P = get_prem_pressure(-Z);
-            else if (param.control.ref_pressure_option == 2)
-                P = get_prem_pressure_modified(-Z);
+            P = ref_pressure(param, Z);
         }
     };
 

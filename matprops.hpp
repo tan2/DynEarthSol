@@ -3,6 +3,8 @@
 
 #include "parameters.hpp"
 
+double ref_pressure(const Param& param, double z);
+
 class VectorBase
 {
 public:
