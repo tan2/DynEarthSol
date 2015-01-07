@@ -241,8 +241,8 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[2] = 0;
                 break;
             case 3:
+                v[0] = 0;
                 v[1] = bc.vbc_val_y0;
-                v[1] = 0;
                 v[2] = 0;
                 break;
             case 4:
@@ -250,8 +250,8 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[2] = 0;
                 break;
             case 5:
-                v[1] = 0;
                 v[0] = bc.vbc_val_y0;
+                v[1] = 0;
                 v[2] = 0;
                 break;
             }
@@ -268,7 +268,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[2] = 0;
                 break;
             case 3:
-                v[1] = bc.vbc_val_y1;
+                v[0] = bc.vbc_val_y1;
                 v[1] = 0;
                 v[2] = 0;
                 break;
@@ -277,8 +277,8 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[2] = 0;
                 break;
             case 5:
-                v[1] = 0;
                 v[0] = bc.vbc_val_y1;
+                v[1] = 0;
                 v[2] = 0;
                 break;
             }
