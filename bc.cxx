@@ -367,11 +367,15 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 {
     // TODO: add general stress (Neumann) bcs
 
-    // hydrostatic water loading for the surface boundary
-    if (param.bc.has_water_loading && param.control.gravity != 0) {
+    if (param.control.gravity == 0) return;
 
-        const int top_bdry = iboundz1;
-        const auto& top = var.bfacets[top_bdry];
+    //
+    // Gravity-induced (hydrostatic and lithostatic) stress BCs
+    //
+
+    // hydrostatic water loading for the surface boundary
+    if (param.bc.has_water_loading) {
+        const auto& top = var.bfacets[iboundz1];
         const auto& coord = *var.coord;
         // loops over all top facets
         for (std::size_t i=0; i<top.size(); ++i) {
@@ -404,13 +408,11 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
                 }
             }
         }
-
     }
 
     // Wrinkler foundation for the bottom boundary
-    if (param.bc.has_wrinkler_foundation && param.control.gravity != 0) {
-        const int bottom_bdry = iboundz0;
-        const auto& bottom = var.bfacets[bottom_bdry];
+    if (param.bc.has_wrinkler_foundation) {
+        const auto& bottom = var.bfacets[iboundz0];
         const auto& coord = *var.coord;
         // loops over all bottom facets
         for (std::size_t i=0; i<bottom.size(); ++i) {
