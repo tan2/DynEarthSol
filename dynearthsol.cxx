@@ -21,6 +21,18 @@
 #include "rheology.hpp"
 
 
+void init_var(const Param& param, Variables& var)
+{
+    var.time = 0;
+    var.steps = 0;
+
+    if (param.control.characteristic_speed == 0)
+        var.max_vbc_val = find_max_vbc(param.bc);
+    else
+        var.max_vbc_val = param.control.characteristic_speed;
+}
+
+
 void init(const Param& param, Variables& var)
 {
     std::cout << "Initializing mesh and field data...\n";
@@ -231,15 +243,10 @@ int main(int argc, const char* argv[])
     // run simulation
     //
     static Variables var; // declared as static to silence valgrind's memory leak detection
+    init_var(param, var);
+
     Output output(param, start_time,
                   (param.sim.is_restarting) ? param.sim.restarting_from_frame : 0);
-    var.time = 0;
-    var.steps = 0;
-
-    if (param.control.characteristic_speed == 0)
-        var.max_vbc_val = find_max_vbc(param.bc);
-    else
-        var.max_vbc_val = param.control.characteristic_speed;
 
     if (! param.sim.is_restarting) {
         init(param, var);
