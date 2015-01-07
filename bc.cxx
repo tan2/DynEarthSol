@@ -335,19 +335,6 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #endif
                 v[NDIMS-1] = bc.vbc_val_z0;
                 break;
-            case 4:
-                v[0] = bc.vbc_val_z0;
-#ifdef THREED
-                v[1] = bc.vbc_val_z0;
-#endif
-                break;
-            case 5:
-                v[0] = bc.vbc_val_z0;
-#ifdef THREED
-                v[1] = bc.vbc_val_z0;
-#endif
-                v[NDIMS-1] = 0;
-                break;
             }
         }
         else if (flag & BOUNDZ1) {
@@ -369,19 +356,6 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[1] = 0;
 #endif
                 v[NDIMS-1] = bc.vbc_val_z1;
-                break;
-            case 4:
-                v[0] = bc.vbc_val_z1;
-#ifdef THREED
-                v[1] = bc.vbc_val_z1;
-#endif
-                break;
-            case 5:
-                v[0] = bc.vbc_val_z1;
-#ifdef THREED
-                v[1] = bc.vbc_val_z1;
-#endif
-                v[NDIMS-1] = 0;
                 break;
             }
         }
