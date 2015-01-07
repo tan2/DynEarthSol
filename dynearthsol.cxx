@@ -30,6 +30,24 @@ void init_var(const Param& param, Variables& var)
         var.max_vbc_val = find_max_vbc(param.bc);
     else
         var.max_vbc_val = param.control.characteristic_speed;
+
+    // XXX: Hard coded boundary flag. If the order of ibound?? is changed
+    //      in the future, the following lines have to be updated as well.
+    var.vbc_types[0] = param.bc.vbc_x0;
+    var.vbc_types[1] = param.bc.vbc_x1;
+    var.vbc_types[2] = param.bc.vbc_y0;
+    var.vbc_types[3] = param.bc.vbc_y1;
+    var.vbc_types[4] = param.bc.vbc_z0;
+    var.vbc_types[5] = param.bc.vbc_z1;
+    var.vbc_types[6] = param.bc.vbc_n0;
+
+    var.vbc_values[0] = param.bc.vbc_val_x0;
+    var.vbc_values[1] = param.bc.vbc_val_x1;
+    var.vbc_values[2] = param.bc.vbc_val_y0;
+    var.vbc_values[3] = param.bc.vbc_val_y1;
+    var.vbc_values[4] = param.bc.vbc_val_z0;
+    var.vbc_values[5] = param.bc.vbc_val_z1;
+    var.vbc_values[6] = param.bc.vbc_val_n0;
 }
 
 

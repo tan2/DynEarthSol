@@ -212,6 +212,8 @@ struct Variables {
     int_vec bnodes[nbdrytypes];
     std::vector< std::pair<int,int> > bfacets[nbdrytypes];
     double bnormals[nbdrytypes][NDIMS];
+    int vbc_types[nbdrytypes];
+    double vbc_values[nbdrytypes];
 
     int_vec2D *support;
     int_vec egroups;
