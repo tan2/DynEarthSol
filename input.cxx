@@ -574,16 +574,16 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Warning: no gravity, Wrinkler foundation is turned off.\n";
         }
         if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z0 != 0 ) {
-            std::cerr << "Error: bc.vbc_z0 is not 0, but Wrinkler foundation is turned on.\n";
-            std::exit(1);
+            p.bc.vbc_z0 = 0;
+            std::cerr << "Warning: Wrinkler foundation is turned on, setting bc.vbc_z0 to 0.\n";
         }
         if ( p.bc.has_water_loading && p.control.gravity == 0 ) {
             p.bc.has_water_loading = 0;
             std::cerr << "Warning: no gravity, water loading is turned off.\n";
         }
         if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z1 != 0 ) {
-            std::cerr << "Error: bc.vbc_z1 is not 0, but water loading is turned on.\n";
-            std::exit(1);
+            p.bc.vbc_z1 = 0;
+            std::cerr << "Warning: water loading is turned on, setting bc.vbc_z1 to 0.\n";
         }
 
         if ( p.bc.vbc_z0 > 3) {
