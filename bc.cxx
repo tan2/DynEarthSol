@@ -372,83 +372,13 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
     //
     // Gravity-induced (hydrostatic and lithostatic) stress BCs
     //
-
-    // hydrostatic water loading for the surface boundary
-    if (param.bc.has_water_loading) {
-        const auto& top = var.bfacets[iboundz1];
-        const auto& coord = *var.coord;
-        // loops over all top facets
-        for (std::size_t i=0; i<top.size(); ++i) {
-            // this facet belongs to element e
-            int e = top[i].first;
-            // this facet is the f-th facet of e
-            int f = top[i].second;
-            const int *conn = (*var.connectivity)[e];
-
-            // the outward-normal vector
-            double normal[NDIMS];
-            // the z-coordinate of the facet center
-            double zcenter;
-
-            normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
-
-            const double sea_level = 0;
-            const double sea_water_density = 1030;
-
-            // below sea level?
-            if (zcenter < sea_level) {
-                double dz = sea_level - zcenter;
-                double p = sea_water_density * param.control.gravity * dz;
-
-                for (int j=0; j<NODES_PER_FACET; ++j) {
-                    int n = conn[NODE_OF_FACET[f][j]];
-                    for (int i=0; i<NDIMS; ++i) {
-                        force[n][i] -= p * normal[i] / NODES_PER_FACET;
-                    }
-                }
-            }
-        }
-    }
-
-    // Wrinkler foundation for the bottom boundary
-    if (param.bc.has_wrinkler_foundation) {
-        const auto& bottom = var.bfacets[iboundz0];
-        const auto& coord = *var.coord;
-        // loops over all bottom facets
-        for (std::size_t i=0; i<bottom.size(); ++i) {
-            // this facet belongs to element e
-            int e = bottom[i].first;
-            // this facet is the f-th facet of e
-            int f = bottom[i].second;
-            const int *conn = (*var.connectivity)[e];
-
-            // the outward-normal vector
-            double normal[NDIMS];
-            // the z-coordinate of the facet center
-            double zcenter;
-
-            normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
-
-            double dz = zcenter - (-param.mesh.zlength);
-            double p = var.compensation_pressure -
-                (var.mat->rho(e) + param.bc.wrinkler_delta_rho) * param.control.gravity * dz;
-
-            // bottom support - Archimed force (normal to the surface)
-            for (int j=0; j<NODES_PER_FACET; ++j) {
-                int n = conn[NODE_OF_FACET[f][j]];
-                for (int i=0; i<NDIMS; ++i) {
-                    force[n][i] -= p * normal[i] / NODES_PER_FACET;
-                }
-            }
-        }
-    }
-
     for (int i=0; i<nbdrytypes; i++) {
-        if (i==iboundz0 || i==iboundz1) continue; //skip top and bottom boundaries
-
         if (var.vbc_types[i] != 0 &&
             var.vbc_types[i] != 2 &&
             var.vbc_types[i] != 4) continue;
+
+        if (i==iboundz0 && !param.bc.has_wrinkler_foundation) continue;
+        if (i==iboundz1 && !param.bc.has_water_loading) continue;
 
         const auto& bdry = var.bfacets[i];
         const auto& coord = *var.coord;
@@ -466,7 +396,28 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             double zcenter;
 
             normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
-            double p = ref_pressure(param, zcenter);
+
+            double p;
+            if (i==iboundz0 && param.bc.has_wrinkler_foundation) {
+                // Wrinkler foundation for the bottom boundary
+                p = var.compensation_pressure -
+                    (var.mat->rho(e) + param.bc.wrinkler_delta_rho) *
+                    param.control.gravity * (zcenter + param.mesh.zlength);
+            }
+            else if (i==iboundz1 && param.bc.has_water_loading) {
+                // hydrostatic water loading for the surface boundary
+                const double sea_level = 0;
+                p = 0;
+                if (zcenter < sea_level) {
+                    // below sea level
+                    const double sea_water_density = 1030;
+                    p = sea_water_density * param.control.gravity * (sea_level - zcenter);
+                }
+            }
+            else {
+                // sidewalls
+                p = ref_pressure(param, zcenter);
+            }
 
             // lithostatc support - Archimed force (normal to the surface)
             for (int j=0; j<NODES_PER_FACET; ++j) {
