@@ -114,25 +114,26 @@ static void declare_parameters(po::options_description &cfg,
          "The file format is described in\n"
          "http://www.cs.cmu.edu/~quake/triangle.poly.html (2D) and\n"
          "http://wias-berlin.de/software/tetgen/fformats.poly.html (3D).\n"
-         "Limitation: no point attributes, no boundary marker for points, no holes,\n"
-         "no regional attributes, and only triangles can be used for facets (3D).\n"
+         "Limitation: no point attributes, no boundary marker for points, no holes, "
+         "and no regional attributes.\n"
          "Users still need to provide these parameters: mesh.xlength, mesh.ylength, and mesh.zlength.")
 
         ("mesh.quality_check_step_interval", po::value<int>(&p.mesh.quality_check_step_interval)->default_value(100),
          "How often to check mesh quality?")
         ("mesh.min_quality", po::value<double>(&p.mesh.min_quality)->default_value(0.4),
          "Min. mesh quality before remeshing (between 0 and 1)")
+        ("mesh.max_boundary_distortion", po::value<double>(&p.mesh.max_boundary_distortion)->default_value(0.25),
+         "Max. distance of boundary distortion before remeshing (in unit of mesh.resolution).")
 
         ("mesh.remeshing_option", po::value<int>(&p.mesh.remeshing_option)->default_value(0),
          "How to deal with the boundaries during remeshing?\n"
          " 0: no modification on any boundary.\n"
          " 1: move all bottom nodes to initial depth, other boundaries are intact.\n"
-         " 2: create a new bottom boundary at the initial depth, other boundaries are intact.\n"
+         " 2: create a new bottom boundary at the initial depth, other boundaries are intact (2D only).\n"
          "10: no modification on any boundary, except small boundary segments might get merged.\n"
-         "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments"
-         "    might get merged.\n")
+         "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments might get merged.\n")
 
-        ("mesh.discard_internal_segments", po::value<bool>(&p.mesh.discard_internal_segments)->default_value(false),
+        ("mesh.is_discarding_internal_segments", po::value<bool>(&p.mesh.is_discarding_internal_segments)->default_value(false),
          "Discarding internal segments after initial mesh is created? "
          "Using it when remeshing process can modify segments (e.g. remeshing_option=11).")
 
@@ -148,7 +149,12 @@ static void declare_parameters(po::options_description &cfg,
         ("markers.init_marker_spacing", po::value<double>(&p.markers.init_marker_spacing)->default_value(0.3),
          "Spacing of markers (in unit of mesh.resolution). Used when init_marker_option=2.")
         ("markers.min_num_markers_in_element", po::value<int>(&p.markers.min_num_markers_in_element)->default_value(3),
-         "When the number of markers in an element is less than this number, a new marker will be created in the element.")
+         "When the number of markers in an element is less than this number, a new marker will be replenished in the element.")
+        ("markers.replenishment_option", po::value<int>(&p.markers.replenishment_option)->default_value(2),
+         "How to determine the mattype of replenished markers?\n"
+         "0: always set to 0 (fastest option).\n"
+         "1: by the probability of marker mattype of the element or surrounding elements.\n"
+         "2: same as the mattype of the nearest marker (slowest option).")
         ;
 
     cfg.add_options()
@@ -172,7 +178,10 @@ static void declare_parameters(po::options_description &cfg,
          "A factor for force damping (0-1)")
 
         ("control.ref_pressure_option", po::value<int>(&p.control.ref_pressure_option)->default_value(0),
-         "How to define reference pressure? 0: using density of the 0-th element to compute lithostatic pressure; 1: computing rerence pressure from the PREM model.")
+         "How to define reference pressure?\n"
+         "0: using density of the 0-th element to compute lithostatic pressure.\n"
+         "1: computing rerence pressure from the PREM model.\n"
+         "2: computing rerence pressure from the PREM model, modified for continent.\n")
 
         ("control.surface_process_option", po::value<int>(&p.control.surface_process_option)->default_value(0),
          "What kind of surface processes? 0: no surface processes. "
@@ -203,7 +212,7 @@ static void declare_parameters(po::options_description &cfg,
          "Applying water loading for top boundary that is below sea level?")
 
         ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
-         "Type of boundary condtition for left side. Possible type is \n"
+         "Type of boundary condition for the left/western side. Possible type is \n"
          "0: all components free;\n"
          "1: normal component fixed, shear components free;\n"
          "2: normal component free, shear components fixed at 0;\n"
@@ -211,29 +220,35 @@ static void declare_parameters(po::options_description &cfg,
          "4: normal component free, shear component (not z) fixed, only in 3D;\n"
          "5: normal component fixed at 0, shear component (not z) fixed, only in 3D;\n")
         ("bc.vbc_x1", po::value<int>(&p.bc.vbc_x1)->default_value(1),
-         "Type of boundary condtition for right side")
+         "Type of boundary condition for the right/eastern side")
         ("bc.vbc_val_x0", po::value<double>(&p.bc.vbc_val_x0)->default_value(-1e-9),
-         "Value of boundary condtition for left side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for left/western side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_x1", po::value<double>(&p.bc.vbc_val_x1)->default_value(1e-9),
-         "Value of boundary condtition for right side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the right/eastern side (if velocity, unit is m/s; if stress, unit is Pa)")
 
         ("bc.vbc_y0", po::value<int>(&p.bc.vbc_y0)->default_value(0),
-         "Type of boundary condtition for back side")
+         "Type of boundary condition for the southern side")
         ("bc.vbc_y1", po::value<int>(&p.bc.vbc_y1)->default_value(0),
-         "Type of boundary condtition for front side")
+         "Type of boundary condition for the northern side")
         ("bc.vbc_val_y0", po::value<double>(&p.bc.vbc_val_y0)->default_value(0),
-         "Value of boundary condtition for back side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the southern side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_y1", po::value<double>(&p.bc.vbc_val_y1)->default_value(0),
-         "Value of boundary condtition for front side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the northern side (if velocity, unit is m/s; if stress, unit is Pa)")
 
         ("bc.vbc_z0", po::value<int>(&p.bc.vbc_z0)->default_value(0),
-         "Type of boundary condtition for bottom side")
+         "Type of boundary condition for the bottom side")
         ("bc.vbc_z1", po::value<int>(&p.bc.vbc_z1)->default_value(0),
-         "Type of boundary condtition for top side")
+         "Type of boundary condition for the top side")
         ("bc.vbc_val_z0", po::value<double>(&p.bc.vbc_val_z0)->default_value(0),
-         "Value of boundary condtition for bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_z1", po::value<double>(&p.bc.vbc_val_z1)->default_value(0),
-         "Value of boundary condtition for top side (if velocity, unit is m/s; if stress, unit is Pa)")
+         "Value of boundary condition for the top side (if velocity, unit is m/s; if stress, unit is Pa)")
+
+        ("bc.vbc_n0", po::value<int>(&p.bc.vbc_n0)->default_value(1),
+         "Type of boundary condition for slant boundary #0 (only type 1, 3 are supported).")
+        ("bc.vbc_val_n0", po::value<double>(&p.bc.vbc_val_n0)->default_value(0),
+         "Value of boundary condition for slant boundary #0 (if velocity, unit is m/s, "
+         "outward normal direction is positive; if stress, unit is Pa)")
         ;
 
     cfg.add_options()
@@ -285,6 +300,9 @@ static void declare_parameters(po::options_description &cfg,
 
         ("ic.oceanic_plate_age_in_yr", po::value<double>(&p.ic.oceanic_plate_age_in_yr)->default_value(60e6),
          "Age of the oceanic plate (in years), used for the temperature profile on the plate.\n")
+
+        ("ic.isostasy_adjustment_time_in_yr", po::value<double>(&p.ic.isostasy_adjustment_time_in_yr)->default_value(0),
+         "Time for spinning up isostasy adjustment.\n")
         ;
 
     cfg.add_options()
@@ -540,6 +558,12 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         std::exit(1);
     }
 
+#ifdef THREED
+    if (p.mesh.remeshing_option == 2) {
+        std::cerr << "Error: mesh.remeshing_option=2 is not available in 3D.\n";
+        std::exit(1);
+    }
+#endif
 
     //
     // bc
@@ -550,7 +574,7 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Warning: no gravity, Wrinkler foundation is turned off.\n";
         }
         if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z0 != 0 ) {
-            std::cerr << "Error: vbc_z0 is not 0, but Wrinkler foundation is turned on.\n";
+            std::cerr << "Error: bc.vbc_z0 is not 0, but Wrinkler foundation is turned on.\n";
             std::exit(1);
         }
         if ( p.bc.has_water_loading && p.control.gravity == 0 ) {
@@ -558,7 +582,12 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Warning: no gravity, water loading is turned off.\n";
         }
         if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z1 != 0 ) {
-            std::cerr << "Error: vbc_z1 is not 0, but water loading is turned on.\n";
+            std::cerr << "Error: bc.vbc_z1 is not 0, but water loading is turned on.\n";
+            std::exit(1);
+        }
+
+        if ( p.bc.vbc_n0 != 1 && p.bc.vbc_n0 != 3 ) {
+            std::cerr << "Error: bc.vbc_n0 is not 1, or 3.\n";
             std::exit(1);
         }
     }
@@ -644,6 +673,16 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         if (p.mat.phase_change_option == 1 && p.mat.nmat < 8) {
             std::cerr << "Error: mat.phase_change_option is 1, but mat.num_materials is less than 8.\n";
             std::exit(1);
+        }
+
+        if (p.mat.nmat < 1) {
+            std::cerr << "Error: mat.num_materials must be greater than 0.\n";
+            std::exit(1);
+        }
+
+        if (p.mat.nmat == 1 && p.markers.replenishment_option != 1) {
+            p.markers.replenishment_option = 1;
+            std::cerr << "Warning: mat.num_materials is 1, using simplest markers.replenishment_option.\n";
         }
 
         get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat, 1);

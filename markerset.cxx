@@ -23,16 +23,16 @@ namespace {
 }
 
 
-MarkerSet::MarkerSet(const std::string& name_) :
-    name(name_)
+MarkerSet::MarkerSet(const std::string& name) :
+    _name(name)
 {
     _last_id = _nmarkers = 0;
     allocate_markerdata(4 * 1024); // pre-allocate a small amount of markers
 }
 
 
-MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string& name_) :
-    name(name_)
+MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string& name) :
+    _name(name)
 {
     _last_id = _nmarkers = 0;
 
@@ -45,13 +45,26 @@ MarkerSet::MarkerSet(const Param& param, Variables& var, const std::string& name
         break;
     default:
         std::cerr << "Error: unknown init_marker_option: " << param.markers.init_marker_option << ". The only valid option is '1'.\n";
+        std::exit(1);
         break;
+    }
+
+    for( int e = 0; e < var.nelem; e++ ) {
+        int num_markers_in_elem = 0;
+        for( int i = 0; i < param.mat.nmat; i++ )
+            num_markers_in_elem += (*(var.elemmarkers))[e][i];
+
+        if (num_markers_in_elem <= 0) {
+            std::cerr << "Error: no marker in element #" << e
+                      << ". Please increase the number of markers.\n";
+            std::exit(1);
+        }
     }
 }
 
 
-MarkerSet::MarkerSet(const Param& param, Variables& var, BinaryInput& bin, const std::string& name_) :
-    name(name_)
+MarkerSet::MarkerSet(const Param& param, Variables& var, BinaryInput& bin, const std::string& name) :
+    _name(name)
 {
     // init from checkpoint file
     read_chkpt_file(var, bin);
@@ -158,13 +171,31 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
 {
     const int d = param.markers.init_marker_spacing * param.mesh.resolution;
 
-    const int nx = param.mesh.xlength / d + 1;
-    const double x0 = 0.5 * (param.mesh.xlength - (nx-1)*d);
-    const int nz = param.mesh.zlength / d + 1;
-    const double z0 = 0.5 * (param.mesh.zlength - (nz-1)*d);
+    double domain_min[NDIMS], domain_max[NDIMS];
+    {
+        for (int d=0; d<NDIMS; d++)
+            domain_min[d] = domain_max[d] = (*var.coord)[0][d];
+
+        for (int i=1; i<var.nnode; i++) {
+            for (int d=0; d<NDIMS; d++) {
+                domain_min[d] = std::min(domain_min[d], (*var.coord)[i][d]);
+                domain_max[d] = std::max(domain_max[d], (*var.coord)[i][d]);
+            }
+        }
+        // print(std::cout, domain_min, NDIMS);
+        // print(std::cout, domain_max, NDIMS);
+    }
+
+    const double xlength = domain_max[0] - domain_min[0];
+    const int nx = xlength / d + 1;
+    const double x0 = domain_min[0] + 0.5 * (xlength - (nx-1)*d);
+    const double zlength = domain_max[NDIMS-1] - domain_min[NDIMS-1];
+    const int nz = zlength / d + 1;
+    const double z0 = domain_min[NDIMS-1] + 0.5 * (zlength - (nz-1)*d);
 #ifdef THREED
-    const int ny = param.mesh.ylength / d + 1;
-    const double y0 = 0.5 * (param.mesh.ylength - (ny-1)*d);
+    const double ylength = domain_max[1] - domain_min[1];
+    const int ny = ylength / d + 1;
+    const double y0 = domain_min[1] + 0.5 * (ylength - (ny-1)*d);
 #else
     const int ny = 1;
 #endif
@@ -196,7 +227,7 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
 #ifdef THREED
                             y0 + iy*d,
 #endif
-                            -(z0 + iz*d) };
+                            z0 + iz*d };
         bool found = false;
 
         // Look for nearby elements.
@@ -226,8 +257,7 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
         }
 
         if (! found) {
-            // Is it possible?
-            std::cout << "Not found\n";
+            // x is outside the domain (ex: the domain is not rectangular)
             continue;
         }
     }
@@ -352,12 +382,12 @@ void MarkerSet::write_chkpt_file(BinaryOutput &bin) const
     int_vec itmp(2);
     itmp[0] = _nmarkers;
     itmp[1] = _last_id;
-    bin.write_array(itmp, (name + " size").c_str(), itmp.size());
+    bin.write_array(itmp, (_name + " size").c_str(), itmp.size());
 
-    bin.write_array(*_eta, (name + ".eta").c_str(), _nmarkers);
-    bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
-    bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
-    bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);
+    bin.write_array(*_eta, (_name + ".eta").c_str(), _nmarkers);
+    bin.write_array(*_elem, (_name + ".elem").c_str(), _nmarkers);
+    bin.write_array(*_mattype, (_name + ".mattype").c_str(), _nmarkers);
+    bin.write_array(*_id, (_name + ".id").c_str(), _nmarkers);
 
 }
 
@@ -365,16 +395,16 @@ void MarkerSet::write_chkpt_file(BinaryOutput &bin) const
 void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
 {
     int_vec itmp(2);
-    bin.read_array(itmp, (name + " size").c_str());
+    bin.read_array(itmp, (_name + " size").c_str());
     _nmarkers = itmp[0];
     _last_id = itmp[1];
 
     allocate_markerdata(_nmarkers);
 
-    bin.read_array(*_eta, (name + ".eta").c_str());
-    bin.read_array(*_elem, (name + ".elem").c_str());
-    bin.read_array(*_mattype, (name + ".mattype").c_str());
-    bin.read_array(*_id, (name + ".id").c_str());
+    bin.read_array(*_eta, (_name + ".eta").c_str());
+    bin.read_array(*_elem, (_name + ".elem").c_str());
+    bin.read_array(*_mattype, (_name + ".mattype").c_str());
+    bin.read_array(*_id, (_name + ".id").c_str());
 
     for( int i = 0; i < _nmarkers; i++ ) {
         int e = (*_elem)[i];
@@ -388,7 +418,7 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
 {
     int_vec itmp(1);
     itmp[0] = _nmarkers;
-    bin.write_array(itmp, (name + " size").c_str(), itmp.size());
+    bin.write_array(itmp, (_name + " size").c_str(), itmp.size());
 
     array_t mcoord(_nmarkers, 0);
     const array_t &coord = *var.coord;
@@ -407,10 +437,10 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
         // std::cout << "\n";
     }
 
-    bin.write_array(mcoord, (name + ".coord").c_str(), _nmarkers);
-    bin.write_array(*_elem, (name + ".elem").c_str(), _nmarkers);
-    bin.write_array(*_mattype, (name + ".mattype").c_str(), _nmarkers);
-    bin.write_array(*_id, (name + ".id").c_str(), _nmarkers);
+    bin.write_array(mcoord, (_name + ".coord").c_str(), _nmarkers);
+    bin.write_array(*_elem, (_name + ".elem").c_str(), _nmarkers);
+    bin.write_array(*_mattype, (_name + ".mattype").c_str(), _nmarkers);
+    bin.write_array(*_id, (_name + ".id").c_str(), _nmarkers);
 
 }
 
@@ -492,6 +522,151 @@ namespace {
         }
     }
 
+
+    void replenish_markers_with_mattype_0(const Param& param, Variables &var,
+                                          int e, int num_marker_in_elem)
+    {
+        while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
+            const int mt = 0;
+            var.markersets[0]->append_random_marker_in_elem(e, mt);
+            if (DEBUG) {
+                std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
+            }
+
+            ++(*var.elemmarkers)[e][mt];
+            ++num_marker_in_elem;
+        }
+    }
+
+
+    void replenish_markers_with_mattype_from_cpdf(const Param& param, Variables &var,
+                                                  int e, int num_marker_in_elem)
+    {
+        // cummulative probability density function of mattype
+        double_vec cpdf(param.mat.nmat, 0);
+
+        if (num_marker_in_elem > 0) {
+            // cpdf of this element
+            cpdf[0] = (*(var.elemmarkers))[e][0] / double(num_marker_in_elem);
+            for( int i = 1; i < param.mat.nmat - 1; i++ )
+                cpdf[i] = cpdf[i-1] + (*(var.elemmarkers))[e][i] / double(num_marker_in_elem);
+        }
+        else {
+            // No markers in this element.
+            // Construct cpdf from neighboring elements
+            int num_markers_in_nbr_elems = 0;
+            // Looping over all neighboring elements (excluding self)
+            for( int kk = 0; kk < NODES_PER_ELEM; kk++) {
+                int n = (*var.connectivity)[e][kk]; // node of this element
+                for( auto ee = (*var.support)[n].begin(); ee < (*var.support)[n].end(); ++ee) {
+                    if (*ee == e) continue;
+                    // Note: some (NODES_PER_ELEM) elements will be iterated
+                    // more than once (NDIMS times). These elements are direct neighbors,
+                    // i.e. they share facets (3D) or edges (2D) with element e.
+                    // So they are counted multiple times to reprensent a greater weight.
+                    for( int i = 0; i < param.mat.nmat; i++ ) {
+                        cpdf[i] += (*(var.elemmarkers))[*ee][i];
+                        num_markers_in_nbr_elems += (*(var.elemmarkers))[*ee][i];
+                    }
+                }
+            }
+            for( int i = 1; i < param.mat.nmat - 1; i++ )
+                cpdf[i] += cpdf[i-1];
+            for( int i = 0; i < param.mat.nmat - 1; i++ )
+                cpdf[i] = cpdf[i] / double(num_markers_in_nbr_elems);
+        }
+
+        cpdf[param.mat.nmat - 1] = 1; // fix to 1 to avoid round-off error
+        if (DEBUG > 1) {
+            std::cout << num_marker_in_elem << " markers in element " << e << '\n'
+                      << "  cpdf: ";
+            print(std::cout, cpdf);
+            std::cout << '\n';
+        }
+
+        while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
+            // Determine new marker's matttype based on cpdf
+            auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
+            const int mt = upper - cpdf.begin();
+            var.markersets[0]->append_random_marker_in_elem(e, mt);
+            if (DEBUG) {
+                std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
+            }
+
+            ++(*var.elemmarkers)[e][mt];
+            ++num_marker_in_elem;
+        }
+    }
+
+
+    void replenish_markers_with_mattype_from_nn_preparation(const Param& param, const Variables &var,
+                                                            ANNkd_tree *&kdtree, double **&points)
+    {
+        const MarkerSet &ms = *var.markersets[0];
+        const int nmarkers = ms.get_nmarkers();
+
+        double *tmp = new double[nmarkers*NDIMS];
+        points = new double*[nmarkers];
+        // The caller is responsible to delete [] points[0] and points!
+
+        for (int n=0; n<nmarkers; n++) {
+            const int e = ms.get_elem(n);
+            const double* eta = ms.get_eta(n);
+            const int* conn = (*var.connectivity)[e];
+
+            points[n] = tmp + n*NDIMS;
+            for(int d=0; d<NDIMS; d++) {
+                double sum = 0;
+                for(int k=0; k<NODES_PER_ELEM; k++) {
+                    sum += (*var.coord)[ conn[k] ][d] * eta[k];
+                }
+                points[n][d] = sum;
+            }
+        }
+
+        kdtree = new ANNkd_tree(points, nmarkers, NDIMS);
+    }
+
+
+    void replenish_markers_with_mattype_from_nn(const Param& param, Variables &var,
+                                                ANNkd_tree &kdtree,
+                                                int e, int num_marker_in_elem)
+    {
+        MarkerSet &ms = *var.markersets[0];
+        while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
+            double eta[NODES_PER_ELEM];
+            ms.random_eta(eta);
+
+            double x[NDIMS] = {0};
+            const int *conn = (*var.connectivity)[e];
+            for (int d=0; d<NDIMS; d++) {
+                for (int i=0; i<NODES_PER_ELEM; i++) {
+                    x[d] += (*var.coord)[ conn[i] ][d] * eta[i];
+                }
+            }
+
+            const int k = 1;  // how many nearest neighbors to search?
+            const double eps = 0; // tolerance of distance error
+            int nn_idx[k];
+            double dd[k];
+
+            // Look for nearest marker.
+            // Note: kdtree.annkSearch() is not thread-safe, cannot use openmp in this loop
+            kdtree.annkSearch(x, k, nn_idx, dd, eps);
+
+            int m = nn_idx[0]; // nearest marker
+            const int mt = ms.get_mattype(m);
+
+            ms.append_marker(eta, e, mt);
+            if (DEBUG) {
+                std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
+            }
+
+            ++(*var.elemmarkers)[e][mt];
+            ++num_marker_in_elem;
+        }
+    }
+
 } // anonymous namespace
 
 
@@ -504,86 +679,61 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
         delete var.hydrous_elemmarkers;
     create_elemmarkers( param, var );
 
-    double_vec new_volume( var.nelem );
-    compute_volume( *var.coord, *var.connectivity, new_volume );
+    // Locating markers in new elements
+    {
+        double_vec new_volume( var.nelem );
+        compute_volume( *var.coord, *var.connectivity, new_volume );
 
-    Barycentric_transformation bary( *var.coord, *var.connectivity, new_volume );
+        Barycentric_transformation bary( *var.coord, *var.connectivity, new_volume );
 
-    // nearest-neighbor search structure
-    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
-    ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
+        // nearest-neighbor search structure
+        double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
+        ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
 
-    find_markers_in_element(*var.markersets[0], *var.elemmarkers,
-                            kdtree, bary, old_coord, old_connectivity);
-    if (param.control.has_hydration_processes)
-        find_markers_in_element(*var.markersets[var.hydrous_marker_index], *var.hydrous_elemmarkers,
+        find_markers_in_element(*var.markersets[0], *var.elemmarkers,
                                 kdtree, bary, old_coord, old_connectivity);
+        if (param.control.has_hydration_processes)
+            find_markers_in_element(*var.markersets[var.hydrous_marker_index], *var.hydrous_elemmarkers,
+                                    kdtree, bary, old_coord, old_connectivity);
 
-    delete [] centroid[0];
-    delete [] centroid;
+        delete [] centroid[0];
+        delete [] centroid;
+    }
 
     // If any new element has too few markers, generate markers in them.
+    ANNkd_tree *kdtree = NULL;
+    double **points = NULL; // coordinate of markers
+    if (param.markers.replenishment_option == 2) {
+        replenish_markers_with_mattype_from_nn_preparation(param, var, kdtree, points);
+    }
+
     for( int e = 0; e < var.nelem; e++ ) {
         int num_marker_in_elem = 0;
         for( int i = 0; i < param.mat.nmat; i++ )
             num_marker_in_elem += (*(var.elemmarkers))[e][i];
 
         if (num_marker_in_elem < param.markers.min_num_markers_in_element) {
-            // cummulative probability density function of mattype
-            double_vec cpdf(param.mat.nmat, 0);
-
-            if (num_marker_in_elem > 0) {
-                // cpdf of this element
-                cpdf[0] = (*(var.elemmarkers))[e][0] / double(num_marker_in_elem);
-                for( int i = 1; i < param.mat.nmat - 1; i++ )
-                    cpdf[i] = cpdf[i-1] + (*(var.elemmarkers))[e][i] / double(num_marker_in_elem);
-            }
-            else {
-                // No markers in this element.
-                // Construct cpdf from neighboring elements
-                int num_markers_in_nbr_elems = 0;
-                // Looping over all neighboring elements (excluding self)
-                for( int kk = 0; kk < NODES_PER_ELEM; kk++) {
-                    int n = (*var.connectivity)[e][kk]; // node of this element
-                    for( auto ee = (*var.support)[n].begin(); ee < (*var.support)[n].end(); ++ee) {
-                        if (*ee == e) continue;
-                        // Note: some (NODES_PER_ELEM) elements will be iterated
-                        // more than once (NDIMS times). These elements are direct neighbors,
-                        // i.e. they share facets (3D) or edges (2D) with element e.
-                        // So they are counted multiple times to reprensent a greater weight.
-                        for( int i = 0; i < param.mat.nmat; i++ ) {
-                            cpdf[i] += (*(var.elemmarkers))[*ee][i];
-                            num_markers_in_nbr_elems += (*(var.elemmarkers))[*ee][i];
-                        }
-                    }
-                }
-                for( int i = 1; i < param.mat.nmat - 1; i++ )
-                    cpdf[i] += cpdf[i-1];
-                for( int i = 0; i < param.mat.nmat - 1; i++ )
-                    cpdf[i] = cpdf[i] / double(num_markers_in_nbr_elems);
-            }
-
-            cpdf[param.mat.nmat - 1] = 1; // fix to 1 to avoid round-off error
-            if (DEBUG > 1) {
-                std::cout << num_marker_in_elem << " markers in element " << e << '\n'
-                          << "  cpdf: ";
-                print(std::cout, cpdf);
-                std::cout << '\n';
-            }
-
-            while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
-                // Determine new marker's matttype based on cpdf
-                auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
-                const int mt = upper - cpdf.begin();
-                var.markersets[0]->append_random_marker_in_elem(e, mt);
-                if (DEBUG) {
-                    std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
-                }
-
-                ++(*var.elemmarkers)[e][mt];
-                ++num_marker_in_elem;
+            switch (param.markers.replenishment_option) {
+            case 0:
+                replenish_markers_with_mattype_0(param, var, e, num_marker_in_elem);
+                break;
+            case 1:
+                replenish_markers_with_mattype_from_cpdf(param, var, e, num_marker_in_elem);
+                break;
+            case 2:
+                replenish_markers_with_mattype_from_nn(param, var, *kdtree, e, num_marker_in_elem);
+                break;
+            default:
+                std::cerr << "Error: unknown markers.replenishment_option: " << param.markers.replenishment_option << '\n';
+                std::exit(1);
             }
         }
+    }
+
+    if (param.markers.replenishment_option == 2) {
+        delete kdtree;
+        delete [] points[0];
+        delete [] points;
     }
 }
 

@@ -54,16 +54,15 @@ struct Mesh {
     double resolution;
     double smallest_size;
     double largest_size;
-    // for 2D only
-    double min_angle;
-    // for 3D only
-    double min_tet_angle, max_ratio;
+    double min_angle;  // for 2D only
+    double min_tet_angle, max_ratio; // for 3D only
     double min_quality;
+    double max_boundary_distortion;
 
     double_pair refined_zonex, refined_zoney, refined_zonez;
     std::string poly_filename;
 
-    bool discard_internal_segments;
+    bool is_discarding_internal_segments;
     int remeshing_option;
 };
 
@@ -100,6 +99,7 @@ struct BC {
     int vbc_y1;
     int vbc_z0;
     int vbc_z1;
+    int vbc_n0;
 
     double vbc_val_x0;
     double vbc_val_x1;
@@ -107,6 +107,7 @@ struct BC {
     double vbc_val_y1;
     double vbc_val_z0;
     double vbc_val_z1;
+    double vbc_val_n0;
 };
 
 struct IC {
@@ -132,6 +133,7 @@ struct IC {
     double weakzone_zsemi_axis;
 
     double oceanic_plate_age_in_yr;
+    double isostasy_adjustment_time_in_yr;
 };
 
 struct Mat {
@@ -167,6 +169,7 @@ struct Markers {
     int init_marker_option;
     int markers_per_element;
     int min_num_markers_in_element;
+    int replenishment_option;
     double init_marker_spacing;
 };
 
@@ -206,8 +209,9 @@ struct Variables {
     regattr_t *regattr;
 
     uint_vec *bcflag;
-    int_vec bnodes[6];
-    std::vector< std::pair<int,int> > bfacets[6];
+    int_vec bnodes[nbdrytypes];
+    std::vector< std::pair<int,int> > bfacets[nbdrytypes];
+    double bnormals[nbdrytypes][NDIMS];
 
     int_vec2D *support;
     int_vec egroups;
@@ -217,7 +221,6 @@ struct Variables {
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
     double_vec *ntmp;
-    double_vec *elquality;
 
     array_t *vel, *force;
     tensor_t *strain_rate, *strain, *stress;

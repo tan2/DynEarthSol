@@ -52,7 +52,7 @@ void normal_vector_of_facet(int f, const int *conn, const array_t &coord,
 bool is_on_boundary(const Variables &var, int node)
 {
     uint flag = (*var.bcflag)[node];
-    return flag & (BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1);
+    return flag & BOUND_ANY;
 }
 
 
@@ -71,8 +71,65 @@ double find_max_vbc(const BC &bc)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_z0));
     if (bc.vbc_z1 == 1 || bc.vbc_z1 == 3)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_z1));
+    if (bc.vbc_n0 == 1 || bc.vbc_n0 == 3)
+        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n0));
 
     return max_vbc_val;
+}
+
+
+void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][NDIMS])
+{
+    /* This subroutine finds the outward normal unit vectors of boundaries.
+     * There are two types of boundaries: ibound{x,y,z}? and iboundn?.
+     * The first type ibound{x,y,z}? has well defined "normal" direction
+     * as their name implied. Thus they can be curved. (Ex. the top boundary
+     * can have topography.)
+     * The second type iboundn?, on the other hand, must be a plane so that
+     * their vbc are well defined.
+     *
+     * If the normal component of the boundary velocity is fixed, the boundary
+     * normal will not change with time.
+     */
+
+    for (int i=0; i<nbdrytypes; i++) {
+        double normal[NDIMS] = {0};
+        if (var.bfacets[i].size() > 0) {
+            for (auto j=var.bfacets[i].begin(); j<var.bfacets[i].end(); ++j) {
+                int e = j->first;
+                int f = j->second;
+                double tmp;
+                normal_vector_of_facet(f, (*var.connectivity)[e], *var.coord,
+                                       normal, tmp);
+                // make an unit vector
+                double len = 0;
+                for(int d=0; d<NDIMS; d++)
+                    len += normal[d] * normal[d];
+
+                len = std::sqrt(len);
+                for(int d=0; d<NDIMS; d++)
+                    normal[d] = normal[d] / len;
+
+                if (j == var.bfacets[i].begin()) {
+                    for(int d=0; d<NDIMS; d++)
+                        bnormals[i][d] = normal[d];
+
+                    if (i < iboundn0) break; // slant boundaries start at iboundn0, other boundary can be curved
+                }
+                else {
+                    // Make sure the boundary is a plane, ie. all facets have the same normal vector.
+                    const double eps2 = 1e-30;
+                    double diff2 = 0;
+                    for(int d=0; d<NDIMS; d++)
+                        diff2 += (bnormals[i][d] - normal[d]) * (bnormals[i][d] - normal[d]);
+                    if (diff2 > eps2) {
+                        std::cerr << "Error: boundary " << i << " is curved.\n";
+                        std::exit(1);
+                    }
+                }
+            }
+        }
+    }
 }
 
 
@@ -99,7 +156,9 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
         uint flag = (*var.bcflag)[i];
         double *v = vel[i];
 
+        //
         // X
+        //
         if (flag & BOUNDX0) {
             switch (bc.vbc_x0) {
             case 0:
@@ -167,7 +226,9 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
             }
         }
 #ifdef THREED
+        //
         // Y
+        //
         if (flag & BOUNDY0) {
             switch (bc.vbc_y0) {
             case 0:
@@ -223,7 +284,33 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
             }
         }
 #endif
-        // Z
+
+        //
+        // N
+        //
+        if (flag & BOUNDN0) {
+            const double *n = var.bnormals[iboundn0]; // unit normal vector
+            switch (bc.vbc_n0) {
+            case 1:
+                {
+                    double vn = 0;
+                    for (int d=0; d<NDIMS; d++)
+                        vn += v[d] * n[d];  // normal velocity
+
+                    for (int d=0; d<NDIMS; d++)
+                        v[d] += (bc.vbc_val_n0 - vn) * n[d];
+                }
+                break;
+            case 3:
+                for (int d=0; d<NDIMS; d++)
+                    v[d] = bc.vbc_val_n0 * n[d];
+                break;
+            }
+        }
+
+        //
+        // Z, must be dealt last
+        //
 
         // fast path: vz is usually free in the models
         if (bc.vbc_z0==0 && bc.vbc_z1==0) continue;
@@ -309,7 +396,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
     // hydrostatic water loading for the surface boundary
     if (param.bc.has_water_loading && param.control.gravity != 0) {
 
-        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const int top_bdry = iboundz1;
         const auto& top = var.bfacets[top_bdry];
         const auto& coord = *var.coord;
         // loops over all top facets
@@ -348,7 +435,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
     // Wrinkler foundation for the bottom boundary
     if (param.bc.has_wrinkler_foundation && param.control.gravity != 0) {
-        const int bottom_bdry = bdry_order.find(BOUNDZ0)->second;
+        const int bottom_bdry = iboundz0;
         const auto& bottom = var.bfacets[bottom_bdry];
         const auto& coord = *var.coord;
         // loops over all bottom facets
@@ -391,7 +478,7 @@ namespace {
          * sedimentation.
          */
 
-        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const int top_bdry = iboundz1;
         const auto& top = var.bfacets[top_bdry];
 
         const int_vec& top_nodes = var.bnodes[top_bdry];
@@ -512,7 +599,7 @@ namespace {
 
     void custom_surface_processes(const Variables& var, array_t& coord)
     {
-        const int top_bdry = bdry_order.find(BOUNDZ1)->second;
+        const int top_bdry = iboundz1;
         const int_vec& top_nodes = var.bnodes[top_bdry];
         const std::size_t ntop = top_nodes.size();
 

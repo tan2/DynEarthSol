@@ -18,8 +18,6 @@ namespace {
     void find_nearest_neighbor(const Variables &var, ANNkd_tree &kdtree,
                                int_vec &idx, int_vec &is_changed)
     {
-        std::cout << "Searching nearest neighbor in the kd-tree.\n";
-
         double **new_center = elem_center(*var.coord, *var.connectivity);
 
         const int k = 1;
@@ -181,11 +179,11 @@ namespace {
                                const Barycentric_transformation &bary,
                                const array_t &old_coord,
                                const conn_t &old_connectivity,
-                               int_vec &idx, int_vec &is_changed,
+                               int_vec &idx,
+                               int_vec &is_changed,
                                std::vector<int_vec> &elems_vec,
                                std::vector<double_vec> &ratios_vec)
     {
-        std::cout << "Constructing a kd-tree.\n";
         // kdtree requires the coordinate as double**
         double **old_center = elem_center(old_coord, old_connectivity);
         ANNkd_tree kdtree(old_center, old_connectivity.size(), NDIMS);
@@ -203,7 +201,8 @@ namespace {
                       const int_vec &is_changed,
                       const std::vector<int_vec> &elems_vec,
                       const std::vector<double_vec> &ratios_vec,
-                      const double_vec &source, double_vec &target)
+                      const double_vec &source,
+                      double_vec &target)
     {
         #pragma omp parallel for default(none)          \
             shared(idx, source, target)
@@ -232,7 +231,8 @@ namespace {
                       const int_vec &is_changed,
                       const std::vector<int_vec> &elems_vec,
                       const std::vector<double_vec> &ratios_vec,
-                      const tensor_t &source, tensor_t &target)
+                      const tensor_t &source,
+                      tensor_t &target)
     {
         #pragma omp parallel for default(none)          \
             shared(idx, source, target)
@@ -292,10 +292,9 @@ namespace {
         inject_field(idx, is_changed, elems_vec, ratios_vec, *var.stress, *b);
         delete var.stress;
         var.stress = b;
-
     }
 
-}
+} // anonymous namespace
 
 
 void nearest_neighbor_interpolation(Variables &var,
@@ -303,7 +302,6 @@ void nearest_neighbor_interpolation(Variables &var,
                                     const array_t &old_coord,
                                     const conn_t &old_connectivity)
 {
-
     int_vec idx(var.nelem); // nearest element
     int_vec is_changed(var.nelem); // is the element changed during remeshing?
 
@@ -316,5 +314,4 @@ void nearest_neighbor_interpolation(Variables &var,
     // print(std::cout, ratios_vec);
 
     nn_interpolate_elem_fields(var, idx, is_changed, elems_vec, ratios_vec);
-
 }

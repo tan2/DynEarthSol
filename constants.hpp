@@ -19,29 +19,25 @@ const int NODES_PER_ELEM = NDIMS + 1;
 const int NSTR = NDIMS * (NDIMS + 1) / 2;
 
 // Flags for boundary
+const int iboundx0 = 0;
+const int iboundx1 = 1;
+const int iboundy0 = 2;
+const int iboundy1 = 3;
+const int iboundz0 = 4;
+const int iboundz1 = 5;
+const int iboundn0 = 6;
+const int nbdrytypes = 7;
+
 typedef unsigned int uint;
-const uint BOUNDX0 = 1 << 0;  //  1, left
-const uint BOUNDX1 = 1 << 1;  //  2, right
-const uint BOUNDY0 = 1 << 2;  //  4, front
-const uint BOUNDY1 = 1 << 3;  //  8, back
-const uint BOUNDZ0 = 1 << 4;  // 16, bottom
-const uint BOUNDZ1 = 1 << 5;  // 32, top
+const uint BOUNDX0 = 1 << iboundx0;  //  1, western (left in 2D)
+const uint BOUNDX1 = 1 << iboundx1;  //  2, eastern (right in 2D)
+const uint BOUNDY0 = 1 << iboundy0;  //  4, southern
+const uint BOUNDY1 = 1 << iboundy1;  //  8, northern
+const uint BOUNDZ0 = 1 << iboundz0;  // 16, bottom
+const uint BOUNDZ1 = 1 << iboundz1;  // 32, top
+const uint BOUNDN0 = 1 << iboundn0;  // 64, arbitrary (not parallel to x,y,z)
 
-static const uint bdry[6] =
-    {BOUNDX0,
-     BOUNDX1,
-     BOUNDY0,
-     BOUNDY1,
-     BOUNDZ0,
-     BOUNDZ1};
-
-static const std::map<uint, int> bdry_order =
-    {{BOUNDX0, 0},
-     {BOUNDX1, 1},
-     {BOUNDY0, 2},
-     {BOUNDY1, 3},
-     {BOUNDZ0, 4},
-     {BOUNDZ1, 5}};
+const uint BOUND_ANY = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1 | BOUNDN0;
 
 // # of facets (edges) per element, 3 for 2D, 4 for 3D
 const int FACETS_PER_ELEM = NDIMS + 1;

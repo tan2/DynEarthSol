@@ -1,9 +1,9 @@
-
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <string>
+#include <sstream>
 
 #ifdef USE_OMP
 #include <omp.h>
@@ -67,6 +67,10 @@ void set_volume_str(std::string &vol, double max_volume)
     if (max_volume > 0) {
         vol += 'a';
         vol += std::to_string((long double)max_volume);
+    }
+    else if (max_volume == 0) {
+        // max_volume is set inside regional attributes (usu. read from poly files)
+        vol += 'a';
     }
 }
 
@@ -178,17 +182,18 @@ void set_3d_quality_str(std::string &quality, double max_ratio,
 }
 
 
+#ifdef THREED
 void tetrahedralize_polyhedron
 (double max_ratio, double min_dihedral_angle, double max_volume,
  int vertex_per_polygon, int meshing_verbosity, int optlevel,
  int npoints, int nsegments,
  const double *points, const int *segments, const int *segflags,
+ const tetgenio::facet *facets,
  const int nregions, const double *regionattributes,
  int *noutpoints, int *ntriangles, int *noutsegments,
  double **outpoints, int **triangles,
  int **outsegments, int **outsegflags, double **outregattr)
 {
-#ifdef THREED
     //
     // Setting Tetgen options.
     //
@@ -218,18 +223,25 @@ void tetrahedralize_polyhedron
     in.pointlist = const_cast<double*>(points);
     in.numberofpoints = npoints;
 
-    tetgenio::polygon *polys = new tetgenio::polygon[nsegments];
-    for (int i=0; i<nsegments; ++i) {
-        polys[i].vertexlist = const_cast<int*>(&segments[i*vertex_per_polygon]);
-        polys[i].numberofvertices = vertex_per_polygon;
-    }
+    tetgenio::polygon *polys;
+    tetgenio::facet *fl;
+    if (facets == NULL) {
+        polys = new tetgenio::polygon[nsegments];
+        for (int i=0; i<nsegments; ++i) {
+            polys[i].vertexlist = const_cast<int*>(&segments[i*vertex_per_polygon]);
+            polys[i].numberofvertices = vertex_per_polygon;
+        }
 
-    tetgenio::facet *fl = new tetgenio::facet[nsegments];
-    for (int i=0; i<nsegments; ++i) {
-        fl[i].polygonlist = &polys[i];
-        fl[i].numberofpolygons = 1;
-        fl[i].holelist = NULL;
-        fl[i].numberofholes = 0;
+        fl = new tetgenio::facet[nsegments];
+        for (int i=0; i<nsegments; ++i) {
+            fl[i].polygonlist = &polys[i];
+            fl[i].numberofpolygons = 1;
+            fl[i].holelist = NULL;
+            fl[i].numberofholes = 0;
+        }
+    }
+    else {
+        fl = const_cast<tetgenio::facet*>(facets);
     }
 
     in.facetlist = fl;
@@ -256,8 +268,10 @@ void tetrahedralize_polyhedron
     in.facetmarkerlist = NULL;
     in.facetlist = NULL;
     in.regionlist = NULL;
-    delete [] polys;
-    delete [] fl;
+    if (facets == NULL) {
+        delete [] polys;
+        delete [] fl;
+    }
 
     *noutpoints = out.numberofpoints;
     *outpoints = out.pointlist;
@@ -275,8 +289,8 @@ void tetrahedralize_polyhedron
     out.trifacemarkerlist = NULL;
     out.tetrahedronattributelist = NULL;
 
-#endif
 }
+#endif
 
 
 void points_to_mesh(const Param &param, Variables &var,
@@ -754,12 +768,11 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
      * Note that the poly file in 3D has a more complicated format.
      */
 
-    double max_elem_size;
 #ifdef THREED
-    max_elem_size = 0.7 * param.mesh.resolution
+    const double std_elem_size = 0.7 * param.mesh.resolution
         * param.mesh.resolution * param.mesh.resolution;
 #else
-    max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
+    const double std_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution;
 #endif
 
     std::FILE *fp = std::fopen(param.mesh.poly_filename.c_str(), "r");
@@ -799,15 +812,20 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     for (int i=0; i<npoints; i++) {
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
-        int junk;
+        int k;
         double *x = &points[i*NDIMS];
 #ifdef THREED
-        n = std::sscanf(buffer, "%d %lf %lf %lf", &junk, x, x+1, x+2);
+        n = std::sscanf(buffer, "%d %lf %lf %lf", &k, x, x+1, x+2);
 #else
-        n = std::sscanf(buffer, "%d %lf %lf", &junk, x, x+1);
+        n = std::sscanf(buffer, "%d %lf %lf", &k, x, x+1);
 #endif
         if (n != NDIMS+1) {
             std::cerr << "Error: parsing line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
+        if (k != i) {
+            std::cerr << "Error: node number is continuous from 0 at line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
@@ -834,15 +852,13 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     }
 
     // get segment (facet) list
-    int *init_segments = new int[n_init_segments * NODES_PER_FACET];
+#ifdef THREED
+    auto facets = new tetgenio::facet[n_init_segments];
     int *init_segflags = new int[n_init_segments];
     for (int i=0; i<n_init_segments; i++) {
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
-        int *x = &init_segments[i*NODES_PER_FACET];
-
-        int junk;
-#ifdef THREED
+        auto &f = facets[i];
         int npolygons, nholes, bdryflag;
         n = std::sscanf(buffer, "%d %d %d", &npolygons, &nholes, &bdryflag);
         if (n != 3) {
@@ -850,7 +866,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-        if (npolygons != 1 ||
+        if (npolygons <= 0 ||
             nholes != 0) {
             std::cerr << "Error: unsupported value in line " << lineno
                       << " of '" << param.mesh.poly_filename << "'\n";
@@ -859,30 +875,64 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 
         init_segflags[i] = bdryflag;
 
+        f.polygonlist = new tetgenio::polygon[npolygons];
+        f.numberofpolygons = npolygons;
+        f.holelist = NULL;
+        f.numberofholes = 0;
+
+        for (int j=0; j<npolygons; j++) {
+            my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
+
+            std::istringstream inbuf(std::string(buffer, 255));
+            int nvertex;
+            inbuf >> nvertex;
+            if (nvertex < NODES_PER_FACET || nvertex > 9999) {
+                std::cerr << "Error: unsupported number of polygon points in line " << lineno
+                          << " of '" << param.mesh.poly_filename << "'\n";
+                std::exit(1);
+            }
+
+            f.polygonlist[j].vertexlist = new int[nvertex];
+            f.polygonlist[j].numberofvertices = nvertex;
+            for (int k=0; k<nvertex; k++) {
+                inbuf >> f.polygonlist[j].vertexlist[k];
+                if (f.polygonlist[j].vertexlist[k] < 0 ||
+                    f.polygonlist[j].vertexlist[k] >= npoints) {
+                    std::cerr << "Error: segment contains out-of-range node # [0-" << npoints
+                              <<"] in line " << lineno << " of '"
+                              << param.mesh.poly_filename << "'\n";
+                    std::exit(1);
+                }
+            }
+        }
+    }
+#else
+    int *init_segments = new int[n_init_segments * NODES_PER_FACET];
+    int *init_segflags = new int[n_init_segments];
+    for (int i=0; i<n_init_segments; i++) {
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
-        int nvertex;
-        n = std::sscanf(buffer, "%d %d %d %d", &nvertex, x, x+1, x+2);
-        if (nvertex != NODES_PER_FACET) {
-            std::cerr << "Error: unsupported value in line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
-        }
-        if (n != NODES_PER_FACET+1) {
-            std::cerr << "Error: parsing line " << lineno << " of '"
-                      << param.mesh.poly_filename << "'\n";
-            std::exit(1);
-        }
-#else
+        int *x = &init_segments[i*NODES_PER_FACET];
+        int junk;
         n = std::sscanf(buffer, "%d %d %d %d", &junk, x, x+1, init_segflags+i);
         if (n != NODES_PER_FACET+2) {
             std::cerr << "Error: parsing line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-#endif
     }
-
+    for (int i=0; i<n_init_segments; i++) {
+        int *x = &init_segments[i*NODES_PER_FACET];
+        for (int j=0; j<NODES_PER_FACET; j++) {
+            if (x[j] < 0 || x[j] >= npoints) {
+                std::cerr << "Error: segment contains out-of-range node # [0-" << npoints
+                          <<"] in line " << lineno << " of '"
+                          << param.mesh.poly_filename << "'\n";
+                std::exit(1);
+            }
+        }
+    }
+#endif
 
     // get header of hole list
     {
@@ -914,16 +964,11 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-        
-        if (param.ic.mattype_option == 0 && nregions != param.mat.nmat) {
-            std::cerr << "Error: Number of regions should be exactly 'mat.num_materials' but a different value is given in line " << lineno
-                      << " of '" << param.mesh.poly_filename << "'\n";
-            std::exit(1);
-        }
     }
 
     // get region list
-    double *regattr = new double[nregions * (NDIMS+2)]; // each region has 5 data fields: x, (y,) z, region marker (mat type), and volume.
+    double *regattr = new double[nregions * (NDIMS+2)]; // each region has these data fields: x, (y,) z, region marker (mattype), and volume.
+    bool has_max_size = false;
     for (int i=0; i<nregions; i++) {
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
@@ -945,14 +990,57 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
             std::cerr << "Note that this parameter is directly used as the index of mat. prop. arrays.\n";
             std::exit(1);
         }
+
+        if ( x[NDIMS+1] > 0 ) {
+            has_max_size = true; // max area is set for this region
+        }
     }
 
+    double max_elem_size = std_elem_size;
+    if ( has_max_size ) max_elem_size = 0; // special value, see set_volume_str() above.
+
+#ifdef THREED
+    // shortcutting points_to_mesh() for polygon boundary
+    double *pcoord, *pregattr;
+    int *pconnectivity, *psegment, *psegflag;
+
+    tetrahedralize_polyhedron(param.mesh.max_ratio,
+                              param.mesh.min_tet_angle, max_elem_size,
+                              0,
+                              param.mesh.meshing_verbosity,
+                              param.mesh.tetgen_optlevel,
+                              npoints, n_init_segments, points,
+                              NULL, init_segflags,
+                              facets,
+                              nregions, regattr,
+                              &var.nnode, &var.nelem, &var.nseg,
+                              &pcoord, &pconnectivity,
+                              &psegment, &psegflag, &pregattr);
+
+    var.coord = new array_t(pcoord, var.nnode);
+    var.connectivity = new conn_t(pconnectivity, var.nelem);
+    var.segment = new segment_t(psegment, var.nseg);
+    var.segflag = new segflag_t(psegflag, var.nseg);
+    var.regattr = new regattr_t(pregattr, var.nelem);
+#else
     points_to_mesh(param, var, npoints, points,
                    n_init_segments, init_segments, init_segflags, nregions, regattr,
                    max_elem_size, NODES_PER_FACET);
+#endif
 
     delete [] points;
+#ifdef THREED
+    for (int i=0; i<n_init_segments; i++) {
+        auto f = facets[i];
+        for (int j=0; j<f.numberofpolygons; j++) {
+            delete [] f.polygonlist[j].vertexlist;
+        }
+        delete [] f.polygonlist;
+    }
+    delete [] facets;
+#else
     delete [] init_segments;
+#endif
     delete [] init_segflags;
     delete [] regattr;
 }
@@ -976,6 +1064,7 @@ void points_to_new_mesh(const Mesh &mesh, int npoints, const double *points,
                               mesh.tetgen_optlevel,
                               npoints, n_init_segments, points,
                               init_segments, init_segflags,
+                              NULL,
                               n_regions, regattr,
                               &nnode, &nelem, &nseg,
                               &pcoord, &pconnectivity,
@@ -1035,11 +1124,9 @@ void points_to_new_surface(const Mesh &mesh, int npoints, const double *points,
 
 void discard_internal_segments(int &nseg, segment_t &segment, segflag_t &segflag)
 {
-    const uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
-
     int n = 0;
     while (n < nseg) {
-        if (segflag[n][0] & flag) {
+        if (segflag[n][0] & BOUND_ANY) {
             // This is a boundary segment, go to next.
             n++;
         }
@@ -1069,14 +1156,30 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
     const int nseg = segment.size();
 
     //
-    // sort coordinate of nodes and element centers
+    // find the longest/shortest dimension
     //
+    double_vec lengths = {param.mesh.xlength,
+#ifdef THREED
+                          param.mesh.ylength,
+#endif
+                          param.mesh.zlength};
+    std::vector<std::size_t> idx(NDIMS);
+    sortindex(lengths, idx);
+    const int dmin = idx[0];
+    const int dmid = idx[1];
+    const int dmax = idx[NDIMS-1];
 
     //
+    // sort coordinate of nodes and element centers
+    //
     double_vec wn(nnode);
-    double aspect_ratio_factor = 1e-6 * param.mesh.xlength / param.mesh.zlength;
+    const double f = 1e-3;
     for(int i=0; i<nnode; i++) {
-        wn[i] = coord[i][0] - aspect_ratio_factor * coord[i][NDIMS-1];
+        wn[i] = coord[i][dmax]
+#ifdef THREED
+            + f * coord[i][dmid]
+#endif
+            + f * f * coord[i][dmin];
     }
 
     double_vec we(nelem);
@@ -1166,15 +1269,15 @@ void create_boundary_nodes(Variables& var)
      */
     for (std::size_t i=0; i<var.bcflag->size(); ++i) {
         uint f = (*var.bcflag)[i];
-        for (int j=0; j<6; ++j) {
-            if (f & bdry[j]) {
+        for (int j=0; j<nbdrytypes; ++j) {
+            if (f & (1<<j)) {
                 // this node belongs to a boundary
                 (var.bnodes[j]).push_back(i);
             }
         }
     }
 
-    // for (int j=0; j<6; ++j) {
+    // for (int j=0; j<nbdrytypes; ++j) {
     //     std::cout << "boundary " << j << '\n';
     //     print(std::cout, var.bnodes[j]);
     //     std::cout << '\n';
@@ -1191,7 +1294,7 @@ void create_boundary_facets(Variables& var)
         const int *conn = (*var.connectivity)[e];
         for (int i=0; i<FACETS_PER_ELEM; ++i) {
             // set all bits to 1
-            uint flag = BOUNDX0 | BOUNDX1 | BOUNDY0 | BOUNDY1 | BOUNDZ0 | BOUNDZ1;
+            uint flag = BOUND_ANY;
             for (int j=0; j<NODES_PER_FACET; ++j) {
                 // find common flags
                 int n = NODE_OF_FACET[i][j];
@@ -1199,13 +1302,21 @@ void create_boundary_facets(Variables& var)
             }
             if (flag) {
                 // this facet belongs to a boundary
-                int n = bdry_order.find(flag)->second;
-                var.bfacets[n].push_back(std::make_pair(e, i));
+                int ibound;
+                for (ibound=0; ibound<nbdrytypes; ibound++) {
+                    if (flag == (1<<ibound))
+                        goto found;
+                }
+                std::cerr << "Error: facet " << i << " of element " << e
+                          << " belongs to more than one boundary!\n";
+                std::exit(1);
+            found:
+                var.bfacets[ibound].push_back(std::make_pair(e, i));
             }
         }
     }
 
-    // for (int n=0; n<6; ++n) {
+    // for (int n=0; n<nbdrytypes; ++n) {
     //     std::cout << "boundary facet " << n << ":\n";
     //     print(std::cout, var.bfacets[n]);
     //     std::cout << '\n';
@@ -1373,7 +1484,7 @@ void create_new_mesh(const Param& param, Variables& var)
         std::exit(1);
     }
 
-    if (param.mesh.discard_internal_segments)
+    if (param.mesh.is_discarding_internal_segments)
         discard_internal_segments(var.nseg, *var.segment, *var.segflag);
 
     renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr, 1);

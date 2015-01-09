@@ -189,7 +189,7 @@ void prepare_interpolation(const Variables &var,
     // std::cout << '\n';
 }
 
-} // end of anonymous namespace
+} // anonymous namespace
 
 
 void barycentric_node_interpolation(Variables &var,

@@ -32,7 +32,6 @@ void allocate_variables(const Param &param, Variables& var)
     }
 
     var.ntmp= new double_vec(n);
-    var.elquality= new double_vec(e);
 
     var.force = new array_t(n, 0);
 
@@ -68,9 +67,6 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.ntmp;
     var.ntmp = new double_vec(n);
-
-    delete var.elquality;
-    var.elquality = new double_vec(e);
 
     delete var.force;
     var.force = new array_t(n, 0);
@@ -142,6 +138,9 @@ void update_temperature(const Param &param, const Variables &var,
 
     loop_all_elem(var.egroups, elemf);
 
+    // Combining temperature update and bc in the same loop for efficiency,
+    // since only the top boundary has Dirichlet bc, and all the other boundaries
+    // have no heat flux bc.
      #pragma omp parallel for default(none)      \
          shared(var, param, tdot, temperature)
      for (int n=0; n<var.nnode; ++n) {

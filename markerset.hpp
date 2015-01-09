@@ -23,6 +23,8 @@ public:
         delete _mattype;
     }
 
+    static void random_eta( double* ); // class method
+
     void append_random_marker_in_elem( int el, int mt );
     void append_marker( const double *eta, int el, int mt );
     void remove_marker(int i);
@@ -47,7 +49,7 @@ public:
     inline void set_eta( const int i, const double r[NDIMS] );
 
 private:
-    const std::string name;
+    const std::string _name;
 
     // Didn't create a data type for an individual marker to follow the "structure of arrays" concept.
     // Number of markers (may change during remeshing)
@@ -65,7 +67,6 @@ private:
     // Unique id
     int_vec *_id;
 
-    void random_eta( double* );
     void random_markers( const Param&, Variables& );
     void regularly_spaced_markers( const Param&, Variables& );
     void allocate_markerdata( const int );

@@ -2,6 +2,7 @@
 #define DYNEARTHSOL3D_IC_HPP
 
 double get_prem_pressure(double depth);
+double get_prem_pressure_modified(double depth);
 void initial_stress_state(const Param &param, const Variables &var,
                           tensor_t &stress, tensor_t &strain,
                           double &compensation_pressure);
