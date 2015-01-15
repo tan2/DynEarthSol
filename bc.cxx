@@ -73,6 +73,12 @@ double find_max_vbc(const BC &bc)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_z1));
     if (bc.vbc_n0 == 1 || bc.vbc_n0 == 3)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n0));
+    if (bc.vbc_n1 == 1 || bc.vbc_n1 == 3)
+        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n1));
+    if (bc.vbc_n2 == 1 || bc.vbc_n2 == 3)
+        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n2));
+    if (bc.vbc_n3 == 1 || bc.vbc_n3 == 3)
+        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n3));
 
     return max_vbc_val;
 }
@@ -288,23 +294,25 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
         //
         // N
         //
-        if (flag & BOUNDN0) {
-            const double *n = var.bnormals[iboundn0]; // unit normal vector
-            switch (bc.vbc_n0) {
-            case 1:
-                {
-                    double vn = 0;
-                    for (int d=0; d<NDIMS; d++)
-                        vn += v[d] * n[d];  // normal velocity
+        for (int ib=iboundn0; ib<=iboundn3; ib++) {
+            if (flag & 1 << ib) {
+                const double *n = var.bnormals[ib]; // unit normal vector
+                switch (var.vbc_types[ib]) {
+                case 1:
+                    {
+                        double vn = 0;
+                        for (int d=0; d<NDIMS; d++)
+                            vn += v[d] * n[d];  // normal velocity
 
+                        for (int d=0; d<NDIMS; d++)
+                            v[d] += (var.vbc_values[ib] - vn) * n[d];
+                    }
+                    break;
+                case 3:
                     for (int d=0; d<NDIMS; d++)
-                        v[d] += (bc.vbc_val_n0 - vn) * n[d];
+                        v[d] = var.vbc_values[ib] * n[d];
+                    break;
                 }
-                break;
-            case 3:
-                for (int d=0; d<NDIMS; d++)
-                    v[d] = bc.vbc_val_n0 * n[d];
-                break;
             }
         }
 

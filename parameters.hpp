@@ -100,6 +100,9 @@ struct BC {
     int vbc_z0;
     int vbc_z1;
     int vbc_n0;
+    int vbc_n1;
+    int vbc_n2;
+    int vbc_n3;
 
     double vbc_val_x0;
     double vbc_val_x1;
@@ -108,6 +111,9 @@ struct BC {
     double vbc_val_z0;
     double vbc_val_z1;
     double vbc_val_n0;
+    double vbc_val_n1;
+    double vbc_val_n2;
+    double vbc_val_n3;
 };
 
 struct IC {

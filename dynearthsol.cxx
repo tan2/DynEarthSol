@@ -40,6 +40,9 @@ void init_var(const Param& param, Variables& var)
     var.vbc_types[4] = param.bc.vbc_z0;
     var.vbc_types[5] = param.bc.vbc_z1;
     var.vbc_types[6] = param.bc.vbc_n0;
+    var.vbc_types[7] = param.bc.vbc_n1;
+    var.vbc_types[8] = param.bc.vbc_n2;
+    var.vbc_types[9] = param.bc.vbc_n3;
 
     var.vbc_values[0] = param.bc.vbc_val_x0;
     var.vbc_values[1] = param.bc.vbc_val_x1;
@@ -48,6 +51,9 @@ void init_var(const Param& param, Variables& var)
     var.vbc_values[4] = param.bc.vbc_val_z0;
     var.vbc_values[5] = param.bc.vbc_val_z1;
     var.vbc_values[6] = param.bc.vbc_val_n0;
+    var.vbc_values[7] = param.bc.vbc_val_n1;
+    var.vbc_values[8] = param.bc.vbc_val_n2;
+    var.vbc_values[9] = param.bc.vbc_val_n3;
 }
 
 

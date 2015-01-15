@@ -249,6 +249,21 @@ static void declare_parameters(po::options_description &cfg,
         ("bc.vbc_val_n0", po::value<double>(&p.bc.vbc_val_n0)->default_value(0),
          "Value of boundary condition for slant boundary #0 (if velocity, unit is m/s, "
          "outward normal direction is positive; if stress, unit is Pa)")
+        ("bc.vbc_n1", po::value<int>(&p.bc.vbc_n1)->default_value(1),
+         "Type of boundary condition for slant boundary #1 (only type 1, 3 are supported).")
+        ("bc.vbc_val_n1", po::value<double>(&p.bc.vbc_val_n1)->default_value(0),
+         "Value of boundary condition for slant boundary #1 (if velocity, unit is m/s, "
+         "outward normal direction is positive; if stress, unit is Pa)")
+        ("bc.vbc_n2", po::value<int>(&p.bc.vbc_n2)->default_value(1),
+         "Type of boundary condition for slant boundary #2 (only type 1, 3 are supported).")
+        ("bc.vbc_val_n2", po::value<double>(&p.bc.vbc_val_n2)->default_value(0),
+         "Value of boundary condition for slant boundary #2 (if velocity, unit is m/s, "
+         "outward normal direction is positive; if stress, unit is Pa)")
+        ("bc.vbc_n3", po::value<int>(&p.bc.vbc_n3)->default_value(1),
+         "Type of boundary condition for slant boundary #3 (only type 1, 3 are supported).")
+        ("bc.vbc_val_n3", po::value<double>(&p.bc.vbc_val_n3)->default_value(0),
+         "Value of boundary condition for slant boundary #3 (if velocity, unit is m/s, "
+         "outward normal direction is positive; if stress, unit is Pa)")
         ;
 
     cfg.add_options()
@@ -596,6 +611,18 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         }
         if ( p.bc.vbc_n0 != 1 && p.bc.vbc_n0 != 3 ) {
             std::cerr << "Error: bc.vbc_n0 is not 1, or 3.\n";
+            std::exit(1);
+        }
+        if ( p.bc.vbc_n1 != 1 && p.bc.vbc_n1 != 3 ) {
+            std::cerr << "Error: bc.vbc_n1 is not 1, or 3.\n";
+            std::exit(1);
+        }
+        if ( p.bc.vbc_n2 != 1 && p.bc.vbc_n2 != 3 ) {
+            std::cerr << "Error: bc.vbc_n2 is not 1, or 3.\n";
+            std::exit(1);
+        }
+        if ( p.bc.vbc_n3 != 1 && p.bc.vbc_n3 != 3 ) {
+            std::cerr << "Error: bc.vbc_n3 is not 1, or 3.\n";
             std::exit(1);
         }
     }
