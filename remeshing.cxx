@@ -276,8 +276,8 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord,
                 enclosing_edges.push_back(&(kk->first));
             }
             else {
-                // no possible
-                std::cout << "Error: an edge belongs to more than 2 facets. The mesh is corrupted.\n";
+                // not possible
+                std::cout << "Error: an edge is belonged to more than 2 facets. The mesh is corrupted.\n";
                 std::exit(11);
             }
         }
@@ -591,17 +591,6 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
             std::cout << '\n';
         }
 
-        int major_direction = 0;  // largest component of normal vector
-        if (i >= iboundn0) { // slant boundaries start at iboundn0
-            double max = 0;
-            for (int d=0; d<NDIMS; d++) {
-                if (std::abs(bnormals[i][d]) > max) {
-                    max = std::abs(bnormals[i][d]);
-                    major_direction = d;
-                }
-            }
-        }
-
         // 3d coordinate -> 2d
         Array2D<double,2> coord2d(bdry_nodes.size() - bdeleting.size());
         int_vec& inv = inverse[i];
@@ -611,6 +600,17 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                 print(std::cout, bdry_nodes);
                 std::cout << "\n";
                 std::cout << bdry_nodes.size() << ' ' << bdeleting.size() << '\n';
+            }
+
+            int major_direction = 0;  // largest component of normal vector
+            if (i >= iboundn0) { // slant boundaries start at iboundn0
+                double max = 0;
+                for (int d=0; d<NDIMS; d++) {
+                    if (std::abs(bnormals[i][d]) > max) {
+                        max = std::abs(bnormals[i][d]);
+                        major_direction = d;
+                    }
+                }
             }
 
             for (std::size_t j=0, k=0, n=0; j<bdry_nodes.size(); j++) {
@@ -665,13 +665,9 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 
         // re-triangulate the affected boundary (connect only, not adding new points)
         {
-            Mesh mesh_param;
-            mesh_param.min_angle = 0;
-            mesh_param.meshing_verbosity = 0;
             const int_vec& polygon = facet_polygons[i];
             int *segflag = new int[polygon.size()]; // all 0
             int *segment = new int[2 * polygon.size()];
-            const int_vec& inv = inverse[i];
             std::size_t j = 0;
             int new_polygon_size = 1;
             while (j < polygon.size() - 1) {
@@ -698,11 +694,16 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                 print(std::cout, segment, new_polygon_size*2);
                 std::cout << '\n';
             }
+
+            // temporary arrays, some will be allocated inside Triangle library
             int new_nnode, new_nelem, new_nseg;
             double *pcoord, *pregattr;
             int *pconnectivity, *psegment, *psegflag;
 
-            points_to_new_surface(mesh_param, coord2d.size(), coord2d.data(),
+            Mesh mesh;
+            mesh.min_angle = 0;
+            mesh.meshing_verbosity = 0;
+            points_to_new_surface(mesh, coord2d.size(), coord2d.data(),
                                   new_polygon_size, segment, segflag,
                                   0, NULL,
                                   0, 3,
@@ -724,7 +725,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                 std::exit(12);
             }
             if (new_nseg != new_polygon_size) {
-                std::cerr << "Error: ponits_to_new_surface is adding new segments!\n";
+                std::cerr << "Error: points_to_new_surface is adding new segments!\n";
                 std::exit(12);
             }
 
@@ -732,20 +733,21 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
             delete [] psegment;
             delete [] psegflag;
             delete [] pregattr;
+            // remember to free pconnectivity later
             delete [] segflag;
             delete [] segment;
 
-            facet.push_back(pconnectivity);
-            nfacets.push_back(new_nelem);
-
-            // translate index of pconnectivity to node #
+            // translating index of local (per-boundary) node # to global (whole-mesh) node #
             for (int j=0; j<new_nelem; ++j) {
-                // 3 nodes per surface facet
-                for (int k=0; k<3; ++k) {
-                    int n = pconnectivity[3*j + k];
-                    pconnectivity[3*j + k] = inv[n];
+                for (int k=0; k<NODES_PER_FACET; ++k) {
+                    int n = pconnectivity[NODES_PER_FACET*j + k];
+                    pconnectivity[NODES_PER_FACET*j + k] = inv[n];
                 }
             }
+
+            // storing the new boundary facets for later
+            facet.push_back(pconnectivity);
+            nfacets.push_back(new_nelem);
         }
     }
 
@@ -754,13 +756,19 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
         std::cerr << "Error: ponits_to_new_surface too many segments!\n";
         std::exit(12);
     }
+
+    // appending facets of all boundaries into segment array
     for (int i=0, n=0; i<nbdrytypes; ++i) {
         for (int k=0; k<nfacets[i]; ++k, ++n) {
             for (int j=0; j<NODES_PER_FACET; ++j)
                 segment[n*NODES_PER_FACET + j] = facet[i][k*NODES_PER_FACET + j];
         }
     }
+    for (int i=0; i<nbdrytypes; ++i) {
+        delete [] facet[i];
+    }
 
+    // mark deleted facets
     for (int i=nseg2; i<nseg; ++i) {
         for (int j=0; j<NODES_PER_FACET; ++j)
             segment[i*NODES_PER_FACET + j] = DELETED_FACET;
@@ -768,14 +776,9 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
     }
     nseg = nseg2;
 
-    for (int i=0; i<nbdrytypes; ++i) {
-        delete [] facet[i];
-    }
-
-    int *endsegment = segment + nseg * NODES_PER_FACET;
-    int end = npoints - 1;
-
     // delete points from the end
+    int *endsegment = segment + nseg * NODES_PER_FACET;  // last segment
+    int end = npoints - 1;  // last point
     for (auto i=points_to_delete.rbegin(); i<points_to_delete.rend(); ++i) {
         if (DEBUG) {
             std::cout << " deleting point " << *i << " replaced by point " << end << '\n';
@@ -875,73 +878,72 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
               const array_t &original_coord, const conn_t &original_connectivity,
               const segment_t &original_segment, const segflag_t &original_segflag)
 {
-    // We don't want to refine large elements during remeshing,
-    // so using negative size as the max area
-    const double max_elem_size = -1;
-    const int vertex_per_polygon = 3;
-    const double min_dist = std::pow(param.mesh.smallest_size*sizefactor, 1./NDIMS) * param.mesh.resolution;
-    Mesh mesh_param = param.mesh;
-    mesh_param.poly_filename = "";
-
     int_vec facet_polygons[nbdrytypes];
     assemble_facet_polygons(var, original_coord, original_connectivity, facet_polygons);
 
-    // create a copy of original_coord and original_segment
+    // create a copy of original mesh
     array_t old_coord(original_coord);
     conn_t old_connectivity(original_connectivity);
     segment_t old_segment(original_segment);
     segflag_t old_segflag(original_segflag);
 
+    // raw pointers to old mesh
     double *qcoord = old_coord.data();
     int *qconn = old_connectivity.data();
     int *qsegment = old_segment.data();
     int *qsegflag = old_segflag.data();
 
+    // size of old mesh
     int old_nnode = old_coord.size();
     int old_nelem = old_connectivity.size();
     int old_nseg = old_segment.size();
 
-    // copy
+    // copying useful arrays of old mesh
     double_vec old_volume(*var.volume);
     uint_vec old_bcflag(*var.bcflag);
     int_vec old_bnodes[nbdrytypes];
     for (int i=0; i<nbdrytypes; ++i) {
-        old_bnodes[i] = var.bnodes[i];
+        old_bnodes[i] = var.bnodes[i];  // copying whole vector
     }
 
-    int_vec points_to_delete;
     bool (*excl_func)(uint) = NULL; // function pointer indicating which point cannot be deleted
-
-    /* choosing which way to remesh the boundary */
     switch (param.mesh.remeshing_option) {
     case 0:
+    case 1:
+    case 2:
         // DO NOT change the boundary
         excl_func = &is_boundary;
         break;
-    case 1:
-        excl_func = &is_boundary;
-        flatten_bottom(old_bcflag, qcoord, -param.mesh.zlength,
-                       points_to_delete, min_dist);
-        break;
-    case 2:
-        excl_func = &is_boundary;
-        new_bottom(old_bcflag, qcoord, -param.mesh.zlength,
-                   points_to_delete, min_dist, qsegment, qsegflag, old_nseg);
-        break;
     case 10:
-        excl_func = &is_corner;
-        break;
     case 11:
+        // DO NOT change the corners
         excl_func = &is_corner;
-        flatten_bottom(old_bcflag, qcoord, -param.mesh.zlength,
-                       points_to_delete, min_dist);
         break;
     default:
         std::cerr << "Error: unknown remeshing_option: " << param.mesh.remeshing_option << '\n';
         std::exit(1);
     }
 
-    if (bad_quality == 3) {
+    /* choosing which way to remesh the boundary */
+    int_vec points_to_delete;
+    const double min_dist = std::pow(param.mesh.smallest_size*sizefactor, 1./NDIMS) * param.mesh.resolution;
+    switch (param.mesh.remeshing_option) {
+    case 0:
+    case 10:
+        // Nothing
+        break;
+    case 1:
+    case 11:
+        flatten_bottom(old_bcflag, qcoord, -param.mesh.zlength,
+                       points_to_delete, min_dist);
+        break;
+    case 2:
+        new_bottom(old_bcflag, qcoord, -param.mesh.zlength,
+                   points_to_delete, min_dist, qsegment, qsegflag, old_nseg);
+        break;
+    }
+
+    if (bad_quality == 3) { // there is a tiny element
         // Marking (non-boundary) points of small elements, which will be deleted later
         int_vec tiny_elems;
         find_tiny_element(param, old_volume, tiny_elems);
@@ -984,20 +986,29 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     int *pconnectivity, *psegment, *psegflag;
 
     int nloops = 0;
+    Mesh mesh = param.mesh;  // temporary copy
+    mesh.poly_filename = ""; // not used, but still need to be init'd
     while (1) {
 
         if (bad_quality == 3) {
             // lessen the quality constraint so that less new points got inserted to the mesh
             // and less chance of having tiny elements
-            mesh_param.min_angle *= 0.8;
-            mesh_param.max_ratio *= 0.8;
-            mesh_param.min_tet_angle *= 1.25;
+            mesh.min_angle *= 0.8;
+            mesh.max_ratio *= 0.8;
+            mesh.min_tet_angle *= 1.25;
         }
 
         pregattr = NULL;
 
+        //
         // new mesh
-        points_to_new_mesh(mesh_param, old_nnode, qcoord,
+        //
+
+        // We don't want to refine large elements during remeshing,
+        // so using negative size as the max area
+        const double max_elem_size = -1;
+        const int vertex_per_polygon = 3;
+        points_to_new_mesh(mesh, old_nnode, qcoord,
                            old_nseg, qsegment, qsegflag,
                            0, pregattr,
                            max_elem_size, vertex_per_polygon,
