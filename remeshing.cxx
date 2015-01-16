@@ -209,11 +209,11 @@ struct hash1
 };
 
 
-void assemble_facet_polygons(const Variables &var, const array_t &old_coord,
+void assemble_bdry_polygons(const Variables &var, const array_t &old_coord,
                              const conn_t &old_connectivity,
-                             int_vec (&facet_polygons)[nbdrytypes])
+                             int_vec (&bdry_polygons)[nbdrytypes])
 {
-    /* facet_polygons[i] contains a list of vertex which enclose the i-th boundary facet */
+    /* bdry_polygons[i] contains a polygon, ie. a list of vertex, enclosing the i-th boundary */
 
 #ifdef THREED
     const int nodes_per_edge = 2;  // an edge has 2 nodes
@@ -286,7 +286,7 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord,
         // Connecting edges to form a polygon
         //
 
-        int_vec &polygon = facet_polygons[ibound];
+        int_vec &polygon = bdry_polygons[ibound];
         const auto g0 = enclosing_edges.begin();
         int head = (*g0)->first;
         int tail = (*g0)->second;
@@ -305,14 +305,15 @@ void assemble_facet_polygons(const Variables &var, const array_t &old_coord,
                 }
             }
         }
+        // the starting point and end point must be the same
         if (polygon.front() != polygon.back()) {
             std::cout << "Error: boundary polygon is not closed. The mesh is corrupted.\n";
             std::exit(11);
         }
-        polygon.pop_back();
+        polygon.pop_back();  // removed the duplicating end point
 
         if (DEBUG > 1) {
-            std::cout << "facet polygon nodes " << ibound << '\n';
+            std::cout << "nodes for " << ibound << "-th boundary polygon:\n";
             print(std::cout, polygon);
             std::cout << '\n';
         }
@@ -562,7 +563,7 @@ void delete_points_and_merge_segments(const int_vec &points_to_delete, int &npoi
 
 void delete_points_and_merge_facets(const int_vec &points_to_delete,
                                     const int_vec (&bnodes)[nbdrytypes],
-                                    const int_vec (&facet_polygons)[nbdrytypes],
+                                    const int_vec (&bdry_polygons)[nbdrytypes],
                                     const int_vec (&bdrynode_deleting)[nbdrytypes],
                                     const double (&bnormals)[nbdrytypes][NDIMS],
                                     int &npoints,
@@ -666,7 +667,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
         // re-triangulate the affected boundary (connect only, not adding new points)
         {
             // converting polygon vertex to segment array
-            const int_vec& polygon = facet_polygons[i];
+            const int_vec& polygon = bdry_polygons[i];
             int *segflag = new int[polygon.size()]; // all 0, its value does not matter
             int *segment = new int[2 * polygon.size()];
             std::size_t first = 0;
@@ -821,7 +822,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 
 void delete_points_on_boundary(int_vec &points_to_delete,
                                const int_vec (&bnodes)[nbdrytypes],
-                               const int_vec (&facet_polygons)[nbdrytypes],
+                               const int_vec (&bdry_polygons)[nbdrytypes],
                                const double (&bnormals)[nbdrytypes][NDIMS],
                                int &npoints,
                                int &nseg, double *points,
@@ -861,7 +862,7 @@ void delete_points_on_boundary(int_vec &points_to_delete,
         return;
     }
 
-    delete_points_and_merge_facets(points_to_delete, bnodes, facet_polygons,
+    delete_points_and_merge_facets(points_to_delete, bnodes, bdry_polygons,
                                    bdrynode_deleting, bnormals, npoints, nseg,
                                    points, segment, segflag, bcflag, min_size);
     delete_facets(nseg, segment, segflag);
@@ -871,7 +872,7 @@ void delete_points_on_boundary(int_vec &points_to_delete,
     delete_facets(nseg, segment, segflag);
     // silence 'unused variable' complier warning
     (void) bnodes;
-    (void) facet_polygons;
+    (void) bdry_polygons;
 #endif
 
     if (DEBUG > 1) {
@@ -886,8 +887,8 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
               const array_t &original_coord, const conn_t &original_connectivity,
               const segment_t &original_segment, const segflag_t &original_segflag)
 {
-    int_vec facet_polygons[nbdrytypes];
-    assemble_facet_polygons(var, original_coord, original_connectivity, facet_polygons);
+    int_vec bdry_polygons[nbdrytypes];
+    assemble_bdry_polygons(var, original_coord, original_connectivity, bdry_polygons);
 
     // create a copy of original mesh
     array_t old_coord(original_coord);
@@ -983,7 +984,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     case 10:
     case 11:
         // deleting points, some of them might be on the boundary
-        delete_points_on_boundary(points_to_delete, old_bnodes, facet_polygons, var.bnormals,
+        delete_points_on_boundary(points_to_delete, old_bnodes, bdry_polygons, var.bnormals,
                                   old_nnode, old_nseg,
                                   qcoord, qsegment, qsegflag, old_bcflag, min_dist);
         break;
