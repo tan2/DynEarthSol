@@ -1035,7 +1035,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
 
         const double smallest_vol = param.mesh.smallest_size * sizefactor * std::pow(param.mesh.resolution, NDIMS);
         bad_quality = 0;
-        for (int e=0; e<var.nelem; e++) {
+        for (int e=0; e<new_nelem; e++) {
             if (new_volume[e] < smallest_vol) {
                 bad_quality = 3;
                 break;
