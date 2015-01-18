@@ -665,32 +665,39 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 
         // re-triangulate the affected boundary (connect only, not adding new points)
         {
+            // converting polygon vertex to segment array
             const int_vec& polygon = facet_polygons[i];
-            int *segflag = new int[polygon.size()]; // all 0
+            int *segflag = new int[polygon.size()]; // all 0, its value does not matter
             int *segment = new int[2 * polygon.size()];
-            std::size_t j = 0;
-            int new_polygon_size = 1;
-            while (j < polygon.size() - 1) {
-                std::size_t ia = std::find(inv.begin(), inv.end(), polygon[j]) - inv.begin();
-                while (ia == inv.size()) {
-                    // this point is to be deleted
-                    ++j;
-                    ia = std::find(inv.begin(), inv.end(), polygon[j]) - inv.begin();
+            std::size_t first = 0;
+            int new_polygon_size = 0;
+            for (std::size_t j=0; j<polygon.size(); j++) {
+                auto search = std::find(inv.begin(), inv.end(), polygon[j]);
+                if (search != inv.end()) {  // the vertex is not deleted
+                    std::size_t ia = search - inv.begin();
+                    if (new_polygon_size == 0) {
+                        // start of the polygon
+                        segment[0] = ia;
+                        first = ia;
+                    }
+                    else if (ia == first) {
+                        // end of the polygon
+                        segment[2*new_polygon_size-1] = ia;
+                        ++new_polygon_size;
+                        break;
+                    }
+                    else {
+                        segment[2*new_polygon_size-1] = segment[2*new_polygon_size] = ia;
+                    }
+                    ++new_polygon_size;
                 }
-
-                segment[2*new_polygon_size-1] = segment[2*new_polygon_size] = ia;
-                ++new_polygon_size;
-                ++j;
             }
-            // close the loop with the last point, which is a corner point and will never be deleted
-            int ia = std::find(inv.begin(), inv.end(), polygon[polygon.size()-1]) - inv.begin();
-            segment[0] = segment[2*new_polygon_size-1] = ia;
 
             if (DEBUG) {
                 std::cout << "inverse: \n";
                 print(std::cout, inv);
                 std::cout << '\n';
-                std::cout << "old segments: ";
+                std::cout << "polygon segments: ";
                 print(std::cout, segment, new_polygon_size*2);
                 std::cout << '\n';
             }
@@ -746,6 +753,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
             }
 
             // storing the new boundary facets for later
+            // ownership of "pconnectivity" array is transferred to "facet"
             facet.push_back(pconnectivity);
             nfacets.push_back(new_nelem);
         }
