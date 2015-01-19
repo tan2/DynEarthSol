@@ -1026,9 +1026,6 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         array_t new_coord(pcoord, new_nnode);
         conn_t new_connectivity(pconnectivity, new_nelem);
 
-        uint_vec new_bcflag(new_nnode);
-        create_boundary_flags2(new_bcflag, new_nseg, psegment, psegflag);
-
         // deleting (non-boundary) nodes to avoid having tiny elements
         double_vec new_volume(new_nelem);
         compute_volume(new_coord, new_connectivity, new_volume);
