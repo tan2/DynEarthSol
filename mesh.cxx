@@ -1285,13 +1285,52 @@ void create_boundary_nodes(Variables& var)
 }
 
 
+namespace {
+    struct ThreeInt
+    {
+        int a, b, c;
+        ThreeInt(int x, int y, int z)
+        {
+            // ensure that a < b < c
+            if (x < y) {
+                if (y < z)
+                    a = x, b = y, c = z;
+                else {
+                    if (x < z)
+                        a = x, b = z, c = y;
+                    else
+                        a = z, b = x, c = y;
+                }
+            }
+            else {
+                if (x < z)
+                    a = y, b = x, c = z;
+                else {
+                    if (y < z)
+                        a = y, b = z, c = x;
+                    else
+                        a = z, b = y, c = x;
+                }
+            }
+        }
+
+        bool operator==(ThreeInt &rhs)
+        {
+            return a==rhs.a && b==rhs.b && c==rhs.c;
+        }
+    };
+}
+
+
 void create_boundary_facets(Variables& var)
 {
     /* var.bfacets[i] contains a list of facets (or segments in 2D)
      * on the i-th boundary. (See constants.hpp for the order of boundaries.)
      */
+    int_vec special_elem, special_bdry;
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
+        int count[nbdrytypes] = {0};  // how many facets (0~4) of this element are on the boundary?
         for (int i=0; i<FACETS_PER_ELEM; ++i) {
             // set all bits to 1
             uint flag = BOUND_ANY;
@@ -1301,17 +1340,85 @@ void create_boundary_facets(Variables& var)
                 flag &= (*var.bcflag)[conn[n]];
             }
             if (flag) {
-                // this facet belongs to a boundary
+                // this facet (very likely) belongs to a boundary
                 int ibound;
                 for (ibound=0; ibound<nbdrytypes; ibound++) {
                     if (flag == (1<<ibound))
                         goto found;
                 }
+                // multiple bits set in flag!
                 std::cerr << "Error: facet " << i << " of element " << e
                           << " belongs to more than one boundary!\n";
                 std::exit(1);
             found:
                 var.bfacets[ibound].push_back(std::make_pair(e, i));
+                count[ibound]++;
+                if (count[ibound] == 2) {
+                    // Uncommon situation: one element has two or three facets
+                    // belonging to the same boundary (usually top or bottom).
+                    // The other facets of this element, although not on the boundary,
+                    // will be reported as false positive.
+                    // Another element, sharing the same facet, will be reported
+                    // as false positive too.
+                    special_elem.push_back(e);
+                    special_bdry.push_back(ibound);
+                }
+            }
+        }
+    }
+
+    // remove the false positive
+    for (auto i=0; i<special_elem.size(); ++i) {
+        int e = special_elem[i];
+        int ibound = special_bdry[i];
+        uint flag = 1 << ibound;
+        const int *conn = (*var.connectivity)[e];
+
+        std::vector<ThreeInt> trblf;
+
+        auto p = var.bfacets[ibound].end();
+        while (p != var.bfacets[ibound].begin()) {  // loop in reverse order
+            --p;
+            if (p->first == e) {
+                int f = p->second;
+                // comparing the node ids of this facet with those in segment array
+                ThreeInt a3i(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]], conn[NODE_OF_FACET[f][2]]);
+                // std::cout << "check facet  " << e << ' ' << a3i.a << ' ' << a3i.b << ' ' << a3i.c << '\n';
+                bool false_positive = true;
+                for (int k=0; k<var.nseg; k++) {
+                    ThreeInt b3i((*var.segment)[k][0], (*var.segment)[k][1], (*var.segment)[k][2]);
+                    if (a3i == b3i) {
+                        false_positive = false;
+                        break;
+                    }
+                }
+                if (false_positive) {
+                    // std::cout << " is removed\n";
+                    p = var.bfacets[ibound].erase(p);
+                    trblf.push_back(a3i); // storing troublesome facet
+                }
+            }
+        }
+
+        if (trblf.size() != 1 && trblf.size() != 2) {
+            std::cerr << "Error: mesh facet is corrupted!\n";
+            std::exit(12);
+        }
+
+        // deleting the conjugate facet of the troublesome facet
+        for (auto d=trblf.begin(); d!=trblf.end(); ++d) {
+            auto p = var.bfacets[ibound].end();
+            while (p != var.bfacets[ibound].begin()) {  // loop in reverse order
+                --p;
+                int e = p->first;
+                int f = p->second;
+                const int *conn = (*var.connectivity)[e];
+                ThreeInt a3i(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]], conn[NODE_OF_FACET[f][2]]);
+                if (*d == a3i) {
+                    // std::cout << "troublesome facet  " << e << ' ' << a3i.a << ' ' << a3i.b << ' ' << a3i.c << " is removed\n";
+                    p = var.bfacets[ibound].erase(p);
+                    break;
+                }
             }
         }
     }
