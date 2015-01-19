@@ -1005,7 +1005,13 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
             mesh.max_ratio *= 0.8;
             mesh.min_tet_angle *= 1.25;
         }
-
+#ifdef THREED
+        if (nloops != 0 && bad_quality == 1) {
+            // enable tetgen optimization for mesh with higher quality
+            // tetgen might consume too much memory and crash!
+            mesh.tetgen_optlevel = 3;
+        }
+#endif
         pregattr = NULL;
 
         //
@@ -1037,6 +1043,16 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
                 bad_quality = 3;
                 break;
             }
+        }
+        int worst_elem;
+        double q = worst_elem_quality(new_coord, new_connectivity,
+                                      new_volume, worst_elem);
+#ifdef THREED
+        // normalizing q so that its magnitude is about the same in 2D and 3D
+        q = std::pow(q, 1.0/3);
+#endif
+        if (q < param.mesh.min_quality) {
+            bad_quality = 1;
         }
 
         new_coord.nullify();
