@@ -625,11 +625,6 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                 // record the node # for inverse mapping
                 inv.push_back(bdry_nodes[j]);
 
-                if (DEBUG > 1) {
-                    std::cerr << j << ' ' << k << ' ' << n << ' '
-                              << bdry_nodes[j] << ' ' << bdeleting[k] << '\n';
-                }
-
                 if (i == iboundz0 || i == iboundz1) {
                     // top or bottom
                     coord2d[n][0] = points[bdry_nodes[j]*NDIMS + 0];
@@ -668,8 +663,8 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
         {
             // converting polygon vertex to segment array
             const int_vec& polygon = bdry_polygons[i];
-            int *segflag = new int[polygon.size()]; // all 0, its value does not matter
-            int *segment = new int[2 * polygon.size()];
+            int_vec surf_segflag(polygon.size()); // all 0, its value does not matter
+            int_vec surf_segment(2 * polygon.size());
             std::size_t first = 0;
             int new_polygon_size = 0;
             for (std::size_t j=0; j<polygon.size(); j++) {
@@ -678,28 +673,24 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                     std::size_t ia = search - inv.begin();
                     if (new_polygon_size == 0) {
                         // start of the polygon
-                        segment[0] = ia;
+                        surf_segment[0] = ia;
                         first = ia;
                     }
-                    else if (ia == first) {
-                        // end of the polygon
-                        segment[2*new_polygon_size-1] = ia;
-                        ++new_polygon_size;
-                        break;
-                    }
                     else {
-                        segment[2*new_polygon_size-1] = segment[2*new_polygon_size] = ia;
+                        surf_segment[2*new_polygon_size-1] = surf_segment[2*new_polygon_size] = ia;
                     }
                     ++new_polygon_size;
                 }
             }
+            // end of the polygon
+            surf_segment[2*new_polygon_size-1] = first;
 
             if (DEBUG) {
                 std::cout << "inverse: \n";
                 print(std::cout, inv);
                 std::cout << '\n';
                 std::cout << "polygon segments: ";
-                print(std::cout, segment, new_polygon_size*2);
+                print(std::cout, surf_segment, new_polygon_size*2);
                 std::cout << '\n';
             }
 
@@ -712,7 +703,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
             mesh.min_angle = 0;
             mesh.meshing_verbosity = 0;
             points_to_new_surface(mesh, coord2d.size(), coord2d.data(),
-                                  new_polygon_size, segment, segflag,
+                                  new_polygon_size, surf_segment.data(), surf_segflag.data(),
                                   0, NULL,
                                   0, 3,
                                   new_nnode, new_nelem, new_nseg,
@@ -742,8 +733,6 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
             delete [] psegflag;
             delete [] pregattr;
             // remember to free pconnectivity later
-            delete [] segflag;
-            delete [] segment;
 
             // translating index of local (per-boundary) node # to global (whole-mesh) node #
             for (int j=0; j<new_nelem; ++j) {
@@ -768,12 +757,13 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 
     // appending facets of all boundaries into segment array
     for (int i=0, n=0; i<nbdrytypes; ++i) {
+        if (bnodes[i].size() == 0) continue;
+
         for (int k=0; k<nfacets[i]; ++k, ++n) {
             for (int j=0; j<NODES_PER_FACET; ++j)
                 segment[n*NODES_PER_FACET + j] = facet[i][k*NODES_PER_FACET + j];
+            segflag[n] = 1 << i;
         }
-    }
-    for (int i=0; i<nbdrytypes; ++i) {
         delete [] facet[i];
     }
 
