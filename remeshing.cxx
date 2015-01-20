@@ -603,7 +603,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                 std::cout << bdry_nodes.size() << ' ' << bdeleting.size() << '\n';
             }
 
-            int major_direction = 0;  // largest component of normal vector
+            int major_direction = i / 2;  // largest component of normal vector
             if (i >= iboundn0) { // slant boundaries start at iboundn0
                 double max = 0;
                 for (int d=0; d<NDIMS; d++) {
@@ -625,29 +625,11 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                 // record the node # for inverse mapping
                 inv.push_back(bdry_nodes[j]);
 
-                if (i == iboundz0 || i == iboundz1) {
-                    // top or bottom
-                    coord2d[n][0] = points[bdry_nodes[j]*NDIMS + 0];
-                    coord2d[n][1] = points[bdry_nodes[j]*NDIMS + 1];
-                }
-                else if (i == iboundx0 || i == iboundx1) {
-                    // western or eastern sides
-                    coord2d[n][0] = points[bdry_nodes[j]*NDIMS + 1];
-                    coord2d[n][1] = points[bdry_nodes[j]*NDIMS + 2];
-                }
-                else if (i == iboundy0 || i == iboundy1) {
-                    // southern or northern sides
-                    coord2d[n][0] = points[bdry_nodes[j]*NDIMS + 0];
-                    coord2d[n][1] = points[bdry_nodes[j]*NDIMS + 2];
-                }
-                else {
-                    // for iboundn?
-                    int dd = 0;
-                    for (int d=0; d<NDIMS; d++) {
-                        if (d == major_direction) continue;
-                        coord2d[n][dd] = points[bdry_nodes[j]*NDIMS + d];
-                        dd++;
-                    }
+                int dd = 0;
+                for (int d=0; d<NDIMS; d++) {
+                    if (d == major_direction) continue;
+                    coord2d[n][dd] = points[bdry_nodes[j]*NDIMS + d];
+                    dd++;
                 }
                 n++;
             }
