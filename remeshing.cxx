@@ -150,7 +150,7 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
         qcoord[n*NDIMS + NDIMS-1] = bottom_depth;
     }
 
-    // mark all bottom facets nodes as deleted
+    // mark all bottom nodes as deleted
     for (int i=0; i<nseg; ++i) {
         if (static_cast<uint>(segflag[i]) == BOUNDZ0) {
             for (int j=0; j<NODES_PER_FACET; j++)
@@ -163,7 +163,7 @@ void new_bottom(const uint_vec &old_bcflag, double *qcoord,
         if (static_cast<uint>(segflag[i]) == BOUNDZ0) {
             segment[i*NODES_PER_FACET + 0] = bottom_corners[0];
             segment[i*NODES_PER_FACET + 1] = bottom_corners[1];
-            segflag[i] = BOUNDZ0;
+            break;
         }
     }
 
