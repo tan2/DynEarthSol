@@ -71,6 +71,7 @@ struct Control {
     double characteristic_speed;
     double inertial_scaling;
     double dt_fraction;
+    double fixed_dt;
     double damping_factor;
     int ref_pressure_option;
 

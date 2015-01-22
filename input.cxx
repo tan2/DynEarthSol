@@ -172,6 +172,8 @@ static void declare_parameters(po::options_description &cfg,
          "Is the simulation quasi-static or dynamic? If quasi-static, inertial scaling and strong damping is applied.\n")
         ("control.dt_fraction", po::value<double>(&p.control.dt_fraction)->default_value(1.0),
          "Take dt as a fraction of max. stable time step size (0-1).\n")
+        ("control.fixed_dt", po::value<double>(&p.control.fixed_dt)->default_value(0),
+         "Fixed dt size (in seconds). If 0, dt sized will be determined dynamically.\n")
         ("control.inertial_scaling", po::value<double>(&p.control.inertial_scaling)->default_value(1e5),
          "Scaling factor for inertial (a large number)")
         ("control.damping_factor", po::value<double>(&p.control.damping_factor)->default_value(0.8),
