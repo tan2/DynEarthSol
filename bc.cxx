@@ -310,20 +310,20 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                             v[d] += (var.vbc_values[ib] - vn) * n[d];
                     }
                     // intersection with another boundary
-                    if (std::abs(n[NDIMS-1]) < eps) {// this bdry is vertical
+                    if (std::abs(n[NDIMS-1]) < eps) { // this bdry is vertical
                         // ordinary sidewalls
                         if ((flag & BOUNDX0 && var.vbc_types[iboundx0] == 1) ||  // another bdry is also vertical
                             (flag & BOUNDX1 && var.vbc_types[iboundx1] == 1) ||
                             (flag & BOUNDY0 && var.vbc_types[iboundy0] == 1) ||
                             (flag & BOUNDY1 && var.vbc_types[iboundy1] == 1))
                             v[0] = v[1] = 0;  // v must be vertical
-
-                        // slant sidewalls
-                        for (int ic=iboundn0; ic<=iboundn3; ic++) {
-                            if (ic == ib) continue;
-                            if ((flag & (1 << ic) && var.vbc_types[ic] == 1 &&
-                                 std::abs(var.bnormals[ic][NDIMS-1]) < eps)) // another bdry is also vertical
-                                v[0] = v[1] = 0;  // v must be vertical
+                        else {
+                            // slant sidewalls
+                            for (int ic=ib+1; ic<=iboundn3; ic++) {
+                                if ((flag & (1 << ic) && var.vbc_types[ic] == 1 &&
+                                     std::abs(var.bnormals[ic][NDIMS-1]) < eps)) // another bdry is also vertical
+                                    v[0] = v[1] = 0;  // v must be vertical
+                            }
                         }
                     }
                     break;
