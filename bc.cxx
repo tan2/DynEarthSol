@@ -295,8 +295,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
         // N
         //
         for (int ib=iboundn0; ib<=iboundn3; ib++) {
-            if (flag & 1 << ib) {
-                const double *n = var.bnormals[ib]; // unit normal vector
+            const double eps = 1e-15;
+            const double *n = var.bnormals[ib]; // unit normal vector
+
+            if (flag & (1 << ib)) {
                 switch (var.vbc_types[ib]) {
                 case 1:
                     {
@@ -306,6 +308,23 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 
                         for (int d=0; d<NDIMS; d++)
                             v[d] += (var.vbc_values[ib] - vn) * n[d];
+                    }
+                    // intersection with another boundary
+                    if (std::abs(n[NDIMS-1]) < eps) {// this bdry is vertical
+                        // ordinary sidewalls
+                        if ((flag & BOUNDX0 && var.vbc_types[iboundx0] == 1) ||  // another bdry is also vertical
+                            (flag & BOUNDX1 && var.vbc_types[iboundx1] == 1) ||
+                            (flag & BOUNDY0 && var.vbc_types[iboundy0] == 1) ||
+                            (flag & BOUNDY1 && var.vbc_types[iboundy1] == 1))
+                            v[0] = v[1] = 0;  // v must be vertical
+
+                        // slant sidewalls
+                        for (int ic=iboundn0; ic<=iboundn3; ic++) {
+                            if (ic == ib) continue;
+                            if ((flag & (1 << ic) && var.vbc_types[ic] == 1 &&
+                                 std::abs(var.bnormals[ic][NDIMS-1]) < eps)) // another bdry is also vertical
+                                v[0] = v[1] = 0;  // v must be vertical
+                        }
                     }
                     break;
                 case 3:
