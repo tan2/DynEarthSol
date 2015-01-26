@@ -79,7 +79,7 @@ void init(const Param& param, Variables& var)
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
-    create_boundary_normals(var, var.bnormals);
+    create_boundary_normals(var, var.bnormals, var.edge_vectors);
     apply_vbcs(param, var, *var.vel);
     // temperature should be init'd before stress and strain
     initial_temperature(param, var, *var.temperature);

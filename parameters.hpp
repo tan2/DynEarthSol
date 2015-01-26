@@ -1,6 +1,7 @@
 #ifndef DYNEARTHSOL3D_PARAMETERS_HPP
 #define DYNEARTHSOL3D_PARAMETERS_HPP
 
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -221,6 +222,7 @@ struct Variables {
     double bnormals[nbdrytypes][NDIMS];
     int vbc_types[nbdrytypes];
     double vbc_values[nbdrytypes];
+    std::map<std::pair<int,int>, double*> edge_vectors;
 
     int_vec2D *support;
     int_vec egroups;

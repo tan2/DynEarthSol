@@ -84,7 +84,8 @@ double find_max_vbc(const BC &bc)
 }
 
 
-void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][NDIMS])
+void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][NDIMS],
+                             std::map<std::pair<int,int>, double*>  &edge_vectors)
 {
     /* This subroutine finds the outward normal unit vectors of boundaries.
      * There are two types of boundaries: ibound{x,y,z}? and iboundn?.
@@ -100,40 +101,70 @@ void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][N
 
     for (int i=0; i<nbdrytypes; i++) {
         double normal[NDIMS] = {0};
-        if (var.bfacets[i].size() > 0) {
-            for (auto j=var.bfacets[i].begin(); j<var.bfacets[i].end(); ++j) {
-                int e = j->first;
-                int f = j->second;
-                double tmp;
-                normal_vector_of_facet(f, (*var.connectivity)[e], *var.coord,
-                                       normal, tmp);
-                // make an unit vector
-                double len = 0;
+        if (var.bfacets[i].size() == 0) continue;
+
+        for (auto j=var.bfacets[i].begin(); j<var.bfacets[i].end(); ++j) {
+            int e = j->first;
+            int f = j->second;
+            double tmp;
+            normal_vector_of_facet(f, (*var.connectivity)[e], *var.coord,
+                                   normal, tmp);
+            // make an unit vector
+            double len = 0;
+            for(int d=0; d<NDIMS; d++)
+                len += normal[d] * normal[d];
+
+            len = std::sqrt(len);
+            for(int d=0; d<NDIMS; d++)
+                normal[d] = normal[d] / len;
+
+            if (j == var.bfacets[i].begin()) {
                 for(int d=0; d<NDIMS; d++)
-                    len += normal[d] * normal[d];
+                    bnormals[i][d] = normal[d];
 
-                len = std::sqrt(len);
+                if (i < iboundn0) break; // slant boundaries start at iboundn0, other boundary can be curved
+            }
+            else {
+                // Make sure the boundary is a plane, ie. all facets have the same normal vector.
+                const double eps2 = 1e-30;
+                double diff2 = 0;
                 for(int d=0; d<NDIMS; d++)
-                    normal[d] = normal[d] / len;
-
-                if (j == var.bfacets[i].begin()) {
-                    for(int d=0; d<NDIMS; d++)
-                        bnormals[i][d] = normal[d];
-
-                    if (i < iboundn0) break; // slant boundaries start at iboundn0, other boundary can be curved
-                }
-                else {
-                    // Make sure the boundary is a plane, ie. all facets have the same normal vector.
-                    const double eps2 = 1e-30;
-                    double diff2 = 0;
-                    for(int d=0; d<NDIMS; d++)
-                        diff2 += (bnormals[i][d] - normal[d]) * (bnormals[i][d] - normal[d]);
-                    if (diff2 > eps2) {
-                        std::cerr << "Error: boundary " << i << " is curved.\n";
-                        std::exit(1);
-                    }
+                    diff2 += (bnormals[i][d] - normal[d]) * (bnormals[i][d] - normal[d]);
+                if (diff2 > eps2) {
+                    std::cerr << "Error: boundary " << i << " is curved.\n";
+                    std::exit(1);
                 }
             }
+        }
+    }
+
+    for (int i=0; i<nbdrytypes; i++) {
+        if (var.bfacets[i].size() == 0) continue;
+
+        const double eps = 1e-15;
+        for (int j=i+1; j<nbdrytypes; j++) {
+            if (var.bfacets[j].size() == 0) continue;
+            double *s = new double[NDIMS];  // intersection of two boundaries
+                                            // whole-application lifetime, no need to delete manually
+#ifdef THREED
+            // quick path: both walls are vertical
+            if (std::abs(var.bnormals[i][NDIMS-1]) < eps &&
+                std::abs(var.bnormals[j][NDIMS-1]) < eps) {
+                s[0] = s[1] = 0;
+                s[NDIMS-1] = 1;
+            }
+            else {
+                // cross product of 2 normal vectors
+                s[0] = var.bnormals[i][1]*var.bnormals[j][2] - var.bnormals[i][2]*var.bnormals[j][1];
+                s[1] = var.bnormals[i][2]*var.bnormals[j][0] - var.bnormals[i][0]*var.bnormals[j][2];
+                s[2] = var.bnormals[i][0]*var.bnormals[j][1] - var.bnormals[i][1]*var.bnormals[j][0];
+            }
+#else
+            // 2D
+            s[0] = 0;
+            s[1] = 1;
+#endif
+            edge_vectors[std::make_pair(i, j)] = s;
         }
     }
 }
@@ -301,35 +332,41 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
             if (flag & (1 << ib)) {
                 switch (var.vbc_types[ib]) {
                 case 1:
-                    {
+                    if (flag == (1 << ib)) {  // ordinary boundary
                         double vn = 0;
                         for (int d=0; d<NDIMS; d++)
                             vn += v[d] * n[d];  // normal velocity
 
                         for (int d=0; d<NDIMS; d++)
-                            v[d] += (var.vbc_values[ib] - vn) * n[d];
+                            v[d] += (var.vbc_values[ib] - vn) * n[d];  // setting normal velocity
                     }
-                    // intersection with another boundary
-                    if (std::abs(n[NDIMS-1]) < eps) { // this bdry is vertical
-                        // ordinary sidewalls
-                        if ((flag & BOUNDX0 && var.vbc_types[iboundx0] == 1) ||  // another bdry is also vertical
-                            (flag & BOUNDX1 && var.vbc_types[iboundx1] == 1) ||
-                            (flag & BOUNDY0 && var.vbc_types[iboundy0] == 1) ||
-                            (flag & BOUNDY1 && var.vbc_types[iboundy1] == 1))
-                            v[0] = v[1] = 0;  // v must be vertical
-                        else {
-                            // slant sidewalls
-                            for (int ic=ib+1; ic<=iboundn3; ic++) {
-                                if ((flag & (1 << ic) && var.vbc_types[ic] == 1 &&
-                                     std::abs(var.bnormals[ic][NDIMS-1]) < eps)) // another bdry is also vertical
-                                    v[0] = v[1] = 0;  // v must be vertical
+                    else {  // intersection with another boundary
+                        for (int ic=iboundx0; ic<ib; ic++) {
+                            if (flag & (1 << ic)) {
+                                if (var.vbc_types[ic] == 0) {
+                                    double vn = 0;
+                                    for (int d=0; d<NDIMS; d++)
+                                        vn += v[d] * n[d];  // normal velocity
+
+                                    for (int d=0; d<NDIMS; d++)
+                                        v[d] += (var.vbc_values[ib] - vn) * n[d];  // setting normal velocity
+                                }
+                                else if (var.vbc_types[ic] == 1) {
+                                    auto edge = var.edge_vectors.at(std::make_pair(ic, ib));
+                                    double ve = 0;
+                                    for (int d=0; d<NDIMS; d++)
+                                        ve += v[d] * edge[d];
+
+                                    for (int d=0; d<NDIMS; d++)
+                                        v[d] = ve * edge[d];  // v must be parallel to edge
+                                }
                             }
                         }
                     }
                     break;
                 case 3:
                     for (int d=0; d<NDIMS; d++)
-                        v[d] = var.vbc_values[ib] * n[d];
+                        v[d] = var.vbc_values[ib] * n[d];  // v must be normal to n
                     break;
                 }
             }
