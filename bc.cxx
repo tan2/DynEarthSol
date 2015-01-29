@@ -126,7 +126,7 @@ void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][N
             }
             else {
                 // Make sure the boundary is a plane, ie. all facets have the same normal vector.
-                const double eps2 = 1e-30;
+                const double eps2 = 1e-12;
                 double diff2 = 0;
                 for(int d=0; d<NDIMS; d++)
                     diff2 += (bnormals[i][d] - normal[d]) * (bnormals[i][d] - normal[d]);
