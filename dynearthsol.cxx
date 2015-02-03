@@ -182,6 +182,9 @@ void restart(const Param& param, Variables& var)
         bin_save.read_array(*var.strain, "strain");
         bin_save.read_array(*var.stress, "stress");
         bin_save.read_array(*var.plstrain, "plastic strain");
+
+        if (param.mat.is_plane_strain)
+            bin_chkpt.read_array(*var.stressyy, "stressyy");
     }
 
     // Misc. items
@@ -286,7 +289,7 @@ int main(int argc, const char* argv[])
             isostasy_adjustment(param, var);
         }
         if (param.sim.has_initial_checkpoint)
-            output.write_checkpoint(var);
+            output.write_checkpoint(param, var);
     }
     else {
         restart(param, var);
@@ -345,7 +348,7 @@ int main(int argc, const char* argv[])
              ((var.time - starting_time) > next_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC)) ) {
 
             if (next_regular_frame % param.sim.checkpoint_frame_interval == 0)
-                output.write_checkpoint(var);
+                output.write_checkpoint(param, var);
 
             output.write(var);
 

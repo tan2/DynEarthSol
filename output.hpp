@@ -25,7 +25,7 @@ public:
     Output(const Param& param, double start_time, int start_frame);
     ~Output();
     void write(const Variables& var, bool is_averaged=true);
-    void write_checkpoint(const Variables& var);
+    void write_checkpoint(const Param& param, const Variables& var);
     void average_fields(Variables& var);
 
 };
