@@ -401,10 +401,12 @@ void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
 
     allocate_markerdata(_nmarkers);
 
-    bin.read_array(*_eta, (_name + ".eta").c_str());
-    bin.read_array(*_elem, (_name + ".elem").c_str());
-    bin.read_array(*_mattype, (_name + ".mattype").c_str());
-    bin.read_array(*_id, (_name + ".id").c_str());
+    if (_nmarkers != 0) {
+        bin.read_array(*_eta, (_name + ".eta").c_str());
+        bin.read_array(*_elem, (_name + ".elem").c_str());
+        bin.read_array(*_mattype, (_name + ".mattype").c_str());
+        bin.read_array(*_id, (_name + ".id").c_str());
+    }
 
     for( int i = 0; i < _nmarkers; i++ ) {
         int e = (*_elem)[i];
