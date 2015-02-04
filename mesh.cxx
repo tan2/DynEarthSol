@@ -1394,26 +1394,26 @@ void create_boundary_facets(Variables& var)
         uint flag = 1 << ibound;
         const int *conn = (*var.connectivity)[e];
 
-        std::vector<OrderedInt> trblf;
+        std::vector<OrderedInt> badfacets;
         auto p = var.bfacets[ibound].end();
         while (p != var.bfacets[ibound].begin()) {  // loop in reverse order
             --p;
             if (p->first == e) {
                 int f = p->second;
                 // comparing the node ids of this facet with those in segment array
-                OrderedInt a3i(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
+                OrderedInt af(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
 #ifdef THREED
-                               , conn[NODE_OF_FACET[f][2]]
+                              , conn[NODE_OF_FACET[f][2]]
 #endif
-                               );
+                              );
                 bool false_positive = true;
                 for (int k=0; k<var.nseg; k++) {
-                    OrderedInt b3i((*var.segment)[k][0], (*var.segment)[k][1]
+                    OrderedInt bf((*var.segment)[k][0], (*var.segment)[k][1]
 #ifdef THREED
-                                   , (*var.segment)[k][2]
+                                  , (*var.segment)[k][2]
 #endif
-                               );
-                    if (a3i == b3i) {
+                                  );
+                    if (af == bf) {
                         // this is a true boundary facet
                         false_positive = false;
                         break;
@@ -1421,36 +1421,36 @@ void create_boundary_facets(Variables& var)
                 }
                 if (false_positive) {
                     p = var.bfacets[ibound].erase(p);
-                    trblf.push_back(a3i); // storing troublesome facet
+                    badfacets.push_back(af); // storing bad facet
                 }
             }
         }
 
         if (
 #ifdef THREED
-            trblf.size() == 0 || trblf.size() > 2
+            badfacets.size() == 0 || badfacets.size() > 2
 #else
-            trblf.size() == 0 || trblf.size() > 1
+            badfacets.size() == 0 || badfacets.size() > 1
 #endif
             ) {
             std::cerr << "Error: mesh facet is corrupted!\n";
             std::exit(12);
         }
 
-        // deleting the conjugate facet of the troublesome facet
-        for (auto d=trblf.begin(); d!=trblf.end(); ++d) {
+        // deleting the conjugate facet of the bad facet
+        for (auto df=badfacets.begin(); df!=badfacets.end(); ++df) {
             auto p = var.bfacets[ibound].end();
             while (p != var.bfacets[ibound].begin()) {  // loop in reverse order
                 --p;
                 int e = p->first;
                 int f = p->second;
                 const int *conn = (*var.connectivity)[e];
-                OrderedInt a3i(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
+                OrderedInt af(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
 #ifdef THREED
-                               , conn[NODE_OF_FACET[f][2]]
+                              , conn[NODE_OF_FACET[f][2]]
 #endif
-                               );
-                if (*d == a3i) {
+                              );
+                if (*df == af) {
                     p = var.bfacets[ibound].erase(p);
                     break;
                 }
