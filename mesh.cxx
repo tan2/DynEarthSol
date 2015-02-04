@@ -1286,10 +1286,12 @@ void create_boundary_nodes(Variables& var)
 
 
 namespace {
-    struct ThreeInt
+
+    struct OrderedInt
     {
+#ifdef THREED
         int a, b, c;
-        ThreeInt(int x, int y, int z)
+        OrderedInt(int x, int y, int z)
         {
             // ensure that a < b < c
             if (x < y) {
@@ -1314,10 +1316,28 @@ namespace {
             }
         }
 
-        bool operator==(ThreeInt &rhs)
+        bool operator==(OrderedInt &rhs)
         {
             return a==rhs.a && b==rhs.b && c==rhs.c;
         }
+
+#else
+
+        int a, b;
+        OrderedInt(int x, int y)
+        {
+            // ensure that a < b
+            if (x < y)
+                a = x, b = y;
+            else
+                a = y, b = x;
+        }
+
+        bool operator==(OrderedInt &rhs)
+        {
+            return a==rhs.a && b==rhs.b;
+        }
+#endif
     };
 }
 
@@ -1349,7 +1369,7 @@ void create_boundary_facets(Variables& var)
                 // multiple bits set in flag!
                 std::cerr << "Error: facet " << i << " of element " << e
                           << " belongs to more than one boundary!\n";
-                std::exit(1);
+                std::exit(12);
             found:
                 var.bfacets[ibound].push_back(std::make_pair(e, i));
                 count[ibound]++;
@@ -1374,33 +1394,45 @@ void create_boundary_facets(Variables& var)
         uint flag = 1 << ibound;
         const int *conn = (*var.connectivity)[e];
 
-        std::vector<ThreeInt> trblf;
-
+        std::vector<OrderedInt> trblf;
         auto p = var.bfacets[ibound].end();
         while (p != var.bfacets[ibound].begin()) {  // loop in reverse order
             --p;
             if (p->first == e) {
                 int f = p->second;
                 // comparing the node ids of this facet with those in segment array
-                ThreeInt a3i(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]], conn[NODE_OF_FACET[f][2]]);
-                // std::cout << "check facet  " << e << ' ' << a3i.a << ' ' << a3i.b << ' ' << a3i.c << '\n';
+                OrderedInt a3i(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
+#ifdef THREED
+                               , conn[NODE_OF_FACET[f][2]]
+#endif
+                               );
                 bool false_positive = true;
                 for (int k=0; k<var.nseg; k++) {
-                    ThreeInt b3i((*var.segment)[k][0], (*var.segment)[k][1], (*var.segment)[k][2]);
+                    OrderedInt b3i((*var.segment)[k][0], (*var.segment)[k][1]
+#ifdef THREED
+                                   , (*var.segment)[k][2]
+#endif
+                               );
                     if (a3i == b3i) {
+                        // this is a true boundary facet
                         false_positive = false;
                         break;
                     }
                 }
                 if (false_positive) {
-                    // std::cout << " is removed\n";
                     p = var.bfacets[ibound].erase(p);
                     trblf.push_back(a3i); // storing troublesome facet
                 }
             }
         }
 
-        if (trblf.size() != 1 && trblf.size() != 2) {
+        if (
+#ifdef THREED
+            trblf.size() == 0 || trblf.size() > 2
+#else
+            trblf.size() == 0 || trblf.size() > 1
+#endif
+            ) {
             std::cerr << "Error: mesh facet is corrupted!\n";
             std::exit(12);
         }
@@ -1413,9 +1445,12 @@ void create_boundary_facets(Variables& var)
                 int e = p->first;
                 int f = p->second;
                 const int *conn = (*var.connectivity)[e];
-                ThreeInt a3i(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]], conn[NODE_OF_FACET[f][2]]);
+                OrderedInt a3i(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
+#ifdef THREED
+                               , conn[NODE_OF_FACET[f][2]]
+#endif
+                               );
                 if (*d == a3i) {
-                    // std::cout << "troublesome facet  " << e << ' ' << a3i.a << ' ' << a3i.b << ' ' << a3i.c << " is removed\n";
                     p = var.bfacets[ibound].erase(p);
                     break;
                 }
