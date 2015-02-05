@@ -18,6 +18,9 @@
 #include "matprops.hpp"
 #include "output.hpp"
 
+#ifdef WIN32
+namespace std { using ::snprintf; }
+#endif
 
 Output::Output(const Param& param, double start_time, int start_frame) :
     modelname(param.sim.modelname),

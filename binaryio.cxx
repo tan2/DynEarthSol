@@ -34,7 +34,7 @@ namespace {
 
 BinaryOutput::BinaryOutput(const char *filename)
 {
-    f = std::fopen(filename, "w");
+    f = std::fopen(filename, "wb");
     if (f == NULL) {
         std::cerr << "Error: cannot open file: " << filename << '\n';
         std::exit(2);

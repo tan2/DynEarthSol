@@ -20,6 +20,9 @@
 #include "remeshing.hpp"
 #include "rheology.hpp"
 
+#ifdef WIN32
+namespace std { using ::snprintf; }
+#endif
 
 void init_var(const Param& param, Variables& var)
 {

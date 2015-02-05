@@ -33,6 +33,17 @@
 #include "mesh.hpp"
 #include "markerset.hpp"
 
+#ifdef WIN32
+namespace std {
+  static std::string to_string(long double t) 
+  {
+    char temp[32];
+    sprintf(temp,"%f",double(t));
+    return std::string(temp);
+  }
+}
+static double drand48() { return (double)rand()/(double)RAND_MAX; }
+#endif
 
 namespace { // anonymous namespace
 

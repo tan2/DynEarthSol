@@ -15,6 +15,10 @@
 #include "geometry.hpp"
 #include "utils.hpp"
 
+#ifdef WIN32
+static double drand48() { return (double)rand()/(double)RAND_MAX; }
+#endif
+
 namespace {
 
     const int DEBUG = 0;
