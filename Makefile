@@ -181,6 +181,7 @@ $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 deepclean:
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
 	@+$(MAKE) -C $(C3X3_DIR) clean
+	@+$(MAKE) -C $(ANN_DIR) realclean
 
 clean:
 	@rm -f $(OBJS) $(EXE)
