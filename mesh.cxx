@@ -1374,7 +1374,7 @@ void create_boundary_facets(Variables& var)
                 // this facet (very likely) belongs to a boundary
                 int ibound;
                 for (ibound=0; ibound<nbdrytypes; ibound++) {
-                    if (flag == (1<<ibound))
+                    if (flag == (1U<<ibound))
                         goto found;
                 }
                 // multiple bits set in flag!
@@ -1399,7 +1399,7 @@ void create_boundary_facets(Variables& var)
     }
 
     // remove the false positive
-    for (auto i=0; i<special_elem.size(); ++i) {
+    for (int_vec::size_type i=0; i<special_elem.size(); ++i) {
         int e = special_elem[i];
         int ibound = special_bdry[i];
         uint flag = 1 << ibound;
