@@ -332,7 +332,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
             if (flag & (1 << ib)) {
                 switch (var.vbc_types[ib]) {
                 case 1:
-                    if (flag == (1 << ib)) {  // ordinary boundary
+                    if (flag == (1U << ib)) {  // ordinary boundary
                         double vn = 0;
                         for (int d=0; d<NDIMS; d++)
                             vn += v[d] * n[d];  // normal velocity
