@@ -6,6 +6,10 @@
 #include "parameters.hpp"
 #include "binaryio.hpp"
 
+#ifdef WIN32
+namespace std { using ::snprintf; }
+#endif
+
 /*****************************************************************************
  * The format of the binary file:
  * 1  The first 'headerlen' bytes are ASCII text.
