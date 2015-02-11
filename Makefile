@@ -60,7 +60,7 @@ all:
 endif
 
 ## Is this a mercurial repository?
-HAS_HG := $(shell hg --version -q 2>/dev/null)
+HAS_HG := $(shell hg log -r tip --template '{node}' 2>/dev/null)
 
 ##
 
