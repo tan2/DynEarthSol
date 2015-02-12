@@ -34,6 +34,7 @@
 #include "markerset.hpp"
 
 #ifdef WIN32
+#ifndef _MSCVER
 namespace std {
   static std::string to_string(long double t) 
   {
@@ -42,8 +43,9 @@ namespace std {
     return std::string(temp);
   }
 }
+#endif //_MSCVER
 static double drand48() { return (double)rand()/(double)RAND_MAX; }
-#endif
+#endif // WIN32
 
 namespace { // anonymous namespace
 
