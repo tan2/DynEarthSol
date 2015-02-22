@@ -21,8 +21,11 @@
 #include "rheology.hpp"
 
 #ifdef WIN32
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#endif // _MSC_VER
 namespace std { using ::snprintf; }
-#endif
+#endif // WIN32
 
 void init_var(const Param& param, Variables& var)
 {
@@ -344,7 +347,7 @@ int main(int argc, const char* argv[])
         if (param.sim.output_averaged_fields)
             output.average_fields(var);
 
-	if ((! param.sim.output_averaged_fields || (var.steps % param.sim.output_averaged_fields == 0)) &&
+        if ((! param.sim.output_averaged_fields || (var.steps % param.sim.output_averaged_fields == 0)) &&
             // When output_averaged_fields in turned on, the output cannot be
             // done at arbitrary time steps.
             (((var.steps - starting_step) == next_regular_frame * param.sim.output_step_interval) ||

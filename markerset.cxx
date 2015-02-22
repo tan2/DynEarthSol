@@ -17,7 +17,7 @@
 
 #ifdef WIN32
 static double drand48() { return (double)rand()/(double)RAND_MAX; }
-#endif
+#endif // WIN32
 
 namespace {
 
@@ -214,8 +214,8 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
     ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
     const int k = std::min(20, var.nelem);  // how many nearest neighbors to search?
     const double eps = 0.001; // tolerance of distance error
-    int nn_idx[k];
-    double dd[k];
+    int nn_idx[20];
+    double dd[20];
 
     double_vec new_volume( var.nelem );
     compute_volume( *var.coord, *var.connectivity, new_volume );
@@ -458,8 +458,9 @@ namespace {
     {
         const int k = std::min((std::size_t) 20, old_connectivity.size());  // how many nearest neighbors to search?
         const double eps = 0.001; // tolerance of distance error
-        int nn_idx[k];
-        double dd[k];
+        int nn_idx[20];
+        double dd[20];
+
 
         // Loop over all the old markers and identify a containing element in the new mesh.
         int last_marker = ms.get_nmarkers();

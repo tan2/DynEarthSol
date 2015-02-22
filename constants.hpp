@@ -4,6 +4,10 @@
 # include <cmath>
 # include <map>
 
+#if !defined(M_PI)
+#define M_PI 3.1415926535897932384626433832795
+#endif
+
 // # of spatial dimension, either 2 or 3
 #ifdef THREED
 const int NDIMS = 3;

@@ -8,11 +8,9 @@
 
 #ifdef WIN32
 #ifdef _MSC_VER
-namespace std { using ::_snprintf; }
 #define snprintf _snprintf
-#else // _MSC_VER
+#endif // _MSC_VER
 namespace std { using ::snprintf; }
-#endif // _MSCVER
 #endif // WIN32
 
 /*****************************************************************************

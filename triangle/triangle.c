@@ -1426,7 +1426,7 @@ int size;
 #endif /* not ANSI_DECLARATORS */
 
 {
-  return ::operator new [] ((unsigned int) size);
+  return operator new [] ((unsigned int) size);
 }
 
 #ifdef ANSI_DECLARATORS

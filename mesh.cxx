@@ -34,7 +34,7 @@
 #include "markerset.hpp"
 
 #ifdef WIN32
-#ifndef _MSCVER
+#ifndef _MSC_VER
 namespace std {
   static std::string to_string(long double t) 
   {
@@ -43,7 +43,10 @@ namespace std {
     return std::string(temp);
   }
 }
-#endif //_MSCVER
+#endif //_MSC_VER
+#endif // WIN32
+
+#ifdef WIN32
 static double drand48() { return (double)rand()/(double)RAND_MAX; }
 #endif // WIN32
 
@@ -1232,6 +1235,7 @@ void create_boundary_flags2(uint_vec &bcflag, int nseg,
 void create_boundary_flags(Variables& var)
 {
     // allocate and init to 0
+    if (var.bcflag) delete var.bcflag;
     var.bcflag = new uint_vec(var.nnode);
 
     create_boundary_flags2(*var.bcflag, var.segment->size(),

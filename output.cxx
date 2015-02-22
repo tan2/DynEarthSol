@@ -19,8 +19,11 @@
 #include "output.hpp"
 
 #ifdef WIN32
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#endif // _MSC_VER
 namespace std { using ::snprintf; }
-#endif
+#endif // WIN32
 
 Output::Output(const Param& param, double start_time, int start_frame) :
     modelname(param.sim.modelname),
