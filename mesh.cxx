@@ -1173,10 +1173,15 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
     }
 
     // arrays to store the result of sorting
-    std::vector<std::size_t> nd_idx(nnode);
-    std::vector<std::size_t> el_idx(nelem);
+    std::vector<int> nd_idx(nnode);
+    std::vector<int> el_idx(nelem);
     sortindex(wn, nd_idx);
     sortindex(we, el_idx);
+
+    // inverse permutation
+    std::vector<int> nd_inv(nnode);
+    for(int i=0; i<nnode; i++)
+      nd_inv[nd_idx[i]] = i;
 
     //
     // renumbering
@@ -1194,7 +1199,7 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
         int n = el_idx[i];
         for(int j=0; j<NODES_PER_ELEM; j++) {
             int k = connectivity[n][j];
-            conn2[i][j] = std::find(nd_idx.begin(), nd_idx.end(), k) - nd_idx.begin();
+            conn2[i][j] = nd_inv[k];
         }
     }
     connectivity.steal_ref(conn2);
@@ -1203,7 +1208,7 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
     for(int i=0; i<nseg; i++) {
         for(int j=0; j<NDIMS; j++) {
             int k = segment[i][j];
-            seg2[i][j] = std::find(nd_idx.begin(), nd_idx.end(), k) - nd_idx.begin();
+            seg2[i][j] = nd_inv[k];
         }
     }
     segment.steal_ref(seg2);
