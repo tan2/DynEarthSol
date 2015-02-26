@@ -1147,7 +1147,11 @@ void discard_internal_segments(int &nseg, segment_t &segment, segflag_t &segflag
 
 
 void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
-                      segment_t &segment, regattr_t &regattr, int option)
+                      segment_t &segment, regattr_t *regattr)
+/* Note: the last argument is a pointer to regional attribute. If the pointer
+ * is not NULL (when the initial mesh is created, before creating markers),
+ * regattr is renumbered.
+ */
 {
     /* Renumbering nodes and elements to enhance cache coherance and better parallel performace. */
 
@@ -1228,13 +1232,13 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
     }
     segment.steal_ref(seg2);
 
-    if (option == 1) {
+    if (regattr != NULL) {
         regattr_t regattr2(nelem);
         for(int i=0; i<nelem; i++) {
             int n = el_idx[i];
-            regattr2[i][0] = regattr[n][0];
+            regattr2[i][0] = (*regattr)[n][0];
         }
-        regattr.steal_ref(regattr2);
+        regattr->steal_ref(regattr2);
     }
 }
 
@@ -1629,7 +1633,7 @@ void create_new_mesh(const Param& param, Variables& var)
     if (param.mesh.is_discarding_internal_segments)
         discard_internal_segments(var.nseg, *var.segment, *var.segflag);
 
-    renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr, 1);
+    renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, var.regattr);
 
     // std::cout << "segment:\n";
     // print(std::cout, *var.segment);
