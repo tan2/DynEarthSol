@@ -801,8 +801,8 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
                 const int_vec& supp = (*var.support)[ conn[j] ];
                 for (std::size_t k=0; k<supp.size(); k++) {
                     int ee = supp[k];
-                    conn = (*var.connectivity)[ee];
-                    bary = get_bary_from_cache(cache, ee, *var.coord, conn, *var.volume);
+                    const int *conn2 = (*var.connectivity)[ee];
+                    bary = get_bary_from_cache(cache, ee, *var.coord, conn2, *var.volume);
                     bary->transform(x, 0, r);
                     if (bary->is_inside(r)) {
                         hydms.set_elem(m, ee);
