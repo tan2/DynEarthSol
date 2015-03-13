@@ -330,18 +330,18 @@ int main(int argc, const char* argv[])
         if (var.mat->rheol_type & MatProps::rh_elastic)
             rotate_stress(var, *var.stress, *var.strain);
 
-        if (var.steps % 10 == 0) {
-            // dt computation is expensive, and dt only changes slowly
-            // don't have to do it every time step
-            var.dt = compute_dt(param, var);
-
-            // ditto for phase changes
+        const int slow_updates_interval = 10;
+        if (var.steps % slow_updates_interval == 0) {
+            // The functions inside this if-block are expensive in computation is expensive,
+            // and only changes slowly. Don't have to do it every time step
             phase_changes(param, var);
 
             if (param.control.has_hydration_processes)
                 advect_hydrous_markers(param, var, 10*var.dt,
                                        *var.markersets[var.hydrous_marker_index],
                                        *var.hydrous_elemmarkers);
+
+            var.dt = compute_dt(param, var);
         }
 
         if (param.sim.output_averaged_fields)
