@@ -447,7 +447,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
         const auto& bdry = var.bfacets[i];
         const auto& coord = *var.coord;
         // loops over all bdry facets
-        for (std::size_t i=0; i<bdry.size(); ++i) {
+        for (int i=0; i<static_cast<int>(bdry.size()); ++i) {
             // this facet belongs to element e
             int e = bdry[i].first;
             // this facet is the f-th facet of e
