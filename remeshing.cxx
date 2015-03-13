@@ -1157,7 +1157,6 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     reallocate_variables(param, var);
 
     // updating other arrays
-    delete var.bcflag;
     create_boundary_flags(var);
     for (int i=0; i<nbdrytypes; ++i) {
         var.bnodes[i].clear();

@@ -6,6 +6,13 @@
 #include "parameters.hpp"
 #include "binaryio.hpp"
 
+#ifdef WIN32
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#endif // _MSC_VER
+namespace std { using ::snprintf; }
+#endif // WIN32
+
 /*****************************************************************************
  * The format of the binary file:
  * 1  The first 'headerlen' bytes are ASCII text.
@@ -34,7 +41,7 @@ namespace {
 
 BinaryOutput::BinaryOutput(const char *filename)
 {
-    f = std::fopen(filename, "w");
+    f = std::fopen(filename, "wb");
     if (f == NULL) {
         std::cerr << "Error: cannot open file: " << filename << '\n';
         std::exit(2);

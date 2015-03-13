@@ -60,7 +60,7 @@ all:
 endif
 
 ## Is this a mercurial repository?
-HAS_HG := $(shell hg --version -q 2>/dev/null)
+HAS_HG := $(shell hg log -r tip --template '{node}' 2>/dev/null)
 
 ##
 
@@ -181,6 +181,7 @@ $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 deepclean:
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
 	@+$(MAKE) -C $(C3X3_DIR) clean
+	@+$(MAKE) -C $(ANN_DIR) realclean
 
 clean:
 	@rm -f $(OBJS) $(EXE)

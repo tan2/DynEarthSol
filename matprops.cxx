@@ -151,7 +151,7 @@ namespace {
         const int len;
     public:
         Vector1(const double_vec &a_, int len_) :
-            d(a_[0]), len(len)
+            d(a_[0]), len(len_)
         {}
 
         double operator[](std::size_t i) const

@@ -52,8 +52,8 @@ namespace {
         const double spacing2 = 1.0 / neta2;
         const int max_el = std::min(32, var.nelem);
         const double eps = 0;
-        int nn_idx[max_el];
-        double dd[max_el];
+        int nn_idx[32];
+        double dd[32];
 
         const int nelem_changed = std::accumulate(is_changed.begin(), is_changed.end(), 0);
         elems_vec.reserve(nelem_changed);
