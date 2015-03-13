@@ -90,16 +90,18 @@ void MarkerSet::random_eta( double *eta )
     // eta for randomly scattered markers within an element.
     // An alternative would be to fix barycentric coordinates and add random perturbations.
     //
-    // 1. populate eta with random numbers between 0 and 1.0.
-    double sum = 0;
-    for( int n = 0; n < NODES_PER_ELEM; n++ ) {
-        eta[n] = (rand()/(double)RAND_MAX);
-        sum += eta[n];
+    while (1) {
+        // sum(eta) == 1 && all components of eta are greater than zero
+        double sum = 0;
+        for( int n = 0; n < NDIMS; n++ ) {
+            eta[n] = (rand()/(double)RAND_MAX);
+            sum += eta[n];
+        }
+        if (sum < 1) {
+            eta[NODES_PER_ELEM - 1] = 1 - sum;
+            break;
+        }
     }
-    // 2. normalize.
-    double inv_sum = 1.0/sum;
-    for( int n = 0; n < NODES_PER_ELEM; n++ )
-        eta[n] *= inv_sum;
 }
 
 
