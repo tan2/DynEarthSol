@@ -2,13 +2,15 @@
 # encoding: utf-8
 '''Convert the binary output of DynEarthSol3D to VTK files.
 
-usage: 2vtk.py [-a -c -m -t -h] modelname [start [end [delta]]]]
+usage: 2vtk.py [-a -c -m -p -t -h] modelname [start [end [delta]]]]
 
 options:
     -a          save data in ASCII format (default: binary)
-    -c          save files in current directory
+    -c          save files in current directory (default: same directory as
+                the data files)
     -m          save marker data
-    -t          save all tensor components (default: no component)
+    -p          save P-axis and T-axis
+    -t          save all tensor components (default: only 1st/2nd invariants)
     -h,--help   show this help
 '''
 
@@ -16,6 +18,7 @@ from __future__ import print_function, unicode_literals
 import sys, os
 import base64, zlib
 import numpy as np
+from numpy.linalg  import eigh
 from Dynearthsol import Dynearthsol
 
 # Save in ASCII or encoded binary.
@@ -27,6 +30,9 @@ output_in_cwd = False
 
 # Save indivisual components?
 output_tensor_components = False
+
+# Save P-/T-axis
+output_pt_axis = False
 
 # Save markers?
 output_markers = False
@@ -124,6 +130,10 @@ def main(modelname, start, end, delta):
                     vtk_dataarray(fvtu, stress[:,d] - tI, 'stress ' + des.component_names[d] + ' dev.')
                 for d in range(des.ndims, des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
+            if output_pt_axis:
+                p_axis, t_axis = compute_pt_axis(stress)
+                vtk_dataarray(fvtu, p_axis, 'P-axis', 3)
+                vtk_dataarray(fvtu, t_axis, 'T-axis', 3)
 
             convert_field(des, frame, 'density', fvtu)
             convert_field(des, frame, 'material', fvtu)
@@ -364,6 +374,63 @@ def second_invariant(t):
                         t[:,3]**2 + t[:,4]**2 + t[:,5]**2)
 
 
+def compute_pt_axis(stress):
+    '''The compression and dilation axis of the deviatoric stress tensor.'''
+
+    nelem = stress.shape[0]
+    nstr = stress.shape[1]
+    # VTK requires vector field (velocity, coordinate) has 3 components.
+    # Allocating a 3-vector tmp array for VTK data output.
+    p_axis = np.zeros((nelem, 3), dtype=stress.dtype)
+    t_axis = np.zeros((nelem, 3), dtype=stress.dtype)
+
+    if nstr == 3:  # 2D
+        sxx, szz, sxz = stress[:,0], stress[:,1], stress[:,2]
+        mag = np.sqrt(0.25*(sxx - szz)**2 + sxz**2)
+        theta = 0.5 * np.arctan2(2*sxz, sxx-szz)
+        cost = np.cos(theta)
+        sint = np.sin(theta)
+
+        p_axis[:,0] = mag * sint
+        p_axis[:,1] = mag * cost
+        t_axis[:,0] = mag * cost
+        t_axis[:,1] = -mag * sint
+
+    else:  # 3D
+        # lower part of symmetric stress tensor
+        s = np.zeros((nelem, 3,3), dtype=stress.dtype)
+        s[:,0,0] = stress[:,0]
+        s[:,1,1] = stress[:,1]
+        s[:,2,2] = stress[:,2]
+        s[:,1,0] = stress[:,3]
+        s[:,2,0] = stress[:,4]
+        s[:,2,1] = stress[:,5]
+
+        # eigenvalues and eigenvectors
+        if np.version.version[:3] >= '1.8':
+            # Numpy-1.8 or newer
+            w, v = eigh(s)
+        else:
+            # Numpy-1.7 or older
+            w = np.zeros((nelem,3), dtype=stress.dtype)
+            v = np.zeros((nelem,3,3), dtype=stress.dtype)
+            for e in range(nelem):
+                w[e,:], v[e,:,:] = eigh(s[e])
+
+        # isotropic part to be removed
+        m = np.sum(w, axis=1)
+
+        p = w.argmin(axis=1)
+        t = w.argmax(axis=1)
+        #print(w.shape, v.shape, p.shape)
+
+        for e in range(nelem):
+            p_axis[e,:] = (w[e,p[e]] - m[e]) * v[e,:,p[e]]
+            t_axis[e,:] = (w[e,t[e]] - m[e]) * v[e,:,t[e]]
+
+    return p_axis, t_axis
+
+
 if __name__ == '__main__':
 
     if len(sys.argv) < 2:
@@ -379,6 +446,8 @@ if __name__ == '__main__':
         output_in_binary = False
     if '-c' in sys.argv:
         output_in_cwd = True
+    if '-p' in sys.argv:
+        output_pt_axis = True
     if '-t' in sys.argv:
         output_tensor_components = True
     if '-m' in sys.argv:
