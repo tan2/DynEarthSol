@@ -178,6 +178,7 @@ void restart(const Param& param, Variables& var)
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
+    create_boundary_normals(var, var.bnormals, var.edge_vectors);
     apply_vbcs(param, var, *var.vel);
 
     // Initializing field variables
