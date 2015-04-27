@@ -50,7 +50,7 @@ namespace {
         const double spacing0 = 1.0 / neta0;
         const double spacing1 = 1.0 / neta1;
         const double spacing2 = 1.0 / neta2;
-        const int max_el = std::min(32, var.nelem);
+        const int max_el = std::min(32, kdtree.nPoints());
         const double eps = 0;
         int nn_idx[32];
         double dd[32];
