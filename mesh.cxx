@@ -1337,115 +1337,49 @@ void create_boundary_facets(Variables& var)
     /* var.bfacets[i] contains a list of facets (or segments in 2D)
      * on the i-th boundary. (See constants.hpp for the order of boundaries.)
      */
-    int_vec special_elem, special_bdry;
-    for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var.connectivity)[e];
-        int count[nbdrytypes] = {0};  // how many facets (0~4) of this element are on the boundary?
-        for (int i=0; i<FACETS_PER_ELEM; ++i) {
-            // set all bits to 1
-            uint flag = BOUND_ANY;
-            for (int j=0; j<NODES_PER_FACET; ++j) {
-                // find common flags
-                int n = NODE_OF_FACET[i][j];
-                flag &= (*var.bcflag)[conn[n]];
-            }
-            if (flag) {
-                // this facet (very likely) belongs to a boundary
-                int ibound;
-                for (ibound=0; ibound<nbdrytypes; ibound++) {
-                    if (flag == (1U<<ibound))
-                        goto found;
-                }
-                // multiple bits set in flag!
-                std::cerr << "Error: facet " << i << " of element " << e
-                          << " belongs to more than one boundary!\n";
-                std::exit(12);
-            found:
-                var.bfacets[ibound].push_back(std::make_pair(e, i));
-                count[ibound]++;
-                if (count[ibound] == 2) {
-                    // Uncommon situation: one element has two or three facets
-                    // belonging to the same boundary (usually top or bottom).
-                    // The other facets of this element, although not on the boundary,
-                    // will be reported as false positive.
-                    // Another element, sharing the same facet, will be reported
-                    // as false positive too.
-                    special_elem.push_back(e);
-                    special_bdry.push_back(ibound);
-                }
-            }
-        }
-    }
 
-    // remove the false positive
-    for (int_vec::size_type i=0; i<special_elem.size(); ++i) {
-        int e = special_elem[i];
-        int ibound = special_bdry[i];
-        uint flag = 1 << ibound;
-        const int *conn = (*var.connectivity)[e];
+    // Looping through var.segment
+    for (int i=0; i<var.nseg; ++i) {
+        uint flag = static_cast<uint>((*var.segflag)[i][0]);
+        // Nodes of this facet
+        OrderedInt af((*var.segment)[i][0], (*var.segment)[i][1]
+#ifdef THREED
+                      , (*var.segment)[i][2]
+#endif
+                      );
 
-        std::vector<OrderedInt> badfacets;
-        auto p = var.bfacets[ibound].end();
-        while (p != var.bfacets[ibound].begin()) {  // loop in reverse order
-            --p;
-            if (p->first == e) {
-                int f = p->second;
-                // comparing the node ids of this facet with those in segment array
-                OrderedInt af(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
+        // Finding the corresponding element and facet #
+        for (int e=0; e<var.nelem; ++e) {
+            const int *conn = (*var.connectivity)[e];
+            for (int f=0; f<FACETS_PER_ELEM; ++f) {
+                if ((flag & (*var.bcflag)[conn[NODE_OF_FACET[f][0]]]
+                    & (*var.bcflag)[conn[NODE_OF_FACET[f][1]]]
+#ifdef THREED
+                    & (*var.bcflag)[conn[NODE_OF_FACET[f][2]]]
+#endif
+                     ) == 0U) continue; // skip
+
+                OrderedInt bf(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
 #ifdef THREED
                               , conn[NODE_OF_FACET[f][2]]
 #endif
                               );
-                bool false_positive = true;
-                for (int k=0; k<var.nseg; k++) {
-                    OrderedInt bf((*var.segment)[k][0], (*var.segment)[k][1]
-#ifdef THREED
-                                  , (*var.segment)[k][2]
-#endif
-                                  );
-                    if (af == bf) {
-                        // this is a true boundary facet
-                        false_positive = false;
-                        break;
+                if (af == bf) {
+                    for (int k=0; k<nbdrytypes; ++k) {
+                        if (flag == (1U << k)) {
+                            var.bfacets[k].push_back(std::make_pair(e,f));
+                            goto found_facet; // break out of nested loops
+                        }
                     }
                 }
-                if (false_positive) {
-                    p = var.bfacets[ibound].erase(p);
-                    badfacets.push_back(af); // storing bad facet
-                }
             }
         }
+        // not found
+        std::cerr << "Error: " << i << "-th segment is not on any element\n";
+        std::exit(12);
 
-        if (
-#ifdef THREED
-            badfacets.size() == 0 || badfacets.size() > 2
-#else
-            badfacets.size() == 0 || badfacets.size() > 1
-#endif
-            ) {
-            std::cerr << "Error: mesh facet is corrupted!\n";
-            std::exit(12);
-        }
-
-        // deleting the conjugate facet of the bad facet
-        for (auto df=badfacets.begin(); df!=badfacets.end(); ++df) {
-            auto p = var.bfacets[ibound].end();
-            while (p != var.bfacets[ibound].begin()) {  // loop in reverse order
-                --p;
-                int e = p->first;
-                int f = p->second;
-                const int *conn = (*var.connectivity)[e];
-                OrderedInt af(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
-#ifdef THREED
-                              , conn[NODE_OF_FACET[f][2]]
-#endif
-                              );
-                if (*df == af) {
-                    p = var.bfacets[ibound].erase(p);
-                    break;
-                }
-            }
-        }
+    found_facet:
+        continue;
     }
 
     // for (int n=0; n<nbdrytypes; ++n) {
