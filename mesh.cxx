@@ -852,7 +852,14 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-
+        if (bdryflag == 0) goto flag_ok;
+        for (int j=0; j<nbdrytypes; j++) {
+            if (bdryflag == 1 << j) goto flag_ok;
+        }
+        std::cerr << "Error: bdry_flag has multiple bits set in line " << lineno
+                  << " of '" << param.mesh.poly_filename << "'\n";
+        std::exit(1);
+    flag_ok:
         init_segflags[i] = bdryflag;
 
         f.polygonlist = new tetgenio::polygon[npolygons];
@@ -893,13 +900,22 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int *x = &init_segments[i*NODES_PER_FACET];
-        int junk;
-        n = std::sscanf(buffer, "%d %d %d %d", &junk, x, x+1, init_segflags+i);
+        int junk, bdryflag;
+        n = std::sscanf(buffer, "%d %d %d %d", &junk, x, x+1, &bdryflag);
         if (n != NODES_PER_FACET+2) {
             std::cerr << "Error: parsing line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
+        if (bdryflag == 0) goto flag_ok;
+        for (int j=0; j<nbdrytypes; j++) {
+            if (bdryflag == 1 << j) goto flag_ok;
+        }
+        std::cerr << "Error: bdry_flag has multiple bits set in line " << lineno
+                  << " of '" << param.mesh.poly_filename << "'\n";
+        std::exit(1);
+    flag_ok:
+        init_segflags[i] = bdryflag;
     }
     for (int i=0; i<n_init_segments; i++) {
         int *x = &init_segments[i*NODES_PER_FACET];
