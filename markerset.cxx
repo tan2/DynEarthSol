@@ -414,11 +414,17 @@ void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
         bin.read_array(*_id, (_name + ".id").c_str());
     }
 
-    for( int i = 0; i < _nmarkers; i++ ) {
-        int e = (*_elem)[i];
-        int mt = (*_mattype)[i];
-        ++(*var.elemmarkers)[e][mt];
-    }
+    if (_name == "markerset")
+        for( int i = 0; i < _nmarkers; i++ ) {
+            int e = (*_elem)[i];
+            int mt = (*_mattype)[i];
+            ++(*var.elemmarkers)[e][mt];
+        }
+    else if (_name == "hydrous-markerset")
+        for( int i = 0; i < _nmarkers; i++ ) {
+            int e = (*_elem)[i];
+            ++(*var.hydrous_elemmarkers)[e][0];
+        }
 }
 
 
