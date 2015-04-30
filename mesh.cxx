@@ -1357,6 +1357,7 @@ void create_boundary_facets(Variables& var)
     // Looping through var.segment
     for (int i=0; i<var.nseg; ++i) {
         uint flag = static_cast<uint>((*var.segflag)[i][0]);
+        if ((flag & BOUND_ANY) == 0) continue; // not a boundary facet
         // Nodes of this facet
         OrderedInt af((*var.segment)[i][0], (*var.segment)[i][1]
 #ifdef THREED
