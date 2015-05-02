@@ -133,7 +133,7 @@ static void declare_parameters(po::options_description &cfg,
          "10: no modification on any boundary, except small boundary segments might get merged.\n"
          "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments might get merged.\n")
 
-        ("mesh.is_discarding_internal_segments", po::value<bool>(&p.mesh.is_discarding_internal_segments)->default_value(false),
+        ("mesh.is_discarding_internal_segments", po::value<bool>(&p.mesh.is_discarding_internal_segments)->default_value(true),
          "Discarding internal segments after initial mesh is created? "
          "Using it when remeshing process can modify segments (e.g. remeshing_option=11).")
 
@@ -172,6 +172,8 @@ static void declare_parameters(po::options_description &cfg,
          "Is the simulation quasi-static or dynamic? If quasi-static, inertial scaling and strong damping is applied.\n")
         ("control.dt_fraction", po::value<double>(&p.control.dt_fraction)->default_value(1.0),
          "Take dt as a fraction of max. stable time step size (0-1).\n")
+        ("control.fixed_dt", po::value<double>(&p.control.fixed_dt)->default_value(0),
+         "Fixed dt size (in seconds). If 0, dt sized will be determined dynamically.\n")
         ("control.inertial_scaling", po::value<double>(&p.control.inertial_scaling)->default_value(1e5),
          "Scaling factor for inertial (a large number)")
         ("control.damping_factor", po::value<double>(&p.control.damping_factor)->default_value(0.8),
@@ -212,8 +214,8 @@ static void declare_parameters(po::options_description &cfg,
          "Applying water loading for top boundary that is below sea level?")
 
         ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
-         "Type of boundary condition for the left/western side. Possible type is \n"
-         "0: all components free;\n"
+         "Type of velocity boundary condition for the left/western side. Possible type is \n"
+         "0: all velocity components free;\n"
          "1: normal component fixed, shear components free;\n"
          "2: normal component free, shear components fixed at 0;\n"
          "3: normal component fixed, shear components fixed at 0;\n"
@@ -248,6 +250,21 @@ static void declare_parameters(po::options_description &cfg,
          "Type of boundary condition for slant boundary #0 (only type 1, 3 are supported).")
         ("bc.vbc_val_n0", po::value<double>(&p.bc.vbc_val_n0)->default_value(0),
          "Value of boundary condition for slant boundary #0 (if velocity, unit is m/s, "
+         "outward normal direction is positive; if stress, unit is Pa)")
+        ("bc.vbc_n1", po::value<int>(&p.bc.vbc_n1)->default_value(1),
+         "Type of boundary condition for slant boundary #1 (only type 1, 3 are supported).")
+        ("bc.vbc_val_n1", po::value<double>(&p.bc.vbc_val_n1)->default_value(0),
+         "Value of boundary condition for slant boundary #1 (if velocity, unit is m/s, "
+         "outward normal direction is positive; if stress, unit is Pa)")
+        ("bc.vbc_n2", po::value<int>(&p.bc.vbc_n2)->default_value(1),
+         "Type of boundary condition for slant boundary #2 (only type 1, 3 are supported).")
+        ("bc.vbc_val_n2", po::value<double>(&p.bc.vbc_val_n2)->default_value(0),
+         "Value of boundary condition for slant boundary #2 (if velocity, unit is m/s, "
+         "outward normal direction is positive; if stress, unit is Pa)")
+        ("bc.vbc_n3", po::value<int>(&p.bc.vbc_n3)->default_value(1),
+         "Type of boundary condition for slant boundary #3 (only type 1, 3 are supported).")
+        ("bc.vbc_val_n3", po::value<double>(&p.bc.vbc_val_n3)->default_value(0),
+         "Value of boundary condition for slant boundary #3 (if velocity, unit is m/s, "
          "outward normal direction is positive; if stress, unit is Pa)")
         ;
 
@@ -307,9 +324,11 @@ static void declare_parameters(po::options_description &cfg,
 
     cfg.add_options()
         ("mat.rheology_type", po::value<std::string>()->required(),
-         "Type of rheology, either 'elastic', 'viscous', 'maxwell', "
-         "'elasto-plastic' (general), 'elasto-plastic2d' (plane strain formulation, 2D only), "
-         "'elasto-visco-plastic' (general), or 'elasto-visco-plastic2d' (plane strain formulation, 2D only).")
+         "Type of rheology, either 'elastic', 'viscous' (experimental), 'maxwell', "
+         "'elasto-plastic', or 'elasto-visco-plastic'.")
+        ("mat.is_plane_strain", po::value<bool>(&p.mat.is_plane_strain)->default_value(false),
+         "Is the rheology formulation in plane strain (2D elasto-plastic case only)?\n")
+
         ("mat.phase_change_option", po::value<int>(&p.mat.phase_change_option)->default_value(0),
          "What kind of phase changes?\n"
          "0: no phase changes.\n"
@@ -574,20 +593,40 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Warning: no gravity, Wrinkler foundation is turned off.\n";
         }
         if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z0 != 0 ) {
-            std::cerr << "Error: bc.vbc_z0 is not 0, but Wrinkler foundation is turned on.\n";
-            std::exit(1);
+            p.bc.vbc_z0 = 0;
+            std::cerr << "Warning: Wrinkler foundation is turned on, setting bc.vbc_z0 to 0.\n";
         }
         if ( p.bc.has_water_loading && p.control.gravity == 0 ) {
             p.bc.has_water_loading = 0;
             std::cerr << "Warning: no gravity, water loading is turned off.\n";
         }
         if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z1 != 0 ) {
-            std::cerr << "Error: bc.vbc_z1 is not 0, but water loading is turned on.\n";
-            std::exit(1);
+            p.bc.vbc_z1 = 0;
+            std::cerr << "Warning: water loading is turned on, setting bc.vbc_z1 to 0.\n";
         }
 
+        if ( p.bc.vbc_z0 > 3) {
+            std::cerr << "Error: bc.vbc_z0 is not 0, 1, 2, or 3.\n";
+            std::exit(1);
+        }
+        if ( p.bc.vbc_z1 > 3) {
+            std::cerr << "Error: bc.vbc_z0 is not 0, 1, 2, or 3.\n";
+            std::exit(1);
+        }
         if ( p.bc.vbc_n0 != 1 && p.bc.vbc_n0 != 3 ) {
             std::cerr << "Error: bc.vbc_n0 is not 1, or 3.\n";
+            std::exit(1);
+        }
+        if ( p.bc.vbc_n1 != 1 && p.bc.vbc_n1 != 3 ) {
+            std::cerr << "Error: bc.vbc_n1 is not 1, or 3.\n";
+            std::exit(1);
+        }
+        if ( p.bc.vbc_n2 != 1 && p.bc.vbc_n2 != 3 ) {
+            std::cerr << "Error: bc.vbc_n2 is not 1, or 3.\n";
+            std::exit(1);
+        }
+        if ( p.bc.vbc_n3 != 1 && p.bc.vbc_n3 != 3 ) {
+            std::cerr << "Error: bc.vbc_n3 is not 1, or 3.\n";
             std::exit(1);
         }
     }
@@ -643,22 +682,17 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             p.mat.rheol_type = MatProps::rh_maxwell;
         else if (str == std::string("elasto-plastic"))
             p.mat.rheol_type = MatProps::rh_ep;
-        else if (str == std::string("elasto-plastic2d"))
-            p.mat.rheol_type = MatProps::rh_ep2d;
         else if (str == std::string("elasto-visco-plastic"))
             p.mat.rheol_type = MatProps::rh_evp;
-        else if (str == std::string("elasto-visco-plastic2d"))
-            p.mat.rheol_type = MatProps::rh_evp2d;
         else {
             std::cerr << "Error: unknown rheology: '" << str << "'\n";
             std::exit(1);
         }
 
 #ifdef THREED
-        if (p.mat.rheol_type == MatProps::rh_ep2d ||
-            p.mat.rheol_type == MatProps::rh_evp2d) {
-            std::cerr << "Error:  " << str << " rheology cannot be used in 3D.\n";
-            std::exit(1);
+        if ( p.mat.is_plane_strain ) {
+            p.mat.is_plane_strain = false;
+            std::cerr << "Warning: mat.is_plane_strain is not avaiable in 3D.\n";
         }
 #endif
 
@@ -680,6 +714,10 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::exit(1);
         }
 
+        if (p.mat.nmat == 1 && p.control.ref_pressure_option != 0) {
+            p.control.ref_pressure_option = 0;
+            std::cerr << "Warning: mat.num_materials is 1, using simplest control.ref_pressure_option.\n";
+        }
         if (p.mat.nmat == 1 && p.markers.replenishment_option != 1) {
             p.markers.replenishment_option = 1;
             std::cerr << "Warning: mat.num_materials is 1, using simplest markers.replenishment_option.\n";

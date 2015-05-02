@@ -18,6 +18,12 @@
 #include "matprops.hpp"
 #include "output.hpp"
 
+#ifdef WIN32
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#endif // _MSC_VER
+namespace std { using ::snprintf; }
+#endif // WIN32
 
 Output::Output(const Param& param, double start_time, int start_frame) :
     modelname(param.sim.modelname),
@@ -242,7 +248,7 @@ void Output::average_fields(Variables& var)
 }
 
 
-void Output::write_checkpoint(const Variables& var)
+void Output::write_checkpoint(const Param& param, const Variables& var)
 {
     char filename[256];
     std::snprintf(filename, 255, "%s.chkpt.%06d", modelname.c_str(), frame);
@@ -259,6 +265,8 @@ void Output::write_checkpoint(const Variables& var)
     // bin.write_array(*var.regattr, "regattr", var.regattr->size());
 
     bin.write_array(*var.volume_old, "volume_old", var.volume_old->size());
+    if (param.mat.is_plane_strain)
+        bin.write_array(*var.stressyy, "stressyy", var.stressyy->size());
 
     for (auto ms=var.markersets.begin(); ms!=var.markersets.end(); ++ms)
         (*ms)->write_chkpt_file(bin);

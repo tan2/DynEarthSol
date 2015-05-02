@@ -1,7 +1,9 @@
 #include <cmath>
 #include <limits>
 #include <iostream>
+#ifdef USE_OMP
 #include "omp.h"
+#endif
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -179,6 +181,10 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
 
 double compute_dt(const Param& param, const Variables& var)
 {
+    // constant dt
+    if (param.control.fixed_dt != 0) return param.control.fixed_dt;
+
+    // dynamic dt
     const int nelem = var.nelem;
     const conn_t& connectivity = *var.connectivity;
     const array_t& coord = *var.coord;

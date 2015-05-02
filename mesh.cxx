@@ -33,6 +33,22 @@
 #include "mesh.hpp"
 #include "markerset.hpp"
 
+#ifdef WIN32
+#ifndef _MSC_VER
+namespace std {
+  static std::string to_string(long double t) 
+  {
+    char temp[32];
+    sprintf(temp,"%f",double(t));
+    return std::string(temp);
+  }
+}
+#endif //_MSC_VER
+#endif // WIN32
+
+#ifdef WIN32
+static double drand48() { return (double)rand()/(double)RAND_MAX; }
+#endif // WIN32
 
 namespace { // anonymous namespace
 
@@ -502,240 +518,204 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 {
     const Mesh& m = param.mesh;
 
-    // To prevent the meshing library giving us a regular grid, the nodes
-    // will be shifted randomly by a small distance
-    const double shift_factor = 0.1;
+    // bounding box
+    const double Lx = m.xlength;
+#ifdef THREED
+    const double Ly = m.ylength;
+#endif
+    const double Lz = m.zlength;
 
     // typical distance between nodes in the refined zone
-    const double d = param.mesh.resolution / std::sqrt(2);
+    const double d = m.resolution;
 
     // adjust the bounds of the refined zone so that nodes are not on the boundary
-    double x0, x1, y0, y1, z0, z1;
-    double dx, dy, dz;
-    int nx, ny, nz;
-    x0 = std::max(m.refined_zonex.first, d / m.xlength);
-    x1 = std::min(m.refined_zonex.second, 1 - d / m.xlength);
-    nx = m.xlength * (x1 - x0) / d + 1;
-    dx = m.xlength * (x1 - x0) / nx;
-    z0 = std::max(m.refined_zonez.first, d / m.zlength);
-    z1 = std::min(m.refined_zonez.second, 1 - d / m.zlength);
-    nz = m.zlength * (z1 - z0) / d + 1;
-    dz = m.zlength * (z1 - z0) / (nz - 1);
-
-    int npoints;
-#ifndef THREED
-    npoints = nx * nz + 4 * (NDIMS - 1);
-#else
-    y0 = std::max(m.refined_zoney.first, d / m.ylength);
-    y1 = std::min(m.refined_zoney.second, 1 - d / m.ylength);
-    ny = m.ylength * (y1 - y0) / d + 1;
-    dy = m.ylength * (y1 - y0) / (ny - 1);
-    npoints = nx * ny * nz + 4 * (NDIMS - 1);
+    const double x0 = std::max(m.refined_zonex.first, d / Lx);
+    const double x1 = std::min(m.refined_zonex.second, 1 - d / Lx);
+#ifdef THREED
+    const double y0 = std::max(m.refined_zoney.first, d / Ly);
+    const double y1 = std::min(m.refined_zoney.second, 1 - d / Ly);
 #endif
+    const double z0 = std::max(m.refined_zonez.first, d / Lz);
+    const double z1 = std::min(m.refined_zonez.second, 1 - d / Lz);
 
+    const int npoints = 2 * 4 * (NDIMS - 1);
     double *points = new double[npoints*NDIMS];
 
-    int n_init_segments = 2 * NDIMS; // 2D:4;  3D:6
-    int n_segment_nodes = 2 * (NDIMS - 1); // 2D:2; 3D:4
-    int *init_segments = new int[n_init_segments*n_segment_nodes];
-    int *init_segflags = new int[n_init_segments];
-
-    const int attr_ndata = NDIMS+2;
-    const int nregions = (param.ic.mattype_option == 0) ? param.mat.nmat : 1;
-    double *regattr = new double[nregions*attr_ndata]; // each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), and volume.
-
-    double max_elem_size;
-    int vertex_per_polygon = 4;
+    const int nsegments = 2 * (2 * NDIMS); // 2 x 2D:4;  3D:6
+    const int nnodes = 2 * (NDIMS - 1);    // 2D:2; 3D:4
+    const int vertex_per_polygon = 4;
+    int *segments = new int[nsegments*nnodes];
+    int *segflags = new int[nsegments];
 
 #ifndef THREED
     {
-	/* Define 4 corner points of the rectangle, with this order:
-         *            BOUNDZ1
-         *          0 ------- 3
-         *  BOUNDX0 |         | BOUNDX1
-         *          1 ------- 2
-         *            BOUNDZ0
-         */
-        // corner 0
-        points[0] = 0;
-	points[1] = 0;
-        // corner 1
-	points[2] = 0;
-	points[3] = -param.mesh.zlength;
-        // corner 2
-	points[4] = param.mesh.xlength;
-	points[5] = -param.mesh.zlength;
-        // corner 3
-	points[6] = param.mesh.xlength;
-	points[7] = 0;
+      /* Define 4 corner points of the rectangle, with this order:
+       *            BOUNDZ1
+       *          0 ------- 3
+       *  BOUNDX0 |         | BOUNDX1
+       *          1 ------- 2
+       *            BOUNDZ0
+       */
 
-        // add refined nodes
-        int n = 8;
-        for (int i=0; i<nx; ++i) {
-            for (int k=0; k<nz; ++k) {
-                double rx = drand48() - 0.5;
-                double rz = drand48() - 0.5;
-                points[n  ] = x0 * m.xlength + (i + shift_factor*rx) * dx;
-                points[n+1] = (1-z0) * -m.zlength + (k + shift_factor*rz) * dz;
-                n += NDIMS;
-            }
-        }
+      // outer box            // inner box
+      // corner 0             // corner 0
+      points[0] = 0.0;        points[8+0] = +x0*Lx;
+      points[1] = 0.0;        points[8+1] = -z0*Lz;
+      // corner 1             // corner 1
+      points[2] = 0.0;        points[8+2] = +x0*Lx;
+      points[3] = -Lz;        points[8+3] = -z1*Lz;
+      // corner 2             // corner 2
+      points[4] = +Lx;        points[8+4] = +x1*Lx;
+      points[5] = -Lz;        points[8+5] = -z1*Lz;
+      // corner 3             // corner 3
+      points[6] = +Lx;        points[8+6] = +x1*Lx;
+      points[7] = 0.0;        points[8+7] = -z0*Lz;
 
-	for (int i=0; i<n_init_segments; ++i) {
-            // 0th node of the i-th segment
-	    init_segments[2*i] = i;
-            // 1st node of the i-th segment
-	    init_segments[2*i+1] = i+1;
-	}
-	// the 1st node of the last segment is connected back to the 0th node
-	init_segments[2*n_init_segments-1] = 0;
+      // outer segments       // inner segments
+      // BOUNDX0              // BOUNDX0
+      segments[0] = 0;        segments[8+0] = 4+0;
+      segments[1] = 1;        segments[8+1] = 4+1;
+      // BOUNDZ0              // BOUNDZ0
+      segments[2] = 1;        segments[8+2] = 4+1;
+      segments[3] = 2;        segments[8+3] = 4+2;
+      // BOUNDX1              // BOUNDX1
+      segments[4] = 2;        segments[8+4] = 4+2;
+      segments[5] = 3;        segments[8+5] = 4+3;
+      // BOUNDZ1              // BOUNDZ1
+      segments[6] = 3;        segments[8+6] = 4+3;
+      segments[7] = 0;        segments[8+7] = 4+0;
 
-        // boundary flags (see definition in constants.hpp)
-        init_segflags[0] = BOUNDX0;
-        init_segflags[1] = BOUNDZ0;
-        init_segflags[2] = BOUNDX1;
-        init_segflags[3] = BOUNDZ1;
-
-        max_elem_size = 1.5 * param.mesh.resolution * param.mesh.resolution
-            * param.mesh.largest_size;
-
-        // Need to modify when nregions > 1.
-        for (int i = 0; i < nregions; i++) {
-            regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
-            regattr[i * attr_ndata + 1] = -0.5*param.mesh.zlength;
-            regattr[i * attr_ndata + 2] = 0;
-            regattr[i * attr_ndata + 3] = -1;
-        }
+      // outer boundary       // inner boundary
+      segflags[0] = BOUNDX0;  segflags[4+0] = 0;
+      segflags[1] = BOUNDZ0;  segflags[4+1] = 0;
+      segflags[2] = BOUNDX1;  segflags[4+2] = 0;
+      segflags[3] = BOUNDZ1;  segflags[4+3] = 0;
     }
 #else
     {
-	/* Define 8 corner points of the box, with this order:
-         *         4 ------- 7
-         *        /         /|
-         *       /         / 6
-         *      0 ------- 3 /
-         *      |         |/
-         *      1 ------- 2
-         *
-         * Cut-out diagram with boundary flag:
-         *             4 ------- 7
-         *             | BOUNDZ1 |
-         *   4 ------- 0 ------- 3 ------- 7 ------- 4
-         *   | BOUNDX0 | BOUNDY0 | BOUNDX1 | BOUNDY1 |
-         *   5 ------- 1 ------- 2 ------- 6 ------- 5
-         *             | BOUNDZ0 |
-         *             5 ------- 6
-         */
+      /* Define 8 corner points of the box, with this order:
+       *         4 ------- 7
+       *        /         /|
+       *       /         / 6
+       *      0 ------- 3 /
+       *      |         |/
+       *      1 ------- 2
+       *
+       * Cut-out diagram with boundary flag:
+       *             4 ------- 7
+       *             | BOUNDZ1 |
+       *   4 ------- 0 ------- 3 ------- 7 ------- 4
+       *   | BOUNDX0 | BOUNDY0 | BOUNDX1 | BOUNDY1 |
+       *   5 ------- 1 ------- 2 ------- 6 ------- 5
+       *             | BOUNDZ0 |
+       *             5 ------- 6
+       */
 
-        // corner 0
-        points[0] = 0;
-	points[1] = 0;
-	points[2] = 0;
-        // corner 1
-	points[3] = 0;
-	points[4] = 0;
-	points[5] = -param.mesh.zlength;
-        // corner 2
-	points[6] = param.mesh.xlength;
-	points[7] = 0;
-	points[8] = -param.mesh.zlength;
-        // corner 3
-	points[9] = param.mesh.xlength;
-	points[10] = 0;
-	points[11] = 0;
-        // corner 4
-	points[12] = 0;
-	points[13] = param.mesh.ylength;
-	points[14] = 0;
-        // corner 5
-	points[15] = 0;
-	points[16] = param.mesh.ylength;
-	points[17] = -param.mesh.zlength;
-        // corner 6
-	points[18] = param.mesh.xlength;
-	points[19] = param.mesh.ylength;
-	points[20] = -param.mesh.zlength;
-        // corner 7
-	points[21] = param.mesh.xlength;
-	points[22] = param.mesh.ylength;
-	points[23] = 0;
+      // outer box            // inner box
+      // corner 0             // corner 0
+      points[ 0] = 0.0;       points[24+ 0] = +x0*Lx;
+      points[ 1] = 0.0;       points[24+ 1] = +y0*Ly;
+      points[ 2] = 0.0;       points[24+ 2] = -z0*Lz;
+      // corner 1             // corner 1
+      points[ 3] = 0.0;       points[24+ 3] = +x0*Lx;
+      points[ 4] = 0.0;       points[24+ 4] = +y0*Ly;
+      points[ 5] = -Lz;       points[24+ 5] = -z1*Lz;
+      // corner 2             // corner 2
+      points[ 6] = +Lx;       points[24+ 6] = +x1*Lx;
+      points[ 7] = 0.0;       points[24+ 7] = +y0*Ly;
+      points[ 8] = -Lz;       points[24+ 8] = -z1*Lz;
+      // corner 3             // corner 3
+      points[ 9] = +Lx;       points[24+ 9] = +x1*Lx;
+      points[10] = 0.0;       points[24+10] = +y0*Ly;
+      points[11] = 0.0;       points[24+11] = -z0*Lz;
+      // corner 4             // corner 4
+      points[12] = 0.0;       points[24+12] = +x0*Lx;
+      points[13] = +Ly;       points[24+13] = +y1*Ly;
+      points[14] = 0.0;       points[24+14] = -z0*Lz;
+      // corner 5             // corner 5
+      points[15] = 0.0;       points[24+15] = +x0*Lx;
+      points[16] = +Ly;       points[24+16] = +y1*Ly;
+      points[17] = -Lz;       points[24+17] = -z1*Lz;
+      // corner 6             // corner 6
+      points[18] = +Lx;       points[24+18] = +x1*Lx;
+      points[19] = +Ly;       points[24+19] = +y1*Ly;
+      points[20] = -Lz;       points[24+20] = -z1*Lz;
+      // corner 7             // corner 7
+      points[21] = +Lx;       points[24+21] = +x1*Lx;
+      points[22] = +Ly;       points[24+22] = +y1*Ly;
+      points[23] = 0.0;       points[24+23] = -z0*Lz;
 
-        // add refined nodes
-        int n = 24;
-        for (int i=0; i<nx; ++i) {
-            for (int j=0; j<ny; ++j) {
-                for (int k=0; k<nz; ++k) {
-                    double rx = drand48() - 0.5;
-                    double ry = drand48() - 0.5;
-                    double rz = drand48() - 0.5;
-                    points[n  ] = x0 * m.xlength + (i + shift_factor*rx) * dx;
-                    points[n+1] = y0 * m.ylength + (j + shift_factor*ry) * dy;
-                    points[n+2] = (1-z0) * -m.zlength + (k + shift_factor*rz) * dz;
-                    n += NDIMS;
-                }
-            }
-        }
+      // outer segments       // inner segments
+      // BOUNDX0              // BOUNDX0
+      segments[ 0] = 0;       segments[24+ 0] = 8+0;
+      segments[ 1] = 1;       segments[24+ 1] = 8+1;
+      segments[ 2] = 5;       segments[24+ 2] = 8+5;
+      segments[ 3] = 4;       segments[24+ 3] = 8+4;
+      // BOUNDY0              // BOUNDY0
+      segments[ 4] = 0;       segments[24+ 4] = 8+0;
+      segments[ 5] = 3;       segments[24+ 5] = 8+3;
+      segments[ 6] = 2;       segments[24+ 6] = 8+2;
+      segments[ 7] = 1;       segments[24+ 7] = 8+1;
+      // BOUNDZ0              // BOUNDZ0
+      segments[ 8] = 1;       segments[24+ 8] = 8+1;
+      segments[ 9] = 2;       segments[24+ 9] = 8+2;
+      segments[10] = 6;       segments[24+10] = 8+6;
+      segments[11] = 5;       segments[24+11] = 8+5;
+      // BOUNDX1              // BOUNDX1
+      segments[12] = 3;       segments[24+12] = 8+3;
+      segments[13] = 7;       segments[24+13] = 8+7;
+      segments[14] = 6;       segments[24+14] = 8+6;
+      segments[15] = 2;       segments[24+15] = 8+2;
+      // BOUNDY1              // BOUNDY1
+      segments[16] = 7;       segments[24+16] = 8+7;
+      segments[17] = 4;       segments[24+17] = 8+4;
+      segments[18] = 5;       segments[24+18] = 8+5;
+      segments[19] = 6;       segments[24+19] = 8+6;
+      // BOUNDZ1              // BOUNDZ1
+      segments[20] = 0;       segments[24+20] = 8+0;
+      segments[21] = 4;       segments[24+21] = 8+4;
+      segments[22] = 7;       segments[24+22] = 8+7;
+      segments[23] = 3;       segments[24+23] = 8+3;
 
-        // BOUNDX0
-        init_segments[0] = 0;
-        init_segments[1] = 1;
-        init_segments[2] = 5;
-        init_segments[3] = 4;
-        // BOUNDY0
-        init_segments[4] = 0;
-        init_segments[5] = 3;
-        init_segments[6] = 2;
-        init_segments[7] = 1;
-        // BOUNDZ0
-        init_segments[8] = 1;
-        init_segments[9] = 2;
-        init_segments[10] = 6;
-        init_segments[11] = 5;
-        // BOUNDX1
-        init_segments[12] = 3;
-        init_segments[13] = 7;
-        init_segments[14] = 6;
-        init_segments[15] = 2;
-        // BOUNDY1
-        init_segments[16] = 7;
-        init_segments[17] = 4;
-        init_segments[18] = 5;
-        init_segments[19] = 6;
-        // BOUNDZ1
-        init_segments[20] = 0;
-        init_segments[21] = 4;
-        init_segments[22] = 7;
-        init_segments[23] = 3;
-
-        // boundary flags (see definition in constants.hpp)
-        init_segflags[0] = BOUNDX0;
-        init_segflags[1] = BOUNDY0;
-        init_segflags[2] = BOUNDZ0;
-        init_segflags[3] = BOUNDX1;
-        init_segflags[4] = BOUNDY1;
-        init_segflags[5] = BOUNDZ1;
-
-        max_elem_size = 0.7 * param.mesh.resolution * param.mesh.resolution
-            * param.mesh.resolution * param.mesh.largest_size;
-
-        // Need to modify when nregions > 1.
-        for (int i = 0; i < nregions; i++) {
-            regattr[i * attr_ndata] = 0.5*param.mesh.xlength;
-            regattr[i * attr_ndata + 1] = 0.5*param.mesh.ylength;
-            regattr[i * attr_ndata + 2] = -0.5*param.mesh.zlength;
-            regattr[i * attr_ndata + 3] = 0;
-            regattr[i * attr_ndata + 4] = -1;
-        }
+      // outer boundary       // inner boundary
+      segflags[0] = BOUNDX0;  segflags[6+0] = 0;
+      segflags[1] = BOUNDY0;  segflags[6+1] = 0;
+      segflags[2] = BOUNDZ0;  segflags[6+2] = 0;
+      segflags[3] = BOUNDX1;  segflags[6+3] = 0;
+      segflags[4] = BOUNDY1;  segflags[6+4] = 0;
+      segflags[5] = BOUNDZ1;  segflags[6+5] = 0;
     }
 #endif
 
+    const int nregions = 2;
+    const int ndata = NDIMS+2; // each region has (NDIMS+2) data fields: x, (y,) z, region marker (mat type), area/volume.
+    double *regattr = new double[nregions*ndata];
+    double *region0 = regattr;
+    double *region1 = regattr + ndata;
+#ifndef THREED
+    const double area1 = 1.5 * (d*d);
+#else
+    const double area1 = 0.7 * (d*d*d);
+#endif
+    const double area0 = area1 * m.largest_size;
+    int pos = 0;
+    region0[pos] = +d/2;  region1[pos++] = +x0*Lx+d/2; // x
+#if THREED
+    region0[pos] = +d/2;  region1[pos++] = +y0*Ly+d/2; // y
+#endif
+    region0[pos] = -d/2;  region1[pos++] = -z0*Lz-d/2; // z
+    region0[pos] = 0.0;   region1[pos++] = 0.0;        // attribute
+    region0[pos] = area0; region1[pos++] = area1;      // area/volume
+
+    const double max_elem_size = 0;
+
     points_to_mesh(param, var, npoints, points,
-                   n_init_segments, init_segments, init_segflags, nregions, regattr,
+                   nsegments, segments, segflags, nregions, regattr,
                    max_elem_size, vertex_per_polygon);
 
     delete [] points;
-    delete [] init_segments;
-    delete [] init_segflags;
+    delete [] segments;
+    delete [] segflags;
     delete [] regattr;
 }
 
@@ -872,7 +852,14 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << " of '" << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
-
+        if (bdryflag == 0) goto flag_ok;
+        for (int j=0; j<nbdrytypes; j++) {
+            if (bdryflag == 1 << j) goto flag_ok;
+        }
+        std::cerr << "Error: bdry_flag has multiple bits set in line " << lineno
+                  << " of '" << param.mesh.poly_filename << "'\n";
+        std::exit(1);
+    flag_ok:
         init_segflags[i] = bdryflag;
 
         f.polygonlist = new tetgenio::polygon[npolygons];
@@ -913,13 +900,22 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
 
         int *x = &init_segments[i*NODES_PER_FACET];
-        int junk;
-        n = std::sscanf(buffer, "%d %d %d %d", &junk, x, x+1, init_segflags+i);
+        int junk, bdryflag;
+        n = std::sscanf(buffer, "%d %d %d %d", &junk, x, x+1, &bdryflag);
         if (n != NODES_PER_FACET+2) {
             std::cerr << "Error: parsing line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
+        if (bdryflag == 0) goto flag_ok;
+        for (int j=0; j<nbdrytypes; j++) {
+            if (bdryflag == 1 << j) goto flag_ok;
+        }
+        std::cerr << "Error: bdry_flag has multiple bits set in line " << lineno
+                  << " of '" << param.mesh.poly_filename << "'\n";
+        std::exit(1);
+    flag_ok:
+        init_segflags[i] = bdryflag;
     }
     for (int i=0; i<n_init_segments; i++) {
         int *x = &init_segments[i*NODES_PER_FACET];
@@ -1147,7 +1143,11 @@ void discard_internal_segments(int &nseg, segment_t &segment, segflag_t &segflag
 
 
 void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
-                      segment_t &segment, regattr_t &regattr, int option)
+                      segment_t &segment, regattr_t *regattr)
+/* Note: the last argument is a pointer to regional attribute. If the pointer
+ * is not NULL (when the initial mesh is created, before creating markers),
+ * regattr is renumbered.
+ */
 {
     /* Renumbering nodes and elements to enhance cache coherance and better parallel performace. */
 
@@ -1193,10 +1193,15 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
     }
 
     // arrays to store the result of sorting
-    std::vector<std::size_t> nd_idx(nnode);
-    std::vector<std::size_t> el_idx(nelem);
+    std::vector<int> nd_idx(nnode);
+    std::vector<int> el_idx(nelem);
     sortindex(wn, nd_idx);
     sortindex(we, el_idx);
+
+    // inverse permutation
+    std::vector<int> nd_inv(nnode);
+    for(int i=0; i<nnode; i++)
+      nd_inv[nd_idx[i]] = i;
 
     //
     // renumbering
@@ -1214,7 +1219,7 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
         int n = el_idx[i];
         for(int j=0; j<NODES_PER_ELEM; j++) {
             int k = connectivity[n][j];
-            conn2[i][j] = std::find(nd_idx.begin(), nd_idx.end(), k) - nd_idx.begin();
+            conn2[i][j] = nd_inv[k];
         }
     }
     connectivity.steal_ref(conn2);
@@ -1223,18 +1228,18 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
     for(int i=0; i<nseg; i++) {
         for(int j=0; j<NDIMS; j++) {
             int k = segment[i][j];
-            seg2[i][j] = std::find(nd_idx.begin(), nd_idx.end(), k) - nd_idx.begin();
+            seg2[i][j] = nd_inv[k];
         }
     }
     segment.steal_ref(seg2);
 
-    if (option == 1) {
+    if (regattr != NULL) {
         regattr_t regattr2(nelem);
         for(int i=0; i<nelem; i++) {
             int n = el_idx[i];
-            regattr2[i][0] = regattr[n][0];
+            regattr2[i][0] = (*regattr)[n][0];
         }
-        regattr.steal_ref(regattr2);
+        regattr->steal_ref(regattr2);
     }
 }
 
@@ -1255,6 +1260,7 @@ void create_boundary_flags2(uint_vec &bcflag, int nseg,
 void create_boundary_flags(Variables& var)
 {
     // allocate and init to 0
+    if (var.bcflag) delete var.bcflag;
     var.bcflag = new uint_vec(var.nnode);
 
     create_boundary_flags2(*var.bcflag, var.segment->size(),
@@ -1285,35 +1291,112 @@ void create_boundary_nodes(Variables& var)
 }
 
 
+namespace {
+
+    struct OrderedInt
+    {
+#ifdef THREED
+        int a, b, c;
+        OrderedInt(int x, int y, int z)
+        {
+            // ensure that a < b < c
+            if (x < y) {
+                if (y < z)
+                    a = x, b = y, c = z;
+                else {
+                    if (x < z)
+                        a = x, b = z, c = y;
+                    else
+                        a = z, b = x, c = y;
+                }
+            }
+            else {
+                if (x < z)
+                    a = y, b = x, c = z;
+                else {
+                    if (y < z)
+                        a = y, b = z, c = x;
+                    else
+                        a = z, b = y, c = x;
+                }
+            }
+        }
+
+        bool operator==(OrderedInt &rhs)
+        {
+            return a==rhs.a && b==rhs.b && c==rhs.c;
+        }
+
+#else
+
+        int a, b;
+        OrderedInt(int x, int y)
+        {
+            // ensure that a < b
+            if (x < y)
+                a = x, b = y;
+            else
+                a = y, b = x;
+        }
+
+        bool operator==(OrderedInt &rhs)
+        {
+            return a==rhs.a && b==rhs.b;
+        }
+#endif
+    };
+}
+
+
 void create_boundary_facets(Variables& var)
 {
     /* var.bfacets[i] contains a list of facets (or segments in 2D)
      * on the i-th boundary. (See constants.hpp for the order of boundaries.)
      */
-    for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var.connectivity)[e];
-        for (int i=0; i<FACETS_PER_ELEM; ++i) {
-            // set all bits to 1
-            uint flag = BOUND_ANY;
-            for (int j=0; j<NODES_PER_FACET; ++j) {
-                // find common flags
-                int n = NODE_OF_FACET[i][j];
-                flag &= (*var.bcflag)[conn[n]];
-            }
-            if (flag) {
-                // this facet belongs to a boundary
-                int ibound;
-                for (ibound=0; ibound<nbdrytypes; ibound++) {
-                    if (flag == (1<<ibound))
-                        goto found;
+
+    // Looping through var.segment
+    for (int i=0; i<var.nseg; ++i) {
+        uint flag = static_cast<uint>((*var.segflag)[i][0]);
+        if ((flag & BOUND_ANY) == 0) continue; // not a boundary facet
+        // Nodes of this facet
+        OrderedInt af((*var.segment)[i][0], (*var.segment)[i][1]
+#ifdef THREED
+                      , (*var.segment)[i][2]
+#endif
+                      );
+
+        // Finding the corresponding element and facet #
+        for (int e=0; e<var.nelem; ++e) {
+            const int *conn = (*var.connectivity)[e];
+            for (int f=0; f<FACETS_PER_ELEM; ++f) {
+                if ((flag & (*var.bcflag)[conn[NODE_OF_FACET[f][0]]]
+                    & (*var.bcflag)[conn[NODE_OF_FACET[f][1]]]
+#ifdef THREED
+                    & (*var.bcflag)[conn[NODE_OF_FACET[f][2]]]
+#endif
+                     ) == 0U) continue; // skip
+
+                OrderedInt bf(conn[NODE_OF_FACET[f][0]], conn[NODE_OF_FACET[f][1]]
+#ifdef THREED
+                              , conn[NODE_OF_FACET[f][2]]
+#endif
+                              );
+                if (af == bf) {
+                    for (int k=0; k<nbdrytypes; ++k) {
+                        if (flag == (1U << k)) {
+                            var.bfacets[k].push_back(std::make_pair(e,f));
+                            goto found_facet; // break out of nested loops
+                        }
+                    }
                 }
-                std::cerr << "Error: facet " << i << " of element " << e
-                          << " belongs to more than one boundary!\n";
-                std::exit(1);
-            found:
-                var.bfacets[ibound].push_back(std::make_pair(e, i));
             }
         }
+        // not found
+        std::cerr << "Error: " << i << "-th segment is not on any element\n";
+        std::exit(12);
+
+    found_facet:
+        continue;
     }
 
     // for (int n=0; n<nbdrytypes; ++n) {
@@ -1487,7 +1570,7 @@ void create_new_mesh(const Param& param, Variables& var)
     if (param.mesh.is_discarding_internal_segments)
         discard_internal_segments(var.nseg, *var.segment, *var.segflag);
 
-    renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, *var.regattr, 1);
+    renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, var.regattr);
 
     // std::cout << "segment:\n";
     // print(std::cout, *var.segment);

@@ -20,6 +20,48 @@
 #include "remeshing.hpp"
 #include "rheology.hpp"
 
+#ifdef WIN32
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#endif // _MSC_VER
+namespace std { using ::snprintf; }
+#endif // WIN32
+
+void init_var(const Param& param, Variables& var)
+{
+    var.time = 0;
+    var.steps = 0;
+
+    if (param.control.characteristic_speed == 0)
+        var.max_vbc_val = find_max_vbc(param.bc);
+    else
+        var.max_vbc_val = param.control.characteristic_speed;
+
+    // XXX: Hard coded boundary flag. If the order of ibound?? is changed
+    //      in the future, the following lines have to be updated as well.
+    var.vbc_types[0] = param.bc.vbc_x0;
+    var.vbc_types[1] = param.bc.vbc_x1;
+    var.vbc_types[2] = param.bc.vbc_y0;
+    var.vbc_types[3] = param.bc.vbc_y1;
+    var.vbc_types[4] = param.bc.vbc_z0;
+    var.vbc_types[5] = param.bc.vbc_z1;
+    var.vbc_types[6] = param.bc.vbc_n0;
+    var.vbc_types[7] = param.bc.vbc_n1;
+    var.vbc_types[8] = param.bc.vbc_n2;
+    var.vbc_types[9] = param.bc.vbc_n3;
+
+    var.vbc_values[0] = param.bc.vbc_val_x0;
+    var.vbc_values[1] = param.bc.vbc_val_x1;
+    var.vbc_values[2] = param.bc.vbc_val_y0;
+    var.vbc_values[3] = param.bc.vbc_val_y1;
+    var.vbc_values[4] = param.bc.vbc_val_z0;
+    var.vbc_values[5] = param.bc.vbc_val_z1;
+    var.vbc_values[6] = param.bc.vbc_val_n0;
+    var.vbc_values[7] = param.bc.vbc_val_n1;
+    var.vbc_values[8] = param.bc.vbc_val_n2;
+    var.vbc_values[9] = param.bc.vbc_val_n3;
+}
+
 
 void init(const Param& param, Variables& var)
 {
@@ -43,11 +85,11 @@ void init(const Param& param, Variables& var)
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
-    create_boundary_normals(var, var.bnormals);
+    create_boundary_normals(var, var.bnormals, var.edge_vectors);
     apply_vbcs(param, var, *var.vel);
     // temperature should be init'd before stress and strain
     initial_temperature(param, var, *var.temperature);
-    initial_stress_state(param, var, *var.stress, *var.strain, var.compensation_pressure);
+    initial_stress_state(param, var, *var.stress, *var.stressyy, *var.strain, var.compensation_pressure);
     initial_weak_zone(param, var, *var.plstrain);
 }
 
@@ -136,6 +178,7 @@ void restart(const Param& param, Variables& var)
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
+    create_boundary_normals(var, var.bnormals, var.edge_vectors);
     apply_vbcs(param, var, *var.vel);
 
     // Initializing field variables
@@ -146,6 +189,9 @@ void restart(const Param& param, Variables& var)
         bin_save.read_array(*var.strain, "strain");
         bin_save.read_array(*var.stress, "stress");
         bin_save.read_array(*var.plstrain, "plastic strain");
+
+        if (param.mat.is_plane_strain)
+            bin_chkpt.read_array(*var.stressyy, "stressyy");
     }
 
     // Misc. items
@@ -186,7 +232,8 @@ void isostasy_adjustment(const Param &param, Variables &var)
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        update_stress(var, *var.stress, *var.strain, *var.plstrain,  *var.delta_plstrain, *var.strain_rate);
+        update_stress(var, *var.stress, *var.stressyy, *var.strain,
+                      *var.plstrain, *var.delta_plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
 
@@ -194,10 +241,15 @@ void isostasy_adjustment(const Param &param, Variables &var)
 
         // displacment is vertical only
         #pragma omp parallel for default(none)          \
-            shared(var)
+            shared(var, param)
         for (int i=0; i<var.nnode; ++i) {
             for (int j=0; j<NDIMS-1; ++j) {
                 (*var.vel)[i][j] = 0;
+            }
+            if (param.bc.has_wrinkler_foundation == false &&
+                (*var.bcflag)[i] & BOUNDZ0) {
+                // holding bottom surface fixed
+                (*var.vel)[i][NDIMS-1] = 0;
             }
         }
 
@@ -231,15 +283,10 @@ int main(int argc, const char* argv[])
     // run simulation
     //
     static Variables var; // declared as static to silence valgrind's memory leak detection
+    init_var(param, var);
+
     Output output(param, start_time,
                   (param.sim.is_restarting) ? param.sim.restarting_from_frame : 0);
-    var.time = 0;
-    var.steps = 0;
-
-    if (param.control.characteristic_speed == 0)
-        var.max_vbc_val = find_max_vbc(param.bc);
-    else
-        var.max_vbc_val = param.control.characteristic_speed;
 
     if (! param.sim.is_restarting) {
         init(param, var);
@@ -249,7 +296,7 @@ int main(int argc, const char* argv[])
             isostasy_adjustment(param, var);
         }
         if (param.sim.has_initial_checkpoint)
-            output.write_checkpoint(var);
+            output.write_checkpoint(param, var);
     }
     else {
         restart(param, var);
@@ -273,7 +320,8 @@ int main(int argc, const char* argv[])
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        update_stress(var, *var.stress, *var.strain, *var.plstrain,  *var.delta_plstrain, *var.strain_rate);
+        update_stress(var, *var.stress, *var.stressyy, *var.strain,
+                      *var.plstrain, *var.delta_plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel);
@@ -283,31 +331,31 @@ int main(int argc, const char* argv[])
         if (var.mat->rheol_type & MatProps::rh_elastic)
             rotate_stress(var, *var.stress, *var.strain);
 
-        if (var.steps % 10 == 0) {
-            // dt computation is expensive, and dt only changes slowly
-            // don't have to do it every time step
-            var.dt = compute_dt(param, var);
-
-            // ditto for phase changes
+        const int slow_updates_interval = 10;
+        if (var.steps % slow_updates_interval == 0) {
+            // The functions inside this if-block are expensive in computation is expensive,
+            // and only changes slowly. Don't have to do it every time step
             phase_changes(param, var);
 
             if (param.control.has_hydration_processes)
                 advect_hydrous_markers(param, var, 10*var.dt,
                                        *var.markersets[var.hydrous_marker_index],
                                        *var.hydrous_elemmarkers);
+
+            var.dt = compute_dt(param, var);
         }
 
         if (param.sim.output_averaged_fields)
             output.average_fields(var);
 
-	if ((! param.sim.output_averaged_fields || (var.steps % param.sim.output_averaged_fields == 0)) &&
+        if ((! param.sim.output_averaged_fields || (var.steps % param.sim.output_averaged_fields == 0)) &&
             // When output_averaged_fields in turned on, the output cannot be
             // done at arbitrary time steps.
             (((var.steps - starting_step) == next_regular_frame * param.sim.output_step_interval) ||
              ((var.time - starting_time) > next_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC)) ) {
 
             if (next_regular_frame % param.sim.checkpoint_frame_interval == 0)
-                output.write_checkpoint(var);
+                output.write_checkpoint(param, var);
 
             output.write(var);
 

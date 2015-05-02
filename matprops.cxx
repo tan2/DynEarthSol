@@ -9,6 +9,97 @@
 
 namespace {
 
+    double get_prem_pressure(double depth)
+    {
+        // reference pressure profile from isotropic PREM model
+        const int nlayers = 46;
+        const static double
+            ref_depth[] = { 0e3,    3e3,    15e3,   24.4e3, 40e3,
+                            60e3,   80e3,   115e3,  150e3,  185e3,
+                            220e3,  265e3,  310e3,  355e3,  400e3,
+                            450e3,  500e3,  550e3,  600e3,  635e3,
+                            670e3,  721e3,  771e3,  871e3,  971e3,
+                            1071e3, 1171e3, 1271e3, 1371e3, 1471e3,
+                            1571e3, 1671e3, 1771e3, 1871e3, 1971e3,
+                            2071e3, 2171e3, 2271e3, 2371e3, 2471e3,
+                            2571e3, 2671e3, 2741e3, 2771e3, 2871e3,
+                            2891e3 };
+
+        // pressure in PREM table is given in kilobar, converted to 10^8 Pa
+        const static double
+            ref_pressure[] = { 0e8,      0.3e8,    3.3e8,    6.0e8,    11.2e8,
+                               17.8e8,   24.5e8,   36.1e8,   47.8e8,   59.4e8,
+                               71.1e8,   86.4e8,   102.0e8,  117.7e8,  133.5e8,
+                               152.2e8,  171.3e8,  190.7e8,  210.4e8,  224.3e8,
+                               238.3e8,  260.7e8,  282.9e8,  327.6e8,  372.8e8,
+                               418.6e8,  464.8e8,  511.6e8,  558.9e8,  606.8e8,
+                               655.2e8,  704.1e8,  753.5e8,  803.6e8,  854.3e8,
+                               905.6e8,  957.6e8,  1010.3e8, 1063.8e8, 1118.2e8,
+                               1173.4e8, 1229.7e8, 1269.7e8, 1287.0e8, 1345.6e8,
+                               1357.5e8 };
+
+        // PREM model doesn't work if depth is above sea level, always returns 0 pressure
+        if (depth <= 0) return 0;
+
+        int n;
+        for (n=1; n<nlayers; n++) {
+            if (depth <= ref_depth[n]) break;
+        }
+
+        // linear interpolation
+        double pressure = ref_pressure[n-1] + (ref_pressure[n] - ref_pressure[n-1]) *
+            (depth - ref_depth[n-1]) / (ref_depth[n] - ref_depth[n-1]);
+
+        return pressure;
+    }
+
+
+    double get_prem_pressure_modified(double depth)
+    {
+        // reference pressure profile from isotropic PREM model, modified for
+        // average continental crust (density 2800 kg/m^3, thickness 24.4 km)
+        const int nlayers = 46;
+        const static double
+            ref_depth[] = { 0e3,    3e3,    15e3,   24.4e3, 40e3,
+                            60e3,   80e3,   115e3,  150e3,  185e3,
+                            220e3,  265e3,  310e3,  355e3,  400e3,
+                            450e3,  500e3,  550e3,  600e3,  635e3,
+                            670e3,  721e3,  771e3,  871e3,  971e3,
+                            1071e3, 1171e3, 1271e3, 1371e3, 1471e3,
+                            1571e3, 1671e3, 1771e3, 1871e3, 1971e3,
+                            2071e3, 2171e3, 2271e3, 2371e3, 2471e3,
+                            2571e3, 2671e3, 2741e3, 2771e3, 2871e3,
+                            2891e3 };
+
+        // pressure in PREM table is given in kilobar, converted to 10^8 Pa
+        const static double
+            ref_pressure[] = { 0e8,      0.82e8,    4.1e8,    6.7e8,    11.2e8,
+                               17.8e8,   24.5e8,   36.1e8,   47.8e8,   59.4e8,
+                               71.1e8,   86.4e8,   102.0e8,  117.7e8,  133.5e8,
+                               152.2e8,  171.3e8,  190.7e8,  210.4e8,  224.3e8,
+                               238.3e8,  260.7e8,  282.9e8,  327.6e8,  372.8e8,
+                               418.6e8,  464.8e8,  511.6e8,  558.9e8,  606.8e8,
+                               655.2e8,  704.1e8,  753.5e8,  803.6e8,  854.3e8,
+                               905.6e8,  957.6e8,  1010.3e8, 1063.8e8, 1118.2e8,
+                               1173.4e8, 1229.7e8, 1269.7e8, 1287.0e8, 1345.6e8,
+                               1357.5e8 };
+
+        // PREM model doesn't work if depth is above sea level, always returns 0 pressure
+        if (depth <= 0) return 0;
+
+        int n;
+        for (n=1; n<nlayers; n++) {
+            if (depth <= ref_depth[n]) break;
+        }
+
+        // linear interpolation
+        double pressure = ref_pressure[n-1] + (ref_pressure[n] - ref_pressure[n-1]) *
+            (depth - ref_depth[n-1]) / (ref_depth[n] - ref_depth[n-1]);
+
+        return pressure;
+    }
+
+
     double arithmetic_mean(const VectorBase &s, const int_vec &n)
     {
         if (s.size() == 1) return s[0];
@@ -64,7 +155,7 @@ namespace {
         const int len;
     public:
         Vector1(const double_vec &a_, int len_) :
-            d(a_[0]), len(len)
+            d(a_[0]), len(len_)
         {}
 
         double operator[](std::size_t i) const
@@ -96,9 +187,25 @@ VectorBase* VectorBase::create(const double_vec &a, int len)
 }
 
 
+double ref_pressure(const Param& param, double z)
+{
+    // Get pressure at this depth
+    double depth = -z;
+    double p;
+    if (param.control.ref_pressure_option == 0)
+        p = param.mat.rho0[0] * param.control.gravity * depth;
+    else if (param.control.ref_pressure_option == 1)
+        p = get_prem_pressure(depth);
+    else if (param.control.ref_pressure_option == 2)
+        p = get_prem_pressure_modified(depth);
+    return p;
+}
+
+
 MatProps::MatProps(const Param& p, const Variables& var) :
   rheol_type(p.mat.rheol_type),
   nmat(p.mat.nmat),
+  is_plane_strain(p.mat.is_plane_strain),
   visc_min(p.mat.visc_min),
   visc_max(p.mat.visc_max),
   tension_max(p.mat.tension_max),

@@ -2,13 +2,15 @@
 # encoding: utf-8
 '''Convert the binary output of DynEarthSol3D to VTK files.
 
-usage: 2vtk.py [-a -c -m -t -h] modelname [start [end [delta]]]]
+usage: 2vtk.py [-a -c -m -p -t -h] modelname [start [end [delta]]]]
 
 options:
     -a          save data in ASCII format (default: binary)
-    -c          save files in current directory
+    -c          save files in current directory (default: same directory as
+                the data files)
     -m          save marker data
-    -t          save all tensor components (default: no component)
+    -p          save P-axis and T-axis
+    -t          save all tensor components (default: only 1st/2nd invariants)
     -h,--help   show this help
 '''
 
@@ -16,9 +18,8 @@ from __future__ import print_function, unicode_literals
 import sys, os
 import base64, zlib
 import numpy as np
-
-# 2D or 3D data?
-ndims = 2
+from numpy.linalg  import eigh
+from Dynearthsol import Dynearthsol
 
 # Save in ASCII or encoded binary.
 # Some old VTK programs cannot read binary VTK files.
@@ -30,130 +31,11 @@ output_in_cwd = False
 # Save indivisual components?
 output_tensor_components = False
 
+# Save P-/T-axis
+output_pt_axis = False
+
 # Save markers?
 output_markers = False
-
-class Dynearthsol:
-    '''Read output file of 2D/3D DynEarthSol'''
-
-    def __init__(self, modelname):
-        self.modelname = modelname
-        self.read_info()
-        self.read_header(self.frames[0])
-
-
-    def read_info(self):
-        tmp = np.fromfile(self.modelname + '.info', dtype=float, sep=' ')
-        tmp.shape = (-1, 8)
-        self.frames = list(tmp[:,0].astype(int))
-        self.steps = list(tmp[:,1].astype(int))
-        self.time = list(tmp[:,2].astype(float))
-        self.nnode_list = tmp[:,5].astype(int)
-        self.nelem_list = tmp[:,6].astype(int)
-        return
-
-
-    def get_fn(self, frame):
-        return '{0}.save.{1:0=6}'.format(self.modelname, frame)
-
-
-    def read_header(self, frame):
-        headerlen = 4096
-        fname = self.get_fn(frame)
-        with open(fname) as f:
-            header = f.read(headerlen).splitlines()
-            #print(header)
-
-        # parsing 1st line
-        first = header[0].split(' ')
-        if (first[0] != '#' or
-            first[1] != 'DynEarthSol' or
-            first[2].split('=')[0] != 'ndims' or
-            first[3].split('=')[0] != 'revision'):
-            print('Error:', fname, 'is not a valid DynEarthSol output file!')
-            sys.exit(1)
-
-        self.ndims = int(first[2].split('=')[1])
-        self.revision = int(first[3].split('=')[1])
-        if self.ndims == 2:
-            self.nstr = 3
-            self.component_names = ('XX', 'ZZ', 'XZ')
-        else:
-            self.nstr = 6
-            self.component_names = ('XX', 'YY', 'ZZ', 'XY', 'XZ', 'YZ')
-
-        # parsing other lines
-        self.field_pos = {}
-        for line in header[1:]:
-            if line[0] == '\x00': break  # end of record
-            name, pos = line.split('\t')
-            self.field_pos[name] = int(pos)
-
-        #print(self.field_pos)
-        return
-
-
-    def read_field(self, frame, name):
-        pos = self.field_pos[name]
-        i = self.frames.index(frame)
-        nnode = self.nnode_list[i]
-        nelem = self.nelem_list[i]
-
-        dtype = np.float64 if name != 'connectivity' else np.int32
-        count = 0
-        shape = (-1,)
-        if name in set(['strain', 'strain-rate', 'stress', 'stress averaged']):
-            count = self.nstr * nelem
-            shape = (nelem, self.nstr)
-        elif name in set(['density', 'material', 'mesh quality',
-                          'plastic strain', 'plastic strain-rate',
-                          'viscosity', 'edvoldt', 'volume']):
-            count = nelem
-        elif name in set(['connectivity']):
-            count = (self.ndims + 1) * nelem
-            shape = (nelem, self.ndims+1)
-        elif name in set(['coordinate', 'velocity', 'velocity averaged', 'force']):
-            count = self.ndims * nnode
-            shape = (nnode, self.ndims)
-        elif name in set(['temperature', 'mass', 'tmass', 'volume_n']):
-            count = nnode
-        else:
-            raise NameError('uknown field name: ' + name)
-
-        fname = self.get_fn(frame)
-        with open(fname) as f:
-            f.seek(pos)
-            field = np.fromfile(f, dtype=dtype, count=count).reshape(shape)
-        return field
-
-
-    def read_markers(self, frame, markername):
-        'Read and return marker data'
-        fname = self.get_fn(frame)
-        with open(fname) as f:
-
-            pos = self.field_pos[markername+' size']
-            f.seek(pos)
-            nmarkers = np.fromfile(f, dtype=np.int32, count=1)[0]
-
-            marker_data = {'size': nmarkers}
-
-            # floating point
-            for name in (markername+'.coord',):
-                pos = self.field_pos[name]
-                f.seek(pos)
-                tmp = np.fromfile(f, dtype=np.float64, count=nmarkers*self.ndims)
-                marker_data[name] = tmp.reshape(-1, self.ndims)
-                #print(marker_data[name].shape, marker_data[name])
-
-            # int
-            for name in (markername+'.elem', markername+'.mattype', markername+'.id'):
-                pos = self.field_pos[name]
-                f.seek(pos)
-                marker_data[name] = np.fromfile(f, dtype=np.int32, count=nmarkers)
-                #print(marker_data[name].shape, marker_data[name])
-
-        return marker_data
 
 
 def main(modelname, start, end, delta):
@@ -164,7 +46,6 @@ def main(modelname, start, end, delta):
         output_prefix = modelname
 
     des = Dynearthsol(modelname)
-    ndims = des.ndims
 
     if end == -1:
         end = len(des.frames)
@@ -249,6 +130,10 @@ def main(modelname, start, end, delta):
                     vtk_dataarray(fvtu, stress[:,d] - tI, 'stress ' + des.component_names[d] + ' dev.')
                 for d in range(des.ndims, des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
+            if output_pt_axis:
+                p_axis, t_axis = compute_pt_axis(stress)
+                vtk_dataarray(fvtu, p_axis, 'P-axis', 3)
+                vtk_dataarray(fvtu, t_axis, 'T-axis', 3)
 
             convert_field(des, frame, 'density', fvtu)
             convert_field(des, frame, 'material', fvtu)
@@ -469,6 +354,8 @@ b'''</Piece>
 
 
 def first_invariant(t):
+    nstr = t.shape[1]
+    ndims = 2 if (nstr == 3) else 3
     return np.sum(t[:,:ndims], axis=1) / ndims
 
 
@@ -476,14 +363,72 @@ def second_invariant(t):
     '''The second invariant of the deviatoric part of a symmetric tensor t,
     where t[:,0:ndims] are the diagonal components;
       and t[:,ndims:] are the off-diagonal components.'''
+    nstr = t.shape[1]
 
     # second invariant: sqrt(0.5 * t_ij**2)
-    if ndims == 2:
+    if nstr == 3:  # 2D
         return np.sqrt(0.25 * (t[:,0] - t[:,1])**2 + t[:,2]**2)
-    else:
+    else:  # 3D
         a = (t[:,0] + t[:,1] + t[:,2]) / 3
         return np.sqrt( 0.5 * ((t[:,0] - a)**2 + (t[:,1] - a)**2 + (t[:,2] - a)**2) +
                         t[:,3]**2 + t[:,4]**2 + t[:,5]**2)
+
+
+def compute_pt_axis(stress):
+    '''The compression and dilation axis of the deviatoric stress tensor.'''
+
+    nelem = stress.shape[0]
+    nstr = stress.shape[1]
+    # VTK requires vector field (velocity, coordinate) has 3 components.
+    # Allocating a 3-vector tmp array for VTK data output.
+    p_axis = np.zeros((nelem, 3), dtype=stress.dtype)
+    t_axis = np.zeros((nelem, 3), dtype=stress.dtype)
+
+    if nstr == 3:  # 2D
+        sxx, szz, sxz = stress[:,0], stress[:,1], stress[:,2]
+        mag = np.sqrt(0.25*(sxx - szz)**2 + sxz**2)
+        theta = 0.5 * np.arctan2(2*sxz, sxx-szz)
+        cost = np.cos(theta)
+        sint = np.sin(theta)
+
+        p_axis[:,0] = mag * sint
+        p_axis[:,1] = mag * cost
+        t_axis[:,0] = mag * cost
+        t_axis[:,1] = -mag * sint
+
+    else:  # 3D
+        # lower part of symmetric stress tensor
+        s = np.zeros((nelem, 3,3), dtype=stress.dtype)
+        s[:,0,0] = stress[:,0]
+        s[:,1,1] = stress[:,1]
+        s[:,2,2] = stress[:,2]
+        s[:,1,0] = stress[:,3]
+        s[:,2,0] = stress[:,4]
+        s[:,2,1] = stress[:,5]
+
+        # eigenvalues and eigenvectors
+        if np.version.version[:3] >= '1.8':
+            # Numpy-1.8 or newer
+            w, v = eigh(s)
+        else:
+            # Numpy-1.7 or older
+            w = np.zeros((nelem,3), dtype=stress.dtype)
+            v = np.zeros((nelem,3,3), dtype=stress.dtype)
+            for e in range(nelem):
+                w[e,:], v[e,:,:] = eigh(s[e])
+
+        # isotropic part to be removed
+        m = np.sum(w, axis=1)
+
+        p = w.argmin(axis=1)
+        t = w.argmax(axis=1)
+        #print(w.shape, v.shape, p.shape)
+
+        for e in range(nelem):
+            p_axis[e,:] = (w[e,p[e]] - m[e]) * v[e,:,p[e]]
+            t_axis[e,:] = (w[e,t[e]] - m[e]) * v[e,:,t[e]]
+
+    return p_axis, t_axis
 
 
 if __name__ == '__main__':
@@ -501,6 +446,8 @@ if __name__ == '__main__':
         output_in_binary = False
     if '-c' in sys.argv:
         output_in_cwd = True
+    if '-p' in sys.argv:
+        output_pt_axis = True
     if '-t' in sys.argv:
         output_tensor_components = True
     if '-m' in sys.argv:

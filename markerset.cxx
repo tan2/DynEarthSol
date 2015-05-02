@@ -15,6 +15,10 @@
 #include "geometry.hpp"
 #include "utils.hpp"
 
+#ifdef WIN32
+static double drand48() { return (double)rand()/(double)RAND_MAX; }
+#endif // WIN32
+
 namespace {
 
     const int DEBUG = 0;
@@ -86,16 +90,18 @@ void MarkerSet::random_eta( double *eta )
     // eta for randomly scattered markers within an element.
     // An alternative would be to fix barycentric coordinates and add random perturbations.
     //
-    // 1. populate eta with random numbers between 0 and 1.0.
-    double sum = 0;
-    for( int n = 0; n < NODES_PER_ELEM; n++ ) {
-        eta[n] = (rand()/(double)RAND_MAX);
-        sum += eta[n];
+    while (1) {
+        // sum(eta) == 1 && all components of eta are greater than zero
+        double sum = 0;
+        for( int n = 0; n < NDIMS; n++ ) {
+            eta[n] = (rand()/(double)RAND_MAX);
+            sum += eta[n];
+        }
+        if (sum < 1) {
+            eta[NODES_PER_ELEM - 1] = 1 - sum;
+            break;
+        }
     }
-    // 2. normalize.
-    double inv_sum = 1.0/sum;
-    for( int n = 0; n < NODES_PER_ELEM; n++ )
-        eta[n] *= inv_sum;
 }
 
 
@@ -210,8 +216,8 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
     ANNkd_tree kdtree(centroid, var.nelem, NDIMS);
     const int k = std::min(20, var.nelem);  // how many nearest neighbors to search?
     const double eps = 0.001; // tolerance of distance error
-    int nn_idx[k];
-    double dd[k];
+    int nn_idx[20];
+    double dd[20];
 
     double_vec new_volume( var.nelem );
     compute_volume( *var.coord, *var.connectivity, new_volume );
@@ -401,16 +407,24 @@ void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
 
     allocate_markerdata(_nmarkers);
 
-    bin.read_array(*_eta, (_name + ".eta").c_str());
-    bin.read_array(*_elem, (_name + ".elem").c_str());
-    bin.read_array(*_mattype, (_name + ".mattype").c_str());
-    bin.read_array(*_id, (_name + ".id").c_str());
-
-    for( int i = 0; i < _nmarkers; i++ ) {
-        int e = (*_elem)[i];
-        int mt = (*_mattype)[i];
-        ++(*var.elemmarkers)[e][mt];
+    if (_nmarkers != 0) {
+        bin.read_array(*_eta, (_name + ".eta").c_str());
+        bin.read_array(*_elem, (_name + ".elem").c_str());
+        bin.read_array(*_mattype, (_name + ".mattype").c_str());
+        bin.read_array(*_id, (_name + ".id").c_str());
     }
+
+    if (_name == "markerset")
+        for( int i = 0; i < _nmarkers; i++ ) {
+            int e = (*_elem)[i];
+            int mt = (*_mattype)[i];
+            ++(*var.elemmarkers)[e][mt];
+        }
+    else if (_name == "hydrous-markerset")
+        for( int i = 0; i < _nmarkers; i++ ) {
+            int e = (*_elem)[i];
+            ++(*var.hydrous_elemmarkers)[e][0];
+        }
 }
 
 
@@ -454,8 +468,9 @@ namespace {
     {
         const int k = std::min((std::size_t) 20, old_connectivity.size());  // how many nearest neighbors to search?
         const double eps = 0.001; // tolerance of distance error
-        int nn_idx[k];
-        double dd[k];
+        int nn_idx[20];
+        double dd[20];
+
 
         // Loop over all the old markers and identify a containing element in the new mesh.
         int last_marker = ms.get_nmarkers();
@@ -799,8 +814,8 @@ void advect_hydrous_markers(const Param& param, const Variables& var, double dt_
                 const int_vec& supp = (*var.support)[ conn[j] ];
                 for (std::size_t k=0; k<supp.size(); k++) {
                     int ee = supp[k];
-                    conn = (*var.connectivity)[ee];
-                    bary = get_bary_from_cache(cache, ee, *var.coord, conn, *var.volume);
+                    const int *conn2 = (*var.connectivity)[ee];
+                    bary = get_bary_from_cache(cache, ee, *var.coord, conn2, *var.volume);
                     bary->transform(x, 0, r);
                     if (bary->is_inside(r)) {
                         hydms.set_elem(m, ee);

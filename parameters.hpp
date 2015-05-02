@@ -1,6 +1,7 @@
 #ifndef DYNEARTHSOL3D_PARAMETERS_HPP
 #define DYNEARTHSOL3D_PARAMETERS_HPP
 
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -71,6 +72,7 @@ struct Control {
     double characteristic_speed;
     double inertial_scaling;
     double dt_fraction;
+    double fixed_dt;
     double damping_factor;
     int ref_pressure_option;
 
@@ -100,6 +102,9 @@ struct BC {
     int vbc_z0;
     int vbc_z1;
     int vbc_n0;
+    int vbc_n1;
+    int vbc_n2;
+    int vbc_n3;
 
     double vbc_val_x0;
     double vbc_val_x1;
@@ -108,6 +113,9 @@ struct BC {
     double vbc_val_z0;
     double vbc_val_z1;
     double vbc_val_n0;
+    double vbc_val_n1;
+    double vbc_val_n2;
+    double vbc_val_n3;
 };
 
 struct IC {
@@ -140,6 +148,7 @@ struct Mat {
     int rheol_type;
     int phase_change_option;
     int nmat;
+    bool is_plane_strain;
     double visc_min;
     double visc_max;
     double tension_max;
@@ -212,6 +221,9 @@ struct Variables {
     int_vec bnodes[nbdrytypes];
     std::vector< std::pair<int,int> > bfacets[nbdrytypes];
     double bnormals[nbdrytypes][NDIMS];
+    int vbc_types[nbdrytypes];
+    double vbc_values[nbdrytypes];
+    std::map<std::pair<int,int>, double*> edge_vectors;
 
     int_vec2D *support;
     int_vec egroups;
@@ -220,6 +232,7 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
+    double_vec *stressyy;
     double_vec *ntmp;
 
     array_t *vel, *force;
