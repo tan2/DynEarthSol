@@ -20,6 +20,7 @@
 #include "remeshing.hpp"
 
 #include "libmmg3d4.h"
+#include <assert.h>
 
 namespace {
 
@@ -1069,8 +1070,9 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     Mesh mesh_param = param.mesh;
     mesh_param.poly_filename = "";
 
-    int_vec facet_polygons[6];
-    assemble_facet_polygons(var, original_coord, facet_polygons);
+    int_vec bdry_polygons[nbdrytypes];    
+    assemble_bdry_polygons(var, original_coord, original_connectivity,
+                           bdry_polygons);
 
     // create a copy of original_coord and original_segment
     array_t old_coord(original_coord);
@@ -1128,20 +1130,21 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     }
 
     // prepare arguments for mmg3d
-    int opt[9];
+    int opt[10];
     MMG_pMesh mymmgmesh;
     MMG_pSol  sol;
 
     opt[0] = 0; // mesh optimization. 1 for mesh generation and optimization.
     opt[1] = 0; // non-debugging mode. 1 for debugging mode
     opt[2] = 64; // bucket size. default 64.
-    opt[3] = 1; // edge swap not allowed. If 0, allowed.
-    opt[4] = 1; // don't keep the node number constant. If 0, keep constant.
-    opt[5] = 0; // allow point relocation. If 1, not allowed.
-    opt[6] = 1; // verbosity level.
-    opt[7] = 3; // 0: no renumbering. 1: renumbering at beginning. 2: renumbering at the end.
+    opt[3] = 0; // noswap? 1: edge swap not allowed; 0, allowed.
+    opt[4] = 1; // noinsert? 1: keep the node number constant; 0: can add nodes.
+    opt[5] = 0; // nomove? 1: point relocation not allowed; 0: allowed.
+    opt[6] = 3; // verbosity level.
+    opt[7] = 2; // 0: no renumbering. 1: renumbering at beginning. 2: renumbering at the end.
                 // 3: renumbering both at beginning and at end.
     opt[8] = 500; // the number of vertices by box(?).
+    opt[9] = 0; // 0: normal, 1: LES (not suitable for anisotropic opt.)
 
     // MMG_Mesh definition block.
     mymmgmesh = (MMG_pMesh)calloc(1, sizeof(MMG_Mesh));
@@ -1190,15 +1193,33 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     sol->np = mymmgmesh->np;
     sol->npmax = mymmgmesh->npmax;
 
-    sol->offset = 1; // 6 for an anisotropic metric: [m11,m21,m22,m31,m32,m33].
+    sol->offset = 6; // 1 or 6 for an anisotropic metric: [m11,m12,m13,m22,m23,m33].
     sol->met = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
     sol->metold = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
 
-    double hsqrinv = 1.0/(param.mesh.resolution*param.mesh.resolution);
+    double hmax = param.mesh.resolution; //0.2;
+    double hmin = 0.01*hmax;
+    double xcenter = 0.5*param.mesh.xlength;
+    double xfold = 0.25*param.mesh.xlength;
+    double h1 = 0.0;  
+    double h1sqrinv = 0.0;
+    double hmsqrinv = 0.0;
     for(int k = 1; k <= mymmgmesh->np; k++ ) {
+        MMG_pPoint ppt = &mymmgmesh->point[k];
+        h1 = hmax*std::abs(1.0-exp(-std::abs((ppt->c[0]-xcenter)/xfold)))+hmin;
+        //std::cerr<< ppt->c[0]<<" "<<h1<<std::endl;
+        h1sqrinv = 1.0/(h1*h1);
+        hmsqrinv = 1.0/(hmax*hmax);
+        
         int isol = (k-1) * sol->offset + 1;
-        for(int i=0; i < sol->offset; i++)
-            sol->met[isol+i] = hsqrinv;
+        sol->met[isol]   = h1sqrinv;
+        sol->met[isol+1] = 0.0;
+        sol->met[isol+2] = 0.0;
+        sol->met[isol+3] = hmsqrinv;
+        sol->met[isol+4] = 0.0;
+        sol->met[isol+5] = hmsqrinv;
+        // for(int i=0; i < sol->offset; i++)
+        //     sol->met[isol+i] = hsqrinv;
     }
 
     // Optimize the mesh based on the metric tensor defined in MMG_pSol.

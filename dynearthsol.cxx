@@ -366,6 +366,7 @@ int main(int argc, const char* argv[])
             int quality_is_bad, bad_quality_index;
             quality_is_bad = bad_mesh_quality(param, var, bad_quality_index);
             std::cerr<<"mesh quality: "<<quality_is_bad<<std::endl;
+            quality_is_bad = true;
             if (quality_is_bad) {
 
                 if (param.sim.has_output_during_remeshing) {
