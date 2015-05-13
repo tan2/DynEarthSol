@@ -960,6 +960,11 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
                       << param.mesh.poly_filename << "'\n";
             std::exit(1);
         }
+        if (nregions <= 0) {
+            std::cerr << "Error: nregions <= 0, at line " << lineno << " of '"
+                      << param.mesh.poly_filename << "'\n";
+            std::exit(1);
+        }
     }
 
     // get region list
