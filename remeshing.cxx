@@ -1134,14 +1134,14 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     MMG_pMesh mymmgmesh;
     MMG_pSol  sol;
 
-    opt[0] = 0; // mesh optimization. 1 for mesh generation and optimization.
-    opt[1] = 0; // non-debugging mode. 1 for debugging mode
+    opt[0] = 4; // mesh optimization. 1 for mesh generation and optimization.
+    opt[1] = 1; // non-debugging mode. 1 for debugging mode
     opt[2] = 64; // bucket size. default 64.
     opt[3] = 0; // noswap? 1: edge swap not allowed; 0, allowed.
-    opt[4] = 1; // noinsert? 1: keep the node number constant; 0: can add nodes.
+    opt[4] = 0; // noinsert? 1: keep the node number constant; 0: can add nodes.
     opt[5] = 0; // nomove? 1: point relocation not allowed; 0: allowed.
-    opt[6] = 3; // verbosity level.
-    opt[7] = 2; // 0: no renumbering. 1: renumbering at beginning. 2: renumbering at the end.
+    opt[6] = 9; // info->imprim. Verbosity level.
+    opt[7] = 0; // 0: no renumbering. 1: renumbering at beginning. 2: renumbering at the end.
                 // 3: renumbering both at beginning and at end.
     opt[8] = 500; // the number of vertices by box(?).
     opt[9] = 0; // 0: normal, 1: LES (not suitable for anisotropic opt.)
@@ -1212,7 +1212,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         hmsqrinv = 1.0/(hmax*hmax);
         
         int isol = (k-1) * sol->offset + 1;
-        sol->met[isol]   = h1sqrinv;
+        sol->met[isol]   = hmsqrinv; //h1sqrinv;
         sol->met[isol+1] = 0.0;
         sol->met[isol+2] = 0.0;
         sol->met[isol+3] = hmsqrinv;
@@ -1224,7 +1224,10 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
 
     // Optimize the mesh based on the metric tensor defined in MMG_pSol.
     int mmg3d_error = mmg3d::MMG_mmg3dlib( opt, mymmgmesh, sol );
-    assert( !mmg3d_error );
+    if( mmg3d_error ) {
+        std::cerr<< "mmg3d_error="<< mmg3d_error<<std::endl;
+        assert( !mmg3d_error );
+    }
 
     // update mesh info.
     var.nnode = mymmgmesh->np;

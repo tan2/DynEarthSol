@@ -12,8 +12,8 @@
 ## openmp = 1: enable OpenMP
 
 ndims = 3
-opt = 0
-openmp = 0
+opt = 2
+openmp = 1
 
 ## Select C++ compiler
 CXX = g++-mp-4.7
@@ -59,7 +59,7 @@ all:
 endif
 
 ## Is this a mercurial repository?
-HAS_HG := $(shell hg log -r tip --template '{node}' 2>/dev/null)
+HAS_HG := $(shell hg --version -q 2>/dev/null)
 
 ##
 
@@ -128,7 +128,8 @@ ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
 
-MMG3D_DIR = mmg3d4-4.0.1-Source
+#MMG3D_DIR = mmg3d4-4.0.1-Source
+MMG3D_DIR = mmg3d/mmg3d4
 MMG3D_INC = $(MMG3D_DIR)/sources
 MMG3D_LIB = $(MMG3D_DIR)/lib
 MMG3D_LIBNAME = mmg3d4
@@ -144,7 +145,7 @@ SCOTCH_LIB = -lscotch -lscotcherr -lscotcherrexit -lscotchmetis
 
 all: $(EXE) take-snapshot
 
-$(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
+$(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(MMG3D_LIB)/lib$(MMG3D_LIBNAME).a
 	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
 		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
 		-L$(MMG3D_DIR)/lib -l$(MMG3D_LIBNAME) -L$(SCOTCH_LIBDIR) $(SCOTCH_LIB) \
@@ -157,17 +158,11 @@ take-snapshot:
 	@echo '  '  PATH=$(PATH) >> snapshot.diff
 	@echo '  '  LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) >> snapshot.diff
 ifneq ($(HAS_HG),)
-	@echo >> snapshot.diff
-	@echo >> snapshot.diff
-	@echo '==== Summary of the code ====' >> snapshot.diff
+	@echo '\n\n==== Summary of the code ====' >> snapshot.diff
 	@hg summary >> snapshot.diff
-	@echo >> snapshot.diff
-	@echo >> snapshot.diff
-	@echo '== Code modification (not checked-in) ==' >> snapshot.diff
+	@echo '\n\n== Code modification (not checked-in) ==' >> snapshot.diff
 	@hg diff >> snapshot.diff
-	@echo >> snapshot.diff
-	@echo >> snapshot.diff
-	@echo '== Code modification (checked-in but not public) ==' >> snapshot.diff
+	@echo '\n\n== Code modification (checked-in but not public) ==' >> snapshot.diff
 	@hg log --patch -r "draft()" >> snapshot.diff
 else
 	@echo \'hg\' is not in path, cannot take code snapshot. >> snapshot.diff
@@ -198,7 +193,6 @@ $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 deepclean:
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
 	@+$(MAKE) -C $(C3X3_DIR) clean
-	@+$(MAKE) -C $(ANN_DIR) realclean
 
 clean:
 	@rm -f $(OBJS) $(EXE)
