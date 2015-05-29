@@ -1140,10 +1140,10 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     opt[3] = 0; // noswap? 1: edge swap not allowed; 0, allowed.
     opt[4] = 0; // noinsert? 1: keep the node number constant; 0: can add nodes.
     opt[5] = 0; // nomove? 1: point relocation not allowed; 0: allowed.
-    opt[6] = 9; // info->imprim. Verbosity level.
+    opt[6] = -1; // info->imprim. Verbosity level.
     opt[7] = 0; // 0: no renumbering. 1: renumbering at beginning. 2: renumbering at the end.
                 // 3: renumbering both at beginning and at end.
-    opt[8] = 500; // the number of vertices by box(?).
+    opt[8] = 50000; // the number of vertices by box(?).
     opt[9] = 0; // 0: normal, 1: LES (not suitable for anisotropic opt.)
 
     // MMG_Mesh definition block.
@@ -1153,9 +1153,11 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     mymmgmesh->nt = old_nseg;
     mymmgmesh->ne = old_nelem;
 
-    mymmgmesh->npmax = 2*mymmgmesh->np;
-    mymmgmesh->ntmax = 2*mymmgmesh->nt;
-    mymmgmesh->nemax = 2*mymmgmesh->ne;
+    // If these max numbers are not big enough,
+    // "cannot create new element" error occurs.
+    mymmgmesh->npmax = 15*mymmgmesh->np;
+    mymmgmesh->ntmax = 15*mymmgmesh->nt;
+    mymmgmesh->nemax = 15*mymmgmesh->ne;
 
     mymmgmesh->point = (MMG_pPoint)calloc(mymmgmesh->npmax+1, sizeof(MMG_Point));
     mymmgmesh->tetra = (MMG_pTetra)calloc(mymmgmesh->nemax+1, sizeof(MMG_Tetra));
@@ -1193,6 +1195,19 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     sol->np = mymmgmesh->np;
     sol->npmax = mymmgmesh->npmax;
 
+    sol->offset = 1; // 1 or 6 for an anisotropic metric: [m11,m12,m13,m22,m23,m33].
+    sol->met = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
+    sol->metold = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
+
+    double hmax = param.mesh.resolution; //0.2;
+    for(int k = 1; k <= mymmgmesh->np; k++ ) {
+        hmsqrinv = 1.0/(hmax*hmax);
+        
+        int isol = (k-1) * sol->offset + 1;
+        for(int i=0; i < sol->offset; i++)
+            sol->met[isol+i] = hmsqrinv;
+    }
+#if 0
     sol->offset = 6; // 1 or 6 for an anisotropic metric: [m11,m12,m13,m22,m23,m33].
     sol->met = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
     sol->metold = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
@@ -1221,6 +1236,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         // for(int i=0; i < sol->offset; i++)
         //     sol->met[isol+i] = hsqrinv;
     }
+#endif
 
     // Optimize the mesh based on the metric tensor defined in MMG_pSol.
     int mmg3d_error = mmg3d::MMG_mmg3dlib( opt, mymmgmesh, sol );
@@ -1358,6 +1374,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
 #ifdef THREED
         optimize_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
+        renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, NULL);        
 #else
         new_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
