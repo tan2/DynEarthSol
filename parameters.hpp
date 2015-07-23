@@ -141,6 +141,9 @@ struct IC {
     double weakzone_zsemi_axis;
 
     int temperature_option;
+    std::string Temp_filename;
+    std::string Nodes_filename;
+    std::string Connectivity_filename;
     double oceanic_plate_age_in_yr;
 
     double isostasy_adjustment_time_in_yr;

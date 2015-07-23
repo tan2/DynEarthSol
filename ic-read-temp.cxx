@@ -13,8 +13,8 @@ void read_external_temperature_from_comsol(const Param &param,
 {
 
     /* Read the eapsi_thermal file(x-coord y-coord temperature). The order of nodes in this file != the order of nodes_per_elem in EAPSI_Coord file.*/
-    std::vector<double> xs, ys, Ts;
-    std::ifstream inputFile("EAPSI_Thermal_Data_Files/eapsi_thermal_HD.dat");
+    std::vector<double> xs, ys, zs, Ts;
+    std::ifstream inputFile(param.ic.Temp_filename.c_str());
     std::string line;
     int i = 0;
 
@@ -23,18 +23,23 @@ void read_external_temperature_from_comsol(const Param &param,
             continue;
         std::istringstream iss(line);
 
-        double x = 0., y = 0., T = 0.;
-        iss>>x>>y>>T;
-        xs.push_back(x);
-        ys.push_back(y);
-        Ts.push_back(T);
+	double x = 0., y = 0., z = 0., T = 0.;
+	if (NDIMS ==3)
+	  iss>>x>>y>>z>>T;
+	else
+	  iss>>x>>y>>T;
+	 
+	xs.push_back(x);
+	ys.push_back(y);
+	zs.push_back(z);
+	Ts.push_back(T);
 
         ++i;
     }
     /* Read the EAPSI-Coord file(x-coord  y-coord). The order of nodes in this file != the order of nodes in eapsi_thermal file.*/ 
-    std::vector<double>nxs, nys, nTs;
+    std::vector<double>nxs, nys, nzs, nTs;
     std::vector<int>nis;
-    std::ifstream ninputFile("EAPSI_Thermal_Data_Files/EAPSI_Coord_HD.dat");
+    std::ifstream ninputFile(param.ic.Nodes_filename.c_str());
     std::string nline;
     int ni = 0;
 
@@ -43,16 +48,21 @@ void read_external_temperature_from_comsol(const Param &param,
             continue;
         std::istringstream iss(nline);
 
-        double x = 0., y = 0.;
-        iss>>x>>y;
-        nis.push_back(ni);
+        double x = 0., y = 0., z = 0.;
+	if (NDIMS == 3)
+          iss>>x>>y>>z;
+	else
+	  iss>>x>>y;
+        
+	nis.push_back(ni);
         nxs.push_back(x);
         nys.push_back(y);
-
+	nzs.push_back(z);
+	
         /* Assign temperature to the nodes according to the order in node-coord profile.*/
         int j = 0;
         for (j=0; j<xs.size();++j) {
-            if (abs(nxs[ni]-xs[j])<0.001 && abs(nys[ni]-ys[j])<0.001)
+            if (abs(nxs[ni]-xs[j])<0.001 && abs(nys[ni]-ys[j])<0.001 && abs(nzs[ni]-zs[j])<0.001)
                 nTs.push_back(Ts[j]);
         }
         ++ni;
@@ -67,12 +77,15 @@ void read_external_temperature_from_comsol(const Param &param,
     for (n=0; n<nis.size(); ++n) {
   	coord[n][0] = nxs[n];
    	coord[n][1] = nys[n];
+#ifdef THREED
+	coord[n][2] = nzs[n];
+#endif
    	inputtemperature[n] = nTs[n];
     }
 
     /* Read the EAPSI_Connectivity file(n0 n1 n2).*/
-    std::vector<int> es, n1s, n2s, n3s;
-    std::ifstream einputFile("EAPSI_Thermal_Data_Files/EAPSI_Connectivity_HD.dat");
+    std::vector<int> es, n0s, n1s, n2s, n3s;
+    std::ifstream einputFile(param.ic.Connectivity_filename.c_str());
     std::string eline;
     int e = 0;
 
@@ -81,12 +94,16 @@ void read_external_temperature_from_comsol(const Param &param,
             continue;
         std::istringstream iss(eline);
 
-        int n1, n2, n3;
-        iss>>n1>>n2>>n3;
-        n1s.push_back(n1);
-        n2s.push_back(n2);
-        n3s.push_back(n3);
-        es.push_back(e);
+        int n0, n1, n2, n3 = 0;
+	if (NDIMS == 3)
+          iss>>n0>>n1>>n2>>n3;
+	else
+	  iss>>n0>>n1>>n2;
+          n0s.push_back(n0);
+	  n1s.push_back(n1);
+          n2s.push_back(n2);
+          n3s.push_back(n3);
+          es.push_back(e);
 
         ++e;
     }
@@ -97,9 +114,12 @@ void read_external_temperature_from_comsol(const Param &param,
     conn_t connectivity(nelem);	// connectivity[elem#][0-NODES_PER_ELEM-1]
 
     for (m=0; m<es.size(); ++m) {
-  	connectivity[m][0] = n1s[m];
-   	connectivity[m][1] = n2s[m];
-   	connectivity[m][2] = n3s[m];
+  	connectivity[m][0] = n0s[m];
+   	connectivity[m][1] = n1s[m];
+   	connectivity[m][2] = n2s[m];
+#ifdef THREED
+	connectivity[m][3] = n3s[m];
+#endif
     }
 
     if (1) {
