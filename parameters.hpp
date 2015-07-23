@@ -140,7 +140,9 @@ struct IC {
     double weakzone_ysemi_axis;
     double weakzone_zsemi_axis;
 
+    int temperature_option;
     double oceanic_plate_age_in_yr;
+
     double isostasy_adjustment_time_in_yr;
 };
 

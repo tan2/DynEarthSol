@@ -15,7 +15,7 @@ namespace po = boost::program_options;
 static void declare_parameters(po::options_description &cfg,
                                Param &p)
 {
-    /* To have a new input parameter declared as such in parameters.h,
+    /* To have a new input parameter declared as such in parameters.hpp,
      *
      *     struct SectionType {
      *         type name;
@@ -24,7 +24,7 @@ static void declare_parameters(po::options_description &cfg,
      *         SectionType section;
      *     }
      *
-     * add this line:
+     * add this line in this function:
      *
      *     ("section.name", po::value<type>(&p.section.name), "help string")
      *
@@ -315,6 +315,10 @@ static void declare_parameters(po::options_description &cfg,
         ("ic.weakzone_zsemi_axis", po::value<double>(&p.ic.weakzone_zsemi_axis)->default_value(1e3),
          "Length of weak zone semi-axis in z direction (in meters)")
 
+        ("ic.temperature_option", po::value<int>(&p.ic.temperature_option)->default_value(0),
+         "How to set the initial temperature?\n"
+         "0: uniform half-space cooling.\n"
+         "90: temperature read from an external grid\n")
         ("ic.oceanic_plate_age_in_yr", po::value<double>(&p.ic.oceanic_plate_age_in_yr)->default_value(60e6),
          "Age of the oceanic plate (in years), used for the temperature profile on the plate.\n")
 
