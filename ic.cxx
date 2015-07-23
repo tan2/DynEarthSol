@@ -4,6 +4,7 @@
 #include "parameters.hpp"
 #include "matprops.hpp"
 
+#include "ic-read-temp.hpp"
 #include "ic.hpp"
 
 namespace {
@@ -217,7 +218,7 @@ void initial_temperature(const Param &param, const Variables &var,
             break;
         }
     case 90:
-        //read_external_temperature();
+        read_external_temperature_from_comsol(param, var, temperature);
         break;
     default:
         std::cout << "Error: unknown ic.temperature option: " << param.ic.temperature_option << '\n';

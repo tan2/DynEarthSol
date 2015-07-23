@@ -73,6 +73,7 @@ SRCS =	\
 	fields.cxx \
 	geometry.cxx \
 	ic.cxx \
+	ic-read-temp.cxx \
 	input.cxx \
 	matprops.cxx \
 	mesh.cxx \
