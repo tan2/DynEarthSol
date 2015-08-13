@@ -447,11 +447,11 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
         const auto& bdry = var.bfacets[i];
         const auto& coord = *var.coord;
         // loops over all bdry facets
-        for (int i=0; i<static_cast<int>(bdry.size()); ++i) {
+        for (int n=0; n<static_cast<int>(bdry.size()); ++n) {
             // this facet belongs to element e
-            int e = bdry[i].first;
+            int e = bdry[n].first;
             // this facet is the f-th facet of e
-            int f = bdry[i].second;
+            int f = bdry[n].second;
             const int *conn = (*var.connectivity)[e];
 
             // the outward-normal vector
@@ -486,8 +486,8 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             // lithostatc support - Archimed force (normal to the surface)
             for (int j=0; j<NODES_PER_FACET; ++j) {
                 int n = conn[NODE_OF_FACET[f][j]];
-                for (int i=0; i<NDIMS; ++i) {
-                    force[n][i] -= p * normal[i] / NODES_PER_FACET;
+                for (int d=0; d<NDIMS; ++d) {
+                    force[n][d] -= p * normal[d] / NODES_PER_FACET;
                 }
             }
         }
