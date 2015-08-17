@@ -157,7 +157,7 @@ ifneq ($(HAS_HG),)
 	@echo >> snapshot.diff
 	@echo >> snapshot.diff
 	@echo '== Code modification (checked-in but not public) ==' >> snapshot.diff
-	@hg log --patch -r "draft()" >> snapshot.diff
+	@hg log --patch -r "not public()" >> snapshot.diff
 else
 	@echo \'hg\' is not in path, cannot take code snapshot. >> snapshot.diff
 endif
