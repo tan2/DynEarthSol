@@ -388,7 +388,7 @@ double MatProps::rho(int e) const
     int n = 0;
     for (int m=0; m<nmat; m++) {
         // TODO: compressibility
-        result += ((*rho0)[m] - (*alpha)[m] * TinCelsius) * elemmarkers[e][m];
+        result += (*rho0)[m] * (1 - (*alpha)[m] * TinCelsius) * elemmarkers[e][m];
         n += elemmarkers[e][m];
     }
     return result / n;
