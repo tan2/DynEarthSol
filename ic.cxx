@@ -194,6 +194,12 @@ void initial_weak_zone(const Param &param, const Variables &var,
 
         if (weakzone->contains(center))
             plstrain[e] = param.ic.weakzone_plstrain;
+
+        // Find the most abundant marker mattype in this element
+        int_vec &a = (*var.elemmarkers)[e];
+        int material = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
+	if (center[NDIMS-1] < -20e3 && (material == 1 || material == 2))
+	    plstrain[e] = param.ic.weakzone_plstrain;
     }
 
     delete weakzone;
@@ -218,7 +224,7 @@ void initial_temperature(const Param &param, const Variables &var,
             break;
         }
     case 90:
-        read_external_temperature_from_comsol(param, var, temperature);
+        read_external_temperature_from_comsol(param, var, *var.temperature);
         break;
     default:
         std::cout << "Error: unknown ic.temperature option: " << param.ic.temperature_option << '\n';

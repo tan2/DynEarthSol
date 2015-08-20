@@ -6,6 +6,10 @@
 
 #include "parameters.hpp"
 #include "ic-read-temp.hpp"
+#include "barycentric-fn.hpp"
+#include "brc-interpolation.hpp"
+#include "geometry.hpp"
+#include "utils.hpp"
 
 void read_external_temperature_from_comsol(const Param &param,
                                            const Variables &var,
@@ -71,14 +75,14 @@ void read_external_temperature_from_comsol(const Param &param,
     /* Write x&y-coord to array_t coord(nnodes). Write temperature to double_vec temperature(nnodes).*/
     int n;
     int nnodes = nis.size();
-    array_t coord(nnodes);	// coord[node#][dim#];
+    array_t input_coord(nnodes);	// coord[node#][dim#];
     double_vec inputtemperature(nnodes);
 
     for (n=0; n<nis.size(); ++n) {
-  	coord[n][0] = nxs[n];
-   	coord[n][1] = nys[n];
+  	input_coord[n][0] = nxs[n];
+   	input_coord[n][1] = nys[n];
 #ifdef THREED
-	coord[n][2] = nzs[n];
+	input_coord[n][2] = nzs[n];
 #endif
    	inputtemperature[n] = nTs[n];
     }
@@ -109,36 +113,46 @@ void read_external_temperature_from_comsol(const Param &param,
     }
 
     /* Write nodes to conn_t connectivity(nelem).*/
-    int m;
+    int m, l;
     int nelem = es.size();
-    conn_t connectivity(nelem);	// connectivity[elem#][0-NODES_PER_ELEM-1]
-
+    conn_t input_connectivity(nelem);	// connectivity[elem#][0-NODES_PER_ELEM-1]
+    int_vec2D input_support(nnodes); //create input_support
     for (m=0; m<es.size(); ++m) {
-  	connectivity[m][0] = n0s[m];
-   	connectivity[m][1] = n1s[m];
-   	connectivity[m][2] = n2s[m];
+  	input_connectivity[m][0] = n0s[m];
+   	input_connectivity[m][1] = n1s[m];
+   	input_connectivity[m][2] = n2s[m];
 #ifdef THREED
-	connectivity[m][3] = n3s[m];
+	input_connectivity[m][3] = n3s[m];
 #endif
+	int *conn = (input_connectivity[m]);
+	for (int l=0; l<NODES_PER_ELEM; ++l) {
+	    (input_support)[conn[l]].push_back(m);
+	}
     }
+    double_vec volume(es.size());
+    compute_volume(input_coord, input_connectivity, volume);
+    //print(std::cout, volume);
+    
+    Barycentric_transformation bary(input_coord, input_connectivity, volume);
+    barycentric_node_interpolation_forT(var, bary, input_coord, input_connectivity, input_support, inputtemperature, temperature);
 
-    if (1) {
+    if (0) {
     /* checking */
-    std::cout << "# of nodes: " << coord.size() << '\n';
-    std::cout << "# of elem:  " << connectivity.size() << '\n';
-    for (m=0; m<5; ++m) {
-   	//int u = rand() % nis.size()/5+m*7000;
-   	int u = m*70;
-   	std::cout<<"The Temp @ point(node # "<<nis[u]<<"): ("<<coord[u][0]<<", "<<coord[u][1]<<") is "<<inputtemperature[u]<<"C."<<std::endl;
-    }
-    std::cout<<"There are "<<nxs.size()<<" of nodes."<<std::endl;
-    for (m=0; m<7; ++m) {
-   	int v = rand() % es.size()/7+m*10000;
-   	std::cout<<"The nodes for element "<<es[v]<<" are: "<<connectivity[v][0]<<", "<<connectivity[v][1]<<" and "<<connectivity[v][2]<<"."<<std::endl;
-    }
+      std::cout << "# of nodes: " << input_coord.size() << '\n';
+      std::cout << "# of elem:  " << input_connectivity.size() << '\n';
+      for (m=0; m<5; ++m) {
+   	  //int u = rand() % nis.size()/5+m*7000;
+   	  int u = m*70;
+   	  std::cout<<"The Temp @ point(node # "<<nis[u]<<"): ("<<input_coord[u][0]<<", "<<input_coord[u][1]<<") is "<<inputtemperature[u]<<"C."<<std::endl;
+      }
+      std::cout<<"There are "<<nxs.size()<<" of nodes."<<std::endl;
+      for (m=0; m<7; ++m) {
+          int v = rand() % es.size()/7+m*10000;
+   	  std::cout<<"The nodes for element "<<es[v]<<" are: "<<input_connectivity[v][0]<<", "<<input_connectivity[v][1]<<" and "<<input_connectivity[v][2]<<"."<<std::endl;
+      }
 
-    std::cout<<"There are "<<es.size()<<" of elements."<<std::endl;
+      std::cout<<"There are "<<es.size()<<" of elements."<<std::endl;
     }
-    std::exit(1);
+    //std::exit(1);
     return;
 }
