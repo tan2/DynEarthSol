@@ -153,6 +153,10 @@ ifneq ($(HAS_HG),)
 	@hg summary >> snapshot.diff
 	@echo >> snapshot.diff
 	@echo >> snapshot.diff
+	@echo '== Code based on (last public revision) ==' >> snapshot.diff
+	@hg log -r "last(public())" >> snapshot.diff
+	@echo >> snapshot.diff
+	@echo >> snapshot.diff
 	@echo '== Code modification (not checked-in) ==' >> snapshot.diff
 	@hg diff >> snapshot.diff
 	@echo >> snapshot.diff
