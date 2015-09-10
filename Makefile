@@ -52,6 +52,25 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 		LDFLAGS += -fopenmp
 	endif
 
+else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with v14
+        CXXFLAGS = -g -std=c++0x
+        LDFLAGS = -lm
+
+        ifeq ($(opt), 1)
+                CXXFLAGS += -O1
+        else ifeq ($(opt), 2)
+                CXXFLAGS += -O2
+        else ifeq ($(opt), 3) # experimental, use at your own risk :)
+                CXXFLAGS += -fast -fast-transcendentals -fp-model fast=2
+        else # debugging flags
+                CXXFLAGS += -O0 -check=uninit -check-pointers=rw -check-pointers-dangling=all -fp-trap-all=all
+        endif
+
+        ifeq ($(openmp), 1)
+                CXXFLAGS += -fopenmp -DUSE_OMP
+                LDFLAGS += -fopenmp
+        endif
+
 else
 # the only way to display the error message in Makefile ...
 all:
