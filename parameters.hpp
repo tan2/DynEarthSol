@@ -93,6 +93,9 @@ struct BC {
     double wrinkler_delta_rho;
     bool has_wrinkler_foundation;
 
+    double elastic_foundation_constant;
+    bool has_elastic_foundation;
+
     bool has_water_loading;
 
     int vbc_x0;
@@ -238,7 +241,7 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
-    double_vec *stressyy;
+    double_vec *stressyy, *z0;
     double_vec *ntmp;
 
     array_t *vel, *force;

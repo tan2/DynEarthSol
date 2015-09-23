@@ -212,6 +212,12 @@ static void declare_parameters(po::options_description &cfg,
          "Using Wrinkler foundation for the bottom boundary?")
         ("bc.wrinkler_delta_rho", po::value<double>(&p.bc.wrinkler_delta_rho)->default_value(0),
          "Excess density of the bottom Wrinkler foundation (in kg/m^3)")
+
+        ("bc.has_elastic_foundation", po::value<bool>(&p.bc.has_elastic_foundation)->default_value(false),
+         "Using elastic foundation for the bottom boundary?")
+        ("bc.elastic_foundation_constant", po::value<double>(&p.bc.elastic_foundation_constant)->default_value(1e11),
+         "Elastic constant for elastic foundation.")
+
         ("bc.has_water_loading", po::value<bool>(&p.bc.has_water_loading)->default_value(true),
          "Applying water loading for top boundary that is below sea level?")
 

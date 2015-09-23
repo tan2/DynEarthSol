@@ -24,6 +24,7 @@ void allocate_variables(const Param &param, Variables& var)
     {
         // these fields are reallocated during remeshing interpolation
         var.temperature = new double_vec(n);
+        var.z0 = new double_vec(n);
         var.plstrain = new double_vec(e);
         var.delta_plstrain = new double_vec(e);
         var.vel = new array_t(n, 0);

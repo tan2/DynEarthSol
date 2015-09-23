@@ -200,10 +200,16 @@ void barycentric_node_interpolation(Variables &var,
     brc_t brc(var.nnode);
     prepare_interpolation(var, bary, old_coord, old_connectivity, *var.support, brc, el);
 
-    double_vec *a = new double_vec(var.nnode);
+    double_vec *a;
+    a = new double_vec(var.nnode);
     interpolate_field(brc, el, old_connectivity, *var.temperature, *a);
     delete var.temperature;
     var.temperature = a;
+
+    a = new double_vec(var.nnode);
+    interpolate_field(brc, el, old_connectivity, *var.z0, *a);
+    delete var.z0;
+    var.z0 = a;
 
     array_t *b = new array_t(var.nnode);
     interpolate_field(brc, el, old_connectivity, *var.vel, *b);

@@ -78,6 +78,9 @@ void init(const Param& param, Variables& var)
 
     allocate_variables(param, var);
 
+    for(int i=0; i<var.nnode; i++)
+        (*var.z0)[i] = (*var.coord)[i][NDIMS-1];
+
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     *var.volume_old = *var.volume;
     compute_mass(param, var.egroups, *var.connectivity, *var.volume, *var.mat,
@@ -170,6 +173,8 @@ void restart(const Param& param, Variables& var)
     }
 
     allocate_variables(param, var);
+
+    bin_chkpt.read_array(*var.z0, "z0");
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     bin_chkpt.read_array(*var.volume_old, "volume_old");

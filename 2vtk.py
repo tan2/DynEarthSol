@@ -81,6 +81,7 @@ def main(modelname, start, end, delta):
             convert_field(des, frame, 'force', fvtu)
 
             convert_field(des, frame, 'temperature', fvtu)
+            #convert_field(des, frame, 'z0', fvtu)
             #convert_field(des, frame, 'bcflag', fvtu)
             #convert_field(des, frame, 'mass', fvtu)
             #convert_field(des, frame, 'tmass', fvtu)
