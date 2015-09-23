@@ -15,9 +15,6 @@
 #include "geometry.hpp"
 #include "utils.hpp"
 
-#ifdef WIN32
-static double drand48() { return (double)rand()/(double)RAND_MAX; }
-#endif // WIN32
 
 namespace {
 
@@ -601,7 +598,7 @@ namespace {
 
         while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
             // Determine new marker's matttype based on cpdf
-            auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), drand48());
+            auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), rand()/(double)RAND_MAX);
             const int mt = upper - cpdf.begin();
             var.markersets[0]->append_random_marker_in_elem(e, mt);
             if (DEBUG) {

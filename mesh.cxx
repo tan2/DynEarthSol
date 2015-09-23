@@ -46,9 +46,6 @@ namespace std {
 #endif //_MSC_VER
 #endif // WIN32
 
-#ifdef WIN32
-static double drand48() { return (double)rand()/(double)RAND_MAX; }
-#endif // WIN32
 
 namespace { // anonymous namespace
 
