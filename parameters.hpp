@@ -184,6 +184,7 @@ struct Markers {
     int markers_per_element;
     int min_num_markers_in_element;
     int replenishment_option;
+    uint random_seed;
     double init_marker_spacing;
 };
 

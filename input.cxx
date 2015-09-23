@@ -155,6 +155,8 @@ static void declare_parameters(po::options_description &cfg,
          "0: always set to 0 (fastest option).\n"
          "1: by the probability of marker mattype of the element or surrounding elements.\n"
          "2: same as the mattype of the nearest marker (slowest option).")
+        ("markers.random_seed", po::value<uint>(&p.markers.random_seed)->default_value(1),
+         "Random seed of marker position. If 0, the current time is used as the seed.")
         ;
 
     cfg.add_options()

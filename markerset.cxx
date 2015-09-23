@@ -153,8 +153,11 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
     allocate_markerdata( max_markers );
     
     // initialize random seed:
-    srand (time(NULL));
-    
+    if (param.markers.random_seed)
+        srand(param.markers.random_seed);
+    else
+        srand(time(NULL));
+
     // Generate particles in each element.
     for( int e = 0; e < ne; e++ )
         for( int m = 0; m < mpe; m++ ) {
