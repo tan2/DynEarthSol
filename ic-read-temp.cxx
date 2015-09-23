@@ -143,23 +143,5 @@ void read_external_temperature_from_comsol(const Param &param,
     Barycentric_transformation bary(input_coord, input_connectivity, volume);
     barycentric_node_interpolation_forT(var, bary, input_coord, input_connectivity, input_support, inputtemperature, temperature);
 
-    if (0) {
-        /* checking */
-        std::cout << "# of nodes: " << input_coord.size() << '\n';
-        std::cout << "# of elem:  " << input_connectivity.size() << '\n';
-        for (m=0; m<5; ++m) {
-            //int u = rand() % nis.size()/5+m*7000;
-            int u = m*70;
-            std::cout<<"The Temp @ point(node # "<<nis[u]<<"): ("<<input_coord[u][0]<<", "<<input_coord[u][1]<<") is "<<inputtemperature[u]<<"C."<<std::endl;
-        }
-        std::cout<<"There are "<<nxs.size()<<" of nodes."<<std::endl;
-        for (m=0; m<7; ++m) {
-            int v = rand() % es.size()/7+m*10000;
-            std::cout<<"The nodes for element "<<es[v]<<" are: "<<input_connectivity[v][0]<<", "<<input_connectivity[v][1]<<" and "<<input_connectivity[v][2]<<"."<<std::endl;
-        }
-
-        std::cout<<"There are "<<es.size()<<" of elements."<<std::endl;
-    }
-    //std::exit(1);
     return;
 }
