@@ -226,6 +226,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[1] = bc.vbc_val_x0;
                 v[2] = 0;
                 break;
+            case 7:
+                v[0] = bc.vbc_val_x0;
+                v[1] = 0;
+                break;
 #endif
             }
         }
@@ -259,6 +263,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[1] = bc.vbc_val_x1;
                 v[2] = 0;
                 break;
+            case 7:
+                v[0] = bc.vbc_val_x1;
+                v[1] = 0;
+                break;
 #endif
             }
         }
@@ -291,6 +299,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[1] = 0;
                 v[2] = 0;
                 break;
+            case 7:
+                v[0] = 0;
+                v[1] = bc.vbc_val_y0;
+                break;
             }
         }
         else if (flag & BOUNDY1) {
@@ -317,6 +329,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[0] = bc.vbc_val_y1;
                 v[1] = 0;
                 v[2] = 0;
+                break;
+            case 7:
+                v[0] = 0;
+                v[1] = bc.vbc_val_y1;
                 break;
             }
         }

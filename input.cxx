@@ -227,8 +227,9 @@ static void declare_parameters(po::options_description &cfg,
          "1: normal component fixed, shear components free;\n"
          "2: normal component free, shear components fixed at 0;\n"
          "3: normal component fixed, shear components fixed at 0;\n"
-         "4: normal component free, shear component (not z) fixed, only in 3D;\n"
-         "5: normal component fixed at 0, shear component (not z) fixed, only in 3D;\n")
+         "4: normal component free, shear component (not z) fixed, z component fixed at 0, only in 3D;\n"
+         "5: normal component fixed at 0, shear component (not z) fixed, z component fixed at 0, only in 3D;\n"
+         "7: normal component fixed shear component (not z) fixed at 0, z component free, only in 3D;\n")
         ("bc.vbc_x1", po::value<int>(&p.bc.vbc_x1)->default_value(1),
          "Type of boundary condition for the right/eastern side")
         ("bc.vbc_val_x0", po::value<double>(&p.bc.vbc_val_x0)->default_value(-1e-9),
