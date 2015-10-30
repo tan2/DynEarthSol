@@ -174,7 +174,7 @@ void restart(const Param& param, Variables& var)
 
     allocate_variables(param, var);
 
-    bin_chkpt.read_array(*var.z0, "z0");
+    bin_save.read_array(*var.z0, "z0");
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     bin_chkpt.read_array(*var.volume_old, "volume_old");
