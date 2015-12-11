@@ -67,15 +67,13 @@ class Dynearthsol:
         return
 
 
-    def read_field(self, frame, name):
-        pos = self.field_pos[name]
+    def _get_dtype_count_shape(self, frame, name):
         i = self.frames.index(frame)
         nnode = self.nnode_list[i]
         nelem = self.nelem_list[i]
 
         dtype = np.float64 if name != 'connectivity' else np.int32
-        count = 0
-        shape = (-1,)
+
         if name in set(['strain', 'strain-rate', 'stress', 'stress averaged']):
             count = self.nstr * nelem
             shape = (nelem, self.nstr)
@@ -83,6 +81,7 @@ class Dynearthsol:
                           'plastic strain', 'plastic strain-rate',
                           'viscosity', 'edvoldt', 'volume']):
             count = nelem
+            shape = (nelem, )
         elif name in set(['connectivity']):
             count = (self.ndims + 1) * nelem
             shape = (nelem, self.ndims+1)
@@ -91,14 +90,34 @@ class Dynearthsol:
             shape = (nnode, self.ndims)
         elif name in set(['temperature', 'mass', 'tmass', 'volume_n', 'z0']):
             count = nnode
+            shape = (nnode, )
         else:
             raise NameError('uknown field name: ' + name)
+        return dtype, count, shape
 
+
+    def read_field(self, frame, name):
+        dtype, count, shape = self._get_dtype_count_shape(frame, name)
+
+        pos = self.field_pos[name]
         fname = self.get_fn(frame)
         with open(fname) as f:
             f.seek(pos)
             field = np.fromfile(f, dtype=dtype, count=count).reshape(shape)
         return field
+
+
+    def overwrite_field(self, frame, name, data):
+        dtype, count, shape = self._get_dtype_count_shape(frame, name)
+        if data.shape != shape:
+            raise Error('Shape of {0} field is changed! Expecting {1}, got {2}.'.format(name, shape, data.shape))
+
+        pos = self.field_pos[name]
+        fname = self.get_fn(frame)
+        with open(fname, 'r+b') as f:
+            f.seek(pos)
+            f.write(data.tobytes())
+        return
 
 
     def read_markers(self, frame, markername):
