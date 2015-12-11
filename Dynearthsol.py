@@ -11,9 +11,11 @@ class Dynearthsol:
     '''Read output file of 2D/3D DynEarthSol'''
 
     def __init__(self, modelname):
+        self.suffix = 'save'
         self.modelname = modelname
         self.read_info()
         self.read_header(self.frames[0])
+        return
 
 
     def read_info(self):
@@ -28,7 +30,7 @@ class Dynearthsol:
 
 
     def get_fn(self, frame):
-        return '{0}.save.{1:0=6}'.format(self.modelname, frame)
+        return '{0}.{1}.{2:0=6}'.format(self.modelname, self.suffix, frame)
 
 
     def read_header(self, frame):
@@ -147,5 +149,33 @@ class Dynearthsol:
                 #print(marker_data[name].shape, marker_data[name])
 
         return marker_data
+
+
+
+
+class DynearthsolCheckpoint(Dynearthsol):
+    '''Read chkpt file of 2D/3D DynEarthSol'''
+
+    def __init__(self, modelname, frame):
+        self.suffix = 'chkpt'
+        self.modelname = modelname
+        self.read_info()
+        self.read_header(frame)
+        return
+
+
+    def _get_dtype_count_shape(self, frame, name):
+        i = self.frames.index(frame)
+        nnode = self.nnode_list[i]
+        nelem = self.nelem_list[i]
+
+        dtype = np.float64 if name != 'connectivity' else np.int32
+
+        if name in set(['volume_old']):
+            count = nelem
+            shape = (nelem, )
+        else:
+            raise NameError('uknown field name: ' + name)
+        return dtype, count, shape
 
 
