@@ -196,10 +196,8 @@ void initial_weak_zone(const Param &param, const Variables &var,
             plstrain[e] = param.ic.weakzone_plstrain;
 
         // Find the most abundant marker mattype in this element
-        int_vec &a = (*var.elemmarkers)[e];
-        int material = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
-	if (center[NDIMS-1] < -20e3 && (material == 1 || material == 2))
-	    plstrain[e] = param.ic.weakzone_plstrain;
+        // int_vec &a = (*var.elemmarkers)[e];
+        // int material = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
     }
 
     delete weakzone;
