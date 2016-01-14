@@ -118,7 +118,7 @@ class Dynearthsol:
         fname = self.get_fn(frame)
         with open(fname, 'r+b') as f:
             f.seek(pos)
-            f.write(data.tobytes())
+            f.write(data.tostring())
         return
 
 
