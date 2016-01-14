@@ -742,7 +742,13 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
      *   2D:  http://www.cs.cmu.edu/~quake/triangle.poly.html
      *   3D:  http://wias-berlin.de/software/tetgen/fformats.poly.html
      *
-     * Note that the poly file in 3D has a more complicated format.
+     * Note:
+     * 1. the poly file in 3D has a more complicated format.
+     * 2. The last row in the regional attributes is the regional constraint
+     *    on the maximum triangle area or tetrahedra volume, which is the max
+     *    size of an element.
+     *    when meshing_option=90, the unit is meter^dim.
+     *    when meshing_option=91, the unit is mesh.resolution^dim.
      */
 
 #ifdef THREED
@@ -991,9 +997,13 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 
         if ( x[NDIMS+1] > 0 ) {
             has_max_size = true; // max area is set for this region
+
+            // normalize the element size w.r.t mesh.resolution
+            if (param.mesh.meshing_option == 91) {
+                x[NDIMS+1] *= std_elem_size;
+            }
         }
     }
-
     double max_elem_size = std_elem_size;
     if ( has_max_size ) max_elem_size = 0; // special value, see set_volume_str() above.
 
@@ -1562,6 +1572,7 @@ void create_new_mesh(const Param& param, Variables& var)
         new_mesh_refined_zone(param, var);
         break;
     case 90:
+    case 91:
         new_mesh_from_polyfile(param, var);
         break;
     default:

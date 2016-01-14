@@ -70,7 +70,8 @@ static void declare_parameters(po::options_description &cfg,
          "How to create the new mesh?\n"
          "1: rectangular box with roughly uniform resolution\n"
          "2: rectangular box with rectangular zone of refined resolution\n"
-         "90: read the bounding polygon from a .poly file"
+         "90: read the bounding polygon from a .poly file\n"
+         "91: same as 90, but the max. element size is normalized with resolution.\n"
          )
         ("mesh.meshing_verbosity", po::value<int>(&p.mesh.meshing_verbosity)->default_value(-1),
          "Output verbose during mesh/remeshing. -1 for no output.")
@@ -110,7 +111,7 @@ static void declare_parameters(po::options_description &cfg,
 
         // for meshing_option = 90 only
         ("mesh.poly_filename", po::value<std::string>(&p.mesh.poly_filename)->default_value("mesh.poly"),
-         "Filename of the input polygon, for meshing_option=90 only.\n"
+         "Filename of the input polygon, for meshing_option=90 or 91 only.\n"
          "The file format is described in\n"
          "http://www.cs.cmu.edu/~quake/triangle.poly.html (2D) and\n"
          "http://wias-berlin.de/software/tetgen/fformats.poly.html (3D).\n"
