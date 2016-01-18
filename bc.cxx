@@ -59,25 +59,25 @@ bool is_on_boundary(const Variables &var, int node)
 double find_max_vbc(const BC &bc)
 {
     double max_vbc_val = 0;
-    if (bc.vbc_x0 == 1 || bc.vbc_x0 == 3)
+    if (bc.vbc_x0 % 2 == 1) // odd number indicates fixed velocity component
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x0));
-    if (bc.vbc_x1 == 1 || bc.vbc_x1 == 3)
+    if (bc.vbc_x1 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x1));
-    if (bc.vbc_y0 == 1 || bc.vbc_y0 == 3)
+    if (bc.vbc_y0 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_y0));
-    if (bc.vbc_y1 == 1 || bc.vbc_y1 == 3)
+    if (bc.vbc_y1 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_y1));
-    if (bc.vbc_z0 == 1 || bc.vbc_z0 == 3)
+    if (bc.vbc_z0 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_z0));
-    if (bc.vbc_z1 == 1 || bc.vbc_z1 == 3)
+    if (bc.vbc_z1 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_z1));
-    if (bc.vbc_n0 == 1 || bc.vbc_n0 == 3)
+    if (bc.vbc_n0 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n0));
-    if (bc.vbc_n1 == 1 || bc.vbc_n1 == 3)
+    if (bc.vbc_n1 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n1));
-    if (bc.vbc_n2 == 1 || bc.vbc_n2 == 3)
+    if (bc.vbc_n2 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n2));
-    if (bc.vbc_n3 == 1 || bc.vbc_n3 == 3)
+    if (bc.vbc_n3 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n3));
 
     return max_vbc_val;
