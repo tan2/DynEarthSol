@@ -28,9 +28,17 @@ BOOST_ROOT_DIR =
 
 BOOST_LDFLAGS = -lboost_program_options
 ifdef BOOST_ROOT_DIR
-	BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
-	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/lib
-	BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/stage/lib
+	# check existence of stage/ directory
+	has_stage_dir = $(wildcard $(BOOST_ROOT_DIR)/stage)
+	ifeq (, $(has_stage_dir))
+		# no stage dir, BOOST_ROOT_DIR is the installation directory
+		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
+		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/lib
+	else
+		# with stage dir, BOOST_ROOT_DIR is the build directory
+		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)
+		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/stage/lib
+	endif
 endif
 
 ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
