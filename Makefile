@@ -11,7 +11,7 @@
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openmp = 1: enable OpenMP
 
-ndims = 2
+ndims = 3
 opt = 2
 openmp = 1
 
@@ -128,16 +128,11 @@ ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
 
-#MMG3D_DIR = mmg3d4-4.0.1-Source
-MMG3D_DIR = mmg3d/mmg3d4
-MMG3D_INC = $(MMG3D_DIR)/sources
-MMG3D_LIB = $(MMG3D_DIR)/lib
-MMG3D_LIBNAME = mmg3d4
-CXXFLAGS += -I$(MMG3D_INC)
-
-SCOTCH_DIR = scotch_6.0.3
-SCOTCH_LIBDIR = $(SCOTCH_DIR)/lib
-SCOTCH_LIB = -lscotch -lscotcherr -lscotcherrexit -lscotchmetis
+LIBADAPTIVITY_DIR = ./libadaptivity
+LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
+LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
+LIBADAPTIVITY_LIBNAME = adaptivity
+CXXFLAGS += -I$(LIBADAPTIVITY_INC)
 
 ## Action
 
