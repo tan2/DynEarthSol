@@ -19,7 +19,41 @@
 #include "markerset.hpp"
 #include "remeshing.hpp"
 
-#include "libmmg3d4.h"
+/* Copyright (C) 2009 Imperial College London.
+
+ Please see the AUTHORS file in the main source directory for a full
+ list of copyright holders.
+
+ Dr Gerard J Gorman
+ Applied Modelling and Computation Group
+ Department of Earth Science and Engineering
+ Imperial College London
+
+ g.gorman@imperial.ac.uk
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ USA
+*/
+#include <cmath>
+#include <vector>
+
+#include "vtk.h"
+
+#include "ErrorMeasure.h"
+#include "Adaptivity.h"
+#include "DiscreteGeometryConstraints.h"
 #include <assert.h>
 
 namespace {
@@ -1129,126 +1163,76 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         std::exit(1);
     }
 
-    // prepare arguments for mmg3d
-    int opt[10];
-    MMG_pMesh mymmgmesh;
-    MMG_pSol  sol;
+    // Optimize mesh using libadaptivity
+    //////////////////////////////
+    vtkUnstructuredGrid *ug; // = ug_reader->GetOutput();
+    ug->Update();
 
-    opt[0] = 4; // mesh optimization. 1 for mesh generation and optimization.
-    opt[1] = 1; // non-debugging mode. 1 for debugging mode
-    opt[2] = 64; // bucket size. default 64.
-    opt[3] = 0; // noswap? 1: edge swap not allowed; 0, allowed.
-    opt[4] = 0; // noinsert? 1: keep the node number constant; 0: can add nodes.
-    opt[5] = 0; // nomove? 1: point relocation not allowed; 0: allowed.
-    opt[6] = -1; // info->imprim. Verbosity level.
-    opt[7] = 0; // 0: no renumbering. 1: renumbering at beginning. 2: renumbering at the end.
-                // 3: renumbering both at beginning and at end.
-    opt[8] = 50000; // the number of vertices by box(?).
-    opt[9] = 0; // 0: normal, 1: LES (not suitable for anisotropic opt.)
+    // These should be populated only once at the outset of a simulation
+    // and be maintained thereafter.
+    std::vector<int> SENList, sids;
+    {
+        DiscreteGeometryConstraints constraints;
+        constraints.verbose_on();
+        constraints.set_coplanar_tolerance(0.9999999);
+        constraints.set_volume_input(ug);
 
-    // MMG_Mesh definition block.
-    mymmgmesh = (MMG_pMesh)calloc(1, sizeof(MMG_Mesh));
-    
-    mymmgmesh->np = old_nnode;
-    mymmgmesh->nt = old_nseg;
-    mymmgmesh->ne = old_nelem;
-
-    // If these max numbers are not big enough,
-    // "cannot create new element" error occurs.
-    mymmgmesh->npmax = 15*mymmgmesh->np;
-    mymmgmesh->ntmax = 15*mymmgmesh->nt;
-    mymmgmesh->nemax = 15*mymmgmesh->ne;
-
-    mymmgmesh->point = (MMG_pPoint)calloc(mymmgmesh->npmax+1, sizeof(MMG_Point));
-    mymmgmesh->tetra = (MMG_pTetra)calloc(mymmgmesh->nemax+1, sizeof(MMG_Tetra));
-    mymmgmesh->tria = (MMG_pTria)calloc(mymmgmesh->ntmax+1, sizeof(MMG_Tria));
-    mymmgmesh->adja = (int *)calloc(4*mymmgmesh->nemax+5, sizeof(int));
-    mymmgmesh->disp = (MMG_pDispl)calloc(mymmgmesh->npmax+1, sizeof(MMG_Displ));
-    mymmgmesh->disp->mv = (double *)calloc(3*(mymmgmesh->npmax+1), sizeof(double));
-    mymmgmesh->disp->alpha = (short *)calloc(mymmgmesh->npmax+1, sizeof(short));
-
-    // copy node coordinates to MMG_pMesh.
-    for(int k=1; k <= mymmgmesh->np; k++ ) {
-        MMG_pPoint ppt = &mymmgmesh->point[k];
-        for(int i=0; i < NDIMS; i++ )
-            ppt->c[i] = qcoord[(k-1)*NDIMS + i];
-    }
-    
-    // copy tet connectivity to MMG_pMesh.
-    for(int k=1; k <= mymmgmesh->ne; k++ ) {
-        MMG_pTetra ptetra = &mymmgmesh->tetra[k];
-        for(int i=0; i < NODES_PER_ELEM; i++ )
-            ptetra->v[i] = qconn[(k-1)*NODES_PER_ELEM + i]+1;
-        //ptetra->ref = logic;
+        constraints.get_coplanar_ids(sids);
+        constraints.get_surface(SENList);
+        assert(sids.size()*3==SENList.size());
+        cout<<"Found "<<sids.size()<<" surface elements\n";
     }
 
-    // copy surface triangle connectivity to MMG_pMesh.
-    for(int k=1; k <= mymmgmesh->nt; k++ ) {
-        MMG_pTria ptria = &mymmgmesh->tria[k];
-        for(int i=0; i < NODES_PER_FACET; i++ )
-            ptria->v[i] = qsegment[(k-1)*NODES_PER_FACET + i]+1;
-        ptria->ref = qsegflag[k-1];
-    }
+    DiscreteGeometryConstraints constraints;
+    constraints.verbose_on();
+    constraints.set_surface_input(ug, SENList, sids);
 
-    // MMG_sol definition block.
-    sol = (MMG_pSol)calloc(1, sizeof(MMG_Sol));
-    sol->np = mymmgmesh->np;
-    sol->npmax = mymmgmesh->npmax;
+    std::vector<double> max_len;
+    constraints.get_constraints(max_len);
+    constraints.write_vtk(std::string("sids.vtu"));
 
-    sol->offset = 1; // 1 or 6 for an anisotropic metric: [m11,m12,m13,m22,m23,m33].
-    sol->met = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
-    sol->metold = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
+    /* Test merging of metrics.
+     */
+    ErrorMeasure error;
+    error.verbose_on();
+    error.set_input(ug);
+    error.add_field("temperature", 1.0, false, 0.01);
+    error.set_max_length(1000.0);
+    error.set_max_length(&(max_len[0]), ug->GetNumberOfPoints());
+    error.set_min_length(200.0);
+    error.apply_gradation(1.3);
+    error.set_max_nodes(20000000);
 
-    double hmax = param.mesh.resolution; //0.2;
-    for(int k = 1; k <= mymmgmesh->np; k++ ) {
-        hmsqrinv = 1.0/(hmax*hmax);
-        
-        int isol = (k-1) * sol->offset + 1;
-        for(int i=0; i < sol->offset; i++)
-            sol->met[isol+i] = hmsqrinv;
-    }
-#if 0
-    sol->offset = 6; // 1 or 6 for an anisotropic metric: [m11,m12,m13,m22,m23,m33].
-    sol->met = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
-    sol->metold = (double *)calloc( sol->npmax+1, sol->offset*sizeof(double) );
+    error.diagnostics();
 
-    double hmax = param.mesh.resolution; //0.2;
-    double hmin = 0.01*hmax;
-    double xcenter = 0.5*param.mesh.xlength;
-    double xfold = 0.25*param.mesh.xlength;
-    double h1 = 0.0;  
-    double h1sqrinv = 0.0;
-    double hmsqrinv = 0.0;
-    for(int k = 1; k <= mymmgmesh->np; k++ ) {
-        MMG_pPoint ppt = &mymmgmesh->point[k];
-        h1 = hmax*std::abs(1.0-exp(-std::abs((ppt->c[0]-xcenter)/xfold)))+hmin;
-        //std::cerr<< ppt->c[0]<<" "<<h1<<std::endl;
-        h1sqrinv = 1.0/(h1*h1);
-        hmsqrinv = 1.0/(hmax*hmax);
-        
-        int isol = (k-1) * sol->offset + 1;
-        sol->met[isol]   = hmsqrinv; //h1sqrinv;
-        sol->met[isol+1] = 0.0;
-        sol->met[isol+2] = 0.0;
-        sol->met[isol+3] = hmsqrinv;
-        sol->met[isol+4] = 0.0;
-        sol->met[isol+5] = hmsqrinv;
-        // for(int i=0; i < sol->offset; i++)
-        //     sol->met[isol+i] = hsqrinv;
-    }
-#endif
+    vtkXMLUnstructuredGridWriter *metric_writer = vtkXMLUnstructuredGridWriter::New();
+    metric_writer->SetFileName("metric_new.vtu");
+    metric_writer->SetInput(ug);
+    metric_writer->Write();
+    metric_writer->Delete();
 
-    // Optimize the mesh based on the metric tensor defined in MMG_pSol.
-    int mmg3d_error = mmg3d::MMG_mmg3dlib( opt, mymmgmesh, sol );
-    if( mmg3d_error ) {
-        std::cerr<< "mmg3d_error="<< mmg3d_error<<std::endl;
-        assert( !mmg3d_error );
-    }
+    ug->GetPointData()->RemoveArray("mean_desired_lengths");
+    ug->GetPointData()->RemoveArray("desired_lengths");
+
+    Adaptivity adapt;
+    adapt.verbose_on();
+    adapt.set_from_vtk(ug, true);
+    adapt.set_adapt_sweeps(5);
+    adapt.set_surface_mesh(SENList);
+    adapt.set_surface_ids(sids);
+    adapt.adapt();
+    adapt.get_surface_ids(sids);
+    adapt.get_surface_mesh(SENList);
+    vtkUnstructuredGrid *tmp_ug = adapt.get_adapted_vtu();
+    ug = tmp_ug;
+    // ug->Delete();
+    ug->GetPointData()->RemoveArray("metric");
+    //////////////////////////////
 
     // update mesh info.
-    var.nnode = mymmgmesh->np;
-    var.nelem = mymmgmesh->ne;
-    var.nseg = mymmgmesh->nt;
+    // var.nnode = mymmgmesh->np;
+    // var.nelem = mymmgmesh->ne;
+    // var.nseg = mymmgmesh->nt;
 
     array_t new_coord( var.nnode );
     conn_t new_connectivity( var.nelem );
@@ -1256,44 +1240,44 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     segflag_t new_segflag( var.nseg );
 
 
-    // copy optimized node coordinates to dynearthsol3d.
-    for(int k=1; k <= mymmgmesh->np; k++ ) {
-        MMG_pPoint ppt = &mymmgmesh->point[k];
-        for(int i=0; i < NDIMS; i++ )
-            new_coord[k-1][i] = ppt->c[i];
-    }
+    // // copy optimized node coordinates to dynearthsol3d.
+    // for(int k=1; k <= mymmgmesh->np; k++ ) {
+    //     MMG_pPoint ppt = &mymmgmesh->point[k];
+    //     for(int i=0; i < NDIMS; i++ )
+    //         new_coord[k-1][i] = ppt->c[i];
+    // }
 
-    // copy optimized tet connectivity to dynearthsol3d.
-    for(int k=1; k <= mymmgmesh->ne; k++ ) {
-        MMG_pTetra ptetra = &mymmgmesh->tetra[k];
-        for(int i=0; i < NODES_PER_ELEM; i++ )
-            new_connectivity[k-1][i] = ptetra->v[i]-1;
-    }
+    // // copy optimized tet connectivity to dynearthsol3d.
+    // for(int k=1; k <= mymmgmesh->ne; k++ ) {
+    //     MMG_pTetra ptetra = &mymmgmesh->tetra[k];
+    //     for(int i=0; i < NODES_PER_ELEM; i++ )
+    //         new_connectivity[k-1][i] = ptetra->v[i]-1;
+    // }
 
-    // copy optimized surface triangle connectivity to dynearthsol3d.
-    for(int k=1; k <= mymmgmesh->nt; k++ ) {
-        MMG_pTria ptria = &mymmgmesh->tria[k];
-        for(int i=0; i < NODES_PER_FACET; i++ )
-            new_segment[k-1][i] = ptria->v[i]-1;
-        new_segflag.data()[k-1] = ptria->ref;
-    }
+    // // copy optimized surface triangle connectivity to dynearthsol3d.
+    // for(int k=1; k <= mymmgmesh->nt; k++ ) {
+    //     MMG_pTria ptria = &mymmgmesh->tria[k];
+    //     for(int i=0; i < NODES_PER_FACET; i++ )
+    //         new_segment[k-1][i] = ptria->v[i]-1;
+    //     new_segflag.data()[k-1] = ptria->ref;
+    // }
 
-    var.coord->steal_ref( new_coord );
-    var.connectivity->steal_ref( new_connectivity );
-    var.segment->steal_ref( new_segment );
-    var.segflag->steal_ref( new_segflag );
+    // var.coord->steal_ref( new_coord );
+    // var.connectivity->steal_ref( new_connectivity );
+    // var.segment->steal_ref( new_segment );
+    // var.segflag->steal_ref( new_segflag );
 
-    free( mymmgmesh->point );
-    free( mymmgmesh->tetra ); 
-    free( mymmgmesh->tria );
-    free( mymmgmesh->adja );
-    free( mymmgmesh->disp );
-    free( mymmgmesh->disp->mv );
-    free( mymmgmesh->disp->alpha );
-    free( mymmgmesh );
-    free( sol->met );
-    free( sol->metold );
-    free( sol );
+    // free( mymmgmesh->point );
+    // free( mymmgmesh->tetra ); 
+    // free( mymmgmesh->tria );
+    // free( mymmgmesh->adja );
+    // free( mymmgmesh->disp );
+    // free( mymmgmesh->disp->mv );
+    // free( mymmgmesh->disp->alpha );
+    // free( mymmgmesh );
+    // free( sol->met );
+    // free( sol->metold );
+    // free( sol );
 
 }
 #endif

@@ -16,7 +16,7 @@ opt = 2
 openmp = 1
 
 ## Select C++ compiler
-CXX = g++-mp-4.7
+CXX = mpicxx # g++-mp-4.7
 
 ## Boost location and library name
 BOOST_ROOT_DIR = /Users/eunseo/opt/boost_1_51_0
@@ -32,7 +32,7 @@ ifdef BOOST_ROOT_DIR
         BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath,$(BOOST_ROOT_DIR)/stage/lib
 endif
 
-ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
+ifneq (, $(findstring mpicxx, $(CXX))) # if using any version of g++
 	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
 
@@ -72,6 +72,7 @@ SRCS =	\
 	fields.cxx \
 	geometry.cxx \
 	ic.cxx \
+	ic-read-temp.cxx \
 	input.cxx \
 	matprops.cxx \
 	mesh.cxx \
@@ -132,7 +133,15 @@ LIBADAPTIVITY_DIR = ./libadaptivity
 LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
 LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
 LIBADAPTIVITY_LIBNAME = adaptivity
-CXXFLAGS += -I$(LIBADAPTIVITY_INC)
+CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I/opt/local/include/vtk-5.10  -DHAVE_VTK=1 \
+        -I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
+        -I$(LIBADAPTIVITY_DIR)/load_balance/include
+
+LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a  -llapack -lblas -lvtkIO -lvtkGraphics \
+                     -lvtkFiltering -lvtkexpat -lvtkzlib -lvtkCommon -ldl -lpthread -lm -lstdc++  \
+                     -L/opt/local/lib/vtk-5.10  -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4 \
+                     -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4/../../.. -lgfortran -lquadmath \
+                     -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4 -lmpi_f77
 
 ## Action
 
@@ -140,10 +149,10 @@ CXXFLAGS += -I$(LIBADAPTIVITY_INC)
 
 all: $(EXE) take-snapshot
 
-$(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(MMG3D_LIB)/lib$(MMG3D_LIBNAME).a
+$(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a
 	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
 		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
-		-L$(MMG3D_DIR)/lib -l$(MMG3D_LIBNAME) -L$(SCOTCH_LIBDIR) $(SCOTCH_LIB) \
+		$(LIBADAPTIVITY_LIBS) \
 		-o $@
 
 take-snapshot:
