@@ -125,7 +125,7 @@ namespace {
                 break;
             }
 
-            if (hyd_inc == 1) {
+            if (param.control.has_hydration_processes && hyd_inc == 1) {
                 // Dehydration metamorphism, hydrous marker is released.
                 const int el = ms.get_elem(m);
                 const double *eta = ms.get_eta(m);
@@ -138,7 +138,7 @@ namespace {
             }
 
             /*** Disable hyd marker deletion
-            else if (hyd_inc == -1) {
+            else if (param.control.has_hydration_processes && hyd_inc == -1) {
                 const int el = ms.get_elem(m);
                 // Find the hydrous marker belong to el
                 int mh;

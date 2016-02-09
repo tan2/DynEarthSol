@@ -54,6 +54,8 @@ def main(modelname, start, end, delta):
         frame = des.frames[i]
         nnode = des.nnode_list[i]
         nelem = des.nelem_list[i]
+        step = des.steps[i]
+        time_in_yr = des.time[i] / (365.2425 * 86400)
 
         des.read_header(frame)
         suffix = '{0:0=6}'.format(frame)
@@ -63,7 +65,7 @@ def main(modelname, start, end, delta):
         fvtu = open(filename, 'wb')
 
         try:
-            vtu_header(fvtu, nnode, nelem)
+            vtu_header(fvtu, nnode, nelem, time_in_yr, step)
 
             #
             # node-based field
@@ -79,6 +81,7 @@ def main(modelname, start, end, delta):
             convert_field(des, frame, 'force', fvtu)
 
             convert_field(des, frame, 'temperature', fvtu)
+            #convert_field(des, frame, 'z0', fvtu)
             #convert_field(des, frame, 'bcflag', fvtu)
             #convert_field(des, frame, 'mass', fvtu)
             #convert_field(des, frame, 'tmass', fvtu)
@@ -183,7 +186,7 @@ def main(modelname, start, end, delta):
         if output_markers:
             # ordinary markerset
             filename = '{0}.{1}.vtp'.format(output_prefix, suffix)
-            output_vtp_file(des, frame, filename, 'markerset')
+            output_vtp_file(des, frame, filename, 'markerset', time_in_yr, step)
 
             # hydrous markerset
             if 'hydrous-markerset size' in des.field_pos:
@@ -194,7 +197,7 @@ def main(modelname, start, end, delta):
     return
 
 
-def output_vtp_file(des, frame, filename, markersetname):
+def output_vtp_file(des, frame, filename, markersetname, time_in_yr, step):
     fvtp = open(filename, 'wb')
 
     class MarkerSizeError(RuntimeError):
@@ -209,7 +212,7 @@ def output_vtp_file(des, frame, filename, markersetname):
             raise MarkerSizeError()
 
         # write vtp header
-        vtp_header(fvtp, nmarkers)
+        vtp_header(fvtp, nmarkers, time_in_yr, step)
 
         # point-based data
         fvtp.write('  <PointData>\n')
@@ -315,13 +318,21 @@ def vtk_dataarray(f, data, data_name=None, data_comps=None):
     return
 
 
-def vtu_header(f, nnode, nelem):
+def vtu_header(f, nnode, nelem, time, step):
     f.write(
 '''<?xml version="1.0"?>
 <VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
 <UnstructuredGrid>
+<FieldData>
+  <DataArray type="Float32" Name="TIME" NumberOfTuples="1" format="ascii">
+    {2}
+  </DataArray>
+  <DataArray type="Float32" Name="CYCLE" NumberOfTuples="1" format="ascii">
+    {3}
+  </DataArray>
+</FieldData>
 <Piece NumberOfPoints="{0}" NumberOfCells="{1}">
-'''.format(nnode, nelem).encode('ascii'))
+'''.format(nnode, nelem, time, step).encode('ascii'))
     return
 
 
@@ -334,13 +345,21 @@ b'''</Piece>
     return
 
 
-def vtp_header(f, nmarkers):
+def vtp_header(f, nmarkers, time, step):
     f.write(
 '''<?xml version="1.0"?>
 <VTKFile type="PolyData" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
 <PolyData>
+<FieldData>
+  <DataArray type="Float32" Name="TIME" NumberOfTuples="1" format="ascii">
+    {1}
+  </DataArray>
+  <DataArray type="Float32" Name="CYCLE" NumberOfTuples="1" format="ascii">
+    {2}
+  </DataArray>
+</FieldData>
 <Piece NumberOfPoints="{0}">
-'''.format(nmarkers).encode('ascii'))
+'''.format(nmarkers, time, step).encode('ascii'))
     return
 
 

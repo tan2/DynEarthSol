@@ -93,6 +93,9 @@ struct BC {
     double wrinkler_delta_rho;
     bool has_wrinkler_foundation;
 
+    double elastic_foundation_constant;
+    bool has_elastic_foundation;
+
     bool has_water_loading;
 
     int vbc_x0;
@@ -140,7 +143,12 @@ struct IC {
     double weakzone_ysemi_axis;
     double weakzone_zsemi_axis;
 
+    int temperature_option;
+    std::string Temp_filename;
+    std::string Nodes_filename;
+    std::string Connectivity_filename;
     double oceanic_plate_age_in_yr;
+
     double isostasy_adjustment_time_in_yr;
 };
 
@@ -179,6 +187,7 @@ struct Markers {
     int markers_per_element;
     int min_num_markers_in_element;
     int replenishment_option;
+    uint random_seed;
     double init_marker_spacing;
 };
 
@@ -232,7 +241,7 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
-    double_vec *stressyy;
+    double_vec *stressyy, *z0;
     double_vec *ntmp;
 
     array_t *vel, *force;

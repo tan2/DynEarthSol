@@ -55,6 +55,7 @@ void prepare_interpolation(const Variables &var,
                            const Barycentric_transformation &bary,
                            const array_t &old_coord,
                            const conn_t &old_connectivity,
+                           const std::vector<int_vec> &old_support,
                            brc_t &brc, int_vec &el)
 {
     // for each new coord point, find the enclosing old element
@@ -65,8 +66,6 @@ void prepare_interpolation(const Variables &var,
         points[i] = const_cast<double*>(old_coord[i]);
     }
     ANNkd_tree kdtree(points, old_coord.size(), NDIMS);
-
-    const std::vector<int_vec> &old_support = *var.support;
 
     const int k = 1;
     const double eps = 0;
@@ -199,12 +198,18 @@ void barycentric_node_interpolation(Variables &var,
 {
     int_vec el(var.nnode);
     brc_t brc(var.nnode);
-    prepare_interpolation(var, bary, old_coord, old_connectivity, brc, el);
+    prepare_interpolation(var, bary, old_coord, old_connectivity, *var.support, brc, el);
 
-    double_vec *a = new double_vec(var.nnode);
+    double_vec *a;
+    a = new double_vec(var.nnode);
     interpolate_field(brc, el, old_connectivity, *var.temperature, *a);
     delete var.temperature;
     var.temperature = a;
+
+    a = new double_vec(var.nnode);
+    interpolate_field(brc, el, old_connectivity, *var.z0, *a);
+    delete var.z0;
+    var.z0 = a;
 
     array_t *b = new array_t(var.nnode);
     interpolate_field(brc, el, old_connectivity, *var.vel, *b);
@@ -213,3 +218,17 @@ void barycentric_node_interpolation(Variables &var,
 }
 
 
+void barycentric_node_interpolation_forT(const Variables &var,
+                                         const Barycentric_transformation &bary,
+                                         const array_t &input_coord,
+                                         const conn_t &input_connectivity,
+                                         const std::vector<int_vec> &input_support,
+					 const double_vec &inputtemperature,
+					 double_vec &outputtemperature)
+{
+    int_vec el(var.nnode);
+    brc_t brc(var.nnode);
+    prepare_interpolation(var, bary, input_coord, input_connectivity, input_support, brc, el);
+
+    interpolate_field(brc, el, input_connectivity, inputtemperature, outputtemperature);
+}

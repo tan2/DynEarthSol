@@ -4,6 +4,7 @@
 #include "parameters.hpp"
 #include "matprops.hpp"
 
+#include "ic-read-temp.hpp"
 #include "ic.hpp"
 
 namespace {
@@ -193,6 +194,10 @@ void initial_weak_zone(const Param &param, const Variables &var,
 
         if (weakzone->contains(center))
             plstrain[e] = param.ic.weakzone_plstrain;
+
+        // Find the most abundant marker mattype in this element
+        // int_vec &a = (*var.elemmarkers)[e];
+        // int material = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
     }
 
     delete weakzone;
@@ -202,14 +207,26 @@ void initial_weak_zone(const Param &param, const Variables &var,
 void initial_temperature(const Param &param, const Variables &var,
                          double_vec &temperature)
 {
-    const double age = param.ic.oceanic_plate_age_in_yr * YEAR2SEC;
-    const MatProps &mat = *var.mat;
-    const double diffusivity = mat.k(0) / mat.rho(0) / mat.cp(0); // thermal diffusivity of 0th element
+    switch(param.ic.temperature_option) {
+    case 0:
+        {
+            const double age = param.ic.oceanic_plate_age_in_yr * YEAR2SEC;
+            const MatProps &mat = *var.mat;
+            const double diffusivity = mat.k(0) / mat.rho(0) / mat.cp(0); // thermal diffusivity of 0th element
 
-    for (int i=0; i<var.nnode; ++i) {
-        double w = -(*var.coord)[i][NDIMS-1] / std::sqrt(4 * diffusivity * age);
-        temperature[i] = param.bc.surface_temperature +
-            (param.bc.mantle_temperature - param.bc.surface_temperature) * std::erf(w);
+            for (int i=0; i<var.nnode; ++i) {
+                double w = -(*var.coord)[i][NDIMS-1] / std::sqrt(4 * diffusivity * age);
+                temperature[i] = param.bc.surface_temperature +
+                    (param.bc.mantle_temperature - param.bc.surface_temperature) * std::erf(w);
+            }
+            break;
+        }
+    case 90:
+        read_external_temperature_from_comsol(param, var, *var.temperature);
+        break;
+    default:
+        std::cout << "Error: unknown ic.temperature option: " << param.ic.temperature_option << '\n';
+        std::exit(1);
     }
 }
 

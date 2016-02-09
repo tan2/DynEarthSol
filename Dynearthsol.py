@@ -11,9 +11,11 @@ class Dynearthsol:
     '''Read output file of 2D/3D DynEarthSol'''
 
     def __init__(self, modelname):
+        self.suffix = 'save'
         self.modelname = modelname
         self.read_info()
         self.read_header(self.frames[0])
+        return
 
 
     def read_info(self):
@@ -28,7 +30,7 @@ class Dynearthsol:
 
 
     def get_fn(self, frame):
-        return '{0}.save.{1:0=6}'.format(self.modelname, frame)
+        return '{0}.{1}.{2:0=6}'.format(self.modelname, self.suffix, frame)
 
 
     def read_header(self, frame):
@@ -67,15 +69,13 @@ class Dynearthsol:
         return
 
 
-    def read_field(self, frame, name):
-        pos = self.field_pos[name]
+    def _get_dtype_count_shape(self, frame, name):
         i = self.frames.index(frame)
         nnode = self.nnode_list[i]
         nelem = self.nelem_list[i]
 
         dtype = np.float64 if name != 'connectivity' else np.int32
-        count = 0
-        shape = (-1,)
+
         if name in set(['strain', 'strain-rate', 'stress', 'stress averaged']):
             count = self.nstr * nelem
             shape = (nelem, self.nstr)
@@ -83,22 +83,43 @@ class Dynearthsol:
                           'plastic strain', 'plastic strain-rate',
                           'viscosity', 'edvoldt', 'volume']):
             count = nelem
+            shape = (nelem, )
         elif name in set(['connectivity']):
             count = (self.ndims + 1) * nelem
             shape = (nelem, self.ndims+1)
         elif name in set(['coordinate', 'velocity', 'velocity averaged', 'force']):
             count = self.ndims * nnode
             shape = (nnode, self.ndims)
-        elif name in set(['temperature', 'mass', 'tmass', 'volume_n']):
+        elif name in set(['temperature', 'mass', 'tmass', 'volume_n', 'z0']):
             count = nnode
+            shape = (nnode, )
         else:
             raise NameError('uknown field name: ' + name)
+        return dtype, count, shape
 
+
+    def read_field(self, frame, name):
+        dtype, count, shape = self._get_dtype_count_shape(frame, name)
+
+        pos = self.field_pos[name]
         fname = self.get_fn(frame)
         with open(fname) as f:
             f.seek(pos)
             field = np.fromfile(f, dtype=dtype, count=count).reshape(shape)
         return field
+
+
+    def overwrite_field(self, frame, name, data):
+        dtype, count, shape = self._get_dtype_count_shape(frame, name)
+        if data.shape != shape:
+            raise Error('Shape of {0} field is changed! Expecting {1}, got {2}.'.format(name, shape, data.shape))
+
+        pos = self.field_pos[name]
+        fname = self.get_fn(frame)
+        with open(fname, 'r+b') as f:
+            f.seek(pos)
+            f.write(data.tostring())
+        return
 
 
     def read_markers(self, frame, markername):
@@ -128,5 +149,33 @@ class Dynearthsol:
                 #print(marker_data[name].shape, marker_data[name])
 
         return marker_data
+
+
+
+
+class DynearthsolCheckpoint(Dynearthsol):
+    '''Read chkpt file of 2D/3D DynEarthSol'''
+
+    def __init__(self, modelname, frame):
+        self.suffix = 'chkpt'
+        self.modelname = modelname
+        self.read_info()
+        self.read_header(frame)
+        return
+
+
+    def _get_dtype_count_shape(self, frame, name):
+        i = self.frames.index(frame)
+        nnode = self.nnode_list[i]
+        nelem = self.nelem_list[i]
+
+        dtype = np.float64 if name != 'connectivity' else np.int32
+
+        if name in set(['volume_old']):
+            count = nelem
+            shape = (nelem, )
+        else:
+            raise NameError('uknown field name: ' + name)
+        return dtype, count, shape
 
 

@@ -15,7 +15,7 @@ namespace po = boost::program_options;
 static void declare_parameters(po::options_description &cfg,
                                Param &p)
 {
-    /* To have a new input parameter declared as such in parameters.h,
+    /* To have a new input parameter declared as such in parameters.hpp,
      *
      *     struct SectionType {
      *         type name;
@@ -24,7 +24,7 @@ static void declare_parameters(po::options_description &cfg,
      *         SectionType section;
      *     }
      *
-     * add this line:
+     * add this line in this function:
      *
      *     ("section.name", po::value<type>(&p.section.name), "help string")
      *
@@ -70,7 +70,8 @@ static void declare_parameters(po::options_description &cfg,
          "How to create the new mesh?\n"
          "1: rectangular box with roughly uniform resolution\n"
          "2: rectangular box with rectangular zone of refined resolution\n"
-         "90: read the bounding polygon from a .poly file"
+         "90: read the bounding polygon from a .poly file\n"
+         "91: same as 90, but the max. element size is normalized with resolution.\n"
          )
         ("mesh.meshing_verbosity", po::value<int>(&p.mesh.meshing_verbosity)->default_value(-1),
          "Output verbose during mesh/remeshing. -1 for no output.")
@@ -110,7 +111,7 @@ static void declare_parameters(po::options_description &cfg,
 
         // for meshing_option = 90 only
         ("mesh.poly_filename", po::value<std::string>(&p.mesh.poly_filename)->default_value("mesh.poly"),
-         "Filename of the input polygon, for meshing_option=90 only.\n"
+         "Filename of the input polygon, for meshing_option=90 or 91 only.\n"
          "The file format is described in\n"
          "http://www.cs.cmu.edu/~quake/triangle.poly.html (2D) and\n"
          "http://wias-berlin.de/software/tetgen/fformats.poly.html (3D).\n"
@@ -155,6 +156,8 @@ static void declare_parameters(po::options_description &cfg,
          "0: always set to 0 (fastest option).\n"
          "1: by the probability of marker mattype of the element or surrounding elements.\n"
          "2: same as the mattype of the nearest marker (slowest option).")
+        ("markers.random_seed", po::value<uint>(&p.markers.random_seed)->default_value(1),
+         "Random seed of marker position. If 0, the current time is used as the seed.")
         ;
 
     cfg.add_options()
@@ -210,17 +213,26 @@ static void declare_parameters(po::options_description &cfg,
          "Using Wrinkler foundation for the bottom boundary?")
         ("bc.wrinkler_delta_rho", po::value<double>(&p.bc.wrinkler_delta_rho)->default_value(0),
          "Excess density of the bottom Wrinkler foundation (in kg/m^3)")
+
+        ("bc.has_elastic_foundation", po::value<bool>(&p.bc.has_elastic_foundation)->default_value(false),
+         "Using elastic foundation for the bottom boundary?")
+        ("bc.elastic_foundation_constant", po::value<double>(&p.bc.elastic_foundation_constant)->default_value(1e11),
+         "Elastic constant for elastic foundation.")
+
         ("bc.has_water_loading", po::value<bool>(&p.bc.has_water_loading)->default_value(true),
          "Applying water loading for top boundary that is below sea level?")
 
         ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
-         "Type of velocity boundary condition for the left/western side. Possible type is \n"
+         "Type of velocity boundary condition for the left/western side. "
+         "Odd number indicates the normal component of the velocity is fixed. "
+         "Possible type is \n"
          "0: all velocity components free;\n"
          "1: normal component fixed, shear components free;\n"
          "2: normal component free, shear components fixed at 0;\n"
          "3: normal component fixed, shear components fixed at 0;\n"
-         "4: normal component free, shear component (not z) fixed, only in 3D;\n"
-         "5: normal component fixed at 0, shear component (not z) fixed, only in 3D;\n")
+         "4: normal component free, shear component (not z) fixed, z component fixed at 0, only in 3D;\n"
+         "5: normal component fixed at 0, shear component (not z) fixed, z component fixed at 0, only in 3D;\n"
+         "7: normal component fixed shear component (not z) fixed at 0, z component free, only in 3D;\n")
         ("bc.vbc_x1", po::value<int>(&p.bc.vbc_x1)->default_value(1),
          "Type of boundary condition for the right/eastern side")
         ("bc.vbc_val_x0", po::value<double>(&p.bc.vbc_val_x0)->default_value(-1e-9),
@@ -313,10 +325,31 @@ static void declare_parameters(po::options_description &cfg,
         ("ic.weakzone_ysemi_axis", po::value<double>(&p.ic.weakzone_ysemi_axis)->default_value(1e3),
          "Length of weak zone semi-axis in y direction (in meters)")
         ("ic.weakzone_zsemi_axis", po::value<double>(&p.ic.weakzone_zsemi_axis)->default_value(1e3),
-         "Length of weak zone semi-axis in z direction (in meters)")
+         "Length of weak zone semi-axis in z direction (in meters)\n")
 
-        ("ic.oceanic_plate_age_in_yr", po::value<double>(&p.ic.oceanic_plate_age_in_yr)->default_value(60e6),
+        ("ic.temperature_option", po::value<int>(&p.ic.temperature_option)->default_value(0),
+         "How to set the initial temperature?\n"
+         "0: uniform half-space cooling.\n"
+         "90: temperature read from an external grid\n")
+
+        // for temperature_option = 0
+	("ic.oceanic_plate_age_in_yr", po::value<double>(&p.ic.oceanic_plate_age_in_yr)->default_value(60e6),
          "Age of the oceanic plate (in years), used for the temperature profile on the plate.\n")
+
+        // for temperature_option = 90
+        ("ic.Temp_filename", po::value<std::string>(&p.ic.Temp_filename)->default_value("Thermal.dat"),
+         "Filename of the input thermal field, for temperature_option=90.\n"
+         "The file format is: <x-coord y-coord (if 3D) z-coord temperature>.\n"
+	 "Can be generated by COMSOL.")
+	("ic.Nodes_filename", po::value<std::string>(&p.ic.Nodes_filename)->default_value("Coord.dat"),
+         "Filename of the mesh coordinates, for temperature_option=90.\n"
+         "The nodes may be ordered differently with the thermal file. The file format is: "
+         "<x-coord y-coord (if 3D) z-coord>.\n"
+         "Can be generated by COMSOL.")
+	("ic.Connectivity_filename", po::value<std::string>(&p.ic.Connectivity_filename)->default_value("Connectivity.dat"),
+         "Filename of the mesh connectivity, for temperature_option = 90 only.\n"
+         "The file format is: <#ofnode0 #ofnode1 #ofnode2 #ofnode3 (if 3D)>.\n"
+         "Can be generated by COMSOL.\n")
 
         ("ic.isostasy_adjustment_time_in_yr", po::value<double>(&p.ic.isostasy_adjustment_time_in_yr)->default_value(0),
          "Time for spinning up isostasy adjustment.\n")
@@ -332,7 +365,7 @@ static void declare_parameters(po::options_description &cfg,
         ("mat.phase_change_option", po::value<int>(&p.mat.phase_change_option)->default_value(0),
          "What kind of phase changes?\n"
          "0: no phase changes.\n"
-         "1: simple rules of subduction-related phase changes. control.has_hydration_processes must be enabled.\n"
+         "1: simple rules of subduction-related phase changes. See SimpleSubduction class in phasechanges.cxx for more details.\n"
          "101: custom phase changes.")
         ("mat.num_materials", po::value<int>(&p.mat.nmat)->default_value(1),
          "Number of material types")
@@ -698,10 +731,6 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
 
         if (p.mat.phase_change_option != 0 && p.mat.nmat == 1) {
             std::cerr << "Error: mat.phase_change_option is chosen, but mat.num_materials is 1.\n";
-            std::exit(1);
-        }
-        if (p.mat.phase_change_option == 1 && !p.control.has_hydration_processes) {
-            std::cerr << "Error: mat.phase_change_option is 1, but control.has_hydration_processes is not enabled.\n";
             std::exit(1);
         }
         if (p.mat.phase_change_option == 1 && p.mat.nmat < 8) {

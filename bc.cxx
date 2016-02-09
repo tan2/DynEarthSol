@@ -59,25 +59,25 @@ bool is_on_boundary(const Variables &var, int node)
 double find_max_vbc(const BC &bc)
 {
     double max_vbc_val = 0;
-    if (bc.vbc_x0 == 1 || bc.vbc_x0 == 3)
+    if (bc.vbc_x0 % 2 == 1) // odd number indicates fixed velocity component
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x0));
-    if (bc.vbc_x1 == 1 || bc.vbc_x1 == 3)
+    if (bc.vbc_x1 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x1));
-    if (bc.vbc_y0 == 1 || bc.vbc_y0 == 3)
+    if (bc.vbc_y0 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_y0));
-    if (bc.vbc_y1 == 1 || bc.vbc_y1 == 3)
+    if (bc.vbc_y1 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_y1));
-    if (bc.vbc_z0 == 1 || bc.vbc_z0 == 3)
+    if (bc.vbc_z0 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_z0));
-    if (bc.vbc_z1 == 1 || bc.vbc_z1 == 3)
+    if (bc.vbc_z1 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_z1));
-    if (bc.vbc_n0 == 1 || bc.vbc_n0 == 3)
+    if (bc.vbc_n0 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n0));
-    if (bc.vbc_n1 == 1 || bc.vbc_n1 == 3)
+    if (bc.vbc_n1 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n1));
-    if (bc.vbc_n2 == 1 || bc.vbc_n2 == 3)
+    if (bc.vbc_n2 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n2));
-    if (bc.vbc_n3 == 1 || bc.vbc_n3 == 3)
+    if (bc.vbc_n3 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_n3));
 
     return max_vbc_val;
@@ -226,6 +226,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[1] = bc.vbc_val_x0;
                 v[2] = 0;
                 break;
+            case 7:
+                v[0] = bc.vbc_val_x0;
+                v[1] = 0;
+                break;
 #endif
             }
         }
@@ -259,6 +263,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[1] = bc.vbc_val_x1;
                 v[2] = 0;
                 break;
+            case 7:
+                v[0] = bc.vbc_val_x1;
+                v[1] = 0;
+                break;
 #endif
             }
         }
@@ -291,6 +299,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[1] = 0;
                 v[2] = 0;
                 break;
+            case 7:
+                v[0] = 0;
+                v[1] = bc.vbc_val_y0;
+                break;
             }
         }
         else if (flag & BOUNDY1) {
@@ -317,6 +329,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 v[0] = bc.vbc_val_y1;
                 v[1] = 0;
                 v[2] = 0;
+                break;
+            case 7:
+                v[0] = 0;
+                v[1] = bc.vbc_val_y1;
                 break;
             }
         }
@@ -447,11 +463,11 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
         const auto& bdry = var.bfacets[i];
         const auto& coord = *var.coord;
         // loops over all bdry facets
-        for (int i=0; i<static_cast<int>(bdry.size()); ++i) {
+        for (int n=0; n<static_cast<int>(bdry.size()); ++n) {
             // this facet belongs to element e
-            int e = bdry[i].first;
+            int e = bdry[n].first;
             // this facet is the f-th facet of e
-            int f = bdry[i].second;
+            int f = bdry[n].second;
             const int *conn = (*var.connectivity)[e];
 
             // the outward-normal vector
@@ -486,10 +502,18 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             // lithostatc support - Archimed force (normal to the surface)
             for (int j=0; j<NODES_PER_FACET; ++j) {
                 int n = conn[NODE_OF_FACET[f][j]];
-                for (int i=0; i<NDIMS; ++i) {
-                    force[n][i] -= p * normal[i] / NODES_PER_FACET;
+                for (int d=0; d<NDIMS; ++d) {
+                    force[n][d] -= p * normal[d] / NODES_PER_FACET;
                 }
             }
+        }
+    }
+
+    if (param.bc.has_elastic_foundation) {
+        /* A restoration force on the bottom nodes proportional to total vertical displacement */
+        for (auto i=var.bnodes[iboundz0].begin(); i<var.bnodes[iboundz0].end(); ++i) {
+            int n = *i;
+            force[n][NDIMS-1] -= param.bc.elastic_foundation_constant * ((*var.coord)[n][NDIMS-1] - (*var.z0)[n]);
         }
     }
 }

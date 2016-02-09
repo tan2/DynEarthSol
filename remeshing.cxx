@@ -1429,6 +1429,16 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
+    if (param.mesh.remeshing_option==1 ||
+        param.mesh.remeshing_option==2 ||
+        param.mesh.remeshing_option==11) {
+        /* Reset z0 of the bottom nodes */
+        for (auto i=var.bnodes[iboundz0].begin(); i<var.bnodes[iboundz0].end(); ++i) {
+            int n = *i;
+            (*var.z0)[n] = -param.mesh.zlength;
+        }
+    }
+
     if (param.sim.has_output_during_remeshing) {
         // the following variables need to be re-computed only when we are
         // outputing right after remeshing

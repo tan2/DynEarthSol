@@ -11,7 +11,7 @@
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openmp = 1: enable OpenMP
 
-ndims = 3
+ndims = 2
 opt = 2
 openmp = 1
 
@@ -59,7 +59,7 @@ all:
 endif
 
 ## Is this a mercurial repository?
-HAS_HG := $(shell hg --version -q 2>/dev/null)
+HAS_HG := $(shell hg log -r tip --template '{node}' 2>/dev/null)
 
 ##
 
@@ -158,11 +158,14 @@ take-snapshot:
 	@echo '  '  PATH=$(PATH) >> snapshot.diff
 	@echo '  '  LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) >> snapshot.diff
 ifneq ($(HAS_HG),)
-	@echo '\n\n==== Summary of the code ====' >> snapshot.diff
+	@echo >> snapshot.diff
+	@echo >> snapshot.diff
+	@echo '==== Summary of the code ====' >> snapshot.diff
 	@hg summary >> snapshot.diff
-	@echo '\n\n== Code modification (not checked-in) ==' >> snapshot.diff
+	@echo >> snapshot.diff
+	@echo >> snapshot.diff
+	@echo '== Code modification (not checked-in) ==' >> snapshot.diff
 	@hg diff >> snapshot.diff
-	@echo '\n\n== Code modification (checked-in but not public) ==' >> snapshot.diff
 	@hg log --patch -r "draft()" >> snapshot.diff
 else
 	@echo \'hg\' is not in path, cannot take code snapshot. >> snapshot.diff
