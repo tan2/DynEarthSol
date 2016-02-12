@@ -1181,8 +1181,10 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
     for (std::size_t i = 0; i < old_nelem; ++i) {
         vtkSmartPointer<vtkTetra> tetra =  vtkSmartPointer<vtkTetra>::New();
-        for (int j = 0; j < NODES_PER_ELEM; ++j)
-            tetra->GetPointIds()->SetId(i, qconn[i*NODES_PER_ELEM + j]);
+        for (int j = 0; j < NODES_PER_ELEM; ++j) {
+            tetra->GetPointIds()->SetId(j, qconn[i*NODES_PER_ELEM + j]);
+            std::cerr << i <<"/"<< old_nelem <<" "<< j <<"/"<< NODES_PER_ELEM <<" "<< qconn[i*NODES_PER_ELEM + j] << std::endl;
+        }
         cells->InsertNextCell( tetra );
     }
     ug->SetCells(VTK_TETRA, cells);
@@ -1212,7 +1214,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
 
     std::vector<double> max_len;
     constraints.get_constraints(max_len);
-    //constraints.write_vtk(std::string("sids.vtu"));
+    constraints.write_vtk(std::string("sids_before.vtu"));
 
     // Prepare the field to be used for error analysis: e.g., plastic strain or strain rate.
     // Setup data for the triangle. Attach a value of 1.45.
@@ -1257,6 +1259,11 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     // ug->GetPointData()->RemoveArray("mean_desired_lengths");
     // ug->GetPointData()->RemoveArray("desired_lengths");
 
+    vtkXMLUnstructuredGridWriter *ug_writer = vtkXMLUnstructuredGridWriter::New();
+    ug_writer->SetFileName("before_adapted.vtu");
+    ug_writer->SetInput(ug);
+    ug_writer->Write();
+
     Adaptivity adapt;
     adapt.verbose_on();
     adapt.set_from_vtk(ug, true);
@@ -1268,6 +1275,14 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     adapt.get_surface_mesh(SENList);
     vtkSmartPointer<vtkUnstructuredGrid> adapted_ug = adapt.get_adapted_vtu();
     // ug->Delete();
+
+    ug_writer->SetFileName("after_adapted.vtu");
+    ug_writer->SetInput(adapted_ug);
+    ug_writer->Write();
+
+    constraints.set_surface_input(adapted_ug, SENList, sids);
+    constraints.write_vtk(std::string("sids_after.vtu"));
+
 
     // update mesh info.
     var.nnode = adapted_ug->GetNumberOfPoints();
@@ -1286,7 +1301,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     }
 
     for (std::size_t i = 0; i < var.nelem; ++i) {
-        vtkSmartPointer<vtkTetra> tetra = (vtkTetra *)ug->GetCell(i);
+        vtkSmartPointer<vtkTetra> tetra = (vtkTetra *)adapted_ug->GetCell(i);
         for (int j = 0; j < NODES_PER_ELEM; ++j)
             new_connectivity[i][j] = tetra->GetPointId(j);
     }
