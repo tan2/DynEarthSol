@@ -1181,10 +1181,8 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
     for (std::size_t i = 0; i < old_nelem; ++i) {
         vtkSmartPointer<vtkTetra> tetra =  vtkSmartPointer<vtkTetra>::New();
-        for (int j = 0; j < NODES_PER_ELEM; ++j) {
+        for (int j = 0; j < NODES_PER_ELEM; ++j)
             tetra->GetPointIds()->SetId(j, qconn[i*NODES_PER_ELEM + j]);
-            std::cerr << i <<"/"<< old_nelem <<" "<< j <<"/"<< NODES_PER_ELEM <<" "<< qconn[i*NODES_PER_ELEM + j] << std::endl;
-        }
         cells->InsertNextCell( tetra );
     }
     ug->SetCells(VTK_TETRA, cells);
@@ -1244,11 +1242,11 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     error.verbose_on();
     error.set_input(ug);
     error.add_field("plasticStrain", 1.0, false, 0.01);
-    error.set_max_length(1000.0);
-    error.set_max_length(&(max_len[0]), ug->GetNumberOfPoints());
-    error.set_min_length(200.0);
+    error.set_max_length(param.mesh.resolution);
+    error.set_max_length(&(max_len[0]), 1); //ug->GetNumberOfPoints());
+    error.set_min_length(param.mesh.resolution * param.mesh.smallest_size);
     error.apply_gradation(1.3);
-    error.set_max_nodes(20000000);
+    error.set_max_nodes(5*old_nnode);
 
     //error.diagnostics();
     // vtkXMLUnstructuredGridWriter *metric_writer = vtkXMLUnstructuredGridWriter::New();
@@ -1313,10 +1311,10 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         new_segflag.data()[i] = sids[i];
     }
 
-    // var.coord->steal_ref( new_coord );
-    // var.connectivity->steal_ref( new_connectivity );
-    // var.segment->steal_ref( new_segment );
-    // var.segflag->steal_ref( new_segflag );
+    var.coord->steal_ref( new_coord );
+    var.connectivity->steal_ref( new_connectivity );
+    var.segment->steal_ref( new_segment );
+    var.segflag->steal_ref( new_segflag );
 }
 #endif
 
