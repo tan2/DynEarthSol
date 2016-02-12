@@ -1198,9 +1198,11 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         constraints.set_coplanar_tolerance(0.9999999);
         constraints.set_volume_input(ug);
 
-        constraints.get_coplanar_ids(sids);
-        constraints.get_surface(SENList);
-        assert(sids.size()*3==SENList.size());
+        sids.assign(qsegflag, qsegflag + old_nseg);
+        SENList.assign(qsegment, qsegment + old_nseg * NODES_PER_FACET);
+        //constraints.get_coplanar_ids(sids);
+        //constraints.get_surface(SENList);
+        //assert(sids.size()*3==SENList.size());
         //cout<<"Found "<<sids.size()<<" surface elements\n";
     }
 
@@ -1290,11 +1292,10 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     }
 
     // copy optimized surface triangle connectivity to dynearthsol3d.
-    for(int k=1; k <= mymmgmesh->nt; k++ ) {
-        MMG_pTria ptria = &mymmgmesh->tria[k];
-        for(int i=0; i < NODES_PER_FACET; i++ )
-            new_segment[k-1][i] = ptria->v[i]-1;
-        new_segflag.data()[k-1] = ptria->ref;
+    for (std::size_t i = 0; i < var.nseg; ++i) {
+        for(int j=0; j < NODES_PER_FACET; j++ )
+            new_segment[i][j] = SENList[i*NODES_PER_FACET + j];
+        new_segflag.data()[i] = sids[i];
     }
 
     // var.coord->steal_ref( new_coord );
