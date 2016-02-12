@@ -50,6 +50,8 @@
 #include <vector>
 
 #include "vtk.h"
+#include <vtkSmartPointer.h>
+#include <vtkCellArray.h>
 
 #include "ErrorMeasure.h"
 #include "Adaptivity.h"
@@ -1163,9 +1165,28 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         std::exit(1);
     }
 
-    // Optimize mesh using libadaptivity
-    //////////////////////////////
-    vtkUnstructuredGrid *ug; // = ug_reader->GetOutput();
+    ////// Optimize mesh using libadaptivity
+
+    // 1. Create a vtkUnstructuredGrid (UG) object.
+    vtkSmartPointer<vtkUnstructuredGrid> ug = vtkSmartPointer<vtkUnstructuredGrid>::New();
+
+    //// 1.1 add old points to the UG object.
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    for (std::size_t i = 0; i < old_nnode; ++i) {
+        points->InsertNextPoint( &qcoord[i*NDIMS] );
+    }
+    ug->SetPoints(points);
+
+    //// 1.2 add old connectivity to the UG object.
+    vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
+    for (std::size_t i = 0; i < old_nelem; ++i) {
+        vtkSmartPointer<vtkTetra> tetra =  vtkSmartPointer<vtkTetra>::New();
+        for (int j = 0; j < NODES_PER_ELEM; ++j)
+            tetra->GetPointIds()->SetId(i, qconn[i*NODES_PER_ELEM + j]);
+        cells->InsertNextCell( tetra );
+    }
+    ug->SetCells(VTK_TETRA, cells);
+
     ug->Update();
 
     // These should be populated only once at the outset of a simulation
@@ -1180,7 +1201,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         constraints.get_coplanar_ids(sids);
         constraints.get_surface(SENList);
         assert(sids.size()*3==SENList.size());
-        cout<<"Found "<<sids.size()<<" surface elements\n";
+        //cout<<"Found "<<sids.size()<<" surface elements\n";
     }
 
     DiscreteGeometryConstraints constraints;
@@ -1189,30 +1210,50 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
 
     std::vector<double> max_len;
     constraints.get_constraints(max_len);
-    constraints.write_vtk(std::string("sids.vtu"));
+    //constraints.write_vtk(std::string("sids.vtu"));
+
+    // Prepare the field to be used for error analysis: e.g., plastic strain or strain rate.
+    // Setup data for the triangle. Attach a value of 1.45.
+    // This can be anything you wish to store with it)
+    vtkSmartPointer<vtkDoubleArray> cellData = vtkSmartPointer<vtkDoubleArray>::New();
+    cellData->SetNumberOfComponents(1); //we will have only 1 value associated with the triangle
+    cellData->SetName("plasticStrain"); //set the name of the value
+    for (std::size_t i = 0; i < old_nelem; ++i)
+        cellData->InsertNextValue( (*var.plstrain)[i] ); //set the actual value
+    ug->GetCellData()->AddArray(cellData);
+
+    vtkSmartPointer<vtkCellDataToPointData> cell2point = vtkSmartPointer<vtkCellDataToPointData>::New();
+    cell2point->SetInput(ug);
+    cell2point->PassCellDataOff();
+    cell2point->Update();
+
+    // vtkSmartPointer<vtkExtractVectorComponents> components = vtkSmartPointer<vtkExtractVectorComponents>::New();
+    // components->ExtractToFieldDataOn();
+    // components->SetInput(cell2point->GetUnstructuredGridOutput());
+    // components->Update();
+
+    ug->GetPointData()->AddArray(cell2point->GetUnstructuredGridOutput()->GetPointData()->GetArray("plasticStrain"));
 
     /* Test merging of metrics.
      */
     ErrorMeasure error;
     error.verbose_on();
     error.set_input(ug);
-    error.add_field("temperature", 1.0, false, 0.01);
+    error.add_field("plasticStrain", 1.0, false, 0.01);
     error.set_max_length(1000.0);
     error.set_max_length(&(max_len[0]), ug->GetNumberOfPoints());
     error.set_min_length(200.0);
     error.apply_gradation(1.3);
     error.set_max_nodes(20000000);
 
-    error.diagnostics();
-
-    vtkXMLUnstructuredGridWriter *metric_writer = vtkXMLUnstructuredGridWriter::New();
-    metric_writer->SetFileName("metric_new.vtu");
-    metric_writer->SetInput(ug);
-    metric_writer->Write();
-    metric_writer->Delete();
-
-    ug->GetPointData()->RemoveArray("mean_desired_lengths");
-    ug->GetPointData()->RemoveArray("desired_lengths");
+    //error.diagnostics();
+    // vtkXMLUnstructuredGridWriter *metric_writer = vtkXMLUnstructuredGridWriter::New();
+    // metric_writer->SetFileName("metric_new.vtu");
+    // metric_writer->SetInput(ug);
+    // metric_writer->Write();
+    // metric_writer->Delete();
+    // ug->GetPointData()->RemoveArray("mean_desired_lengths");
+    // ug->GetPointData()->RemoveArray("desired_lengths");
 
     Adaptivity adapt;
     adapt.verbose_on();
@@ -1223,62 +1264,43 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     adapt.adapt();
     adapt.get_surface_ids(sids);
     adapt.get_surface_mesh(SENList);
-    vtkUnstructuredGrid *tmp_ug = adapt.get_adapted_vtu();
-    ug = tmp_ug;
+    vtkSmartPointer<vtkUnstructuredGrid> adapted_ug = adapt.get_adapted_vtu();
     // ug->Delete();
-    ug->GetPointData()->RemoveArray("metric");
-    //////////////////////////////
 
     // update mesh info.
-    // var.nnode = mymmgmesh->np;
-    // var.nelem = mymmgmesh->ne;
-    // var.nseg = mymmgmesh->nt;
+    var.nnode = adapted_ug->GetNumberOfPoints();
+    var.nelem = adapted_ug->GetNumberOfCells();
+    var.nseg = sids.size();
 
     array_t new_coord( var.nnode );
     conn_t new_connectivity( var.nelem );
     segment_t new_segment( var.nseg );
     segflag_t new_segflag( var.nseg );
 
+    for (std::size_t i = 0; i < var.nnode; ++i) {
+        double *x = adapted_ug->GetPoints()->GetPoint(i);
+        for(int j=0; j < NDIMS; j++ )
+            new_coord[i][j] = x[j];
+    }
 
-    // // copy optimized node coordinates to dynearthsol3d.
-    // for(int k=1; k <= mymmgmesh->np; k++ ) {
-    //     MMG_pPoint ppt = &mymmgmesh->point[k];
-    //     for(int i=0; i < NDIMS; i++ )
-    //         new_coord[k-1][i] = ppt->c[i];
-    // }
+    for (std::size_t i = 0; i < var.nelem; ++i) {
+        vtkSmartPointer<vtkTetra> tetra = (vtkTetra *)ug->GetCell(i);
+        for (int j = 0; j < NODES_PER_ELEM; ++j)
+            new_connectivity[i][j] = tetra->GetPointId(j);
+    }
 
-    // // copy optimized tet connectivity to dynearthsol3d.
-    // for(int k=1; k <= mymmgmesh->ne; k++ ) {
-    //     MMG_pTetra ptetra = &mymmgmesh->tetra[k];
-    //     for(int i=0; i < NODES_PER_ELEM; i++ )
-    //         new_connectivity[k-1][i] = ptetra->v[i]-1;
-    // }
-
-    // // copy optimized surface triangle connectivity to dynearthsol3d.
-    // for(int k=1; k <= mymmgmesh->nt; k++ ) {
-    //     MMG_pTria ptria = &mymmgmesh->tria[k];
-    //     for(int i=0; i < NODES_PER_FACET; i++ )
-    //         new_segment[k-1][i] = ptria->v[i]-1;
-    //     new_segflag.data()[k-1] = ptria->ref;
-    // }
+    // copy optimized surface triangle connectivity to dynearthsol3d.
+    for(int k=1; k <= mymmgmesh->nt; k++ ) {
+        MMG_pTria ptria = &mymmgmesh->tria[k];
+        for(int i=0; i < NODES_PER_FACET; i++ )
+            new_segment[k-1][i] = ptria->v[i]-1;
+        new_segflag.data()[k-1] = ptria->ref;
+    }
 
     // var.coord->steal_ref( new_coord );
     // var.connectivity->steal_ref( new_connectivity );
     // var.segment->steal_ref( new_segment );
     // var.segflag->steal_ref( new_segflag );
-
-    // free( mymmgmesh->point );
-    // free( mymmgmesh->tetra ); 
-    // free( mymmgmesh->tria );
-    // free( mymmgmesh->adja );
-    // free( mymmgmesh->disp );
-    // free( mymmgmesh->disp->mv );
-    // free( mymmgmesh->disp->alpha );
-    // free( mymmgmesh );
-    // free( sol->met );
-    // free( sol->metold );
-    // free( sol );
-
 }
 #endif
 
