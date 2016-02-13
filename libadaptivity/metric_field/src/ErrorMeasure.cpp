@@ -138,6 +138,52 @@ void ErrorMeasure::add_field(string field, double error, bool relative, double s
   return;
 }
 
+
+void ErrorMeasure::add_field_simple(string field, double error, bool relative, double sigma){
+  if(verbose)
+    cout<<"void ErrorMeasure::add_field(...)\n";
+  
+  if(ug==NULL){
+    cerr<<"ERROR ("<<__FILE__<<", "<<__LINE__<<"): no mesh has been provided\n";
+  }
+  
+  assert(ug->GetPointData()->GetArray(field.c_str())!=NULL);
+
+  if(ug->GetPointData()->GetArray("metric")==NULL){
+    vtkDoubleArray *array = vtkDoubleArray::New();
+    array->SetName("metric");
+    array->SetNumberOfComponents(dim*dim);
+    array->SetNumberOfTuples(ug->GetNumberOfPoints());
+    
+    for(int i=0;i<ug->GetNumberOfPoints();i++){
+      double val = 1.0 + 10.0 * ug->GetPointData()->GetArray(field.c_str())->GetTuple1(i);
+      if(dim==2){
+        array->SetTuple9(i,
+                         val/(error*error), 0.0,                   0.0,
+                         0.0,                   val/(error*error), 0.0,
+                         0.0,                   0.0,               1.0);
+        
+      }else if(dim==3){
+        array->SetTuple9(i,
+                         val/(error*error), 0.0,               0.0,
+                         0.0,               val/(error*error), 0.0,
+                         0.0,               0.0,               val/(error*error));
+      }else{
+        cerr<<"ERROR: unexpected dimension = "<<dim<<endl;
+        exit(-1);
+      }
+    }
+    ug->GetPointData()->AddArray(array);
+    array->Delete();
+  }
+  else {
+    cerr<<"ERROR ("<<__FILE__<<", "<<__LINE__<<"): metric is already define!!\n";
+    exit(-1);
+  }
+
+  return;
+}
+
 void ErrorMeasure::apply_gradation(double gradation){
   if(verbose)
     cout<<"void ErrorMeasure::apply_gradation()\n";

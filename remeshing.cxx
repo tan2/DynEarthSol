@@ -1212,7 +1212,6 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
 
     std::vector<double> max_len;
     constraints.get_constraints(max_len);
-    constraints.write_vtk(std::string("sids_before.vtu"));
 
     // Prepare the field to be used for error analysis: e.g., plastic strain or strain rate.
     // Setup data for the triangle. Attach a value of 1.45.
@@ -1229,11 +1228,6 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     cell2point->PassCellDataOff();
     cell2point->Update();
 
-    // vtkSmartPointer<vtkExtractVectorComponents> components = vtkSmartPointer<vtkExtractVectorComponents>::New();
-    // components->ExtractToFieldDataOn();
-    // components->SetInput(cell2point->GetUnstructuredGridOutput());
-    // components->Update();
-
     ug->GetPointData()->AddArray(cell2point->GetUnstructuredGridOutput()->GetPointData()->GetArray("plasticStrain"));
 
     /* Test merging of metrics.
@@ -1241,26 +1235,32 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     ErrorMeasure error;
     error.verbose_on();
     error.set_input(ug);
-    error.add_field("plasticStrain", 1.0, false, 0.01);
-    error.set_max_length(param.mesh.resolution);
-    error.set_max_length(&(max_len[0]), 1); //ug->GetNumberOfPoints());
+    //error.add_field("plasticStrain", 0.05, false, 0.01); // 1.0, false, 1.0
+    error.add_field_simple("plasticStrain", 2.0*param.mesh.resolution, false, 0.01); // 1.0, false, 1.0
+    //error.set_max_length(param.mesh.resolution*5.0);
+    //error.set_max_length(&(max_len[0]), ug->GetNumberOfPoints()); // 1 or NumofPoints.
     error.set_min_length(param.mesh.resolution * param.mesh.smallest_size);
     error.apply_gradation(1.3);
     error.set_max_nodes(5*old_nnode);
 
-    //error.diagnostics();
-    // vtkXMLUnstructuredGridWriter *metric_writer = vtkXMLUnstructuredGridWriter::New();
-    // metric_writer->SetFileName("metric_new.vtu");
-    // metric_writer->SetInput(ug);
-    // metric_writer->Write();
-    // metric_writer->Delete();
-    // ug->GetPointData()->RemoveArray("mean_desired_lengths");
-    // ug->GetPointData()->RemoveArray("desired_lengths");
+    // For debugging
+    constraints.write_vtk(std::string("sids_before.vtu"));
+
+    error.diagnostics();
+
+    vtkXMLUnstructuredGridWriter *metric_writer = vtkXMLUnstructuredGridWriter::New();
+    metric_writer->SetFileName("metric_new.vtu");
+    metric_writer->SetInput(ug);
+    metric_writer->Write();
+    metric_writer->Delete();
+    ug->GetPointData()->RemoveArray("mean_desired_lengths");
+    ug->GetPointData()->RemoveArray("desired_lengths");
 
     vtkXMLUnstructuredGridWriter *ug_writer = vtkXMLUnstructuredGridWriter::New();
     ug_writer->SetFileName("before_adapted.vtu");
     ug_writer->SetInput(ug);
     ug_writer->Write();
+    /////////////////
 
     Adaptivity adapt;
     adapt.verbose_on();
@@ -1274,12 +1274,14 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     vtkSmartPointer<vtkUnstructuredGrid> adapted_ug = adapt.get_adapted_vtu();
     // ug->Delete();
 
+    // For debugging
     ug_writer->SetFileName("after_adapted.vtu");
     ug_writer->SetInput(adapted_ug);
     ug_writer->Write();
 
     constraints.set_surface_input(adapted_ug, SENList, sids);
     constraints.write_vtk(std::string("sids_after.vtu"));
+    ////////////////
 
 
     // update mesh info.

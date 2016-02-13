@@ -62,6 +62,7 @@ class ErrorMeasure{
   
   /// Add a field that contribures to the construction of the error metric tensor field.
   void add_field(std::string name, double error, bool relative, double sigma);
+  void add_field_simple(std::string name, double error, bool relative, double sigma);
   
   /// Apply mesh gradation. Algorithm based on:
   /// Anisotropic mesh gradation control (2004), 
