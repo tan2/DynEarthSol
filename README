@@ -7,7 +7,8 @@ used to study the long-term deformation of Earth's lithosphere and problems
 alike.
 
 The purpose of this fork of DES3D (https://bitbucket.org/tan2/dynearthsol3d) 
-is to show that libadaptivity from Fluidity (https://github.com/FluidityProject/fluidity), 
+is to show that libadaptivity from Fluidity
+(https://github.com/FluidityProject/fluidity), 
 a self-contained library for anisotropic adaptive mesh refinement, 
 works well with DES3D.
 
