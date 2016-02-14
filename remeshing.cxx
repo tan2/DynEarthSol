@@ -1194,7 +1194,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     std::vector<int> SENList, sids;
     {
         DiscreteGeometryConstraints constraints;
-        constraints.verbose_on();
+        constraints.verbose_off();
         constraints.set_coplanar_tolerance(0.9999999);
         constraints.set_volume_input(ug);
 
@@ -1207,7 +1207,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     }
 
     DiscreteGeometryConstraints constraints;
-    constraints.verbose_on();
+    constraints.verbose_off();
     constraints.set_surface_input(ug, SENList, sids);
 
     std::vector<double> max_len;
@@ -1233,7 +1233,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     /* Test merging of metrics.
      */
     ErrorMeasure error;
-    error.verbose_on();
+    error.verbose_off();
     error.set_input(ug);
     //error.add_field("plasticStrain", 0.05, false, 0.01); // 1.0, false, 1.0
     error.add_field_simple("plasticStrain", 2.0*param.mesh.resolution, false, 0.01); // 1.0, false, 1.0
@@ -1288,23 +1288,27 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     var.nnode = adapted_ug->GetNumberOfPoints();
     var.nelem = adapted_ug->GetNumberOfCells();
     var.nseg = sids.size();
+    std::cerr << "Updated mesh size\n";
 
     array_t new_coord( var.nnode );
     conn_t new_connectivity( var.nelem );
     segment_t new_segment( var.nseg );
     segflag_t new_segflag( var.nseg );
+    std::cerr << "Resized arrays\n";
 
     for (std::size_t i = 0; i < var.nnode; ++i) {
         double *x = adapted_ug->GetPoints()->GetPoint(i);
         for(int j=0; j < NDIMS; j++ )
             new_coord[i][j] = x[j];
     }
+    std::cerr << "New coordinates populated\n";
 
     for (std::size_t i = 0; i < var.nelem; ++i) {
         vtkSmartPointer<vtkTetra> tetra = (vtkTetra *)adapted_ug->GetCell(i);
         for (int j = 0; j < NODES_PER_ELEM; ++j)
             new_connectivity[i][j] = tetra->GetPointId(j);
     }
+    std::cerr << "New connectivity populated\n";
 
     // copy optimized surface triangle connectivity to dynearthsol3d.
     for (std::size_t i = 0; i < var.nseg; ++i) {
@@ -1312,11 +1316,13 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
             new_segment[i][j] = SENList[i*NODES_PER_FACET + j];
         new_segflag.data()[i] = sids[i];
     }
+    std::cerr << "New segments populated\n";
 
     var.coord->steal_ref( new_coord );
     var.connectivity->steal_ref( new_connectivity );
     var.segment->steal_ref( new_segment );
     var.segflag->steal_ref( new_segflag );
+    std::cerr << "Arrays transferred. Mesh optimization done \n";
 }
 #endif
 
