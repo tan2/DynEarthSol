@@ -1,8 +1,12 @@
+===========
+Overview
+===========
 DynEarthSol3D is a finite element code that solves the momentum balance and 
 the heat transfer in Lagrangian form using unstructured meshes. It can be
 used to study the long-term deformation of Earth's lithosphere and problems
 alike.
 
+The purpose of this fork of DES3D (https://bitbucket.org/tan2/dynearthsol3d) is to show that libadaptivity from Fluidity (https://github.com/FluidityProject/fluidity), a self-contained library for anisotropic adaptive mesh refinement, works well with DES3D.
 
 ===========
 Build
@@ -19,11 +23,22 @@ Requirement:
      the library.
 * You will need Python 2.6+ or 3.2+ and the Numpy package.
 
+For libadaptiviy, you further need
+* VTK (v.5.10 tested) built from source or development packages.
+* MPI (openmpi-1.6.1 tested).
+
 Build procedure:
-* Edit 'Makefile', modify BOOST_ROOT_DIR if you manually built or installed 
+- libadaptivity
+* Run "configure" in libadaptivity
+* Run "make".
+
+- DES3D
+* Edit 'Makefile', 
+  1) modify BOOST_ROOT_DIR if you manually built or installed 
   boost library. If you followed the instructions above to build 
   Boost::Program_options library, set BOOST_ROOT_DIR to the untarred boost
   directory.
+  2) turn on 'useadapt' to use libadaptivity.
 * Run "make" to build an optimized 2D executable 'dynearthsol2d'.
 * Run "make ndims=3" to build an optimized 3D executable 'dynearthsol3d'.
 * Run "make opt=0" to build a debugging executable.
