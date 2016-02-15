@@ -10,13 +10,19 @@
 ## ndims = 3: 3D code; 2: 2D code
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openmp = 1: enable OpenMP
+## useadapt = 1: use libadaptivity for mesh optimization during remeshing
 
 ndims = 3
 opt = 2
 openmp = 1
+useadapt = 1
 
 ## Select C++ compiler
-CXX = mpicxx # g++-mp-4.7
+ifeq ($(useadapt), 1)
+	CXX = mpicxx # g++-mp-4.7
+else
+	CXX = g++
+endif
 
 ## Boost location and library name
 BOOST_ROOT_DIR = /Users/eunseo/opt/boost_1_51_0
@@ -129,19 +135,21 @@ ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
 
-LIBADAPTIVITY_DIR = ./libadaptivity
-LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
-LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
-LIBADAPTIVITY_LIBNAME = adaptivity
-CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I/opt/local/include/vtk-5.10  -DHAVE_VTK=1 \
-        -I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
-        -I$(LIBADAPTIVITY_DIR)/load_balance/include
+ifeq ($(useadapt), 1)
+	LIBADAPTIVITY_DIR = ./libadaptivity
+	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
+	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
+	LIBADAPTIVITY_LIBNAME = adaptivity
+	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I/opt/local/include/vtk-5.10 -DHAVE_ADAPT=1 -DHAVE_VTK=1 \
+    	    -I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
+        	-I$(LIBADAPTIVITY_DIR)/load_balance/include
 
-LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a  -llapack -lblas -lvtkIO -lvtkGraphics \
+	LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a  -llapack -lblas -lvtkIO -lvtkGraphics \
                      -lvtkFiltering -lvtkexpat -lvtkzlib -lvtkCommon -ldl -lpthread -lm -lstdc++  \
                      -L/opt/local/lib/vtk-5.10  -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4 \
                      -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4/../../.. -lgfortran -lquadmath \
                      -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4 -lmpi_f77
+endif                
 
 ## Action
 
@@ -149,11 +157,18 @@ LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a  -llapack -lblas -lvtk
 
 all: $(EXE) take-snapshot
 
+ifeq ($(useadapt), 1)
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a
-	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
-		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
-		$(LIBADAPTIVITY_LIBS) \
-		-o $@
+		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
+			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
+			$(LIBADAPTIVITY_LIBS) \
+			-o $@
+else
+$(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
+		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
+			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
+			-o $@
+endif			
 
 take-snapshot:
 	@# snapshot of the code for building the executable

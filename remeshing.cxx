@@ -1243,24 +1243,24 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     error.apply_gradation(1.3);
     error.set_max_nodes(5*old_nnode);
 
-    // For debugging
-    constraints.write_vtk(std::string("sids_before.vtu"));
+    // // For debugging
+    // constraints.write_vtk(std::string("sids_before.vtu"));
 
-    error.diagnostics();
+    // error.diagnostics();
 
-    vtkXMLUnstructuredGridWriter *metric_writer = vtkXMLUnstructuredGridWriter::New();
-    metric_writer->SetFileName("metric_new.vtu");
-    metric_writer->SetInput(ug);
-    metric_writer->Write();
-    metric_writer->Delete();
-    ug->GetPointData()->RemoveArray("mean_desired_lengths");
-    ug->GetPointData()->RemoveArray("desired_lengths");
+    // vtkXMLUnstructuredGridWriter *metric_writer = vtkXMLUnstructuredGridWriter::New();
+    // metric_writer->SetFileName("metric_new.vtu");
+    // metric_writer->SetInput(ug);
+    // metric_writer->Write();
+    // metric_writer->Delete();
+    // ug->GetPointData()->RemoveArray("mean_desired_lengths");
+    // ug->GetPointData()->RemoveArray("desired_lengths");
 
-    vtkXMLUnstructuredGridWriter *ug_writer = vtkXMLUnstructuredGridWriter::New();
-    ug_writer->SetFileName("before_adapted.vtu");
-    ug_writer->SetInput(ug);
-    ug_writer->Write();
-    /////////////////
+    // vtkXMLUnstructuredGridWriter *ug_writer = vtkXMLUnstructuredGridWriter::New();
+    // ug_writer->SetFileName("before_adapted.vtu");
+    // ug_writer->SetInput(ug);
+    // ug_writer->Write();
+    // /////////////////
 
     Adaptivity adapt;
     adapt.verbose_on();
@@ -1274,13 +1274,13 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     vtkSmartPointer<vtkUnstructuredGrid> adapted_ug = adapt.get_adapted_vtu();
     // ug->Delete();
 
-    // For debugging
-    ug_writer->SetFileName("after_adapted.vtu");
-    ug_writer->SetInput(adapted_ug);
-    ug_writer->Write();
+    // // For debugging
+    // ug_writer->SetFileName("after_adapted.vtu");
+    // ug_writer->SetInput(adapted_ug);
+    // ug_writer->Write();
 
-    constraints.set_surface_input(adapted_ug, SENList, sids);
-    constraints.write_vtk(std::string("sids_after.vtu"));
+    // constraints.set_surface_input(adapted_ug, SENList, sids);
+    // constraints.write_vtk(std::string("sids_after.vtu"));
     ////////////////
 
 
@@ -1399,7 +1399,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         old_segment.steal_ref(*var.segment);
         old_segflag.steal_ref(*var.segflag);
 
-#ifdef THREED
+#ifdef HAVE_ADAPT
         optimize_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
         renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, NULL);        
