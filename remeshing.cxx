@@ -1399,17 +1399,19 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         old_segment.steal_ref(*var.segment);
         old_segflag.steal_ref(*var.segflag);
 
-#ifdef HAVE_ADAPT
+#ifdef THREED
+#ifdef ADAPT
         optimize_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
-        renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, NULL);        
 #else
         new_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
-
+#endif
+#else
+        new_mesh(param, var, bad_quality, old_coord, old_connectivity,
+                 old_segment, old_segflag);
+#endif
         renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, NULL);        
-#endif        
-
 
         {
             std::cout << "    Interpolating fields.\n";
