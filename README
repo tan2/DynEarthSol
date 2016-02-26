@@ -44,8 +44,10 @@ Build procedure:
   Boost::Program_options library, set BOOST_ROOT_DIR to the untarred boost
   directory.
   2) turn on 'useadapt' to use libadaptivity.
-  3) Check if VTK paths are correct.
+  3) Check if VTK_INC path is correct.
   4) Copy LIBS in libadaptivity/tests/Makefile to LIBADAPTIVITY_LIBS.
+  5) Make sure that the path to libadaptivity.a is correctly set in the beginning of LIBADAPTIVITY_LIBS. 
+     $(LIBADAPTIVITY_LIB)/libadaptivity.a will do.
 
 * Run "make" to build an optimized 2D executable 'dynearthsol2d'.
 * Run "make ndims=3" to build an optimized 3D executable 'dynearthsol3d'.
