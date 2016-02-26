@@ -33,8 +33,9 @@ For libadaptiviy, you further need
 
 Build procedure:
 - libadaptivity
-* Run "configure" in libadaptivity
+* Run "LDFLAGS=-L${VTK_LIBDIR} ./configure" in libadaptivity
 * Run "make".
+* Run "make" in tests/. Depending on the flavor of MPI, one might need to add '-lmpi_f77' to LIBS in Makefile.
 
 - DES3D
 * Edit 'Makefile', 
@@ -43,6 +44,9 @@ Build procedure:
   Boost::Program_options library, set BOOST_ROOT_DIR to the untarred boost
   directory.
   2) turn on 'useadapt' to use libadaptivity.
+  3) Check if VTK paths are correct.
+  4) Copy LIBS in libadaptivity/tests/Makefile to LIBADAPTIVITY_LIBS.
+
 * Run "make" to build an optimized 2D executable 'dynearthsol2d'.
 * Run "make ndims=3" to build an optimized 3D executable 'dynearthsol3d'.
 * Run "make opt=0" to build a debugging executable.
