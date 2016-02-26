@@ -25,7 +25,7 @@ else
 endif
 
 ## Boost location and library name
-BOOST_ROOT_DIR = /Users/eunseo/opt/boost_1_51_0
+BOOST_ROOT_DIR = ${HOME}/opt/boost_1_51_0
 
 ########################################################################
 ## Select compiler and linker flags
@@ -140,15 +140,12 @@ ifeq ($(useadapt), 1)
 	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
 	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
 	LIBADAPTIVITY_LIBNAME = adaptivity
-	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I/opt/local/include/vtk-5.10 -DADAPT -DHAVE_VTK=1 \
+	VTK_INC = /home/staff/echoi/opt/vtk-5.6.1/include/vtk-5.6
+	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I$(VTK_INC) -DADAPT -DHAVE_VTK=1 \
     	    -I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
         	-I$(LIBADAPTIVITY_DIR)/load_balance/include
 
-	LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a  -llapack -lblas -lvtkIO -lvtkGraphics \
-                     -lvtkFiltering -lvtkexpat -lvtkzlib -lvtkCommon -ldl -lpthread -lm -lstdc++  \
-                     -L/opt/local/lib/vtk-5.10  -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4 \
-                     -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4/../../.. -lgfortran -lquadmath \
-                     -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4 -lmpi_f77
+	LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a  -llapack -lblas -lvtkIO -lvtkGraphics -lvtkFiltering -lvtkexpat -lvtkzlib -lvtkCommon -ldl -lpthread -lm -lstdc++   -L/home/staff/echoi/opt/vtk-5.6.1/lib/vtk-5.6 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../.. -lgfortranbegin -lgfortran -lm -L/home/staff/echoi/opt/vtk-5.6.1/lib/vtk-5.6 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../.. -lgfortranbegin -lgfortran -lm -L./lib -L/home/staff/echoi/opt/vtk-5.6.1/lib/vtk-5.6 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../.. -lgfortranbegin -lgfortran -lm -lmpi_f77
 endif                
 
 ## Action
