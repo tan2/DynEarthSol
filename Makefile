@@ -140,7 +140,7 @@ ifeq ($(useadapt), 1)
 	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
 	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
 	LIBADAPTIVITY_LIBNAME = adaptivity
-	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I/opt/local/include/vtk-5.10 -DHAVE_ADAPT=1 -DHAVE_VTK=1 \
+	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I/opt/local/include/vtk-5.10 -DADAPT -DHAVE_VTK=1 \
     	    -I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
         	-I$(LIBADAPTIVITY_DIR)/load_balance/include
 
