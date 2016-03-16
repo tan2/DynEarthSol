@@ -191,6 +191,10 @@ struct Markers {
     double init_marker_spacing;
 };
 
+struct Debug {
+    bool dt;
+};
+
 struct Param {
     Sim sim;
     Mesh mesh;
@@ -199,6 +203,7 @@ struct Param {
     IC ic;
     Mat mat;
     Markers markers;
+    Debug debug;
 };
 
 
