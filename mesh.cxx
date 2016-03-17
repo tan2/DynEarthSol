@@ -871,9 +871,9 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         f.numberofholes = 0;
 
         for (int j=0; j<npolygons; j++) {
-            my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
+            my_fgets(buffer, 4096, fp, lineno, param.mesh.poly_filename);
 
-            std::istringstream inbuf(std::string(buffer, 255));
+            std::istringstream inbuf(std::string(buffer, 4096));
             int nvertex;
             inbuf >> nvertex;
             if (nvertex < NODES_PER_FACET || nvertex > 9999) {
