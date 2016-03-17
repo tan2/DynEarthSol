@@ -717,7 +717,7 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 }
 
 
-void my_fgets(char *buffer, int size, std::FILE *fp,
+void my_fgets(char *buffer, std::size_t size, std::FILE *fp,
               int &lineno, const std::string &filename)
 {
     char *s;
@@ -727,6 +727,11 @@ void my_fgets(char *buffer, int size, std::FILE *fp,
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << filename << "'\n";
+            std::exit(2);
+        }
+        if (std::strlen(buffer) == size-1 && buffer[size-2] != '\n') {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << filename << "', line is too long.\n";
             std::exit(2);
         }
 
