@@ -513,7 +513,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
         /* A restoration force on the bottom nodes proportional to total vertical displacement */
         for (auto i=var.bnodes[iboundz0].begin(); i<var.bnodes[iboundz0].end(); ++i) {
             int n = *i;
-            force[n][NDIMS-1] -= param.bc.elastic_foundation_constant * ((*var.coord)[n][NDIMS-1] - (*var.z0)[n]);
+            force[n][NDIMS-1] -= param.bc.elastic_foundation_constant * ((*var.coord)[n][NDIMS-1] - (*var.coord0)[n][NDIMS-1]);
         }
     }
 }

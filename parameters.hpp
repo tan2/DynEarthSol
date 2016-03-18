@@ -246,10 +246,10 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
-    double_vec *stressyy, *z0;
+    double_vec *stressyy;
     double_vec *ntmp;
 
-    array_t *vel, *force;
+    array_t *vel, *force, *coord0;
     tensor_t *strain_rate, *strain, *stress;
     shapefn *shpdx, *shpdy, *shpdz;
 

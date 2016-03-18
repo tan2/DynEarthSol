@@ -173,7 +173,7 @@ void Output::write(const Variables& var, bool is_averaged)
 
     bin.write_array(*var.force, "force", var.force->size());
 
-    bin.write_array(*var.z0, "z0", var.z0->size());
+    bin.write_array(*var.coord0, "coord0", var.coord0->size());
 
     //bin.write_array(*var.bcflag, "bcflag", var.bcflag->size());
 
