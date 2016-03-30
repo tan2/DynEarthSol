@@ -36,7 +36,7 @@
 #ifdef WIN32
 #ifndef _MSC_VER
 namespace std {
-  static std::string to_string(long double t) 
+  static std::string to_string(long double t)
   {
     char temp[32];
     sprintf(temp,"%f",double(t));
@@ -368,7 +368,7 @@ void new_mesh_uniform_resolution(const Param& param, Variables& var)
         // corner 3
 	points[6] = param.mesh.xlength;
 	points[7] = 0;
-	
+
 	for (int i=0; i<n_init_segments; ++i) {
             // 0th node of the i-th segment
 	    init_segments[2*i] = i;
@@ -766,12 +766,12 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
 
     int lineno = 0;
     int n;
-    char buffer[255];
+    char buffer[2550];
 
     // get header of node list
     int npoints;
     {
-        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
+        my_fgets(buffer, 2550, fp, lineno, param.mesh.poly_filename);
 
         int dim, nattr, nbdrym;
         n = std::sscanf(buffer, "%d %d %d %d", &npoints, &dim, &nattr, &nbdrym);
@@ -793,7 +793,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     // get node list
     double *points = new double[npoints * NDIMS];
     for (int i=0; i<npoints; i++) {
-        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
+        my_fgets(buffer, 2550, fp, lineno, param.mesh.poly_filename);
 
         int k;
         double *x = &points[i*NDIMS];
@@ -817,7 +817,7 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     // get header of segment (facet) list
     int n_init_segments;
     {
-        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
+        my_fgets(buffer, 2550, fp, lineno, param.mesh.poly_filename);
 
         int has_bdryflag;
         n = std::sscanf(buffer, "%d %d", &n_init_segments, &has_bdryflag);
@@ -839,11 +839,12 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     auto facets = new tetgenio::facet[n_init_segments];
     int *init_segflags = new int[n_init_segments];
     for (int i=0; i<n_init_segments; i++) {
-        my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
+        my_fgets(buffer, 2550, fp, lineno, param.mesh.poly_filename);
 
         auto &f = facets[i];
         int npolygons, nholes, bdryflag;
         n = std::sscanf(buffer, "%d %d %d", &npolygons, &nholes, &bdryflag);
+        // std::cerr<<npolygons<<" "<<nholes<<" "<<bdryflag<<"\n";
         if (n != 3) {
             std::cerr << "Error: parsing line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
@@ -871,13 +872,14 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         f.numberofholes = 0;
 
         for (int j=0; j<npolygons; j++) {
-            my_fgets(buffer, 255, fp, lineno, param.mesh.poly_filename);
+            my_fgets(buffer, 2550, fp, lineno, param.mesh.poly_filename);
 
-            std::istringstream inbuf(std::string(buffer, 255));
+            std::istringstream inbuf(std::string(buffer, 2550));
             int nvertex;
             inbuf >> nvertex;
+            // std::cerr <<"segment "<<i<<"/"<<n_init_segments<<" polygon "<<j<<"/"<<npolygons<<" "<<nvertex<<"\n";
             if (nvertex < NODES_PER_FACET || nvertex > 9999) {
-                std::cerr << "Error: unsupported number of polygon points in line " << lineno
+                std::cerr << "Error: unsupported number of polygon points "<<nvertex<<" in line " << lineno
                           << " of '" << param.mesh.poly_filename << "'\n";
                 std::exit(1);
             }
@@ -886,9 +888,10 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
             f.polygonlist[j].numberofvertices = nvertex;
             for (int k=0; k<nvertex; k++) {
                 inbuf >> f.polygonlist[j].vertexlist[k];
+                // std::cerr <<"segment "<<i<<" "<<j<<" "<<k<<"/"<<nvertex<<"="<<f.polygonlist[j].vertexlist[k]<<"\n";
                 if (f.polygonlist[j].vertexlist[k] < 0 ||
                     f.polygonlist[j].vertexlist[k] >= npoints) {
-                    std::cerr << "Error: segment contains out-of-range node # [0-" << npoints
+                    std::cerr << "Error: segment contains "<< f.polygonlist[j].vertexlist[k] <<" out-of-range node # [0-" << npoints
                               <<"] in line " << lineno << " of '"
                               << param.mesh.poly_filename << "'\n";
                     std::exit(1);
@@ -1618,5 +1621,3 @@ double** elem_center(const array_t &coord, const conn_t &connectivity)
     }
     return center;
 }
-
-
