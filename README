@@ -33,7 +33,7 @@ For libadaptiviy, you further need
 
 Build procedure:
 - libadaptivity
-* Run "LDFLAGS=-L${VTK_LIBDIR} ./configure" in libadaptivity
+* Run "VTK_INCLUDE=${VTK_INCDIR} LDFLAGS=-L${VTK_LIBDIR} ./configure" in libadaptivity
 * Run "make".
 * Run "make" in tests/. Depending on the flavor of MPI, one might need to add '-lmpi_f77' to LIBS in Makefile.
 
