@@ -25,7 +25,7 @@ else
 endif
 
 ## Boost location and library name
-BOOST_ROOT_DIR = ${HOME}/opt/boost_1_51_0
+BOOST_ROOT_DIR = ${HOME}/opt/boost_1_55_0
 
 ########################################################################
 ## Select compiler and linker flags
@@ -34,8 +34,17 @@ BOOST_ROOT_DIR = ${HOME}/opt/boost_1_51_0
 
 BOOST_LDFLAGS = -lboost_program_options
 ifdef BOOST_ROOT_DIR
-        BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)
-        BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath,$(BOOST_ROOT_DIR)/stage/lib
+	# check existence of stage/ directory
+	has_stage_dir = $(wildcard $(BOOST_ROOT_DIR)/stage)
+	ifeq (, $(has_stage_dir))
+		# no stage dir, BOOST_ROOT_DIR is the installation directory
+		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
+		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/lib
+	else
+		# with stage dir, BOOST_ROOT_DIR is the build directory
+		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)
+		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib #-Wl,-rpath=$(BOOST_ROOT_DIR)/stage/lib
+	endif
 endif
 
 ifneq (, $(findstring mpicxx, $(CXX))) # if using any version of g++
@@ -56,6 +65,27 @@ ifneq (, $(findstring mpicxx, $(CXX))) # if using any version of g++
 		CXXFLAGS += -fopenmp -DUSE_OMP
 		LDFLAGS += -fopenmp
 	endif
+
+else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with v14
+					CXXFLAGS = -g -std=c++0x
+	        LDFLAGS = -lm
+
+	        ifeq ($(opt), 1)
+	                CXXFLAGS += -O1
+	        else ifeq ($(opt), 2)
+	                CXXFLAGS += -O2
+	        else ifeq ($(opt), 3) # experimental, use at your own risk :)
+	                CXXFLAGS += -fast -fast-transcendentals -fp-model fast=2
+	        else # debugging flags
+	                CXXFLAGS += -O0 -check=uninit -check-pointers=rw -check-pointers-dangling=all -fp-trap-all=all
+	        endif
+
+	        ifeq ($(openmp), 1)
+	                CXXFLAGS += -fopenmp -DUSE_OMP
+	                LDFLAGS += -fopenmp
+	        endif
+
+
 
 else
 # the only way to display the error message in Makefile ...
@@ -140,13 +170,13 @@ ifeq ($(useadapt), 1)
 	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
 	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
 	LIBADAPTIVITY_LIBNAME = adaptivity
-	VTK_INC = /home/staff/echoi/opt/vtk-5.6.1/include/vtk-5.6
+	VTK_INC = $(VTK_INCDIR)
 	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I$(VTK_INC) -DADAPT -DHAVE_VTK=1 \
     	    -I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
         	-I$(LIBADAPTIVITY_DIR)/load_balance/include
 
-	LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a  -llapack -lblas -lvtkIO -lvtkGraphics -lvtkFiltering -lvtkexpat -lvtkzlib -lvtkCommon -ldl -lpthread -lm -lstdc++   -L/home/staff/echoi/opt/vtk-5.6.1/lib/vtk-5.6 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../.. -lgfortranbegin -lgfortran -lm -L/home/staff/echoi/opt/vtk-5.6.1/lib/vtk-5.6 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../.. -lgfortranbegin -lgfortran -lm -L./lib -L/home/staff/echoi/opt/vtk-5.6.1/lib/vtk-5.6 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../.. -lgfortranbegin -lgfortran -lm -lmpi_f77
-endif                
+	LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a -llapack -lblas -lvtkIO -lvtkGraphics -lvtkFiltering -lvtkexpat -lvtkzlib -lvtkCommon -ldl -lpthread -lm -lstdc++     -L/opt/local/lib/vtk-5.10 -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4 -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4/../../.. -lgfortran -lquadmath -lm -lmpifort
+endif
 
 ## Action
 
@@ -165,7 +195,7 @@ $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(A
 		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
 			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
 			-o $@
-endif			
+endif
 
 take-snapshot:
 	@# snapshot of the code for building the executable
@@ -215,4 +245,3 @@ deepclean:
 
 clean:
 	@rm -f $(OBJS) $(EXE)
-
