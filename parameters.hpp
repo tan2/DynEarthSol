@@ -191,6 +191,10 @@ struct Markers {
     double init_marker_spacing;
 };
 
+struct Debug {
+    bool dt;
+};
+
 struct Param {
     Sim sim;
     Mesh mesh;
@@ -199,6 +203,7 @@ struct Param {
     IC ic;
     Mat mat;
     Markers markers;
+    Debug debug;
 };
 
 
@@ -241,10 +246,10 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
-    double_vec *stressyy, *z0;
+    double_vec *stressyy;
     double_vec *ntmp;
 
-    array_t *vel, *force;
+    array_t *vel, *force, *coord0;
     tensor_t *strain_rate, *strain, *stress;
     shapefn *shpdx, *shpdy, *shpdz;
 

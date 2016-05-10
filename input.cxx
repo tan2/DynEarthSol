@@ -418,6 +418,13 @@ static void declare_parameters(po::options_description &cfg,
         ("mat.dilation_angle1", po::value<std::string>()->default_value("[0]"),
          "Dilation angle of the materials when weakening saturates '[d0, d1, d2, ...]' (in degree)")
         ;
+
+    /* These parameters will enable additional debugging output. DO NOT document these parameters
+       in defaults.cfg. */
+    cfg.add_options()
+        ("debug.dt", po::value<bool>(&p.debug.dt)->default_value(false),
+         "Print all dt criteria")
+        ;
 }
 
 

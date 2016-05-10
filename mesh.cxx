@@ -717,7 +717,7 @@ void new_mesh_refined_zone(const Param& param, Variables& var)
 }
 
 
-void my_fgets(char *buffer, int size, std::FILE *fp,
+void my_fgets(char *buffer, std::size_t size, std::FILE *fp,
               int &lineno, const std::string &filename)
 {
     char *s;
@@ -727,6 +727,11 @@ void my_fgets(char *buffer, int size, std::FILE *fp,
         if (! s) {
             std::cerr << "Error: reading line " << lineno
                       << " of '" << filename << "'\n";
+            std::exit(2);
+        }
+        if (std::strlen(buffer) == size-1 && buffer[size-2] != '\n') {
+            std::cerr << "Error: reading line " << lineno
+                      << " of '" << filename << "', line is too long.\n";
             std::exit(2);
         }
 
@@ -844,7 +849,6 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         auto &f = facets[i];
         int npolygons, nholes, bdryflag;
         n = std::sscanf(buffer, "%d %d %d", &npolygons, &nholes, &bdryflag);
-        // std::cerr<<npolygons<<" "<<nholes<<" "<<bdryflag<<"\n";
         if (n != 3) {
             std::cerr << "Error: parsing line " << lineno << " of '"
                       << param.mesh.poly_filename << "'\n";
@@ -872,14 +876,13 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
         f.numberofholes = 0;
 
         for (int j=0; j<npolygons; j++) {
-            my_fgets(buffer, 2550, fp, lineno, param.mesh.poly_filename);
+            my_fgets(buffer, 4096, fp, lineno, param.mesh.poly_filename);
 
-            std::istringstream inbuf(std::string(buffer, 2550));
+            std::istringstream inbuf(std::string(buffer, 4096));
             int nvertex;
             inbuf >> nvertex;
-            // std::cerr <<"segment "<<i<<"/"<<n_init_segments<<" polygon "<<j<<"/"<<npolygons<<" "<<nvertex<<"\n";
             if (nvertex < NODES_PER_FACET || nvertex > 9999) {
-                std::cerr << "Error: unsupported number of polygon points "<<nvertex<<" in line " << lineno
+                std::cerr << "Error: unsupported number of polygon points in line " << lineno
                           << " of '" << param.mesh.poly_filename << "'\n";
                 std::exit(1);
             }
@@ -888,10 +891,9 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
             f.polygonlist[j].numberofvertices = nvertex;
             for (int k=0; k<nvertex; k++) {
                 inbuf >> f.polygonlist[j].vertexlist[k];
-                // std::cerr <<"segment "<<i<<" "<<j<<" "<<k<<"/"<<nvertex<<"="<<f.polygonlist[j].vertexlist[k]<<"\n";
                 if (f.polygonlist[j].vertexlist[k] < 0 ||
                     f.polygonlist[j].vertexlist[k] >= npoints) {
-                    std::cerr << "Error: segment contains "<< f.polygonlist[j].vertexlist[k] <<" out-of-range node # [0-" << npoints
+                    std::cerr << "Error: segment contains out-of-range node # [0-" << npoints
                               <<"] in line " << lineno << " of '"
                               << param.mesh.poly_filename << "'\n";
                     std::exit(1);
@@ -1621,3 +1623,5 @@ double** elem_center(const array_t &coord, const conn_t &connectivity)
     }
     return center;
 }
+
+

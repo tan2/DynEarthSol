@@ -1462,10 +1462,10 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     if (param.mesh.remeshing_option==1 ||
         param.mesh.remeshing_option==2 ||
         param.mesh.remeshing_option==11) {
-        /* Reset z0 of the bottom nodes */
+        /* Reset coord0 of the bottom nodes */
         for (auto i=var.bnodes[iboundz0].begin(); i<var.bnodes[iboundz0].end(); ++i) {
             int n = *i;
-            (*var.z0)[n] = -param.mesh.zlength;
+            (*var.coord0)[n][NDIMS-1] = -param.mesh.zlength;
         }
     }
 
