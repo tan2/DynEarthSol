@@ -82,7 +82,7 @@ def main(modelname, start, end, delta):
             coord0 = des.read_field(frame, 'coord0')
             coord = des.read_field(frame, 'coordinate')
             disp = np.zeros((nnode, 3), dtype=coord.dtype)
-            disp[:,0:2] = coord - coord0
+            disp[:,0:des.ndims] = coord - coord0
             vtk_dataarray(fvtu, disp, 'total displacement', 3)
 
             convert_field(des, frame, 'temperature', fvtu)
