@@ -457,7 +457,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             var.vbc_types[i] != 2 &&
             var.vbc_types[i] != 4) continue;
 
-        if (i==iboundz0 && !param.bc.has_wrinkler_foundation) continue;
+        if (i==iboundz0 && !param.bc.has_winkler_foundation) continue;
         if (i==iboundz1 && !param.bc.has_water_loading) continue;
 
         const auto& bdry = var.bfacets[i];
@@ -478,10 +478,10 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
 
             double p;
-            if (i==iboundz0 && param.bc.has_wrinkler_foundation) {
-                // Wrinkler foundation for the bottom boundary
+            if (i==iboundz0 && param.bc.has_winkler_foundation) {
+                // Winkler foundation for the bottom boundary
                 p = var.compensation_pressure -
-                    (var.mat->rho(e) + param.bc.wrinkler_delta_rho) *
+                    (var.mat->rho(e) + param.bc.winkler_delta_rho) *
                     param.control.gravity * (zcenter + param.mesh.zlength);
             }
             else if (i==iboundz1 && param.bc.has_water_loading) {

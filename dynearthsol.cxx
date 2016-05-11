@@ -252,7 +252,7 @@ void isostasy_adjustment(const Param &param, Variables &var)
             for (int j=0; j<NDIMS-1; ++j) {
                 (*var.vel)[i][j] = 0;
             }
-            if (param.bc.has_wrinkler_foundation == false &&
+            if (param.bc.has_winkler_foundation == false &&
                 (*var.bcflag)[i] & BOUNDZ0) {
                 // holding bottom surface fixed
                 (*var.vel)[i][NDIMS-1] = 0;
