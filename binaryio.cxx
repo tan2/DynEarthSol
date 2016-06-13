@@ -95,13 +95,22 @@ void BinaryOutput::write_header(const char *name)
     hd_pos = std::strncat(hd_pos, buffer, len);
 }
 
-
+// XXX: when A is *var.bcflag, i.e. T is uint, g++ cannot instantiate the template
 template <typename T>
 void BinaryOutput::write_array(const std::vector<T>& A, const char *name, std::size_t size)
 {
     write_header(name);
     std::size_t n = std::fwrite(A.data(), sizeof(T), size, f);
     eof_pos += n * sizeof(T);
+}
+
+
+// specialize for uint
+void BinaryOutput::write_array(const std::vector<uint>& A, const char *name, std::size_t size)
+{
+    write_header(name);
+    std::size_t n = std::fwrite(A.data(), sizeof(uint), size, f);
+    eof_pos += n * sizeof(uint);
 }
 
 

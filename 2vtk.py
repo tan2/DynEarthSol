@@ -86,7 +86,7 @@ def main(modelname, start, end, delta):
             vtk_dataarray(fvtu, disp, 'total displacement', 3)
 
             convert_field(des, frame, 'temperature', fvtu)
-            #convert_field(des, frame, 'bcflag', fvtu)
+            convert_field(des, frame, 'bcflag', fvtu)
             #convert_field(des, frame, 'mass', fvtu)
             #convert_field(des, frame, 'tmass', fvtu)
             #convert_field(des, frame, 'volume_n', fvtu)

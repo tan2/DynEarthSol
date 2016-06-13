@@ -75,7 +75,7 @@ class Dynearthsol:
         nnode = self.nnode_list[i]
         nelem = self.nelem_list[i]
 
-        dtype = np.float64 if name != 'connectivity' else np.int32
+        dtype = np.float64 if name not in ('connectivity', 'bcflag') else np.int32
 
         if name in set(['strain', 'strain-rate', 'stress', 'stress averaged']):
             count = self.nstr * nelem
@@ -91,7 +91,7 @@ class Dynearthsol:
         elif name in set(['coordinate', 'velocity', 'velocity averaged', 'force', 'coord0']):
             count = self.ndims * nnode
             shape = (nnode, self.ndims)
-        elif name in set(['temperature', 'mass', 'tmass', 'volume_n']):
+        elif name in set(['bcflag', 'temperature', 'mass', 'tmass', 'volume_n']):
             count = nnode
             shape = (nnode, )
         else:
