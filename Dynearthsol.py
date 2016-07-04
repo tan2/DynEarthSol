@@ -113,7 +113,12 @@ class Dynearthsol:
 
     def overwrite_field(self, frame, name, data):
         if frame != self._header_frame: read_header(frame)
-        dtype, count, shape = self._get_dtype_count_shape(frame, name)
+        if name.startswith(('markerset.', 'hydrous-markerset.')):
+            dtype = data.dtype
+            count = len(data)
+            shape = (count,)
+        else:
+            dtype, count, shape = self._get_dtype_count_shape(frame, name)
         if data.shape != shape:
             raise Error('Shape of {0} field is changed! Expecting {1}, got {2}.'.format(name, shape, data.shape))
 
