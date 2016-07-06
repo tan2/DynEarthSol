@@ -188,3 +188,32 @@ class DynearthsolCheckpoint(Dynearthsol):
         return dtype, count, shape
 
 
+    def read_markers(self, frame, markername):
+        'Read and return marker data'
+        if frame != self._header_frame: read_header(frame)
+        fname = self.get_fn(frame)
+        with open(fname) as f:
+
+            pos = self.field_pos[markername+' size']
+            f.seek(pos)
+            nmarkers = np.fromfile(f, dtype=np.int32, count=1)[0]
+
+            marker_data = {'size': nmarkers}
+
+            # floating point
+            for name in (markername+'.eta',):
+                pos = self.field_pos[name]
+                f.seek(pos)
+                tmp = np.fromfile(f, dtype=np.float64, count=nmarkers*(self.ndims+1))
+                marker_data[name] = tmp.reshape(-1, self.ndims+1)
+                #print(marker_data[name].shape, marker_data[name])
+
+            # int
+            for name in (markername+'.elem', markername+'.mattype', markername+'.id'):
+                pos = self.field_pos[name]
+                f.seek(pos)
+                marker_data[name] = np.fromfile(f, dtype=np.int32, count=nmarkers)
+                #print(marker_data[name].shape, marker_data[name])
+
+        return marker_data
+
