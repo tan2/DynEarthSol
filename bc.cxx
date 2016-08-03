@@ -233,7 +233,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #endif
             }
         }
-        else if (flag & BOUNDX1) {
+        if (flag & BOUNDX1) {
             switch (bc.vbc_x1) {
             case 0:
                 break;
@@ -305,7 +305,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 break;
             }
         }
-        else if (flag & BOUNDY1) {
+        if (flag & BOUNDY1) {
             switch (bc.vbc_y1) {
             case 0:
                 break;
@@ -417,7 +417,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 break;
             }
         }
-        else if (flag & BOUNDZ1) {
+        if (flag & BOUNDZ1) {
             switch (bc.vbc_z1) {
             case 0:
                 break;
