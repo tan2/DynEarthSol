@@ -321,6 +321,8 @@ void update_coordinate(const Variables& var, array_t& coord)
 
 namespace {
 
+#ifdef THREED
+
     void jaumann_rate_3d(double *s, double dt, double w3, double w4, double w5)
     {
         double s_inc[NSTR];
@@ -337,6 +339,7 @@ namespace {
         }
     }
 
+#else
 
     void jaumann_rate_2d(double *s, double dt, double w2)
     {
@@ -350,6 +353,8 @@ namespace {
             s[i] += dt * s_inc[i];
         }
     }
+
+#endif
 
 }
 
