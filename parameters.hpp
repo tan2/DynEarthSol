@@ -25,6 +25,10 @@ typedef Array2D<int,NODES_PER_ELEM> conn_t;
 typedef Array2D<int,NDIMS> segment_t;
 typedef Array2D<int,1> segflag_t;
 
+// forward declaration
+class PhaseChange;
+
+
 //
 // Structures for input parameters
 //
@@ -260,6 +264,8 @@ struct Variables {
 
     int_vec2D *elemmarkers; // for marksersets[0] (mattype markers)
     Array2D<int,1> *hydrous_elemmarkers; // for markersets[hydrous_marker_index] (hydrous markers)
+
+    PhaseChange *phch;
 };
 
 #endif
