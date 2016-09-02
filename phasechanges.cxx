@@ -85,8 +85,11 @@ namespace {
                     // Phase diagram from Hacker, 1996, Subduction: Top to Bottom
                     const double min_eclogite_T = 500 + 273;
                     const double transition_pressure = -0.3e9 + 2.2e6*T;
+                    const double dehydration_T = 150 + 273;
                     if (T > min_eclogite_T && P > transition_pressure) {
                         new_mt = mt_eclogite;
+                    }
+                    else if (T > dehydration_T) {
                         hyd_inc = 1;
                     }
                 }
@@ -97,8 +100,11 @@ namespace {
                     // from sediment solidus in Nichols et al, 1994, Nature
                     const double min_schist_T = 650 + 273;
                     const double min_schist_Z = -20e3;
+                    const double dehydration_T = 150 + 273;
                     if (T > min_schist_T && Z < min_schist_Z) {
                         new_mt = mt_schist;
+                    }
+                    else if (T > dehydration_T) {
                         hyd_inc = 1;
                     }
                 }
