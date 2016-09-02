@@ -90,8 +90,8 @@ struct BC {
     double surface_temperature;
     double mantle_temperature;
 
-    double wrinkler_delta_rho;
-    bool has_wrinkler_foundation;
+    double winkler_delta_rho;
+    bool has_winkler_foundation;
 
     double elastic_foundation_constant;
     bool has_elastic_foundation;

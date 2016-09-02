@@ -209,10 +209,10 @@ static void declare_parameters(po::options_description &cfg,
          "Surface temperature (in Kelvin)")
         ("bc.mantle_temperature", po::value<double>(&p.bc.mantle_temperature)->default_value(1600),
          "Mantle temperature (in Kelvin)")
-        ("bc.has_wrinkler_foundation", po::value<bool>(&p.bc.has_wrinkler_foundation)->default_value(true),
-         "Using Wrinkler foundation for the bottom boundary?")
-        ("bc.wrinkler_delta_rho", po::value<double>(&p.bc.wrinkler_delta_rho)->default_value(0),
-         "Excess density of the bottom Wrinkler foundation (in kg/m^3)")
+        ("bc.has_winkler_foundation", po::value<bool>(&p.bc.has_winkler_foundation)->default_value(true),
+         "Using Winkler foundation for the bottom boundary?")
+        ("bc.winkler_delta_rho", po::value<double>(&p.bc.winkler_delta_rho)->default_value(0),
+         "Excess density of the bottom Winkler foundation (in kg/m^3)")
 
         ("bc.has_elastic_foundation", po::value<bool>(&p.bc.has_elastic_foundation)->default_value(false),
          "Using elastic foundation for the bottom boundary?")
@@ -628,19 +628,19 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
     // bc
     //
     {
-        if ( p.bc.has_wrinkler_foundation && p.control.gravity == 0 ) {
-            p.bc.has_wrinkler_foundation = 0;
-            std::cerr << "Warning: no gravity, Wrinkler foundation is turned off.\n";
+        if ( p.bc.has_winkler_foundation && p.control.gravity == 0 ) {
+            p.bc.has_winkler_foundation = 0;
+            std::cerr << "Warning: no gravity, Winkler foundation is turned off.\n";
         }
-        if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z0 != 0 ) {
+        if ( p.bc.has_winkler_foundation && p.bc.vbc_z0 != 0 ) {
             p.bc.vbc_z0 = 0;
-            std::cerr << "Warning: Wrinkler foundation is turned on, setting bc.vbc_z0 to 0.\n";
+            std::cerr << "Warning: Winkler foundation is turned on, setting bc.vbc_z0 to 0.\n";
         }
         if ( p.bc.has_water_loading && p.control.gravity == 0 ) {
             p.bc.has_water_loading = 0;
             std::cerr << "Warning: no gravity, water loading is turned off.\n";
         }
-        if ( p.bc.has_wrinkler_foundation && p.bc.vbc_z1 != 0 ) {
+        if ( p.bc.has_winkler_foundation && p.bc.vbc_z1 != 0 ) {
             p.bc.vbc_z1 = 0;
             std::cerr << "Warning: water loading is turned on, setting bc.vbc_z1 to 0.\n";
         }

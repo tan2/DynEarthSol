@@ -175,7 +175,7 @@ void Output::write(const Variables& var, bool is_averaged)
 
     bin.write_array(*var.coord0, "coord0", var.coord0->size());
 
-    //bin.write_array(*var.bcflag, "bcflag", var.bcflag->size());
+    bin.write_array(*var.bcflag, "bcflag", var.bcflag->size());
 
     if (has_marker_output) {
         for (auto ms=var.markersets.begin(); ms!=var.markersets.end(); ++ms)

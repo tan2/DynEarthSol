@@ -34,6 +34,7 @@ class Dynearthsol:
 
 
     def read_header(self, frame):
+        self._header_frame = frame
         headerlen = 4096
         fname = self.get_fn(frame)
         with open(fname) as f:
@@ -74,7 +75,7 @@ class Dynearthsol:
         nnode = self.nnode_list[i]
         nelem = self.nelem_list[i]
 
-        dtype = np.float64 if name != 'connectivity' else np.int32
+        dtype = np.float64 if name not in ('connectivity', 'bcflag') else np.int32
 
         if name in set(['strain', 'strain-rate', 'stress', 'stress averaged']):
             count = self.nstr * nelem
@@ -90,7 +91,7 @@ class Dynearthsol:
         elif name in set(['coordinate', 'velocity', 'velocity averaged', 'force', 'coord0']):
             count = self.ndims * nnode
             shape = (nnode, self.ndims)
-        elif name in set(['temperature', 'mass', 'tmass', 'volume_n']):
+        elif name in set(['bcflag', 'temperature', 'mass', 'tmass', 'volume_n']):
             count = nnode
             shape = (nnode, )
         else:
@@ -99,6 +100,7 @@ class Dynearthsol:
 
 
     def read_field(self, frame, name):
+        if frame != self._header_frame: read_header(frame)
         dtype, count, shape = self._get_dtype_count_shape(frame, name)
 
         pos = self.field_pos[name]
@@ -110,7 +112,13 @@ class Dynearthsol:
 
 
     def overwrite_field(self, frame, name, data):
-        dtype, count, shape = self._get_dtype_count_shape(frame, name)
+        if frame != self._header_frame: read_header(frame)
+        if name.startswith(('markerset.', 'hydrous-markerset.')):
+            dtype = data.dtype
+            count = len(data)
+            shape = (count,)
+        else:
+            dtype, count, shape = self._get_dtype_count_shape(frame, name)
         if data.shape != shape:
             raise Error('Shape of {0} field is changed! Expecting {1}, got {2}.'.format(name, shape, data.shape))
 
@@ -124,6 +132,7 @@ class Dynearthsol:
 
     def read_markers(self, frame, markername):
         'Read and return marker data'
+        if frame != self._header_frame: read_header(frame)
         fname = self.get_fn(frame)
         with open(fname) as f:
 
@@ -178,4 +187,33 @@ class DynearthsolCheckpoint(Dynearthsol):
             raise NameError('uknown field name: ' + name)
         return dtype, count, shape
 
+
+    def read_markers(self, frame, markername):
+        'Read and return marker data'
+        if frame != self._header_frame: read_header(frame)
+        fname = self.get_fn(frame)
+        with open(fname) as f:
+
+            pos = self.field_pos[markername+' size']
+            f.seek(pos)
+            nmarkers = np.fromfile(f, dtype=np.int32, count=1)[0]
+
+            marker_data = {'size': nmarkers}
+
+            # floating point
+            for name in (markername+'.eta',):
+                pos = self.field_pos[name]
+                f.seek(pos)
+                tmp = np.fromfile(f, dtype=np.float64, count=nmarkers*(self.ndims+1))
+                marker_data[name] = tmp.reshape(-1, self.ndims+1)
+                #print(marker_data[name].shape, marker_data[name])
+
+            # int
+            for name in (markername+'.elem', markername+'.mattype', markername+'.id'):
+                pos = self.field_pos[name]
+                f.seek(pos)
+                marker_data[name] = np.fromfile(f, dtype=np.int32, count=nmarkers)
+                #print(marker_data[name].shape, marker_data[name])
+
+        return marker_data
 
