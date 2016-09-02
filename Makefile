@@ -20,6 +20,12 @@ useadapt = 1
 ## Select C++ compiler
 ifeq ($(useadapt), 1)
 	CXX = mpicxx # g++-mp-4.7
+
+	# path to vtk header files
+	VTK_INCDIR = /opt/local/include/vtk-5.10
+
+	# flag to link with fortran binding of MPI library
+	LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
 else
 	CXX = g++
 endif
@@ -67,7 +73,7 @@ ifneq (, $(findstring mpicxx, $(CXX))) # if using any version of g++
 	endif
 
 else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with v14
-					CXXFLAGS = -g -std=c++0x
+		CXXFLAGS = -g -std=c++0x
 	        LDFLAGS = -lm
 
 	        ifeq ($(opt), 1)
@@ -170,12 +176,9 @@ ifeq ($(useadapt), 1)
 	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
 	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
 	LIBADAPTIVITY_LIBNAME = adaptivity
-	VTK_INC = $(VTK_INCDIR)
-	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I$(VTK_INC) -DADAPT -DHAVE_VTK=1 \
-    	    -I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
-        	-I$(LIBADAPTIVITY_DIR)/load_balance/include
-
-	LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a -llapack -lblas -lvtkIO -lvtkGraphics -lvtkFiltering -lvtkexpat -lvtkzlib -lvtkCommon -ldl -lpthread -lm -lstdc++     -L/opt/local/lib/vtk-5.10 -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4 -L/opt/local/lib/gcc47/gcc/x86_64-apple-darwin12/4.7.4/../../.. -lgfortran -lquadmath -lm -lmpifort
+	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I$(VTK_INCDIR) -DADAPT -DHAVE_VTK=1 \
+		-I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
+		-I$(LIBADAPTIVITY_DIR)/load_balance/include
 endif
 
 ## Action
@@ -185,6 +188,19 @@ endif
 all: $(EXE) take-snapshot
 
 ifeq ($(useadapt), 1)
+
+$(LIBADAPTIVITY_DIR)/lflags.mk:
+	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
+
+$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
+	@cd $(LIBADAPTIVITY_DIR) && ./configure
+
+$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk
+	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
+
+-include $(LIBADAPTIVITY_DIR)/lflags.mk
+LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
+
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a
 		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
 			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
@@ -239,9 +255,13 @@ $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
 $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 	@+$(MAKE) -C $(ANN_DIR) linux-g++
 
-deepclean:
+deepclean: cleanadapt
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
 	@+$(MAKE) -C $(C3X3_DIR) clean
 
 clean:
 	@rm -f $(OBJS) $(EXE)
+
+cleanadapt:
+		@rm -f $(LIBADAPTIVITY_DIR)/lflags.mk
+		@+$(MAKE) -C $(C3X3_DIR) clean
