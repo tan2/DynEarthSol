@@ -195,7 +195,7 @@ def main(modelname, start, end, delta):
             # hydrous markerset
             if 'hydrous-markerset size' in des.field_pos:
                 filename = '{0}.hyd-ms.{1}.vtp'.format(output_prefix, suffix)
-                output_vtp_file(des, frame, filename, 'hydrous-markerset')
+                output_vtp_file(des, frame, filename, 'hydrous-markerset', time_in_yr, step)
 
     print()
     return
