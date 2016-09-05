@@ -640,7 +640,7 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             p.bc.has_water_loading = 0;
             std::cerr << "Warning: no gravity, water loading is turned off.\n";
         }
-        if ( p.bc.has_winkler_foundation && p.bc.vbc_z1 != 0 ) {
+        if ( p.bc.has_water_loading && p.bc.vbc_z1 != 0 ) {
             p.bc.vbc_z1 = 0;
             std::cerr << "Warning: water loading is turned on, setting bc.vbc_z1 to 0.\n";
         }
