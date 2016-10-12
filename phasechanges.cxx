@@ -206,11 +206,11 @@ namespace {
 
 void phase_changes_init(const Param& param, Variables& var)
 {
+    PhaseChange *phch = nullptr;
     if (param.mat.nmat == 1 || param.mat.phase_change_option == 0) return;
 
     MarkerSet& ms = *(var.markersets[0]);
 
-    PhaseChange *phch = NULL;
     switch (param.mat.phase_change_option) {
     case 1:
         phch = new SimpleSubduction(param, var, ms,
@@ -231,6 +231,8 @@ void phase_changes_init(const Param& param, Variables& var)
 
 void phase_changes(const Param& param, Variables& var)
 {
+    if (var.phch == nullptr) return;  // no phase change
+
     PhaseChange& phch = *var.phch;
     MarkerSet& ms = *(var.markersets[0]);
     int_vec2D& elemmarkers = *var.elemmarkers;
