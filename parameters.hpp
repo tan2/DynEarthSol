@@ -78,6 +78,7 @@ struct Control {
     double dt_fraction;
     double fixed_dt;
     double damping_factor;
+    int damping_option;
     int ref_pressure_option;
 
     int surface_process_option;
