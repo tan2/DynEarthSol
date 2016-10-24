@@ -246,8 +246,31 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         }
         break;
     case 2:
+        // damping prop. to force
+        #pragma omp parallel for default(none)          \
+            shared(var, param, ff, v)
+        for (int i=0; i<var.nnode*NDIMS; ++i) {
+            ff[i] -= param.control.damping_factor * ff[i];
+        }
         break;
     case 3:
+        // damping when force and velocity are parallel
+        // weakly acclerating when force and velocity are anti-parallel
+        #pragma omp parallel for default(none)          \
+            shared(var, param, ff, v)
+        for (int i=0; i<var.nnode*NDIMS; ++i) {
+            if ((ff[i]<0) == (v[i]<0)) {
+                // strong damping
+                ff[i] -= param.control.damping_factor * ff[i], v[i];
+            }
+            else {
+                // weak acceleration
+                ff[i] += (1 - param.control.damping_factor) * ff[i];
+            }
+        }
+        break;
+    case 4:
+        // rayleigh damping
         break;
     default:
         std::cerr << "Error: unknown damping_option: " << param.control.damping_option << '\n';
