@@ -95,6 +95,8 @@ void init(const Param& param, Variables& var)
     initial_temperature(param, var, *var.temperature);
     initial_stress_state(param, var, *var.stress, *var.stressyy, *var.strain, var.compensation_pressure);
     initial_weak_zone(param, var, *var.plstrain);
+
+    phase_changes_init(param, var);
 }
 
 
@@ -210,6 +212,8 @@ void restart(const Param& param, Variables& var)
         // the following fields are not required for restarting
         bin_save.read_array(*var.force, "force");
     }
+
+    phase_changes_init(param, var);
 }
 
 

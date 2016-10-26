@@ -179,6 +179,14 @@ static void declare_parameters(po::options_description &cfg,
          "Fixed dt size (in seconds). If 0, dt sized will be determined dynamically.\n")
         ("control.inertial_scaling", po::value<double>(&p.control.inertial_scaling)->default_value(1e5),
          "Scaling factor for inertial (a large number)")
+
+        ("control.damping_option", po::value<int>(&p.control.damping_option)->default_value(1),
+         "How to damp the elastic wave?\n"
+         "0: no damping.\n"
+         "1: damping/acceleration depends on force and direction of velocity.\n"
+         "2: damping depends on force.\n"
+         "3: damping/(weaker) acceleration depends on force and direction of velocity.\n"
+         "4: Rayleigh damping.\n")
         ("control.damping_factor", po::value<double>(&p.control.damping_factor)->default_value(0.8),
          "A factor for force damping (0-1)")
 
@@ -640,7 +648,7 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             p.bc.has_water_loading = 0;
             std::cerr << "Warning: no gravity, water loading is turned off.\n";
         }
-        if ( p.bc.has_winkler_foundation && p.bc.vbc_z1 != 0 ) {
+        if ( p.bc.has_water_loading && p.bc.vbc_z1 != 0 ) {
             p.bc.vbc_z1 = 0;
             std::cerr << "Warning: water loading is turned on, setting bc.vbc_z1 to 0.\n";
         }

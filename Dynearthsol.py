@@ -100,7 +100,7 @@ class Dynearthsol:
 
 
     def read_field(self, frame, name):
-        if frame != self._header_frame: read_header(frame)
+        if frame != self._header_frame: self.read_header(frame)
         dtype, count, shape = self._get_dtype_count_shape(frame, name)
 
         pos = self.field_pos[name]
@@ -112,6 +112,7 @@ class Dynearthsol:
 
 
     def overwrite_field(self, frame, name, data):
+        if frame != self._header_frame: self.read_header(frame)
         if frame != self._header_frame: read_header(frame)
         if name.startswith(('markerset.', 'hydrous-markerset.')):
             dtype = data.dtype
@@ -132,7 +133,7 @@ class Dynearthsol:
 
     def read_markers(self, frame, markername):
         'Read and return marker data'
-        if frame != self._header_frame: read_header(frame)
+        if frame != self._header_frame: self.read_header(frame)
         fname = self.get_fn(frame)
         with open(fname) as f:
 

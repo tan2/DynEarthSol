@@ -229,12 +229,52 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     double* ff = force.data();
     const double* v = var.vel->data();
     const double small_vel = 1e-13;
-    #pragma omp parallel for default(none)          \
-        shared(var, param, ff, v)
-    for (int i=0; i<var.nnode*NDIMS; ++i) {
-        if (std::fabs(v[i]) > small_vel) {
-            ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
+
+    switch (param.control.damping_option) {
+    case 0:
+        // no damping, stress field can become very noisy
+        break;
+    case 1:
+        // damping when force and velocity are parallel
+        // acclerating when force and velocity are anti-parallel
+        #pragma omp parallel for default(none)          \
+            shared(var, param, ff, v)
+        for (int i=0; i<var.nnode*NDIMS; ++i) {
+            if (std::fabs(v[i]) > small_vel) {
+                ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
+            }
         }
+        break;
+    case 2:
+        // damping prop. to force
+        #pragma omp parallel for default(none)          \
+            shared(var, param, ff, v)
+        for (int i=0; i<var.nnode*NDIMS; ++i) {
+            ff[i] -= param.control.damping_factor * ff[i];
+        }
+        break;
+    case 3:
+        // damping when force and velocity are parallel
+        // weakly acclerating when force and velocity are anti-parallel
+        #pragma omp parallel for default(none)          \
+            shared(var, param, ff, v)
+        for (int i=0; i<var.nnode*NDIMS; ++i) {
+            if ((ff[i]<0) == (v[i]<0)) {
+                // strong damping
+                ff[i] -= param.control.damping_factor * ff[i], v[i];
+            }
+            else {
+                // weak acceleration
+                ff[i] += (1 - param.control.damping_factor) * ff[i];
+            }
+        }
+        break;
+    case 4:
+        // rayleigh damping
+        break;
+    default:
+        std::cerr << "Error: unknown damping_option: " << param.control.damping_option << '\n';
+        std::exit(1);
     }
 }
 
@@ -321,6 +361,8 @@ void update_coordinate(const Variables& var, array_t& coord)
 
 namespace {
 
+#ifdef THREED
+
     void jaumann_rate_3d(double *s, double dt, double w3, double w4, double w5)
     {
         double s_inc[NSTR];
@@ -337,6 +379,7 @@ namespace {
         }
     }
 
+#else
 
     void jaumann_rate_2d(double *s, double dt, double w2)
     {
@@ -350,6 +393,8 @@ namespace {
             s[i] += dt * s_inc[i];
         }
     }
+
+#endif
 
 }
 
