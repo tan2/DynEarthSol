@@ -21,8 +21,11 @@ useadapt = 1
 ifeq ($(useadapt), 1)
 	CXX = mpicxx # g++-mp-4.7
 
-	# path to vtk header files
-	VTK_INCDIR = /opt/local/include/vtk-5.10
+	# path to vtk header files, if not in standard system location
+	VTK_INCLUDE =
+
+	# path of vtk library files, if not in standard system location
+	VTK_LIBS =
 
 	# flag to link with fortran binding of MPI library
 	LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
@@ -30,7 +33,7 @@ else
 	CXX = g++
 endif
 
-## Boost location and library name
+## path to Boost's base directory, if not in standard system location
 BOOST_ROOT_DIR = ${HOME}/opt/boost_1_55_0
 
 ########################################################################
@@ -176,7 +179,7 @@ ifeq ($(useadapt), 1)
 	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
 	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
 	LIBADAPTIVITY_LIBNAME = adaptivity
-	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -I$(VTK_INCDIR) -DADAPT -DHAVE_VTK=1 \
+	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -DADAPT -DHAVE_VTK=1 \
 		-I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
 		-I$(LIBADAPTIVITY_DIR)/load_balance/include
 endif
@@ -192,14 +195,19 @@ ifeq ($(useadapt), 1)
 $(LIBADAPTIVITY_DIR)/lflags.mk:
 	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
 
-$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
-	@cd $(LIBADAPTIVITY_DIR) && ./configure --enable-vtk
+$(LIBADAPTIVITY_DIR)/cppflags.mk:
+	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
 
-$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk
+$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
+	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk
+
+$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
 	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
 
 -include $(LIBADAPTIVITY_DIR)/lflags.mk
+-include $(LIBADAPTIVITY_DIR)/cppflags.mk
 LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
+CXXFLAGS += $(CPPFLAGS)
 
 $(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a $(OBJS)
 		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
@@ -263,5 +271,5 @@ clean:
 	@rm -f $(OBJS) $(EXE)
 
 cleanadapt:
-	@rm -f $(LIBADAPTIVITY_DIR)/lflags.mk
+	@rm -f $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
 	@+$(MAKE) -C $(LIBADAPTIVITY_DIR) clean
