@@ -263,5 +263,5 @@ clean:
 	@rm -f $(OBJS) $(EXE)
 
 cleanadapt:
-		@rm -f $(LIBADAPTIVITY_DIR)/lflags.mk
-		@+$(MAKE) -C $(C3X3_DIR) clean
+	@rm -f $(LIBADAPTIVITY_DIR)/lflags.mk
+	@+$(MAKE) -C $(LIBADAPTIVITY_DIR) clean
