@@ -193,7 +193,7 @@ $(LIBADAPTIVITY_DIR)/lflags.mk:
 	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
 
 $(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
-	@cd $(LIBADAPTIVITY_DIR) && ./configure
+	@cd $(LIBADAPTIVITY_DIR) && ./configure --enable-vtk
 
 $(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk
 	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
