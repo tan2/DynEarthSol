@@ -17,9 +17,14 @@ opt = 2
 openmp = 1
 useadapt = 1
 
+ifeq ($(ndims), 2)
+	useadapt = 0   # libadaptivity is 3d only
+endif
+
 ## Select C++ compiler
 ifeq ($(useadapt), 1)
 	CXX = mpicxx # g++-mp-4.7
+	CXX_BACKEND = g++
 
 	# path to vtk header files, if not in standard system location
 	VTK_INCLUDE =
@@ -31,6 +36,7 @@ ifeq ($(useadapt), 1)
 	LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
 else
 	CXX = g++
+	CXX_BACKEND = ${CXX}
 endif
 
 ## path to Boost's base directory, if not in standard system location
@@ -56,7 +62,7 @@ ifdef BOOST_ROOT_DIR
 	endif
 endif
 
-ifneq (, $(findstring mpicxx, $(CXX))) # if using any version of g++
+ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
 
@@ -75,7 +81,7 @@ ifneq (, $(findstring mpicxx, $(CXX))) # if using any version of g++
 		LDFLAGS += -fopenmp
 	endif
 
-else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with v14
+else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tested with v14
 		CXXFLAGS = -g -std=c++0x
 	        LDFLAGS = -lm
 

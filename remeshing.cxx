@@ -19,6 +19,8 @@
 #include "markerset.hpp"
 #include "remeshing.hpp"
 
+#ifdef ADAPT
+
 /* Copyright (C) 2009 Imperial College London.
 
  Please see the AUTHORS file in the main source directory for a full
@@ -57,6 +59,8 @@
 #include "Adaptivity.h"
 #include "DiscreteGeometryConstraints.h"
 #include <assert.h>
+
+#endif
 
 namespace {
 
@@ -1094,6 +1098,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
 }
 
 #ifdef THREED
+#ifdef ADAPT
 void optimize_mesh(const Param &param, Variables &var, int bad_quality,
               const array_t &original_coord, const conn_t &original_connectivity,
               const segment_t &original_segment, const segflag_t &original_segflag)
@@ -1324,6 +1329,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     var.segflag->steal_ref( new_segflag );
     std::cerr << "Arrays transferred. Mesh optimization done \n";
 }
+#endif
 #endif
 
 } // anonymous namespace
