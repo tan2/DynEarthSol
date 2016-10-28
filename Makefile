@@ -208,7 +208,7 @@ $(LIBADAPTIVITY_DIR)/lflags.mk:
 	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
 
 $(LIBADAPTIVITY_DIR)/cppflags.mk:
-	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
+	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
 
 $(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
 	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk
