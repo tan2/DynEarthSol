@@ -47,6 +47,8 @@ BOOST_ROOT_DIR = ${HOME}/opt/boost_1_55_0
 ## (Usually you won't need to modify anything below)
 ########################################################################
 
+OSNAME := $(shell uname -s)
+
 BOOST_LDFLAGS = -lboost_program_options
 ifdef BOOST_ROOT_DIR
 	# check existence of stage/ directory
@@ -54,11 +56,15 @@ ifdef BOOST_ROOT_DIR
 	ifeq (, $(has_stage_dir))
 		# no stage dir, BOOST_ROOT_DIR is the installation directory
 		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
-		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,-rpath=$(BOOST_ROOT_DIR)/lib
+		BOOST_LIB_DIR = $(BOOST_ROOT_DIR)/lib
 	else
 		# with stage dir, BOOST_ROOT_DIR is the build directory
 		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)
-		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib #-Wl,-rpath=$(BOOST_ROOT_DIR)/stage/lib
+		BOOST_LIB_DIR = $(BOOST_ROOT_DIR)/stage/lib
+	endif
+	BOOST_LDFLAGS += -L$(BOOST_LIB_DIR)
+	ifneq ($(OSNAME_S), Darwin)  # Apple's ld doesn't support -rpath
+		BOOST_LDFLAGS += -Wl,-rpath=$(BOOST_LIB_DIR)
 	endif
 endif
 
@@ -220,6 +226,9 @@ $(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNA
 			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
 			$(LIBADAPTIVITY_LIBS) \
 			-o $@
+ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
+		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+endif
 else
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
 		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
