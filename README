@@ -6,8 +6,7 @@ the heat transfer in Lagrangian form using unstructured meshes. It can be
 used to study the long-term deformation of Earth's lithosphere and problems
 alike.
 
-The purpose of this fork of DES3D (https://bitbucket.org/tan2/dynearthsol3d) 
-is to show that libadaptivity from Fluidity
+This version of DES3D contains libadaptivity from Fluidity
 (https://github.com/FluidityProject/fluidity), 
 a self-contained library for anisotropic adaptive mesh refinement, 
 works well as a mesh optimizer for DES3D's remeshing.
@@ -28,30 +27,22 @@ Requirement:
 * You will need Python 2.6+ or 3.2+ and the Numpy package.
 
 For libadaptiviy, you further need
-* VTK (v.5.10 tested) built from source or development packages.
-* MPI (openmpi-1.6.1 tested).
+* VTK5 (v5.8 and v5.10 tested) built from source or development packages.
+* MPI (openmpi v1.4~v1.6, and mpich2 v1.4 tested).
 
-Build procedure:
-- libadaptivity
-* Run "VTK_INCLUDE=${VTK_INCDIR} LDFLAGS=-L${VTK_LIBDIR} ./configure" in libadaptivity
-* Run "make".
-* Run "make" in tests/. Depending on the flavor of MPI, one might need to add '-lmpi_f77' to LIBS in Makefile.
-
-- DES3D
+Procedures:
 * Edit 'Makefile', 
-  1) modify BOOST_ROOT_DIR if you manually built or installed 
+  1) Modify BOOST_ROOT_DIR if you manually built or installed 
   boost library. If you followed the instructions above to build 
   Boost::Program_options library, set BOOST_ROOT_DIR to the untarred boost
   directory.
-  2) turn on 'useadapt' to use libadaptivity.
-  3) Set 'ndims = 3'. libadaptivity works only for 3D.
-  4) Check if VTK_INC path is correct.
-  5) Copy LIBS in libadaptivity/tests/Makefile to LIBADAPTIVITY_LIBS.
-  6) Make sure that the path to libadaptivity.a is correctly set in the beginning of LIBADAPTIVITY_LIBS. 
-     $(LIBADAPTIVITY_LIB)/libadaptivity.a will do.
-
-* Run "make opt=0" to build a debugging executable.
-* Run "make openmp=0" to build the executable without OpenMP. This is
+  2) If using libadaptivity:
+    2.1) Set 'useadapt = 1' and 'ndims = 3'. libadaptivity works only for 3D.
+    2.2) Set VTK_INCLUDE and VTK_LIBS paths if vtk is not in standard location.
+    2.3) Set LIB_MPIFORTRAN for your mpi library
+* Run "make" to build optimized executable.
+* Or run "make opt=0" to build a debugging executable.
+* Or run "make openmp=0" to build the executable without OpenMP. This is
   necessary to debug the code under valgrind.
 
 
@@ -105,8 +96,8 @@ This program is free software: you can redistribute it and/or modify
 it under the terms of the MIT / X Windows System license (see the
 file LICENSE for the full text).
 
-The files under the subdirectories 3x3-C/, ann/, tetgen/, and
-triangles/ are distributed by their own license(s).
+The files under the subdirectories 3x3-C/, ann/, libadaptivity/, tetgen/
+and triangles/ are distributed by their own license(s).
 
 
 by Eh Tan, Sept. 2014
