@@ -63,7 +63,7 @@ ifdef BOOST_ROOT_DIR
 		BOOST_LIB_DIR = $(BOOST_ROOT_DIR)/stage/lib
 	endif
 	BOOST_LDFLAGS += -L$(BOOST_LIB_DIR)
-	ifneq ($(OSNAME_S), Darwin)  # Apple's ld doesn't support -rpath
+	ifneq ($(OSNAME), Darwin)  # Apple's ld doesn't support -rpath
 		BOOST_LDFLAGS += -Wl,-rpath=$(BOOST_LIB_DIR)
 	endif
 endif
@@ -87,26 +87,32 @@ ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 		LDFLAGS += -fopenmp
 	endif
 
+	ifeq ($(useadapt), 1)
+		CXXFLAGS += -I$(VTK_INCLUDE)
+	endif
+
 else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tested with v14
-		CXXFLAGS = -g -std=c++0x
-	        LDFLAGS = -lm
+	CXXFLAGS = -g -std=c++0x
+	LDFLAGS = -lm
 
-	        ifeq ($(opt), 1)
-	                CXXFLAGS += -O1
-	        else ifeq ($(opt), 2)
-	                CXXFLAGS += -O2
-	        else ifeq ($(opt), 3) # experimental, use at your own risk :)
-	                CXXFLAGS += -fast -fast-transcendentals -fp-model fast=2
-	        else # debugging flags
-	                CXXFLAGS += -O0 -check=uninit -check-pointers=rw -check-pointers-dangling=all -fp-trap-all=all
-	        endif
+	ifeq ($(opt), 1)
+		CXXFLAGS += -O1
+	else ifeq ($(opt), 2)
+		CXXFLAGS += -O2
+	else ifeq ($(opt), 3) # experimental, use at your own risk :)
+		CXXFLAGS += -fast -fast-transcendentals -fp-model fast=2
+	else # debugging flags
+		CXXFLAGS += -O0 -check=uninit -check-pointers=rw -check-pointers-dangling=all -fp-trap-all=all
+	endif
 
-	        ifeq ($(openmp), 1)
-	                CXXFLAGS += -fopenmp -DUSE_OMP
-	                LDFLAGS += -fopenmp
-	        endif
+	ifeq ($(openmp), 1)
+		CXXFLAGS += -fopenmp -DUSE_OMP
+		LDFLAGS += -fopenmp
+	endif
 
-
+	ifeq ($(useadapt), 1)
+		CXXFLAGS += -I$(VTK_INCLUDE)
+	endif
 
 else
 # the only way to display the error message in Makefile ...
@@ -204,10 +210,10 @@ all: $(EXE) take-snapshot
 
 ifeq ($(useadapt), 1)
 
-$(LIBADAPTIVITY_DIR)/lflags.mk:
+$(LIBADAPTIVITY_DIR)/lflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
 	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
 
-$(LIBADAPTIVITY_DIR)/cppflags.mk:
+$(LIBADAPTIVITY_DIR)/cppflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
 	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
 
 $(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
