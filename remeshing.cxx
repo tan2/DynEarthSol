@@ -1192,7 +1192,9 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     }
     ug->SetCells(VTK_TETRA, cells);
 
+#if VTK_MAJOR_VERSION <= 5
     ug->Update();
+#endif
 
     // These should be populated only once at the outset of a simulation
     // and be maintained thereafter.
@@ -1229,7 +1231,11 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     ug->GetCellData()->AddArray(cellData);
 
     vtkSmartPointer<vtkCellDataToPointData> cell2point = vtkSmartPointer<vtkCellDataToPointData>::New();
+#if VTK_MAJOR_VERSION <= 5
     cell2point->SetInput(ug);
+#else
+    cell2point->SetInputData(ug);
+#endif
     cell2point->PassCellDataOff();
     cell2point->Update();
 
