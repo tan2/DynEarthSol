@@ -12,6 +12,7 @@
 typedef std::pair<double,double> double_pair;
 
 typedef std::vector<double> double_vec;
+typedef std::vector<double_vec> double_vec2D;
 typedef std::vector<int> int_vec;
 typedef std::vector<int_vec> int_vec2D;
 typedef std::vector<uint> uint_vec;
@@ -245,6 +246,7 @@ struct Variables {
     std::map<std::pair<int,int>, double*> edge_vectors;
 
     int_vec2D *support;
+    double_vec2D *force_support;
     int_vec egroups;
 
     double_vec *volume, *volume_old, *volume_n;

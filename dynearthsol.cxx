@@ -72,6 +72,7 @@ void init(const Param& param, Variables& var)
     create_boundary_nodes(var);
     create_boundary_facets(var);
     create_support(var);
+    create_force_support(var);
     create_elem_groups(var);
     create_elemmarkers(param, var);
     create_markers(param, var);
@@ -165,6 +166,7 @@ void restart(const Param& param, Variables& var)
     create_boundary_nodes(var);
     create_boundary_facets(var);
     create_support(var);
+    create_force_support(var);
     create_elem_groups(var);
     create_elemmarkers(param, var);
 

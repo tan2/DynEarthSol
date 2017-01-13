@@ -281,17 +281,22 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
 
 void update_force(const Param& param, const Variables& var, array_t& force)
 {
+    // zero out force vector
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
+    // zero out force_support
+    for (int n = 0; n < var.nnode; ++n)
+        for( int d = 0; d < NDIMS; ++d)
+            std::fill((*var.force_support)[n*NDIMS+d].begin(), (*var.force_support)[n*NDIMS+d].end(), 0);
 
+    // Populate force_support.
     class ElemFunc_force : public ElemFunc
     {
     private:
         const Variables &var;
-        array_t &force;
         const double gravity;
     public:
-        ElemFunc_force(const Variables &var, array_t &force, double gravity) :
-            var(var), force(force), gravity(gravity) {};
+        ElemFunc_force(const Variables &var, double gravity) :
+            var(var), gravity(gravity) {};
         void operator()(int e)
         {
             const int *conn = (*var.connectivity)[e];
@@ -307,21 +312,48 @@ void update_force(const Param& param, const Variables& var, array_t& force)
             if (gravity != 0)
                 buoy = var.mat->rho(e) * gravity / NODES_PER_ELEM;
 
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                double *f = force[conn[i]];
+            for (int i = 0; i < NODES_PER_ELEM; ++i) {
+                double f = 0.0;
 #ifdef THREED
-                f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-                f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-                f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+                f = -(s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+                (*var.force_support)[NDIMS*conn[i]].push_back(f);
+                f = -(s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+                (*var.force_support)[NDIMS*conn[i]+1].push_back(f);
+                f = -(s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+                (*var.force_support)[NDIMS*conn[i]+2].push_back(f);
 #else
-                f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-                f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+                f = -(s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+                (*var.force_support)[NDIMS*conn[i]].push_back(f);
+                f = -(s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+                (*var.force_support)[NDIMS*conn[i]+1].push_back(f);
 #endif
             }
         }
-    } elemf(var, force, param.control.gravity);
+    } elemf(var, param.control.gravity);
 
     loop_all_elem(var.egroups, elemf);
+
+    // Add up the force supports using an accurate algorithm
+    // to get net force values independent of summation orders.
+    #pragma omp parallel for default(none) \
+        shared(var, force)
+    for ( int i = 0; i < var.nnode; ++i) {
+        double *f = force[i];
+        for( int d = 0; d < NDIMS; ++d) {
+            int nd = i*NDIMS+d;
+            double correction = 0.0;
+            for( auto fc = (*var.force_support)[nd].begin(); fc < (*var.force_support)[nd].end(); ++fc) {
+#if 0
+                f[d] += (*fc);
+#endif
+                // Kahan summatioin algorithm
+                double corrected_item = (*fc) - correction;
+                double corrected_sum = f[d] + corrected_item;
+                correction = (corrected_sum - f[d]) - corrected_item;
+                f[d] = corrected_sum;
+            }
+        }
+    }
 
     apply_stress_bcs(param, var, force);
 
@@ -472,4 +504,3 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 #endif
     }
 }
-

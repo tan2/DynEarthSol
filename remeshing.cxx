@@ -1111,7 +1111,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     Mesh mesh_param = param.mesh;
     mesh_param.poly_filename = "";
 
-    int_vec bdry_polygons[nbdrytypes];    
+    int_vec bdry_polygons[nbdrytypes];
     assemble_bdry_polygons(var, original_coord, original_connectivity,
                            bdry_polygons);
 
@@ -1423,7 +1423,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         new_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
 #endif
-        renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, NULL);        
+        renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, NULL);
 
         {
             std::cout << "    Interpolating fields.\n";
@@ -1438,11 +1438,13 @@ void remesh(const Param &param, Variables &var, int bad_quality)
 
         delete var.support;
         create_support(var);
+        delete var.force_support;
+        create_force_support(var);
 
         std::cout << "    Remapping markers.\n";
         // remap markers. elemmarkers are updated here, too.
         remap_markers(param, var, old_coord, old_connectivity);
-  
+
         // old_coord et al. are destroyed before exiting this block
     }
 
@@ -1490,5 +1492,3 @@ void remesh(const Param &param, Variables &var, int bad_quality)
 
     std::cout << "  Remeshing finished.\n";
 }
-
-
