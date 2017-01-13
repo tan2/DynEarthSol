@@ -283,10 +283,14 @@ void update_force(const Param& param, const Variables& var, array_t& force)
 {
     // zero out force vector
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
-    // zero out force_support
-    for (int n = 0; n < var.nnode; ++n)
-        for( int d = 0; d < NDIMS; ++d)
-            std::fill((*var.force_support)[n*NDIMS+d].begin(), (*var.force_support)[n*NDIMS+d].end(), 0);
+    // resize force_support to zero.
+    for (int n = 0; n < var.nnode; ++n) {
+        (*var.force_support)[n*NDIMS].resize(0);
+        (*var.force_support)[n*NDIMS+1].resize(0);
+#ifdef THREED
+        (*var.force_support)[n*NDIMS+2].resize(0);
+#endif
+    }
 
     // Populate force_support.
     class ElemFunc_force : public ElemFunc
@@ -336,23 +340,23 @@ void update_force(const Param& param, const Variables& var, array_t& force)
     // Add up the force supports using an accurate algorithm
     // to get net force values independent of summation orders.
     #pragma omp parallel for default(none) \
-        shared(var, force)
+        shared(var, force, std::cout)
     for ( int i = 0; i < var.nnode; ++i) {
+        int iNDIMS = i * NDIMS;
         double *f = force[i];
-        for( int d = 0; d < NDIMS; ++d) {
-            int nd = i*NDIMS+d;
-            double correction = 0.0;
-            for( auto fc = (*var.force_support)[nd].begin(); fc < (*var.force_support)[nd].end(); ++fc) {
-#if 0
-                f[d] += (*fc);
+        // std::cout << "i="<< i << " size="<< (*var.force_support)[iNDIMS].size()<< " force_support[0]=[";
+        // for(auto& fs: (*var.force_support)[iNDIMS]) std::cout << fs << ' ';
+        // std::cout <<"]"<< std::endl;
+        // std::cout << "i="<< i << " size="<< (*var.force_support)[iNDIMS+1].size()<< " force_support[1]=[";
+        // for(auto& fs: (*var.force_support)[iNDIMS+1]) std::cout << fs << ' ';
+        // std::cout <<"]"<< std::endl;
+
+        f[0] = accurate_sum( (*var.force_support)[iNDIMS] );
+        f[1] = accurate_sum( (*var.force_support)[iNDIMS+1] );
+#ifdef THREED
+        f[2] = accurate_sum( (*var.force_support)[iNDIMS+2] );
 #endif
-                // Kahan summatioin algorithm
-                double corrected_item = (*fc) - correction;
-                double corrected_sum = f[d] + corrected_item;
-                correction = (corrected_sum - f[d]) - corrected_item;
-                f[d] = corrected_sum;
-            }
-        }
+        //std::cout << "force = "<< f[0] <<" "<< f[1] << std::endl;
     }
 
     apply_stress_bcs(param, var, force);

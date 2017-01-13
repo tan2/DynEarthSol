@@ -1457,12 +1457,6 @@ void create_force_support(Variables& var)
     // double-type vectors to be filled in fields.cxx:update_force()
     // for each node and for each component of the force vector.
     var.force_support = new std::vector<double_vec>(var.nnode*NDIMS);
-    for (int n = 0; n < var.nnode; ++n) {
-        for (int d = 0; d < NDIMS; ++d) {
-            (*var.force_support)[n*NDIMS+d].resize((*var.support)[n].size(),0);
-            //std::cerr << (*var.force_support).size() <<" "<< (*var.force_support)[n*NDIMS+d].size() << std::endl;
-        }
-    }
 }
 
 

@@ -127,4 +127,43 @@ static double second_invariant(const double* t)
     return std::sqrt(second_invariant2(t));
 }
 
+// C++ verstion of msum() given in
+// http://code.activestate.com/recipes/393090-binary-floating-point-summation-accurate-to-full-p/
+//
+// Description from the original source:
+// "Full precision summation using multiple floats for intermediate values"
+//   Rounded x+y stored in hi with the round-off stored in lo.  Together
+//   hi+lo are exactly equal to x+y.  The inner loop applies hi/lo summation
+//   to each partial so that the list of partial sums remains exact.
+//   Depends on IEEE-754 arithmetic guarantees.  See proof of correctness at:
+//   www-2.cs.cmu.edu/afs/cs/project/quake/public/papers/robust-arithmetic.ps
+static double accurate_sum(std::vector<double> &a)
+{
+    double x;
+    std::vector<double> partials;
+
+    for (auto& x: a) {
+        int i = 0;
+        for(auto& y: partials) {
+            if (std::fabs(x) < std::fabs(y)) std::swap(x,y);
+            double hi = x + y;
+            double lo = y - (hi - x);
+            //std::cout << "lo=" << lo <<"\n";
+            //std::cout << "hi=" << hi <<"\n";
+            if (lo) {
+                partials[i] = lo;
+                i += 1;
+            }
+            x = hi;
+        }
+        partials.resize(i+1);
+        partials[i] = x;
+        //std::cout << "i="<< i << " size="<< partials.size()<< " partials=[";
+        //for(auto& el: partials) std::cout << el << ' ';
+        //std::cout <<"]"<< std::endl;
+    }
+
+    return partials[partials.size()-1] + 0.0;
+}
+
 #endif
