@@ -139,12 +139,14 @@ static double second_invariant(const double* t)
 //   www-2.cs.cmu.edu/afs/cs/project/quake/public/papers/robust-arithmetic.ps
 static double accurate_sum(std::vector<double> &a)
 {
-    double x;
+    double xx, yy, msum = 0.;
     std::vector<double> partials;
 
-    for (auto& x: a) {
+    for (auto& xx : a) {
+	double x = xx;
         int i = 0;
-        for(auto& y: partials) {
+        for(auto& yy : partials) {
+	    double y = yy;
             if (std::fabs(x) < std::fabs(y)) std::swap(x,y);
             double hi = x + y;
             double lo = y - (hi - x);
@@ -162,8 +164,10 @@ static double accurate_sum(std::vector<double> &a)
         //for(auto& el: partials) std::cout << el << ' ';
         //std::cout <<"]"<< std::endl;
     }
+    for (auto & n : partials)
+	msum += n;
 
-    return partials[partials.size()-1] + 0.0;
+    return msum + 0.0;
 }
 
 #endif
