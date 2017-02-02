@@ -246,7 +246,7 @@ struct Variables {
     std::map<std::pair<int,int>, double*> edge_vectors;
 
     int_vec2D *support;
-    double_vec2D *force_support, *volume_n_support, *mass_support, *tmass_support;
+    double_vec2D *force_support, *volume_n_support, *mass_support, *tmass_support, *dvoldt_support;
     int_vec egroups;
 
     double_vec *volume, *volume_old, *volume_n;

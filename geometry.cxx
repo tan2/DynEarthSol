@@ -116,16 +116,20 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dvoldt.begin(), var.nnode, 0);
+    // resize dvoldt_support to zero.
+    for (int n = 0; n < var.nnode; ++n) {
+        (*var.dvoldt_support)[n].resize(0);
+	}
 
     class ElemFunc_dvoldt : public ElemFunc
     {
     private:
         const Variables &var;
         const double_vec &volume;
-        double_vec &dvoldt;
+        // double_vec &dvoldt;
     public:
-        ElemFunc_dvoldt(const Variables &var, const double_vec &volume, double_vec &dvoldt) :
-            var(var), volume(volume), dvoldt(dvoldt) {};
+        ElemFunc_dvoldt(const Variables &var, const double_vec &volume/*, double_vec &dvoldt*/) :
+            var(var), volume(volume)/*, dvoldt(dvoldt)*/ {};
         void operator()(int e)
         {
             const int *conn = (*var.connectivity)[e];
@@ -134,11 +138,12 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
             // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
             double dj = trace(strain_rate);
             for (int i=0; i<NODES_PER_ELEM; ++i) {
-                int n = conn[i];
-                dvoldt[n] += dj * volume[e];
+                // int n = conn[i];
+                // dvoldt[n] += dj * volume[e];
+                (*var.dvoldt_support)[conn[i]].push_back(dj * volume[e]);
             }
         }
-    } elemf(var, volume, dvoldt);
+    } elemf(var, volume/*, dvoldt*/);
 
 
     loop_all_elem(var.egroups, elemf);
@@ -147,7 +152,8 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, volume_n)
     for (int n=0; n<var.nnode; ++n)
-         dvoldt[n] /= volume_n[n];
+         // dvoldt[n] /= volume_n[n];
+         dvoldt[n] = accurate_sum((*var.dvoldt_support)[n]) / volume_n[n];
 
     // std::cout << "dvoldt:\n";
     // print(std::cout, dvoldt);

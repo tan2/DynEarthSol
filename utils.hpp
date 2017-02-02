@@ -143,10 +143,10 @@ static double accurate_sum(std::vector<double> &a)
     std::vector<double> partials;
 
     for (auto& xx : a) {
-	double x = xx;
+		double x = xx;
         int i = 0;
         for(auto& yy : partials) {
-	    double y = yy;
+	    	double y = yy;
             if (std::fabs(x) < std::fabs(y)) std::swap(x,y);
             double hi = x + y;
             double lo = y - (hi - x);
@@ -165,7 +165,7 @@ static double accurate_sum(std::vector<double> &a)
         //std::cout <<"]"<< std::endl;
     }
     for (auto & n : partials)
-	msum += n;
+		msum += n;
 
     return msum + 0.0;
 }
