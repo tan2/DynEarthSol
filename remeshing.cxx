@@ -1438,7 +1438,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
 
         delete var.support;
         create_support(var);
-        delete var.force_support;
+        delete_force_support(var);
         create_force_support(var);
 
         std::cout << "    Remapping markers.\n";
@@ -1468,7 +1468,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     // TODO: using edvoldt and volume to get volume_old
     std::copy(var.volume->begin(), var.volume->end(), var.volume_old->begin());
-    compute_mass(param, var.egroups, *var.connectivity, *var.volume, *var.mat,
+    compute_mass(param, var, var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
     compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
