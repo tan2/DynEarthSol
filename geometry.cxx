@@ -15,7 +15,7 @@
 /* Given two points, returns the distance^2 */
 double dist2(const double* a, const double* b)
 {
-    double sum = 0;;
+    double sum = 0;
     for (int i=0; i<NDIMS; ++i) {
         double d = b[i] - a[i];
         sum += d * d;
