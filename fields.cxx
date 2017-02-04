@@ -261,7 +261,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         for (int i=0; i<var.nnode*NDIMS; ++i) {
             if ((ff[i]<0) == (v[i]<0)) {
                 // strong damping
-                ff[i] -= param.control.damping_factor * ff[i], v[i];
+                ff[i] -= param.control.damping_factor * ff[i];
             }
             else {
                 // weak acceleration
