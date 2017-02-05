@@ -153,7 +153,7 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
         shared(var, dvoldt, volume_n)
     for (int n=0; n<var.nnode; ++n)
          // dvoldt[n] /= volume_n[n];
-         dvoldt[n] = accurate_sum((*var.dvoldt_support)[n]) / volume_n[n];
+         dvoldt[n] = (dvoldt[n] + accurate_sum((*var.dvoldt_support)[n])) / volume_n[n];
 
     // std::cout << "dvoldt:\n";
     // print(std::cout, dvoldt);
