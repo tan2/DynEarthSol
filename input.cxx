@@ -530,18 +530,18 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         std::exit(1);
     }
     if ( ! vm.count("sim.max_steps") )
-        p.sim.max_steps = std::numeric_limits<int>::max();;
+        p.sim.max_steps = std::numeric_limits<int>::max();
     if ( ! vm.count("sim.max_time_in_yr") )
-        p.sim.max_time_in_yr = std::numeric_limits<double>::max();;
+        p.sim.max_time_in_yr = std::numeric_limits<double>::max();
 
     if ( ! (vm.count("sim.output_step_interval") || vm.count("sim.output_time_interval_in_yr")) ) {
         std::cerr << "Must provide either sim.output_step_interval or sim.output_time_interval_in_yr\n";
         std::exit(1);
     }
     if ( ! vm.count("sim.output_step_interval") )
-        p.sim.output_step_interval = std::numeric_limits<int>::max();;
+        p.sim.output_step_interval = std::numeric_limits<int>::max();
     if ( ! vm.count("sim.output_time_interval_in_yr") )
-        p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();;
+        p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();
 
     //
     // These parameters are required when restarting
