@@ -1463,6 +1463,7 @@ void create_force_support(Variables& var)
     var.mass_support = new std::vector<double_vec>(var.nnode);
     var.tmass_support = new std::vector<double_vec>(var.nnode);
     var.dvoldt_support = new std::vector<double_vec>(var.nnode);
+    var.temp_support = new std::vector<double_vec>(var.nnode);
 }
 
 void delete_force_support(Variables& var)
@@ -1473,6 +1474,7 @@ void delete_force_support(Variables& var)
     delete var.mass_support;
     delete var.tmass_support;
     delete var.dvoldt_support;
+    delete var.temp_support;
 }
 
 

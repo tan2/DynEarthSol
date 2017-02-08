@@ -153,7 +153,7 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
         shared(var, dvoldt, volume_n)
     for (int n=0; n<var.nnode; ++n)
          // dvoldt[n] /= volume_n[n];
-         dvoldt[n] = (dvoldt[n] + accurate_sum((*var.dvoldt_support)[n])) / volume_n[n];
+         dvoldt[n] = accurate_sum((*var.dvoldt_support)[n]) / volume_n[n];
 
     // std::cout << "dvoldt:\n";
     // print(std::cout, dvoldt);
@@ -318,11 +318,11 @@ void compute_mass(const Param &param, const Variables& var,
     #pragma omp parallel for default(none) \
         shared(param, var, volume_n, mass, tmass, std::cout)
     for ( int i = 0; i < var.nnode; ++i) {
-		volume_n[i] += accurate_sum((*var.volume_n_support)[i]);
-		mass[i] += accurate_sum((*var.mass_support)[i]);
-		if (param.control.has_thermal_diffusion)
-			tmass[i] += accurate_sum((*var.tmass_support)[i]);
-	}
+	volume_n[i] = accurate_sum((*var.volume_n_support)[i]);
+	mass[i] = accurate_sum((*var.mass_support)[i]);
+	if (param.control.has_thermal_diffusion)
+	    tmass[i] = accurate_sum((*var.tmass_support)[i]);
+    }
 	
 }
 
