@@ -240,7 +240,9 @@ static void declare_parameters(po::options_description &cfg,
          "3: normal component fixed, shear components fixed at 0;\n"
          "4: normal component free, shear component (not z) fixed, z component fixed at 0, only in 3D;\n"
          "5: normal component fixed at 0, shear component (not z) fixed, z component fixed at 0, only in 3D;\n"
-         "7: normal component fixed shear component (not z) fixed at 0, z component free, only in 3D;\n")
+         "7: normal component fixed, shear component (not z) fixed at 0, z component free, only in 3D;\n"
+         "11: horizontal normal component fixed, z component and horizontal shear component free, only in 3D;\n"
+         "13: horizontal normal component fixed, z component and horizontal shear component fixed at 0, only in 3D;\n")
         ("bc.vbc_x1", po::value<int>(&p.bc.vbc_x1)->default_value(1),
          "Type of boundary condition for the right/eastern side")
         ("bc.vbc_val_x0", po::value<double>(&p.bc.vbc_val_x0)->default_value(-1e-9),
@@ -267,22 +269,22 @@ static void declare_parameters(po::options_description &cfg,
          "Value of boundary condition for the top side (if velocity, unit is m/s; if stress, unit is Pa)")
 
         ("bc.vbc_n0", po::value<int>(&p.bc.vbc_n0)->default_value(1),
-         "Type of boundary condition for slant boundary #0 (only type 1, 3 are supported).")
+         "Type of boundary condition for slant boundary #0 (only type 1, 3, 11, 13 are supported).")
         ("bc.vbc_val_n0", po::value<double>(&p.bc.vbc_val_n0)->default_value(0),
          "Value of boundary condition for slant boundary #0 (if velocity, unit is m/s, "
          "outward normal direction is positive; if stress, unit is Pa)")
         ("bc.vbc_n1", po::value<int>(&p.bc.vbc_n1)->default_value(1),
-         "Type of boundary condition for slant boundary #1 (only type 1, 3 are supported).")
+         "Type of boundary condition for slant boundary #1 (only type 1, 3, 11, 13 are supported).")
         ("bc.vbc_val_n1", po::value<double>(&p.bc.vbc_val_n1)->default_value(0),
          "Value of boundary condition for slant boundary #1 (if velocity, unit is m/s, "
          "outward normal direction is positive; if stress, unit is Pa)")
         ("bc.vbc_n2", po::value<int>(&p.bc.vbc_n2)->default_value(1),
-         "Type of boundary condition for slant boundary #2 (only type 1, 3 are supported).")
+         "Type of boundary condition for slant boundary #2 (only type 1, 3, 11, 13 are supported).")
         ("bc.vbc_val_n2", po::value<double>(&p.bc.vbc_val_n2)->default_value(0),
          "Value of boundary condition for slant boundary #2 (if velocity, unit is m/s, "
          "outward normal direction is positive; if stress, unit is Pa)")
         ("bc.vbc_n3", po::value<int>(&p.bc.vbc_n3)->default_value(1),
-         "Type of boundary condition for slant boundary #3 (only type 1, 3 are supported).")
+         "Type of boundary condition for slant boundary #3 (only type 1, 3, 11, 13 are supported).")
         ("bc.vbc_val_n3", po::value<double>(&p.bc.vbc_val_n3)->default_value(0),
          "Value of boundary condition for slant boundary #3 (if velocity, unit is m/s, "
          "outward normal direction is positive; if stress, unit is Pa)")
@@ -661,20 +663,20 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Error: bc.vbc_z0 is not 0, 1, 2, or 3.\n";
             std::exit(1);
         }
-        if ( p.bc.vbc_n0 != 1 && p.bc.vbc_n0 != 3 ) {
-            std::cerr << "Error: bc.vbc_n0 is not 1, or 3.\n";
+        if ( p.bc.vbc_n0 != 1 && p.bc.vbc_n0 != 3 && p.bc.vbc_n0 != 11 && p.bc.vbc_n0 != 13 ) {
+            std::cerr << "Error: bc.vbc_n0 is not 1, 3, 11, or 13.\n";
             std::exit(1);
         }
-        if ( p.bc.vbc_n1 != 1 && p.bc.vbc_n1 != 3 ) {
-            std::cerr << "Error: bc.vbc_n1 is not 1, or 3.\n";
+        if ( p.bc.vbc_n1 != 1 && p.bc.vbc_n1 != 3 && p.bc.vbc_n1 != 11 && p.bc.vbc_n1 != 13 ) {
+            std::cerr << "Error: bc.vbc_n1 is not 1, 3, 11, or 13.\n";
             std::exit(1);
         }
-        if ( p.bc.vbc_n2 != 1 && p.bc.vbc_n2 != 3 ) {
-            std::cerr << "Error: bc.vbc_n2 is not 1, or 3.\n";
+        if ( p.bc.vbc_n2 != 1 && p.bc.vbc_n2 != 3 && p.bc.vbc_n2 != 11 && p.bc.vbc_n2 != 13 ) {
+            std::cerr << "Error: bc.vbc_n2 is not 1, 3, 11, or 13.\n";
             std::exit(1);
         }
-        if ( p.bc.vbc_n3 != 1 && p.bc.vbc_n3 != 3 ) {
-            std::cerr << "Error: bc.vbc_n3 is not 1, or 3.\n";
+        if ( p.bc.vbc_n3 != 1 && p.bc.vbc_n3 != 3 && p.bc.vbc_n3 != 11 && p.bc.vbc_n3 != 13 ) {
+            std::cerr << "Error: bc.vbc_n3 is not 1, 3, 11, or 13.\n";
             std::exit(1);
         }
     }
