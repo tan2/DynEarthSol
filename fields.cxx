@@ -132,7 +132,8 @@ void update_temperature(const Param &param, const Variables &var,
             }
             for (int i=0; i<NODES_PER_ELEM; ++i) {
                 double diffusion = 0;
-                std::vector<double> interpolate_support;
+                //std::vector<double> interpolate_support;
+                double_tbb_vec interpolate_support;
                 interpolate_support.resize(0);
                 for (int j=0; j<NODES_PER_ELEM; ++j)
                     // diffusion += D[i][j] * temperature[conn[j]];

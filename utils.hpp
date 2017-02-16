@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#include "parameters.hpp"
+
 /////////////////////////////////////////////////////////////////////
 
 class ElemFunc  // base class for functor used in loop_all_elem()
@@ -137,6 +139,7 @@ static double second_invariant(const double* t)
 //   to each partial so that the list of partial sums remains exact.
 //   Depends on IEEE-754 arithmetic guarantees.  See proof of correctness at:
 //   www-2.cs.cmu.edu/afs/cs/project/quake/public/papers/robust-arithmetic.ps
+#if 0
 static double accurate_sum(std::vector<double> &a)
 {
     double xx, yy, msum = 0.;
@@ -169,5 +172,37 @@ static double accurate_sum(std::vector<double> &a)
 
     return msum + 0.0;
 }
+#endif
+static double accurate_sum(double_tbb_vec &a)
+{
+    double xx, yy, msum = 0.;
+    std::vector<double> partials;
 
+    for (auto& xx : a) {
+		double x = xx;
+        int i = 0;
+        for(auto& yy : partials) {
+	    	double y = yy;
+            if (std::fabs(x) < std::fabs(y)) std::swap(x,y);
+            double hi = x + y;
+            double lo = y - (hi - x);
+            //std::cout << "lo=" << lo <<"\n";
+            //std::cout << "hi=" << hi <<"\n";
+            if (lo) {
+                partials[i] = lo;
+                i += 1;
+            }
+            x = hi;
+        }
+        partials.resize(i+1);
+        partials[i] = x;
+        //std::cout << "i="<< i << " size="<< partials.size()<< " partials=[";
+        //for(auto& el: partials) std::cout << el << ' ';
+        //std::cout <<"]"<< std::endl;
+    }
+    for (auto & n : partials)
+		msum += n;
+
+    return msum + 0.0;
+}
 #endif

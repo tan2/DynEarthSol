@@ -1456,14 +1456,21 @@ void create_force_support(Variables& var)
 {
     // double-type vectors to be filled in fields.cxx:update_force()
     // for each node and for each component of the force vector.
-    // As well as geometry.cxx:compute_mass() & compute_dvoldt() for 
+    // As well as geometry.cxx:compute_mass() & compute_dvoldt() for
     // each node of the dvoldt, volume_n, mass, and tmass vector.
-    var.force_support = new std::vector<double_vec>(var.nnode*NDIMS);
-    var.volume_n_support = new std::vector<double_vec>(var.nnode);
-    var.mass_support = new std::vector<double_vec>(var.nnode);
-    var.tmass_support = new std::vector<double_vec>(var.nnode);
-    var.dvoldt_support = new std::vector<double_vec>(var.nnode);
-    var.temp_support = new std::vector<double_vec>(var.nnode);
+    // var.force_support = new std::vector<double_vec>(var.nnode*NDIMS);
+    // var.volume_n_support = new std::vector<double_vec>(var.nnode);
+    // var.mass_support = new std::vector<double_vec>(var.nnode);
+    // var.tmass_support = new std::vector<double_vec>(var.nnode);
+    // var.dvoldt_support = new std::vector<double_vec>(var.nnode);
+    // var.temp_support = new std::vector<double_vec>(var.nnode);
+    var.force_support = new double_tbb_vec2D(var.nnode*NDIMS);
+    var.volume_n_support = new double_tbb_vec2D(var.nnode);
+    var.mass_support = new double_tbb_vec2D(var.nnode);
+    var.tmass_support = new double_tbb_vec2D(var.nnode);
+    var.dvoldt_support = new double_tbb_vec2D(var.nnode);
+    var.temp_support = new double_tbb_vec2D(var.nnode);
+
 }
 
 void delete_force_support(Variables& var)
