@@ -12,7 +12,7 @@
 ## openmp = 1: enable OpenMP
 ## useadapt = 1: use libadaptivity for mesh optimization during remeshing
 
-ndims = 3
+ndims = 2
 opt = 2
 openmp = 1
 useadapt = 1
@@ -40,9 +40,9 @@ else
 endif
 
 ## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR = ${HOME}/opt/boost_1_55_0
-TBB_DIR = /Users/eunseo/opt/tbb44_20160316oss
-TBB_ARCH = macos_intel64_gcc_cc8.0.0_os10.11.6_release
+BOOST_ROOT_DIR = /opt/boost_1_63_0
+TBB_DIR = /opt/tbb2017_20161128oss#/Users/eunseo/opt/tbb44_20160316oss
+TBB_ARCH = macos_intel64_gcc_cc5.4.0_os10.12.3_release
 
 ########################################################################
 ## Select compiler and linker flags

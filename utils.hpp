@@ -178,11 +178,15 @@ static double accurate_sum(double_tbb_vec &a)
     double xx, yy, msum = 0.;
     std::vector<double> partials;
 
-    for (auto& xx : a) {
-		double x = xx;
+    //for (auto& xx : a) {
+    //double x = xx;
+    for (int ii=0; ii<a.size(); ++ii) {
+        double x = a[ii];
         int i = 0;
-        for(auto& yy : partials) {
-	    	double y = yy;
+        //for(auto& yy : partials) {
+        //double y = yy;
+        for (int jj=0; jj<partials.size(); ++jj) {
+            double y = partials[jj];
             if (std::fabs(x) < std::fabs(y)) std::swap(x,y);
             double hi = x + y;
             double lo = y - (hi - x);
@@ -200,8 +204,10 @@ static double accurate_sum(double_tbb_vec &a)
         //for(auto& el: partials) std::cout << el << ' ';
         //std::cout <<"]"<< std::endl;
     }
-    for (auto & n : partials)
-		msum += n;
+    //for (auto & n : partials)
+    //msum += n;
+    for (int n=0; n<partials.size(); ++n)
+        msum += partials[n];
 
     return msum + 0.0;
 }
