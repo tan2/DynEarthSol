@@ -50,6 +50,7 @@ Procedures:
 Run
 ===========
 
+* setenv LD_LIBRARY_PATH /home/student/dennist/TOOL/tbb44_20160316oss/build/linux_intel64_gcc_cc4.4.7_libc2.12_kernel2.6.32_release (for utig)
 * Execute "dynearthsol2d inputfile".
 * Several example input files are provided under 'examples/' directory. The
   format of the input file is described in 'examples/defaults.cfg'.
