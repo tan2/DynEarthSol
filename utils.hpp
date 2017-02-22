@@ -166,7 +166,7 @@ static double accurate_sum(double_tbb_vec &a)
         //for(auto& el: partials) std::cout << el << ' ';
         //std::cout <<"]"<< std::endl;
     }
-    for (auto & n : partials)
+    for (auto& n : partials)
         msum += n;
     return msum + 0.0;
 }
