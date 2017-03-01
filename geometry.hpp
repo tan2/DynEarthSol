@@ -12,7 +12,7 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
 
 double compute_dt(const Param& param, const Variables& var);
 
-void compute_mass(const Param &param,
+void compute_mass(const Param &param, const Variables& var,
                   const int_vec &egroups, const conn_t &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double max_vbc_val, double_vec &volume_n,

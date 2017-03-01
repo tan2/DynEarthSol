@@ -15,7 +15,7 @@
 /* Given two points, returns the distance^2 */
 double dist2(const double* a, const double* b)
 {
-    double sum = 0;;
+    double sum = 0;
     for (int i=0; i<NDIMS; ++i) {
         double d = b[i] - a[i];
         sum += d * d;
@@ -116,16 +116,20 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dvoldt.begin(), var.nnode, 0);
+    // resize dvoldt_support to zero.
+    for (int n = 0; n < var.nnode; ++n) {
+        (*var.dvoldt_support)[n].resize(0);
+	}
 
     class ElemFunc_dvoldt : public ElemFunc
     {
     private:
         const Variables &var;
         const double_vec &volume;
-        double_vec &dvoldt;
+        // double_vec &dvoldt;
     public:
-        ElemFunc_dvoldt(const Variables &var, const double_vec &volume, double_vec &dvoldt) :
-            var(var), volume(volume), dvoldt(dvoldt) {};
+        ElemFunc_dvoldt(const Variables &var, const double_vec &volume/*, double_vec &dvoldt*/) :
+            var(var), volume(volume)/*, dvoldt(dvoldt)*/ {};
         void operator()(int e)
         {
             const int *conn = (*var.connectivity)[e];
@@ -134,11 +138,12 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
             // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
             double dj = trace(strain_rate);
             for (int i=0; i<NODES_PER_ELEM; ++i) {
-                int n = conn[i];
-                dvoldt[n] += dj * volume[e];
+                // int n = conn[i];
+                // dvoldt[n] += dj * volume[e];
+                (*var.dvoldt_support)[conn[i]].push_back(dj * volume[e]);
             }
         }
-    } elemf(var, volume, dvoldt);
+    } elemf(var, volume/*, dvoldt*/);
 
 
     loop_all_elem(var.egroups, elemf);
@@ -147,7 +152,8 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, volume_n)
     for (int n=0; n<var.nnode; ++n)
-         dvoldt[n] /= volume_n[n];
+         // dvoldt[n] /= volume_n[n];
+         dvoldt[n] = accurate_sum((*var.dvoldt_support)[n]) / volume_n[n];
 
     // std::cout << "dvoldt:\n";
     // print(std::cout, dvoldt);
@@ -254,7 +260,7 @@ double compute_dt(const Param& param, const Variables& var)
 }
 
 
-void compute_mass(const Param &param,
+void compute_mass(const Param &param, const Variables& var,
                   const int_vec &egroups, const conn_t &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double max_vbc_val, double_vec &volume_n,
@@ -265,26 +271,28 @@ void compute_mass(const Param &param,
     mass.assign(mass.size(), 0);
     tmass.assign(tmass.size(), 0);
 
+    // resize volume_n_support, mass_support, and tmass_support to zero.
+    for (int n = 0; n < var.nnode; ++n) {
+        (*var.volume_n_support)[n].resize(0);
+        (*var.mass_support)[n].resize(0);
+        (*var.tmass_support)[n].resize(0);
+	}
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
 
     class ElemFunc_mass : public ElemFunc
     {
     private:
+    	const Variables& var;
         const MatProps &mat;
         const conn_t &connectivity;
         const double_vec &volume;
-        double_vec &volume_n;
-        double_vec &mass;
-        double_vec &tmass;
         double pseudo_speed;
         bool is_quasi_static;
         bool has_thermal_diffusion;
     public:
-        ElemFunc_mass(const MatProps &mat, const conn_t &connectivity, const double_vec &volume,
-                      double pseudo_speed, bool is_quasi_static, bool has_thermal_diffusion,
-                      double_vec &volume_n, double_vec &mass, double_vec &tmass) :
-            mat(mat), connectivity(connectivity), volume(volume),
-            volume_n(volume_n), mass(mass), tmass(tmass),
+        ElemFunc_mass(const Variables& var, const MatProps &mat, const conn_t &connectivity, const double_vec &volume,
+                      double pseudo_speed, bool is_quasi_static, bool has_thermal_diffusion) :
+            var(var), mat(mat), connectivity(connectivity), volume(volume),
             pseudo_speed(pseudo_speed), is_quasi_static(is_quasi_static),
             has_thermal_diffusion(has_thermal_diffusion) {};
         void operator()(int e)
@@ -296,16 +304,26 @@ void compute_mass(const Param &param,
             double tm = mat.rho(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
             const int *conn = connectivity[e];
             for (int i=0; i<NODES_PER_ELEM; ++i) {
-                volume_n[conn[i]] += volume[e];
-                mass[conn[i]] += m;
+				(*var.volume_n_support)[conn[i]].push_back(volume[e]);
+                (*var.mass_support)[conn[i]].push_back(m);
                 if (has_thermal_diffusion)
-                    tmass[conn[i]] += tm;
+                    (*var.tmass_support)[conn[i]].push_back(tm);	   
             }
         }
-    } elemf(mat, connectivity, volume, pseudo_speed, param.control.is_quasi_static,
-            param.control.has_thermal_diffusion, volume_n, mass, tmass);
+    } elemf(var, mat, connectivity, volume, pseudo_speed, param.control.is_quasi_static,
+            param.control.has_thermal_diffusion);
 
     loop_all_elem(egroups, elemf);
+    
+    #pragma omp parallel for default(none) \
+        shared(param, var, volume_n, mass, tmass, std::cout)
+    for ( int i = 0; i < var.nnode; ++i) {
+	volume_n[i] = accurate_sum((*var.volume_n_support)[i]);
+	mass[i] = accurate_sum((*var.mass_support)[i]);
+	if (param.control.has_thermal_diffusion)
+	    tmass[i] = accurate_sum((*var.tmass_support)[i]);
+    }
+	
 }
 
 

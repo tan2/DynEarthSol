@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#include "parameters.hpp"
+
 /////////////////////////////////////////////////////////////////////
 
 class ElemFunc  // base class for functor used in loop_all_elem()
@@ -137,7 +139,7 @@ static double second_invariant(const double* t)
 //   to each partial so that the list of partial sums remains exact.
 //   Depends on IEEE-754 arithmetic guarantees.  See proof of correctness at:
 //   www-2.cs.cmu.edu/afs/cs/project/quake/public/papers/robust-arithmetic.ps
-static double accurate_sum(std::vector<double> &a)
+static double accurate_sum(double_tbb_vec &a)
 {
     double xx, yy, msum = 0.;
     std::vector<double> partials;
@@ -168,5 +170,4 @@ static double accurate_sum(std::vector<double> &a)
         msum += n;
     return msum + 0.0;
 }
-
 #endif

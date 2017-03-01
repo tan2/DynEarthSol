@@ -9,6 +9,8 @@
 #include "constants.hpp"
 #include "array2d.hpp"
 
+#include "tbb/concurrent_vector.h"
+
 typedef std::pair<double,double> double_pair;
 
 typedef std::vector<double> double_vec;
@@ -16,6 +18,9 @@ typedef std::vector<double_vec> double_vec2D;
 typedef std::vector<int> int_vec;
 typedef std::vector<int_vec> int_vec2D;
 typedef std::vector<uint> uint_vec;
+// Intel Threading Building Block's concurrent vector types
+typedef tbb::concurrent_vector<double> double_tbb_vec;
+typedef tbb::concurrent_vector<double_tbb_vec> double_tbb_vec2D;
 
 typedef Array2D<double,NDIMS> array_t;
 typedef Array2D<double,NSTR> tensor_t;
@@ -246,7 +251,8 @@ struct Variables {
     std::map<std::pair<int,int>, double*> edge_vectors;
 
     int_vec2D *support;
-    double_vec2D *force_support;
+    double_tbb_vec2D *force_support, *volume_n_support, *mass_support, *tmass_support;
+    double_tbb_vec2D *dvoldt_support, *temp_support;
     int_vec egroups;
 
     double_vec *volume, *volume_old, *volume_n;

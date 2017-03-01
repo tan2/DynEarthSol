@@ -94,16 +94,18 @@ void update_temperature(const Param &param, const Variables &var,
                         double_vec &temperature, double_vec &tdot)
 {
     tdot.assign(var.nnode, 0);
+    for (int n = 0; n < var.nnode; ++n)
+        (*var.temp_support)[n].resize(0);
 
     class ElemFunc_temperature : public ElemFunc
     {
     private:
         const Variables &var;
         const double_vec &temperature;
-        double_vec &tdot;
+        // double_vec &tdot;
     public:
-        ElemFunc_temperature(const Variables &var, const double_vec &temperature, double_vec &tdot) :
-            var(var), temperature(temperature), tdot(tdot) {};
+        ElemFunc_temperature(const Variables &var, const double_vec &temperature/*, double_vec &tdot*/) :
+            var(var), temperature(temperature)/*, tdot(tdot)*/ {};
         void operator()(int e)
         {
             // diffusion matrix
@@ -130,13 +132,17 @@ void update_temperature(const Param &param, const Variables &var,
             }
             for (int i=0; i<NODES_PER_ELEM; ++i) {
                 double diffusion = 0;
+                //std::vector<double> interpolate_support;
+                double_tbb_vec interpolate_support;
+                interpolate_support.resize(0);
                 for (int j=0; j<NODES_PER_ELEM; ++j)
-                    diffusion += D[i][j] * temperature[conn[j]];
-
-                tdot[conn[i]] += diffusion * kv;
+                    // diffusion += D[i][j] * temperature[conn[j]];
+                    interpolate_support.push_back(D[i][j] * temperature[conn[j]]);
+                // tdot[conn[i]] += diffusion * kv;
+                (*var.temp_support)[conn[i]].push_back(accurate_sum( interpolate_support ) * kv);
             }
         }
-    } elemf(var, temperature, tdot);
+    } elemf(var, temperature/*, tdot*/);
 
     loop_all_elem(var.egroups, elemf);
 
@@ -149,7 +155,8 @@ void update_temperature(const Param &param, const Variables &var,
         if ((*var.bcflag)[n] & BOUNDZ1)
             temperature[n] = param.bc.surface_temperature;
         else
-            temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
+            // temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
+            temperature[n] -= accurate_sum( (*var.temp_support)[n] ) * var.dt / (*var.tmass)[n];
     }
 }
 
@@ -261,7 +268,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         for (int i=0; i<var.nnode*NDIMS; ++i) {
             if ((ff[i]<0) == (v[i]<0)) {
                 // strong damping
-                ff[i] -= param.control.damping_factor * ff[i], v[i];
+                ff[i] -= param.control.damping_factor * ff[i];
             }
             else {
                 // weak acceleration
