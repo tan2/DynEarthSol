@@ -37,7 +37,7 @@ class Dynearthsol:
         self._header_frame = frame
         headerlen = 4096
         fname = self.get_fn(frame)
-        with open(fname) as f:
+        with open(fname,'r',encoding = "ISO-8859-1") as f:
             header = f.read(headerlen).splitlines()
             #print(header)
 
@@ -105,7 +105,7 @@ class Dynearthsol:
 
         pos = self.field_pos[name]
         fname = self.get_fn(frame)
-        with open(fname) as f:
+        with open(fname,'rb') as f:
             f.seek(pos)
             field = np.fromfile(f, dtype=dtype, count=count).reshape(shape)
         return field
@@ -217,4 +217,3 @@ class DynearthsolCheckpoint(Dynearthsol):
                 #print(marker_data[name].shape, marker_data[name])
 
         return marker_data
-
