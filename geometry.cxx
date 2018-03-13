@@ -310,7 +310,7 @@ double compute_dt(const Param& param, const Variables& var)
         0.5 * minl / std::sqrt(var.mat->bulkm(0) / var.mat->rho(0));
     double dt = std::min(std::min(dt_elastic, dt_maxwell),
                          std::min(dt_advection, dt_diffusion)) * param.control.dt_fraction;
-    dt = std::min(dt_advection, std::min(dt_elastic, dt_maxwell));
+//    dt = std::min(dt_advection, std::min(dt_elastic, dt_maxwell));
 
     if (param.debug.dt) {
         std::cout << "step #" << var.steps << "  dt: " << dt_maxwell << " " << dt_diffusion
