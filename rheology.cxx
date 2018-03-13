@@ -507,7 +507,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
 }
 
 
-void update_stress(const Variables& var, tensor_t& stress,
+void update_stress(/*const*/ Variables& var, tensor_t& stress,
                    double_vec& stressyy,
                    tensor_t& strain, double_vec& plstrain,
                    double_vec& delta_plstrain, tensor_t& strain_rate)
@@ -637,6 +637,7 @@ void update_stress(const Variables& var, tensor_t& stress,
             std::exit(1);
             break;
         }
+	(*var.etmp)[e] = trace(s);
         // std::cerr << "stress " << e << ": ";
         // print(std::cerr, s, NSTR);
         // std::cerr << '\n';
