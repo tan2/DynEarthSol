@@ -11,14 +11,22 @@
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openmp = 1: enable OpenMP
 ## useadapt = 1: use libadaptivity for mesh optimization during remeshing
+## adaptive_time_step = 1: use adaptive time stepping technique
+## use_R_S = 1: use Rate - State friction law
 
-ndims = 3
+ndims = 2
 opt = 2
 openmp = 1
 useadapt = 1
+adaptive_time_step = 1
+use_R_S = 1
 
 ifeq ($(ndims), 2)
 	useadapt = 0   # libadaptivity is 3d only
+endif
+
+ifneq ($(adaptive_time_step), 1)
+	use_R_S = 0   # Rate - State friction law only works with adaptive time stepping technique
 endif
 
 ## Select C++ compiler
@@ -27,10 +35,10 @@ ifeq ($(useadapt), 1)
 	CXX_BACKEND = g++
 
 	# path to vtk header files, if not in standard system location
-	VTK_INCLUDE =
+	VTK_INCLUDE = /usr/include/vtk-5.10
 
 	# path of vtk library files, if not in standard system location
-	VTK_LIBS =
+	VTK_LIBS = /usr/lib/vtk-5.10
 
 	# flag to link with fortran binding of MPI library
 	LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
@@ -40,7 +48,12 @@ else
 endif
 
 ## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR = ${HOME}/opt/boost_1_55_0
+#BOOST_ROOT_DIR = /opt/boost_1_63_0
+#TBB_DIR = /opt/tbb-2017_U7
+#TBB_ARCH = macos_intel64_clang_cc8.1.0_os10.12.5_release
+BOOST_ROOT_DIR = /opt/boost_1_65_0
+TBB_DIR = /opt/tbb-2017_U7
+TBB_ARCH = linux_intel64_gcc_cc5.4.0_libc2.23_kernel4.4.0_release
 
 ########################################################################
 ## Select compiler and linker flags
@@ -185,12 +198,23 @@ ifeq ($(ndims), 3)
 	CXXFLAGS += -DTHREED
 endif
 
+ifeq ($(adaptive_time_step), 1)
+	CXXFLAGS += -DATS
+ifeq ($(use_R_S), 1)
+	CXXFLAGS += -DRS
+endif
+endif
+
 C3X3_DIR = 3x3-C
 C3X3_LIBNAME = 3x3
 
 ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
+
+TBB_LIBNAME = tbb
+CXXFLAGS += -I$(TBB_DIR)/include
+LDFLAGS += -L$(TBB_DIR)/build/$(TBB_ARCH) -ltbb
 
 ifeq ($(useadapt), 1)
 	LIBADAPTIVITY_DIR = ./libadaptivity
@@ -234,12 +258,17 @@ $(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNA
 			-o $@
 ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
 		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+		install_name_tool -change @rpath/libtbb.dylib $(TBB_DIR)/build/$(TBB_ARCH)/libtbb.dylib $@
 endif
 else
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
 		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
 			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
 			-o $@
+ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
+		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+		install_name_tool -change @rpath/libtbb.dylib $(TBB_DIR)/build/$(TBB_ARCH)/libtbb.dylib $@
+endif
 endif
 
 take-snapshot:
@@ -287,6 +316,11 @@ $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 deepclean: cleanadapt
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
 	@+$(MAKE) -C $(C3X3_DIR) clean
+	
+cleanall: clean
+	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
+	@+$(MAKE) -C $(C3X3_DIR) clean
+	@+$(MAKE) -C $(ANN_DIR) realclean
 
 clean:
 	@rm -f $(OBJS) $(EXE)

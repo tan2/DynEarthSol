@@ -20,7 +20,7 @@ void allocate_variables(const Param &param, Variables& var)
     var.tmass = new double_vec(n);
 
     var.edvoldt = new double_vec(e);
-    var.edvoldt_stress = new double_vec(e);
+	var.edvoldt_stress = new double_vec(e);
 
     {
         // these fields are reallocated during remeshing interpolation
@@ -38,7 +38,7 @@ void allocate_variables(const Param &param, Variables& var)
     var.etmp= new double_vec(e);
 
     var.force = new array_t(n, 0);
-
+	
     var.strain_rate = new tensor_t(e, 0);
 
     var.shpdx = new shapefn(e);
@@ -70,7 +70,7 @@ void reallocate_variables(const Param& param, Variables& var)
     var.edvoldt = new double_vec(e);
     delete var.edvoldt_stress;
     var.edvoldt_stress = new double_vec(e);
-
+	
     delete var.ntmp;
     var.ntmp = new double_vec(n);
     delete var.etmp;
@@ -78,7 +78,7 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.force;
     var.force = new array_t(n, 0);
-
+	
     delete var.strain_rate;
     var.strain_rate = new tensor_t(e, 0);
 

@@ -523,6 +523,7 @@ void update_stress(/*const*/ Variables& var, tensor_t& stress,
         double& syy = stressyy[e];
         double* es = strain[e];
         double* edot = strain_rate[e];
+	double old_s = trace(s);
 
         // anti-mesh locking correction on strain rate
         if(1){
@@ -637,7 +638,7 @@ void update_stress(/*const*/ Variables& var, tensor_t& stress,
             std::exit(1);
             break;
         }
-	(*var.etmp)[e] = trace(s);
+	(*var.etmp)[e] = trace(s) - old_s;
         // std::cerr << "stress " << e << ": ";
         // print(std::cerr, s, NSTR);
         // std::cerr << '\n';

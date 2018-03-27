@@ -209,9 +209,7 @@ void compute_dvoldt_stress(const Variables &var, double_vec &dvoldt_stress)
         }
     } elemf(var, volume, dvoldt_stress);
 
-
     loop_all_elem(var.egroups, elemf);
-
 
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt_stress, volume_n)
@@ -310,8 +308,6 @@ double compute_dt(const Param& param, const Variables& var)
         0.5 * minl / std::sqrt(var.mat->bulkm(0) / var.mat->rho(0));
     double dt = std::min(std::min(dt_elastic, dt_maxwell),
                          std::min(dt_advection, dt_diffusion)) * param.control.dt_fraction;
-//    dt = std::min(dt_advection, std::min(dt_elastic, dt_maxwell));
-
     if (param.debug.dt) {
         std::cout << "step #" << var.steps << "  dt: " << dt_maxwell << " " << dt_diffusion
                   << " " << dt_advection << " " << dt_elastic << " sec\n";
