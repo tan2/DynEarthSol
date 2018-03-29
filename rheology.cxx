@@ -507,15 +507,15 @@ static void elasto_plastic2d(double bulkm, double shearm,
 }
 
 
-void update_stress(/*const*/ Variables& var, tensor_t& stress,
-                   double_vec& stressyy,
+void update_stress(const Variables& var, tensor_t& stress,
+                   double_vec& stressyy, double_vec& dpressure,
                    tensor_t& strain, double_vec& plstrain,
                    double_vec& delta_plstrain, tensor_t& strain_rate)
 {
     const int rheol_type = var.mat->rheol_type;
 
     #pragma omp parallel for default(none)                           \
-        shared(var, stress, stressyy, strain, plstrain, delta_plstrain, \
+        shared(var, stress, stressyy, dpressure, strain, plstrain, delta_plstrain, \
                strain_rate, std::cerr)
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
@@ -638,7 +638,7 @@ void update_stress(/*const*/ Variables& var, tensor_t& stress,
             std::exit(1);
             break;
         }
-	(*var.etmp)[e] = trace(s) - old_s;
+	dpressure[e] = trace(s) - old_s;
         // std::cerr << "stress " << e << ": ";
         // print(std::cerr, s, NSTR);
         // std::cerr << '\n';
