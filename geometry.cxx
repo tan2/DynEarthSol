@@ -201,7 +201,7 @@ void compute_dvoldt_stress(const Variables &var, double_vec &dvoldt_stress)
             const int *conn = (*var.connectivity)[e];
             // TODO: try another definition:
             // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
-            double dj = (*var.etmp)[e];
+            double dj = (*var.dpressure)[e];
             for (int i=0; i<NODES_PER_ELEM; ++i) {
                 int n = conn[i];
                 dvoldt_stress[n] += dj * volume[e];
@@ -242,7 +242,7 @@ void NMD_stress(const Variables &var, tensor_t& stress)
         shared(var, stress)
     for (int e=0; e<var.nelem; ++e) {
 	double* s = stress[e];
-	double div = (*var.etmp)[e];//trace(s);
+	double div = (*var.dpressure)[e];//trace(s);
 	for (int i=0; i<NDIMS; ++i) s[i] += ( - div + (*var.edvoldt_stress)[e]) / NDIMS;
     }
 }
