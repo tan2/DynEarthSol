@@ -249,7 +249,7 @@ struct Variables {
 
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;
-    double_vec *edvoldt, *edvoldt_stress;
+    double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
     double_vec *stressyy, *dpressure;
     double_vec *ntmp;

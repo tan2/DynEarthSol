@@ -188,14 +188,14 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress)
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dp_nd.begin(), var.nnode, 0);
 
-    class ElemFunc_dvoldt_stress : public ElemFunc
+    class ElemFunc_NMD_stress : public ElemFunc
     {
     private:
         const Variables &var;
         const double_vec &volume;
         double_vec &dp_nd;
     public:
-        ElemFunc_dvoldt_stress(const Variables &var, const double_vec &volume, double_vec &dp_nd) :
+        ElemFunc_NMD_stress(const Variables &var, const double_vec &volume, double_vec &dp_nd) :
             var(var), volume(volume), dp_nd(dp_nd) {};
         void operator()(int e)
         {
