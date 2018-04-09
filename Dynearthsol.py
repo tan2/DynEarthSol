@@ -2,6 +2,7 @@
 
 from __future__ import print_function, unicode_literals
 import sys
+import io
 import numpy as np
 
 # 2D or 3D data?
@@ -34,12 +35,20 @@ class Dynearthsol:
 
 
     def read_header(self, frame):
+        # built-in open in python2 does not understand encoding, use io.open instead 
+        global open
+        builtin_open = open
+        if sys.version_info.major == 2:
+            open = io.open
+
         self._header_frame = frame
         headerlen = 4096
         fname = self.get_fn(frame)
         with open(fname,'r',encoding = "ISO-8859-1") as f:
             header = f.read(headerlen).splitlines()
             #print(header)
+
+        open = builtin_open  # restore builtin open
 
         # parsing 1st line
         first = header[0].split(' ')
