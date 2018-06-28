@@ -2,7 +2,6 @@
 
 from __future__ import print_function, unicode_literals
 import sys
-import io
 import numpy as np
 
 # 2D or 3D data?
@@ -35,32 +34,24 @@ class Dynearthsol:
 
 
     def read_header(self, frame):
-        # built-in open in python2 does not understand encoding, use io.open instead 
-        global open
-        builtin_open = open
-        if sys.version_info.major == 2:
-            open = io.open
-
         self._header_frame = frame
         headerlen = 4096
         fname = self.get_fn(frame)
-        with open(fname,'r',encoding = "ISO-8859-1") as f:
+        with open(fname, 'rb') as f:
             header = f.read(headerlen).splitlines()
             #print(header)
 
-        open = builtin_open  # restore builtin open
-
         # parsing 1st line
-        first = header[0].split(' ')
-        if (first[0] != '#' or
-            first[1] != 'DynEarthSol' or
-            first[2].split('=')[0] != 'ndims' or
-            first[3].split('=')[0] != 'revision'):
+        first = header[0].split(b' ')
+        if (first[0] != b'#' or
+            first[1] != b'DynEarthSol' or
+            first[2].split(b'=')[0] != b'ndims' or
+            first[3].split(b'=')[0] != b'revision'):
             print('Error:', fname, 'is not a valid DynEarthSol output file!')
             sys.exit(1)
 
-        self.ndims = int(first[2].split('=')[1])
-        self.revision = int(first[3].split('=')[1])
+        self.ndims = int(first[2].split(b'=')[1])
+        self.revision = int(first[3].split(b'=')[1])
         if self.ndims == 2:
             self.nstr = 3
             self.component_names = ('XX', 'ZZ', 'XZ')
@@ -71,9 +62,10 @@ class Dynearthsol:
         # parsing other lines
         self.field_pos = {}
         for line in header[1:]:
-            if line[0] == '\x00': break  # end of record
-            name, pos = line.split('\t')
-            self.field_pos[name] = int(pos)
+            # test for null in python3 bytes and python2 str
+            if line[0] in (0, '\x00'): break  # end of record
+            name, pos = line.split(b'\t')
+            self.field_pos[name.decode('ascii')] = int(pos)
 
         #print(self.field_pos)
         return
@@ -114,7 +106,7 @@ class Dynearthsol:
 
         pos = self.field_pos[name]
         fname = self.get_fn(frame)
-        with open(fname,'rb') as f:
+        with open(fname,'r') as f:
             f.seek(pos)
             field = np.fromfile(f, dtype=dtype, count=count).reshape(shape)
         return field
@@ -134,7 +126,7 @@ class Dynearthsol:
 
         pos = self.field_pos[name]
         fname = self.get_fn(frame)
-        with open(fname, 'r+b') as f:
+        with open(fname, 'r+') as f:
             f.seek(pos)
             f.write(data.tostring())
         return

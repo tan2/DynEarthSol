@@ -62,7 +62,7 @@ def main(modelname, start, end, delta):
         print('Converting frame #{0}'.format(suffix), end='\r', file=sys.stderr)
 
         filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
-        fvtu = open(filename, 'wb')
+        fvtu = open(filename, 'w')
 
         try:
             vtu_header(fvtu, nnode, nelem, time_in_yr, step)
@@ -70,7 +70,7 @@ def main(modelname, start, end, delta):
             #
             # node-based field
             #
-            fvtu.write(b'  <PointData>\n')
+            fvtu.write('  <PointData>\n')
 
             # averaged velocity is more stable and is preferred
             try:
@@ -94,11 +94,11 @@ def main(modelname, start, end, delta):
             # node number for debugging
             vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node number')
 
-            fvtu.write(b'  </PointData>\n')
+            fvtu.write('  </PointData>\n')
             #
             # element-based field
             #
-            fvtu.write(b'  <CellData>\n')
+            fvtu.write('  <CellData>\n')
 
             #convert_field(des, frame, 'volume', fvtu)
             #convert_field(des, frame, 'edvoldt', fvtu)
@@ -151,19 +151,19 @@ def main(modelname, start, end, delta):
             # element number for debugging
             vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem number')
 
-            fvtu.write(b'  </CellData>\n')
+            fvtu.write('  </CellData>\n')
 
             #
             # node coordinate
             #
-            fvtu.write(b'  <Points>\n')
+            fvtu.write('  <Points>\n')
             convert_field(des, frame, 'coordinate', fvtu)
-            fvtu.write(b'  </Points>\n')
+            fvtu.write('  </Points>\n')
 
             #
             # element connectivity & types
             #
-            fvtu.write(b'  <Cells>\n')
+            fvtu.write('  <Cells>\n')
             convert_field(des, frame, 'connectivity', fvtu)
             vtk_dataarray(fvtu, (des.ndims+1)*np.array(range(1, nelem+1), dtype=np.int32), 'offsets')
             if des.ndims == 2:
@@ -173,7 +173,7 @@ def main(modelname, start, end, delta):
                 # VTK_ TETRA == 10
                 celltype = 10
             vtk_dataarray(fvtu, celltype*np.ones((nelem,), dtype=np.int32), 'types')
-            fvtu.write(b'  </Cells>\n')
+            fvtu.write('  </Cells>\n')
 
             vtu_footer(fvtu)
             fvtu.close()
@@ -202,7 +202,7 @@ def main(modelname, start, end, delta):
 
 
 def output_vtp_file(des, frame, filename, markersetname, time_in_yr, step):
-    fvtp = open(filename, 'wb')
+    fvtp = open(filename, 'w')
 
     class MarkerSizeError(RuntimeError):
         pass
@@ -305,7 +305,7 @@ def vtk_dataarray(f, data, data_name=None, data_comps=None):
         fmt = 'ascii'
     header = '<DataArray type="{0}" {1} {2} format="{3}">\n'.format(
         dtype, name, ncomp, fmt)
-    f.write(header.encode('ascii'))
+    f.write(header)
     if output_in_binary:
         header = np.zeros(4, dtype=np.int32)
         header[0] = 1
@@ -314,11 +314,11 @@ def vtk_dataarray(f, data, data_name=None, data_comps=None):
         header[2] = len(a)
         b = zlib.compress(a)
         header[3] = len(b)
-        f.write(base64.standard_b64encode(header.tostring()))
-        f.write(base64.standard_b64encode(b))
+        f.write(base64.standard_b64encode(header.tostring()).decode('ascii'))
+        f.write(base64.standard_b64encode(b).decode('ascii'))
     else:
-        data.tofile(f, sep=b' ')
-    f.write(b'\n</DataArray>\n')
+        data.tofile(f, sep=' ')
+    f.write('\n</DataArray>\n')
     return
 
 
@@ -336,13 +336,13 @@ def vtu_header(f, nnode, nelem, time, step):
   </DataArray>
 </FieldData>
 <Piece NumberOfPoints="{0}" NumberOfCells="{1}">
-'''.format(nnode, nelem, time, step).encode('ascii'))
+'''.format(nnode, nelem, time, step))
     return
 
 
 def vtu_footer(f):
     f.write(
-b'''</Piece>
+'''</Piece>
 </UnstructuredGrid>
 </VTKFile>
 ''')
@@ -363,13 +363,13 @@ def vtp_header(f, nmarkers, time, step):
   </DataArray>
 </FieldData>
 <Piece NumberOfPoints="{0}">
-'''.format(nmarkers, time, step).encode('ascii'))
+'''.format(nmarkers, time, step))
     return
 
 
 def vtp_footer(f):
     f.write(
-b'''</Piece>
+'''</Piece>
 </PolyData>
 </VTKFile>
 ''')
