@@ -12,11 +12,15 @@ options:
     -p          save P-axis and T-axis
     -t          save all tensor components (default: only 1st/2nd invariants)
     -h,--help   show this help
+
+If 'start' is not provided, start from the 0th frame.
+If 'start' is -1, resume previous conversion.
+If 'end' is not provided or is -1, end at the last output.
 '''
 
 from __future__ import print_function, unicode_literals
 import sys, os
-import base64, zlib
+import base64, zlib, glob
 import numpy as np
 from numpy.linalg  import eigh
 from Dynearthsol import Dynearthsol
@@ -46,6 +50,11 @@ def main(modelname, start, end, delta):
         output_prefix = modelname
 
     des = Dynearthsol(modelname)
+
+    if start == -1:
+        vtulist = sorted(glob.glob(modelname + '.*.vtu'))
+        lastframe = int(vtulist[-1][(len(modelname)+1):-4]) if vtulist else des.frames[0]
+        start = des.frames.index(lastframe) + 1
 
     if end == -1:
         end = len(des.frames)
