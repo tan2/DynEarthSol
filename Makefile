@@ -101,7 +101,9 @@ ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 	endif
 
 	ifeq ($(useadapt), 1)
-		CXXFLAGS += -I$(VTK_INCLUDE)
+		ifdef VTK_INCLUDE
+			CXXFLAGS += -I$(VTK_INCLUDE)
+		endif
 	endif
 
 else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tested with v14
@@ -124,7 +126,9 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 	endif
 
 	ifeq ($(useadapt), 1)
-		CXXFLAGS += -I$(VTK_INCLUDE)
+		ifdef VTK_INCLUDE
+			CXXFLAGS += -I$(VTK_INCLUDE)
+		endif
 	endif
 
 else
