@@ -132,6 +132,12 @@ void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][N
                     diff2 += (bnormals[i][d] - normal[d]) * (bnormals[i][d] - normal[d]);
                 if (diff2 > eps2) {
                     std::cerr << "Error: boundary " << i << " is curved.\n";
+                    std::cerr << "Got  -  Expected\n";
+                    std::cerr << bnormals[i][0] << " - " << normal[0] << '\n';
+                    std::cerr << bnormals[i][1] << " - " << normal[1] << '\n';
+#ifdef THREED
+                    std::cerr << bnormals[i][2] << " - " << normal[2] << '\n';
+#endif
                     std::exit(1);
                 }
             }
