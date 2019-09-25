@@ -48,12 +48,7 @@ else
 endif
 
 ## path to Boost's base directory, if not in standard system location
-#BOOST_ROOT_DIR = /opt/boost_1_63_0
-#TBB_DIR = /opt/tbb-2017_U7
-#TBB_ARCH = macos_intel64_clang_cc8.1.0_os10.12.5_release
 BOOST_ROOT_DIR = /opt/boost_1_65_0
-TBB_DIR = /opt/tbb-2017_U7
-TBB_ARCH = linux_intel64_gcc_cc5.4.0_libc2.23_kernel4.4.0_release
 
 ########################################################################
 ## Select compiler and linker flags
@@ -216,10 +211,6 @@ ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
 
-TBB_LIBNAME = tbb
-CXXFLAGS += -I$(TBB_DIR)/include
-LDFLAGS += -L$(TBB_DIR)/build/$(TBB_ARCH) -ltbb
-
 ifeq ($(useadapt), 1)
 	LIBADAPTIVITY_DIR = ./libadaptivity
 	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
@@ -262,7 +253,6 @@ $(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNA
 			-o $@
 ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
 		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
-		install_name_tool -change @rpath/libtbb.dylib $(TBB_DIR)/build/$(TBB_ARCH)/libtbb.dylib $@
 endif
 else
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
@@ -271,7 +261,6 @@ $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(A
 			-o $@
 ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
 		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
-		install_name_tool -change @rpath/libtbb.dylib $(TBB_DIR)/build/$(TBB_ARCH)/libtbb.dylib $@
 endif
 endif
 
