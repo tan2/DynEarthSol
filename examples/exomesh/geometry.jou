@@ -1,0 +1,53 @@
+reset
+
+# create a big outer box
+# We move boxes so that the z-pos surface are all aligned on z=0
+# Note: Y is the depth axis
+brick x 1000000 y 350000 z 600000
+move Volume 1 y -175000 z -300000 include_merged 
+
+# A box for the weak lower crust
+brick x 75000 y 40000 z 600000
+move Volume 2 x 0 y -35000 z -300000 include_merged 
+
+# create a high-res box
+brick x 300000 y 100000 z 200000
+move Volume 3 y -50000 z -100000 include_merged 
+
+# Subtract volumes so that the overlapping region is counted only once.
+subtract body 2 from body 1 imprint keep 
+delete volume 1 
+
+subtract body 3 from body 4 imprint keep 
+delete volume 4 
+
+webcut body 2 with plane zplane offset -200000
+
+subtract body 2 from body 3 imprint keep 
+delete volume 3 
+
+compress all
+
+# web cut the high-res normal crust block so that a fault plane can be imprinted on the cut plane
+webcut body 4 with plane xplane
+
+# Create a fault plane
+create surface rectangle width 100000 height 15000 xplane 
+move surface 53 x 0 y -7500 z -50000
+imprint volume all with surface 53
+delete body 6
+compress all
+
+# Tie things together and clean up
+imprint all with volume all
+merge all
+
+# Name volumes.
+volume 1 name "weak_highres"
+volume 2 name "normal_lowres"
+volume 3 name "weak_lowres"
+volume 4 name "normal_highres_xneg"
+volume 5 name "normal_highres_xpos"
+
+
+

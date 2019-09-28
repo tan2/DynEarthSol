@@ -1034,7 +1034,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
 #ifndef THREED
     std::cerr << "Error: exofile is currently works only in 3D.\n";
     std::exit(2);
-#else
+#endif
 
     // Open an .exo file.
     int CPU_word_size = 0;
@@ -1063,7 +1063,10 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     }
     var.nnode = num_nodes;
     var.nelem = num_elem;
-
+    std::cerr <<" Numbers of nodes and elements are " << var.nnode <<" and "<< var.nelem <<"."<<std::endl;
+    std::cerr <<" Number of element blocks is " << num_elem_blk <<"."<<std::endl;
+    std::cerr <<" Number of node sets is " << num_node_sets <<"."<<std::endl;
+    std::cerr <<" Number of side sets is " << num_side_sets <<"."<<std::endl;
     // Assign node coordinates.
     float *x = (float *) calloc(var.nnode, sizeof(float));
     float *y = (float *) calloc(var.nnode, sizeof(float));
@@ -1079,9 +1082,9 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     var.coord = new array_t(var.nnode);
     double* coord = var.coord->data();
     for(int i=0; i<var.nnode; i++) {
-        coord[i]   = std::static_cast<double>(x[i]);
-        coord[i+1] = std::static_cast<double>(y[i]);
-        coord[i+2] = std::static_cast<double>(z[i]);
+        coord[i]   = static_cast<double>(x[i]);
+        coord[i+1] = static_cast<double>(y[i]);
+        coord[i+2] = static_cast<double>(z[i]);
     }
     free(x);
     free(y);
@@ -1127,11 +1130,11 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     // One way is to provide a map from block names to mat id. TBD.
     // 
     var.regattr = new regattr_t(var.nelem);
-    int *attr = var.regattr.data();
+    double *attr = var.regattr->data();
     int start = 0;
     for (int i=0; i<num_elem_blk; i++) {
         for(int j=0; j<num_elem_in_block[i]; j++)
-            attr[start+j] = ids[i]-1;
+            attr[start+j] = static_cast<double>(ids[i]-1);
         start = num_elem_in_block[i];
     }
 
@@ -1148,10 +1151,10 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     }
 
     var.connectivity = new conn_t(var.nelem);
-    int *conn = var.connectivity.data();
+    int *conn = var.connectivity->data();
     start = 0;
     for (int i=0; i<num_elem_blk; i++) {
-        std::memcpy( conn[start], connect[i], sizeof(connect[i]) );
+        std::memcpy( &(conn[start]), &(connect[i]), sizeof(connect[i]) );
         start = num_elem_in_block[i];
     }
             
@@ -1169,15 +1172,19 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
 
     // - Read side set ids.
     error = ex_get_side_set_ids (exoid, ids);
+    if( error != 0 ) {
+            std::cerr << "Error: Unable to get side set ids." << std::endl;
+            std::exit(2);
+    }   
     var.nseg = 0;
     for(int i=0; i<num_side_sets; i++) {
         error = ex_get_side_set_param (exoid, ids[i], &(num_sides_in_set[i]),
                                        &(num_df_in_set[i]));
         if( error != 0 ) {
-            std::cerr << "Error: Unable to read side set parameters." << std::endl;
+            std::cerr << "Error: Unable to read "<<i<<"-th side set parameters." << std::endl;
             std::exit(2);
         }                           
-        var.nseg += num_elem_in_set;
+        var.nseg += num_sides_in_set[i];
     }
 
     // list of facets (sides) of a corresponding element in the side set
@@ -1195,8 +1202,8 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
         elem_list[i] = (int *) calloc(num_sides_in_set[i], sizeof(int));
         side_list[i] = (int *) calloc(num_sides_in_set[i], sizeof(int));
         node_cnt_list[i] = (int *) calloc(num_sides_in_set[i], sizeof(int));
-        node_list[i] = (int *) calloc(num_sides_in_set*3, sizeof(int));
-        dist_fact[i] = (float *) calloc(num_df_in_set, sizeof(float));
+        node_list[i] = (int *) calloc(num_sides_in_set[i]*3, sizeof(int));
+        dist_fact[i] = (float *) calloc(num_df_in_set[i], sizeof(float));
         
         // list of elements of which facet belongs to a side set
         // Note: The # of elements is same as # of sides!
@@ -1223,33 +1230,35 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
 
     // Assign memory to segments (boundary facets)
     var.segment = new segment_t(var.nseg, 0);
-    int *segments = var.segment.data();
+    int *segments = var.segment->data();
 
     // Assign memory to segment flags (which boundary a segments belong to).
     var.segflag = new segflag_t(var.nseg, 0);
-    int *segflags = var.segflag.data();
+    int *segflags = var.segflag->data();
 
     // Populate segment and segflag arrays
     start = 0;
     for (int i=0; i<num_side_sets; i++) {
-        for (int j=0; j<num_sides_in_set; j++) {        
+        for (int j=0; j<num_sides_in_set[i]; j++) {        
             const int *conn = (*var.connectivity)[elem_list[i][j]];
             segments[start+j*3] = conn[node_list[i][3*j]];
             segments[start+j*3+1] = conn[node_list[i][3*j+1]];
             segments[start+j*3+2] = conn[node_list[i][3*j+2]];
-            segflags[start+j] = id[i]; 
+            segflags[start+j] = ids[i]; 
         }
         start = num_sides_in_set[i];
     }
     
     // free up memory.
     for (int i=0; i<num_side_sets; i++) {
-        free (elem_list);
-        free (side_list);
-        free (node_cnt_list);
-        free (node_list);
-        free (dist_fact);
+        free (elem_list[i]);
+        free (side_list[i]);
+        free (node_cnt_list[i]);
+        free (node_list[i]);
+        free (dist_fact[i]);
     }
+    free (num_sides_in_set);
+    free (num_df_in_set);
     free(ids);
     
 } // end of function new_mesh_from_exofile
@@ -1839,6 +1848,9 @@ void create_new_mesh(const Param& param, Variables& var)
         break;
     case 90:
         new_mesh_from_polyfile(param, var);
+        break;
+    case 95:
+        new_mesh_from_exofile(param, var);
         break;
     default:
         std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';

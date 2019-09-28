@@ -13,42 +13,46 @@
 ## useadapt = 1: use libadaptivity for mesh optimization during remeshing
 ## adaptive_time_step = 1: use adaptive time stepping technique
 ## use_R_S = 1: use Rate - State friction law
+## useexo = 1: get ready to import a exodusII mesh (e.g., from Trelis)
 
-ndims = 2
+ndims = 3
 opt = 2
 openmp = 1
 useadapt = 1
 adaptive_time_step = 1
 use_R_S = 1
+useexo = 1
 
 ifeq ($(ndims), 2)
-	useadapt = 0   # libadaptivity is 3d only
+	useadapt = 0  # libadaptivity is 3d only
+	useexo = 0    # for now, can import only 3d exo mesh
 endif
 
 ifneq ($(adaptive_time_step), 1)
 	use_R_S = 0   # Rate - State friction law only works with adaptive time stepping technique
 endif
 
-## Select C++ compiler
+## Select C++ compiler and set paths to necessary libraries
 ifeq ($(useadapt), 1)
 	CXX = mpicxx # g++-mp-4.7
 	CXX_BACKEND = g++
 
 	# path to vtk header files, if not in standard system location
-	VTK_INCLUDE = /usr/include/vtk-5.10
+	VTK_INCLUDE = /opt/local/include/vtk-8.1
 
 	# path of vtk library files, if not in standard system location
-	VTK_LIBS = /usr/lib/vtk-5.10
+	VTK_LIBS = /opt/local/lib
 
 	# flag to link with fortran binding of MPI library
-	LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
+	#LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
+	LIB_MPIFORTRAN = -lfmpich # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
 else
 	CXX = g++
 	CXX_BACKEND = ${CXX}
 endif
 
 ## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR = /opt/boost_1_65_0
+BOOST_ROOT_DIR = ${HOME}/opt/boost_1_69_0
 
 ########################################################################
 ## Select compiler and linker flags
@@ -73,6 +77,20 @@ ifdef BOOST_ROOT_DIR
 	BOOST_LDFLAGS += -L$(BOOST_LIB_DIR)
 	ifneq ($(OSNAME), Darwin)  # Apple's ld doesn't support -rpath
 		BOOST_LDFLAGS += -Wl,-rpath=$(BOOST_LIB_DIR)
+	endif
+endif
+
+ifeq ($(useexo), 1)
+	# path to exodus header files
+	EXO_INCLUDE = ${HOME}/opt/seacas/include
+
+	# path of exodus library files, if not in standard system location
+	EXO_LIB_DIR = ${HOME}/opt/seacas/lib
+
+	EXO_CXXFLAGS = -I$(EXO_INCLUDE)
+	EXO_LDFLAGS = -L$(EXO_LIB_DIR) -lexodus
+	ifneq ($(OSNAME), Darwin)  # Apple's ld doesn't support -rpath
+		EXO_LDFLAGS += -Wl,-rpath=$(EXO_LIB_DIR)
 	endif
 endif
 
@@ -150,7 +168,7 @@ SRCS =	\
 	ic-read-temp.cxx \
 	input.cxx \
 	matprops.cxx \
-	mesh.cxx \
+	mesh_exo.cxx \
 	nn-interpolation.cxx \
 	output.cxx \
 	phasechanges.cxx \
@@ -204,6 +222,11 @@ ifeq ($(use_R_S), 1)
 endif
 endif
 
+ifeq ($(useexo), 1)
+	CXXFLAGS += $(EXO_CXXFLAGS)
+	LDFLAGS += $(EXO_LDFLAGS)
+endif
+
 C3X3_DIR = 3x3-C
 C3X3_LIBNAME = 3x3
 
@@ -236,7 +259,7 @@ $(LIBADAPTIVITY_DIR)/cppflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
 	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
 
 $(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
-	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk
+	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk exec_prefix=`pwd`
 
 $(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
 	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
@@ -251,9 +274,12 @@ $(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNA
 			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
 			$(LIBADAPTIVITY_LIBS) \
 			-o $@
-ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
-		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
-endif
+#ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
+#		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+##ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
+##		install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
+##endif
+#endif
 else
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
 		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
@@ -261,6 +287,9 @@ $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(A
 			-o $@
 ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
 		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
+		install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
+endif
 endif
 endif
 

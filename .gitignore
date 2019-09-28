@@ -1,0 +1,15 @@
+*.o
+config.*
+*.mod
+*.mk
+libadaptivity/lib
+libadaptivity/CMakeFiles
+*.a
+*.so
+ann/lib
+snapshot.diff
+dynearthsol[2,3]d
+libadaptivity/Makefile
+libadaptivity/*/Makefile
+confdefs.h
+libadaptivity/include

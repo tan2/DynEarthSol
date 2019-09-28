@@ -66,6 +66,7 @@ struct Mesh {
 
     double_pair refined_zonex, refined_zoney, refined_zonez;
     std::string poly_filename;
+    std::string exo_filename;
 
     bool is_discarding_internal_segments;
     int remeshing_option;

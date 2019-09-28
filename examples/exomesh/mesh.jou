@@ -1,0 +1,101 @@
+# ----------------------------------------------------------------------
+# Generate geometry
+# ----------------------------------------------------------------------
+playback 'geometry.jou'
+
+# ----------------------------------------------------------------------
+# Set discretization size
+# ----------------------------------------------------------------------
+volume all size 50000
+volume weak_highres size 10000
+volume weak_lowres size 50000
+volume normal_highres_xneg size 10000
+volume normal_highres_xpos size 10000
+
+# ----------------------------------------------------------------------
+# Generate the mesh
+# ----------------------------------------------------------------------
+volume all scheme Tetmesh proximity layers off 
+mesh volume all
+
+# ----------------------------------------------------------------------
+# Create blocks for materials
+# ----------------------------------------------------------------------
+block 1 volume weak_highres weak_lowres
+block 1 name "weak_viscoelastic"
+block 2 volume normal_lowres normal_highres_xneg normal_highres_xpos
+block 2 name "normal_viscoelastic"
+
+
+# ----------------------------------------------------------------------
+# Create sideset and nodeset for fault
+# ----------------------------------------------------------------------
+group "fault" add node in surface 50
+group "fault_edge" add node in curve 122
+nodeset 10 group fault
+nodeset 10 name "fault"
+nodeset 20 group fault_edge
+nodeset 20 name "fault_edge"
+
+# ----------------------------------------------------------------------
+# Create nodeset for +x face
+# ----------------------------------------------------------------------
+sideset 11 add surface 14
+sideset 11 name "face_xpos"
+group "face_xpos" add node in surface 14
+nodeset 11 group face_xpos
+nodeset 11 name "face_xpos"
+
+# ----------------------------------------------------------------------
+# Create nodeset for -x face
+# ----------------------------------------------------------------------
+sideset 12 add surface 13
+sideset 12 name "face_xneg"
+group "face_xneg" add node in surface 13
+nodeset 12 group face_xneg
+nodeset 12 name "face_xneg"
+
+# ----------------------------------------------------------------------
+# Create nodeset for -y face
+# ----------------------------------------------------------------------
+sideset 13 add surface 12
+sideset 13 name "face_yneg"
+group "face_yneg" add node in surface 12
+nodeset 13 group face_yneg
+nodeset 13 name "face_yneg"
+
+# ----------------------------------------------------------------------
+# Create nodeset for +y face
+# ----------------------------------------------------------------------
+sideset 14 add surface 7, 28, 40
+sideset 14 name "face_ypos"
+group "face_ypos" add node in surface 7, 28, 40
+group face_ypos remove node in group fault
+nodeset 14 group face_ypos
+nodeset 14 name "face_ypos"
+
+# ----------------------------------------------------------------------
+# Create nodeset for -z face
+# ----------------------------------------------------------------------
+sideset 15 add surface 2, 11
+sideset 15 name "face_zneg"
+group "face_zneg" add node in surface 2, 11
+nodeset 15 group face_zneg
+nodeset 15 name "face_zneg"
+
+# ----------------------------------------------------------------------
+# Create nodeset for +z face
+# ----------------------------------------------------------------------
+sideset 16 add surface 1, 10, 30, 38
+sideset 16 name "face_zpos"
+group "face_zpos" add node in surface 1, 10, 30, 38
+group face_zpos remove node in group fault
+nodeset 16 group face_zpos
+nodeset 16 name "face_zpos"
+
+# ----------------------------------------------------------------------
+# Export exodus file
+# ----------------------------------------------------------------------
+export mesh "KandS.exo" dimension 3 overwrite
+
+
