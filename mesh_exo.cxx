@@ -1116,7 +1116,11 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
             std::cerr << "Error: Unable to element block " << ids[i] ;
             std::cerr << " out of " << num_elem_blk << " blocks." << std::endl;
             std::exit(2);
-        }                           
+        }             
+        if( NODES_PER_ELEM != num_nodes_per_elem[i] ) {
+            std::cerr << "Error: Element has " << num_nodes_per_elem[i] << " nodes per element. Tetraherdon should have 4." << std::endl;
+            std::exit(2);
+        }
     }
 
     // Create the array of region attributes.
@@ -1135,7 +1139,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     for (int i=0; i<num_elem_blk; i++) {
         for(int j=0; j<num_elem_in_block[i]; j++)
             attr[start+j] = static_cast<double>(ids[i]-1);
-        start = num_elem_in_block[i];
+        start += num_elem_in_block[i];
     }
 
     // - Read and append element connectivity
@@ -1154,8 +1158,16 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     int *conn = var.connectivity->data();
     start = 0;
     for (int i=0; i<num_elem_blk; i++) {
-        std::memcpy( &(conn[start]), &(connect[i]), sizeof(connect[i]) );
-        start = num_elem_in_block[i];
+        for(int j=0; j<num_elem_in_block[i]; j++) {
+            const int elem_num = start + j;
+            conn[ NODES_PER_ELEM * elem_num ] = connect[i][ NODES_PER_ELEM * j ];
+            conn[ NODES_PER_ELEM * elem_num + 1] = connect[i][ NODES_PER_ELEM * j + 1];
+            conn[ NODES_PER_ELEM * elem_num + 2] = connect[i][ NODES_PER_ELEM * j + 2];
+            conn[ NODES_PER_ELEM * elem_num + 3] = connect[i][ NODES_PER_ELEM * j + 3];
+        }
+        //std::memcpy( &(conn[start]), &(connect[i]), sizeof(connect[i]) );
+        //std::memcpy( &(conn[start]), &(connect[i]), num_elem_in_block[i]*NODES_PER_ELEM );
+        start += num_elem_in_block[i];
     }
             
     for (int i=0; i<num_elem_blk; i++) free(connect[i]);
@@ -1187,7 +1199,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
         var.nseg += num_sides_in_set[i];
     }
 
-    // list of facets (sides) of a corresponding element in the side set
+    // list of elements in the side set
     int *elem_list[num_side_sets];
     // list of facets (sides) of a corresponding element in the side set
     int *side_list[num_side_sets];
@@ -1212,13 +1224,14 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
             std::cerr << "Error: Unable to read "<< i <<"-th side set." << std::endl;
             std::exit(2);
         }
-        error = ex_get_side_set_node_list (exoid, ids[i], node_cnt_list[i],
-                                               node_list[i]);
-        if( error != 0 ) {
-            std::cerr << "Error: Unable to read "<< i <<"-th side set's node list." << std::endl;
-            std::exit(2);
-        }
         if (num_df_in_set > 0) {
+            //error = ex_get_side_set_node_list (exoid, ids[i], node_cnt_list[i],
+            //                                       node_list[i]);
+            //if( error != 0 ) {
+            //    std::cerr << "Error: Unable to read "<< i <<"-th side set's node list." << std::endl;
+            //    std::exit(2);
+            //}
+        
             error = ex_get_side_set_dist_fact (exoid, ids[i], dist_fact[i]);
             if( error != 0 ) {
                 std::cerr << "Error: Unable to read "<< i;
@@ -1237,16 +1250,23 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     int *segflags = var.segflag->data();
 
     // Populate segment and segflag arrays
+    // For sideset node ordering, 
+    // refer Table 4.2 on p. 30, "Exodus: A finite element data model" by Sjaardema et al.
+    // Retrieved on 2019/09/28 from gsjaardema.github.io/seacas/exodusII-new.pdf.
+    std::vector< std::vector<int> > local_node_list{{1,2,4},{2,3,4},{1,4,3},{1,3,2}};
     start = 0;
     for (int i=0; i<num_side_sets; i++) {
         for (int j=0; j<num_sides_in_set[i]; j++) {        
             const int *conn = (*var.connectivity)[elem_list[i][j]];
-            segments[start+j*3] = conn[node_list[i][3*j]];
-            segments[start+j*3+1] = conn[node_list[i][3*j+1]];
-            segments[start+j*3+2] = conn[node_list[i][3*j+2]];
+            const int side_num = side_list[i][j] - 1;
+            for (int k=0; k<NODES_PER_FACET; k++) { // 3 nodes per triangular facet
+                const int local_node_number = local_node_list[side_num][k] - 1;
+                segments[start+j*3+k]   = conn[ local_node_number ];
+                std::cerr << i <<" "<< j <<"/"<<num_sides_in_set[i]<<" "<< k <<" "<<local_node_number<<" "<<start<<" "<< conn[ local_node_number] << std::endl;
+            }
             segflags[start+j] = ids[i]; 
         }
-        start = num_sides_in_set[i];
+        start += num_sides_in_set[i];
     }
     
     // free up memory.
@@ -1259,7 +1279,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     }
     free (num_sides_in_set);
     free (num_df_in_set);
-    free(ids);
+    free (ids);
     
 } // end of function new_mesh_from_exofile
 
