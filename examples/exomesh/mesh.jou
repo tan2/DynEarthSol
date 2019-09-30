@@ -8,9 +8,8 @@ playback 'geometry.jou'
 # ----------------------------------------------------------------------
 volume all size 50000
 volume weak_highres size 10000
-volume weak_lowres size 50000
-volume normal_highres_xneg size 10000
-volume normal_highres_xpos size 10000
+volume normal_highres size 10000
+volume fault_zone size 10000
 
 # ----------------------------------------------------------------------
 # Generate the mesh
@@ -22,76 +21,68 @@ mesh volume all
 # Create blocks for materials
 # ----------------------------------------------------------------------
 block 1 volume weak_highres weak_lowres
-block 1 name "weak_viscoelastic"
-block 2 volume normal_lowres normal_highres_xneg normal_highres_xpos
-block 2 name "normal_viscoelastic"
+block 1 name "weak_evp"
+block 2 volume fault_zone normal_lowres normal_highres
+block 2 name "normal_evp"
 
-
+#/* Define 8 corner points of the box, with this order:
+#      *         4 ------- 7
+#      *        /               /|
+#       *       /              / 6           z^   ^ y
+#       *      0 ------- 3 /             |  /
+#       *      |               |/               | /
+#       *      1 ------- 2                -----> x
+#       *
+#       * Cut-out diagram with boundary flag:
+#       *                    4 ------- 7
+#       *                     | BOUNDZ1 |
+#       *   4 ------- 0 ------- 3   -------   7 ------- 4
+#       *   | BOUNDX0 | BOUNDY0 | BOUNDX1 | BOUNDY1 |
+#       *   5 ------- 1 ------- 2   -------   6 ------- 5
+#       *                     | BOUNDZ0 |
+#       *                    5 ------- 6
+#       */
+# BOUNDX0 = 1, western (left in 2D)
+# BOUNDX1 = 2, eastern (right in 2D)
+# BOUNDY0 = 4, southern
+# BOUNDY1 = 8, northern
+# BOUNDZ0 = 16, bottom
+# BOUNDZ1 = 32, top
 # ----------------------------------------------------------------------
-# Create sideset and nodeset for fault
+# Create sideset for BOUNDX0 (western or -x face)
 # ----------------------------------------------------------------------
-group "fault" add node in surface 50
-group "fault_edge" add node in curve 122
-nodeset 10 group fault
-nodeset 10 name "fault"
-nodeset 20 group fault_edge
-nodeset 20 name "fault_edge"
-
-# ----------------------------------------------------------------------
-# Create nodeset for +x face
-# ----------------------------------------------------------------------
-sideset 11 add surface 14
-sideset 11 name "face_xpos"
-group "face_xpos" add node in surface 14
-nodeset 11 group face_xpos
-nodeset 11 name "face_xpos"
-
-# ----------------------------------------------------------------------
-# Create nodeset for -x face
-# ----------------------------------------------------------------------
-sideset 12 add surface 13
-sideset 12 name "face_xneg"
-group "face_xneg" add node in surface 13
-nodeset 12 group face_xneg
-nodeset 12 name "face_xneg"
-
-# ----------------------------------------------------------------------
-# Create nodeset for -y face
-# ----------------------------------------------------------------------
-sideset 13 add surface 12
-sideset 13 name "face_yneg"
-group "face_yneg" add node in surface 12
-nodeset 13 group face_yneg
-nodeset 13 name "face_yneg"
+sideset 1 add surface 21
+sideset 1 name "BOUNDX0"
 
 # ----------------------------------------------------------------------
-# Create nodeset for +y face
+# Create sideset for BOUNDX1 (western or +x face)
 # ----------------------------------------------------------------------
-sideset 14 add surface 7, 28, 40
-sideset 14 name "face_ypos"
-group "face_ypos" add node in surface 7, 28, 40
-group face_ypos remove node in group fault
-nodeset 14 group face_ypos
-nodeset 14 name "face_ypos"
+sideset 2 add surface 22
+sideset 2 name "BOUNDX1"
 
 # ----------------------------------------------------------------------
-# Create nodeset for -z face
+# Create sideset for BOUNDX0 (western or -y face)
 # ----------------------------------------------------------------------
-sideset 15 add surface 2, 11
-sideset 15 name "face_zneg"
-group "face_zneg" add node in surface 2, 11
-nodeset 15 group face_zneg
-nodeset 15 name "face_zneg"
+sideset 4 add surface 1, 20
+sideset 4 name "BOUNDY0"
 
 # ----------------------------------------------------------------------
-# Create nodeset for +z face
+# Create sideset for BOUNDX0 (western or +y face)
 # ----------------------------------------------------------------------
-sideset 16 add surface 1, 10, 30, 38
-sideset 16 name "face_zpos"
-group "face_zpos" add node in surface 1, 10, 30, 38
-group face_zpos remove node in group fault
-nodeset 16 group face_zpos
-nodeset 16 name "face_zpos"
+sideset 8 add surface 2, 7, 15, 45
+sideset 8 name "BOUNDY1"
+
+# ----------------------------------------------------------------------
+# Create sideset for BOUNDX0 (western or -z face)
+# ----------------------------------------------------------------------
+sideset 16 add surface 19
+sideset 16 name "BOUNDZ0"
+
+# ----------------------------------------------------------------------
+# Create sideset for BOUNDX0 (western or +z face)
+# ----------------------------------------------------------------------
+sideset 32 add surface 3, 18, 35, 36
+sideset 32 name "BOUNDZ1"
 
 # ----------------------------------------------------------------------
 # Export exodus file
