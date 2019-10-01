@@ -1082,9 +1082,12 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     var.coord = new array_t(var.nnode);
     double* coord = var.coord->data();
     for(int i=0; i<var.nnode; i++) {
-        coord[i]   = static_cast<double>(x[i]);
-        coord[i+1] = static_cast<double>(y[i]);
-        coord[i+2] = static_cast<double>(z[i]);
+        coord[i*NDIMS]   = static_cast<double>(x[i]);
+        coord[i*NDIMS+1] = static_cast<double>(y[i]);
+        coord[i*NDIMS+2] = static_cast<double>(z[i]);
+        // if(coord[i*NDIMS+1]==-5.0)
+        //     std::cerr<<"i="<<i<<" "<<coord[i*NDIMS]<<" "<<coord[i*NDIMS+1]<<" "<<coord[i*NDIMS+2]<<std::endl;
+
     }
     free(x);
     free(y);
@@ -1118,7 +1121,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
             std::exit(2);
         }             
         if( NODES_PER_ELEM != num_nodes_per_elem[i] ) {
-            std::cerr << "Error: Element has " << num_nodes_per_elem[i] << " nodes per element. Tetraherdon should have 4." << std::endl;
+            std::cerr << "Error: Element has " << num_nodes_per_elem[i] << " nodes per element but should have "<<NODES_PER_ELEM<<"."<< std::endl;
             std::exit(2);
         }
     }
@@ -1144,31 +1147,50 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
 
     // - Read and append element connectivity
     int* connect[num_elem_blk];
+    // start = 0;
     for (int i=0; i<num_elem_blk; i++) {
         connect[i] = (int *) calloc((num_nodes_per_elem[i] * num_elem_in_block[i]), sizeof(int));
+        //std::cerr << i <<" "<< num_nodes_per_elem[i]<<" "<< num_elem_in_block[i]<< std::endl;
         error = ex_get_elem_conn (exoid, ids[i], connect[i]);
         if( error != 0 ) {
             std::cerr << "Error: Unable to connectivity for element block " << ids[i] ;
             std::cerr << " out of " << num_elem_blk << " blocks." << std::endl;
             std::exit(2);
-        }                           
+        }
+        // Debugging stuff
+        // for(int j=0; j<num_elem_in_block[i]; j++) {
+        //     const int elem_num = start + j;
+        //     for(int k=0; k < NODES_PER_ELEM; k++ ) {
+        //         const int node_num = connect[i][ NODES_PER_ELEM * elem_num + k ]-1;
+        //         std::cerr<<i<<" "<<j<<" "<<elem_num<<" "<<k<<" "<<(NODES_PER_ELEM * elem_num + k);
+        //         std::cerr<<" node num:"<<node_num<<std::endl;
+        //         std::cerr<<coord[node_num*NDIMS]<<" "<<coord[node_num*NDIMS+1]<<" "<<coord[node_num*NDIMS+2]<<std::endl;
+        //     }
+        // }
+        // start += num_elem_in_block[i];
     }
 
-    var.connectivity = new conn_t(var.nelem);
-    int *conn = var.connectivity->data();
-    start = 0;
-    for (int i=0; i<num_elem_blk; i++) {
-        for(int j=0; j<num_elem_in_block[i]; j++) {
-            const int elem_num = start + j;
-            conn[ NODES_PER_ELEM * elem_num ] = connect[i][ NODES_PER_ELEM * j ];
-            conn[ NODES_PER_ELEM * elem_num + 1] = connect[i][ NODES_PER_ELEM * j + 1];
-            conn[ NODES_PER_ELEM * elem_num + 2] = connect[i][ NODES_PER_ELEM * j + 2];
-            conn[ NODES_PER_ELEM * elem_num + 3] = connect[i][ NODES_PER_ELEM * j + 3];
+    {
+        var.connectivity = new conn_t(var.nelem);
+        int *conn = var.connectivity->data();
+        start = 0;
+        for (int i=0; i<num_elem_blk; i++) {
+            for(int j=0; j<num_elem_in_block[i]; j++) {
+                const int elem_num = start + j;
+                for(int k=0; k < NODES_PER_ELEM; k++ ) {
+                    conn[ NODES_PER_ELEM*elem_num + k ] = connect[i][ NODES_PER_ELEM*j + k ]-1;
+                    // debugging stuff
+                    // const int node_num = conn[ NODES_PER_ELEM*elem_num + k ];
+                    // std::cerr<<i<<" "<<j<<" "<<elem_num<<" "<<k<<" "<<(NODES_PER_ELEM * elem_num + k);
+                    // std::cerr<<" node num:"<<node_num<<std::endl;
+                    // std::cerr<<coord[node_num*NDIMS]<<" "<<coord[node_num*NDIMS+1]<<" "<<coord[node_num*NDIMS+2]<<std::endl;
+                }
+            }
+            //std::memcpy( &(conn[start]), &(connect[i]), sizeof(connect[i]) );
+            //std::memcpy( &(conn[start]), &(connect[i]), num_elem_in_block[i]*NODES_PER_ELEM );
+            start += num_elem_in_block[i];
         }
-        //std::memcpy( &(conn[start]), &(connect[i]), sizeof(connect[i]) );
-        //std::memcpy( &(conn[start]), &(connect[i]), num_elem_in_block[i]*NODES_PER_ELEM );
-        start += num_elem_in_block[i];
-    }
+    } // code block to localize conn 
             
     for (int i=0; i<num_elem_blk; i++) free(connect[i]);
     free (ids);
@@ -1198,7 +1220,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
         }                           
         var.nseg += num_sides_in_set[i];
     }
-
+    
     // list of elements in the side set
     int *elem_list[num_side_sets];
     // list of facets (sides) of a corresponding element in the side set
@@ -1255,18 +1277,31 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     // Retrieved on 2019/09/28 from gsjaardema.github.io/seacas/exodusII-new.pdf.
     std::vector< std::vector<int> > local_node_list{{1,2,4},{2,3,4},{1,4,3},{1,3,2}};
     start = 0;
+    const int *conn = var.connectivity->data();
     for (int i=0; i<num_side_sets; i++) {
-        for (int j=0; j<num_sides_in_set[i]; j++) {        
-            const int *conn = (*var.connectivity)[elem_list[i][j]];
+        for (int j=0; j<num_sides_in_set[i]; j++) {
+            const int elem_num = elem_list[i][j] - 1;   
             const int side_num = side_list[i][j] - 1;
+            //const int *conn = (*var.connectivity)[elem_num*NODES_PER_ELEM];
             for (int k=0; k<NODES_PER_FACET; k++) { // 3 nodes per triangular facet
                 const int local_node_number = local_node_list[side_num][k] - 1;
-                segments[start+j*3+k]   = conn[ local_node_number ];
-                std::cerr << i <<" "<< j <<"/"<<num_sides_in_set[i]<<" "<< k <<" "<<local_node_number<<" "<<start<<" "<< conn[ local_node_number] << std::endl;
+                segments[ (start + j)*NODES_PER_FACET + k] = conn[ elem_num*NODES_PER_ELEM + local_node_number ];
+                // if( ids[i] == 4 ) {
+                //     std::cerr << i <<" "<< j <<" "<<ids[i]<<" el:"<<elem_num<<" side:"<< side_num<<" "<< local_node_number;
+                //     std::cerr <<" "<< conn[ local_node_number ] << std::endl;
+                // }
+                // if( conn[ elem_num*NODES_PER_ELEM + local_node_number ] == 48) {
+                //     std::cerr << i <<" "<< j <<"/"<<num_sides_in_set[i]<<" "<< k <<" "<<local_node_number<<" "<<start<<" "<< conn[ local_node_number]<<" "<<ids[i]<< std::endl;
+                // }
             }
-            segflags[start+j] = ids[i]; 
+            segflags[start + j] = ids[i]; 
+            // if(i==num_side_sets-1) {
+            //     std::cerr<< i <<" "<<j<<" "<<num_sides_in_set[i]<<" "<<start<<" "<<start+j;
+            //     std::cerr<<" id="<<ids[i]<<std::endl;
+            // }
         }
         start += num_sides_in_set[i];
+        //std::cerr << start << std::endl;
     }
     
     // free up memory.
@@ -1468,7 +1503,7 @@ void renumbering_mesh(const Param& param, array_t &coord, conn_t &connectivity,
 
     segment_t seg2(nseg);
     for(int i=0; i<nseg; i++) {
-        for(int j=0; j<NDIMS; j++) {
+        for(int j=0; j<NODES_PER_FACET; j++) {
             int k = segment[i][j];
             seg2[i][j] = nd_inv[k];
         }
@@ -1494,6 +1529,9 @@ void create_boundary_flags2(uint_vec &bcflag, int nseg,
         const int *n = psegment + i * NODES_PER_FACET;
         for (int j=0; j<NODES_PER_FACET; ++j) {
             bcflag[n[j]] |= flag;
+            //if( bcflag[n[j]] != flag)
+            // if( n[j] == 73 || n[j] == 74 || n[j] == 48 )
+            //     std::cerr<<"flag2: " << i <<" "<< j <<" "<<n[j]<<" "<<bcflag[n[j]]<<" "<<flag<< std::endl;
         }
     }
 }
@@ -1606,6 +1644,11 @@ void create_boundary_facets(Variables& var)
                 // find common flags
                 int n = NODE_OF_FACET[i][j];
                 flag &= (*var.bcflag)[conn[n]];
+                // if( conn[n] == 73 || conn[n] == 48 || conn[n] == 74 ) {
+                //     std::cerr<<"e="<<e<<" "<<i<<" "<<j<<" "<<n<<" "<<conn[n]<<" "<<flag<<" "<<(*var.bcflag)[conn[n]]<<std::endl;
+                //     std::cerr<<"xyz="<<(*var.coord)[conn[n]][0]<<" "<<(*var.coord)[conn[n]][1];
+                //     std::cerr<<" "<<(*var.coord)[conn[n]][2]<<std::endl;
+                // }
             }
             if (flag) {
                 // this facet (very likely) belongs to a boundary
@@ -1617,6 +1660,13 @@ void create_boundary_facets(Variables& var)
                 // multiple bits set in flag!
                 std::cerr << "Error: facet " << i << " of element " << e
                           << " belongs to more than one boundary!\n";
+                std::cerr << " flag = "<< flag <<", bcflags of three facet nodes are " << std::endl;
+                std::cerr << (*var.bcflag)[conn[NODE_OF_FACET[i][0]]] <<" "<< conn[NODE_OF_FACET[i][0]]<< std::endl;
+                std::cerr << (*var.bcflag)[conn[NODE_OF_FACET[i][1]]] <<" "<< conn[NODE_OF_FACET[i][1]]<< std::endl;
+                std::cerr << (*var.bcflag)[conn[NODE_OF_FACET[i][2]]] <<" "<< conn[NODE_OF_FACET[i][2]]<< std::endl;
+                std::cerr << (*var.coord)[conn[NODE_OF_FACET[i][0]]][0] <<" "<< (*var.coord)[conn[NODE_OF_FACET[i][0]]][1]<<" "<<(*var.coord)[conn[NODE_OF_FACET[i][0]]][2]<< std::endl;
+                std::cerr << (*var.coord)[conn[NODE_OF_FACET[i][1]]][0] <<" "<< (*var.coord)[conn[NODE_OF_FACET[i][1]]][1]<<" "<<(*var.coord)[conn[NODE_OF_FACET[i][1]]][2]<< std::endl;
+                std::cerr << (*var.coord)[conn[NODE_OF_FACET[i][2]]][0] <<" "<< (*var.coord)[conn[NODE_OF_FACET[i][2]]][1]<<" "<<(*var.coord)[conn[NODE_OF_FACET[i][2]]][2]<< std::endl;
                 std::exit(12);
             found:
                 var.bfacets[ibound].push_back(std::make_pair(e, i));
@@ -1880,7 +1930,7 @@ void create_new_mesh(const Param& param, Variables& var)
     if (param.mesh.is_discarding_internal_segments)
         discard_internal_segments(var.nseg, *var.segment, *var.segflag);
 
-    renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, var.regattr);
+    //renumbering_mesh(param, *var.coord, *var.connectivity, *var.segment, var.regattr);
 
     // std::cout << "segment:\n";
     // print(std::cout, *var.segment);
