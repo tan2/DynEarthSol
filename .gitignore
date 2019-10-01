@@ -6,6 +6,10 @@ libadaptivity/lib
 libadaptivity/CMakeFiles
 *.a
 *.so
+*.save.*
+*.chkpt.*
+*.info
+*.vtu
 ann/lib
 snapshot.diff
 dynearthsol[2,3]d

@@ -1032,7 +1032,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
 {
     
 #ifndef THREED
-    std::cerr << "Error: exofile is currently works only in 3D.\n";
+    std::cerr << "Error: Importing an exofile currently works in 3D only.\n";
     std::exit(2);
 #endif
 
@@ -1058,15 +1058,22 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     error = ex_get_init (exoid, title, &num_dim, &num_nodes, &num_elem,
                          &num_elem_blk, &num_node_sets, &num_side_sets);
     if( error != 0 ) {
-        std::cerr << "Error: Unable to read database parameters from '" << param.mesh.exo_filename << "'\n";
+        std::cerr << "Error: Unable to read database parameters from '" << param.mesh.exo_filename << std::endl;
         std::exit(2);
     }
     var.nnode = num_nodes;
     var.nelem = num_elem;
+    std::cerr <<" Reading " << param.mesh.exo_filename <<"."<<std::endl;
     std::cerr <<" Numbers of nodes and elements are " << var.nnode <<" and "<< var.nelem <<"."<<std::endl;
     std::cerr <<" Number of element blocks is " << num_elem_blk <<"."<<std::endl;
     std::cerr <<" Number of node sets is " << num_node_sets <<"."<<std::endl;
     std::cerr <<" Number of side sets is " << num_side_sets <<"."<<std::endl;
+    if( param.mat.nmat != num_elem_blk) {
+        std::cerr <<"param.mat.nmat is not equal to # of element blocks in this exo file!"<<std::endl;
+        std::cerr <<"Check if your material parameters are properly set!!"<<std::endl;
+        std::exit(2);
+    }
+
     // Assign node coordinates.
     float *x = (float *) calloc(var.nnode, sizeof(float));
     float *y = (float *) calloc(var.nnode, sizeof(float));
@@ -1085,9 +1092,6 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
         coord[i*NDIMS]   = static_cast<double>(x[i]);
         coord[i*NDIMS+1] = static_cast<double>(y[i]);
         coord[i*NDIMS+2] = static_cast<double>(z[i]);
-        // if(coord[i*NDIMS+1]==-5.0)
-        //     std::cerr<<"i="<<i<<" "<<coord[i*NDIMS]<<" "<<coord[i*NDIMS+1]<<" "<<coord[i*NDIMS+2]<<std::endl;
-
     }
     free(x);
     free(y);
@@ -1107,7 +1111,6 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     char elem_type[MAX_STR_LENGTH+1];
 
     // - Read element block ids.
-    // error = ex_get_elem_blk_ids (exoid, ids);
     error = ex_get_ids (exoid, EX_ELEM_BLOCK, ids);
     if( error != 0 ) {
         std::cerr << "Error: Unable to get element block ids." << std::endl;
@@ -1115,9 +1118,6 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     }
     // - Read element block parameters.
     for (int i=0; i<num_elem_blk; i++) {
-        // error = ex_get_elem_block (exoid, ids[i], elem_type,
-        //                            &(num_elem_in_block[i]),
-        //                            &(num_nodes_per_elem[i]), &(num_attr[i]));
         error = ex_get_block (exoid, EX_ELEM_BLOCK, ids[i], elem_type,
                                 &(num_elem_in_block[i]), &(num_nodes_per_elem[i]),
                                 &(num_edges_per_elem[i]), &(num_faces_per_elem[i]), 
@@ -1128,7 +1128,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
             std::exit(2);
         }             
         if( NODES_PER_ELEM != num_nodes_per_elem[i] ) {
-            std::cerr << "Error: Element has " << num_nodes_per_elem[i] << " nodes per element but should have "<<NODES_PER_ELEM<<"."<< std::endl;
+            std::cerr << "Error: Element has " << num_nodes_per_elem[i] << " nodes per element but should have "<<NODES_PER_ELEM<<" because element type should be uniformly tetrahedral."<< std::endl;
             std::exit(2);
         }
     }
@@ -1154,54 +1154,35 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
 
     // - Read and append element connectivity
     int* connect[num_elem_blk];
-    // start = 0;
     for (int i=0; i<num_elem_blk; i++) {
         connect[i] = (int *) calloc((num_nodes_per_elem[i] * num_elem_in_block[i]), sizeof(int));
-        //std::cerr << i <<" "<< num_nodes_per_elem[i]<<" "<< num_elem_in_block[i]<< std::endl;
-        // error = ex_get_elem_conn (exoid, ids[i], connect[i]);
         error = ex_get_conn (exoid, EX_ELEM_BLOCK, ids[i], connect[i], 0, 0);
         if( error != 0 ) {
             std::cerr << "Error: Unable to connectivity for element block " << ids[i] ;
             std::cerr << " out of " << num_elem_blk << " blocks." << std::endl;
             std::exit(2);
         }
-        // Debugging stuff
-        // for(int j=0; j<num_elem_in_block[i]; j++) {
-        //     const int elem_num = start + j;
-        //     for(int k=0; k < NODES_PER_ELEM; k++ ) {
-        //         const int node_num = connect[i][ NODES_PER_ELEM * elem_num + k ]-1;
-        //         std::cerr<<i<<" "<<j<<" "<<elem_num<<" "<<k<<" "<<(NODES_PER_ELEM * elem_num + k);
-        //         std::cerr<<" node num:"<<node_num<<std::endl;
-        //         std::cerr<<coord[node_num*NDIMS]<<" "<<coord[node_num*NDIMS+1]<<" "<<coord[node_num*NDIMS+2]<<std::endl;
-        //     }
-        // }
-        // start += num_elem_in_block[i];
     }
 
-    {
+    { // To render 'int *conn' local to this block.
         var.connectivity = new conn_t(var.nelem);
         int *conn = var.connectivity->data();
         start = 0;
         for (int i=0; i<num_elem_blk; i++) {
             for(int j=0; j<num_elem_in_block[i]; j++) {
                 const int elem_num = start + j;
-                for(int k=0; k < NODES_PER_ELEM; k++ ) {
+                for(int k=0; k < NODES_PER_ELEM; k++ )
                     conn[ NODES_PER_ELEM*elem_num + k ] = connect[i][ NODES_PER_ELEM*j + k ]-1;
-                    // debugging stuff
-                    // const int node_num = conn[ NODES_PER_ELEM*elem_num + k ];
-                    // std::cerr<<i<<" "<<j<<" "<<elem_num<<" "<<k<<" "<<(NODES_PER_ELEM * elem_num + k);
-                    // std::cerr<<" node num:"<<node_num<<std::endl;
-                    // std::cerr<<coord[node_num*NDIMS]<<" "<<coord[node_num*NDIMS+1]<<" "<<coord[node_num*NDIMS+2]<<std::endl;
-                }
             }
-            //std::memcpy( &(conn[start]), &(connect[i]), sizeof(connect[i]) );
-            //std::memcpy( &(conn[start]), &(connect[i]), num_elem_in_block[i]*NODES_PER_ELEM );
+            // can the j and k loops be replaced with memcpy?
+            // std::memcpy( &(conn[NODES_PER_ELEM*start]), &(connect[i]), num_elem_in_block[i]*NODES_PER_ELEM*sizeof(int) );
             start += num_elem_in_block[i];
         }
     } // code block to localize conn 
             
     for (int i=0; i<num_elem_blk; i++) free(connect[i]);
     free (ids);
+    free (num_elem_in_block);
     free (num_nodes_per_elem);
     free (num_edges_per_elem);
     free (num_faces_per_elem);
@@ -1215,7 +1196,6 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     int *num_df_in_set = (int *) calloc(num_side_sets, sizeof(int));
 
     // - Read side set ids.
-    // error = ex_get_side_set_ids (exoid, ids);
     error = ex_get_ids (exoid, EX_SIDE_SET, ids);
     if( error != 0 ) {
             std::cerr << "Error: Unable to get side set ids." << std::endl;
@@ -1233,7 +1213,8 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
         }                           
         var.nseg += num_sides_in_set[i];
     }
-    
+    std::cerr <<" Numbers of segments are " << var.nseg <<"."<<std::endl;
+
     // list of elements in the side set
     int *elem_list[num_side_sets];
     // list of facets (sides) of a corresponding element in the side set
@@ -1246,29 +1227,20 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
     float *dist_fact[num_side_sets];
         
     for(int i=0; i<num_side_sets; i++) {
-        elem_list[i] = (int *) calloc(num_sides_in_set[i], sizeof(int));
-        side_list[i] = (int *) calloc(num_sides_in_set[i], sizeof(int));
+        elem_list[i]     = (int *) calloc(num_sides_in_set[i], sizeof(int));
+        side_list[i]     = (int *) calloc(num_sides_in_set[i], sizeof(int));
         node_cnt_list[i] = (int *) calloc(num_sides_in_set[i], sizeof(int));
-        node_list[i] = (int *) calloc(num_sides_in_set[i]*3, sizeof(int));
-        dist_fact[i] = (float *) calloc(num_df_in_set[i], sizeof(float));
+        node_list[i]     = (int *) calloc(num_sides_in_set[i]*FACETS_PER_ELEM, sizeof(int));
+        dist_fact[i]     = (float *) calloc(num_df_in_set[i], sizeof(float));
         
         // list of elements of which facet belongs to a side set
         // Note: The # of elements is same as # of sides!
-        // error = ex_get_side_set (exoid, ids[i], elem_list[i], side_list[i]);
         error = ex_get_set (exoid, EX_SIDE_SET, ids[i], elem_list[i], side_list[i]);
         if( error != 0 ) {
             std::cerr << "Error: Unable to read "<< i <<"-th side set." << std::endl;
             std::exit(2);
         }
         if (num_df_in_set > 0) {
-            //error = ex_get_side_set_node_list (exoid, ids[i], node_cnt_list[i],
-            //                                       node_list[i]);
-            //if( error != 0 ) {
-            //    std::cerr << "Error: Unable to read "<< i <<"-th side set's node list." << std::endl;
-            //    std::exit(2);
-            //}
-        
-            //error = ex_get_side_set_dist_fact (exoid, ids[i], dist_fact[i]);
             error = ex_get_set_dist_fact (exoid, EX_SIDE_SET, ids[i], dist_fact[i]);
             if( error != 0 ) {
                 std::cerr << "Error: Unable to read "<< i;
@@ -1297,26 +1269,13 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
         for (int j=0; j<num_sides_in_set[i]; j++) {
             const int elem_num = elem_list[i][j] - 1;   
             const int side_num = side_list[i][j] - 1;
-            //const int *conn = (*var.connectivity)[elem_num*NODES_PER_ELEM];
             for (int k=0; k<NODES_PER_FACET; k++) { // 3 nodes per triangular facet
                 const int local_node_number = local_node_list[side_num][k] - 1;
                 segments[ (start + j)*NODES_PER_FACET + k] = conn[ elem_num*NODES_PER_ELEM + local_node_number ];
-                // if( ids[i] == 4 ) {
-                //     std::cerr << i <<" "<< j <<" "<<ids[i]<<" el:"<<elem_num<<" side:"<< side_num<<" "<< local_node_number;
-                //     std::cerr <<" "<< conn[ local_node_number ] << std::endl;
-                // }
-                // if( conn[ elem_num*NODES_PER_ELEM + local_node_number ] == 48) {
-                //     std::cerr << i <<" "<< j <<"/"<<num_sides_in_set[i]<<" "<< k <<" "<<local_node_number<<" "<<start<<" "<< conn[ local_node_number]<<" "<<ids[i]<< std::endl;
-                // }
             }
             segflags[start + j] = ids[i]; 
-            // if(i==num_side_sets-1) {
-            //     std::cerr<< i <<" "<<j<<" "<<num_sides_in_set[i]<<" "<<start<<" "<<start+j;
-            //     std::cerr<<" id="<<ids[i]<<std::endl;
-            // }
         }
         start += num_sides_in_set[i];
-        //std::cerr << start << std::endl;
     }
     
     // free up memory.
