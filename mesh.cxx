@@ -17,6 +17,11 @@
 
 #endif // THREED
 
+#ifdef USEEXODUS
+#include "netcdf.h"
+#include "exodusII.h"
+#endif // USEEXODUS
+
 #define REAL double
 #define VOID void
 #define ANSI_DECLARATORS
@@ -1058,7 +1063,271 @@ void new_mesh_from_polyfile(const Param& param, Variables& var)
     delete [] regattr;
 }
 
-}
+#ifdef USEEXODUS
+void new_mesh_from_exofile(const Param& param, Variables& var)
+{
+
+#ifndef THREED
+    std::cerr << "Error: Importing an exofile currently works in 3D only.\n";
+    std::exit(2);
+#endif
+
+    // Open an .exo file.
+    int CPU_word_size = 0;
+    int IO_word_size = 0;
+    float version = 0.0;
+    int exoid = ex_open( param.mesh.exo_filename.c_str(), /* filename path */
+                         EX_READ, /* access mode = READ */
+                         &CPU_word_size, /* CPU word size */
+                         &IO_word_size, /* IO word size */
+                         &version); /* ExodusII library version */
+    if (exoid < 0) {
+        std::cerr << "Error: Cannot open exo_filename '" << param.mesh.exo_filename << "'\n";
+        std::exit(2);
+    }
+
+    // Read database parameters.
+    int error;
+    char title[MAX_LINE_LENGTH+1];
+    int num_dim, num_nodes, num_elem, num_elem_blk, num_node_sets, num_side_sets;
+
+    error = ex_get_init (exoid, title, &num_dim, &num_nodes, &num_elem,
+                         &num_elem_blk, &num_node_sets, &num_side_sets);
+    if( error != 0 ) {
+        std::cerr << "Error: Unable to read database parameters from '" << param.mesh.exo_filename << std::endl;
+        std::exit(2);
+    }
+    var.nnode = num_nodes;
+    var.nelem = num_elem;
+    std::cerr <<" Reading " << param.mesh.exo_filename <<"."<<std::endl;
+    std::cerr <<" Numbers of nodes and elements are " << var.nnode <<" and "<< var.nelem <<"."<<std::endl;
+    std::cerr <<" Number of element blocks is " << num_elem_blk <<"."<<std::endl;
+    std::cerr <<" Number of node sets is " << num_node_sets <<"."<<std::endl;
+    std::cerr <<" Number of side sets is " << num_side_sets <<"."<<std::endl;
+    if( param.mat.nmat != num_elem_blk) {
+        std::cerr <<"param.mat.nmat is not equal to # of element blocks in this exo file!"<<std::endl;
+        std::cerr <<"Check if your material parameters are properly set!!"<<std::endl;
+        std::exit(2);
+    }
+
+    // Assign node coordinates.
+    float *x = (float *) calloc(var.nnode, sizeof(float));
+    float *y = (float *) calloc(var.nnode, sizeof(float));
+    float *z = (float *) calloc(var.nnode, sizeof(float));
+
+    error = ex_get_coord (exoid, x, y, z);
+    if( error != 0 ) {
+        std::cerr << "Error: Unable to read coordinates from '" << param.mesh.exo_filename << "'\n";
+        std::exit(2);
+    }
+
+    // assign node coordinates to var.coord.
+    var.coord = new array_t(var.nnode);
+    double* coord = var.coord->data();
+    for(int i=0; i<var.nnode; i++) {
+        coord[i*NDIMS]   = static_cast<double>(x[i]);
+        coord[i*NDIMS+1] = static_cast<double>(y[i]);
+        coord[i*NDIMS+2] = static_cast<double>(z[i]);
+    }
+    free(x);
+    free(y);
+    free(z);
+
+    // Process element blocks.
+    //
+    // Note that blocks are the basic units for
+    // organizing connectivity and material id.
+    //
+    int *ids = (int *) calloc(num_elem_blk, sizeof(int));
+    int *num_elem_in_block = (int *) calloc(num_elem_blk, sizeof(int));
+    int *num_nodes_per_elem = (int *) calloc(num_elem_blk, sizeof(int));
+    int *num_edges_per_elem = (int *) calloc(num_elem_blk, sizeof(int));
+    int *num_faces_per_elem = (int *) calloc(num_elem_blk, sizeof(int));
+    int *num_attr = (int *) calloc(num_elem_blk, sizeof(int));
+    char elem_type[MAX_STR_LENGTH+1];
+
+    // - Read element block ids.
+    error = ex_get_ids (exoid, EX_ELEM_BLOCK, ids);
+    if( error != 0 ) {
+        std::cerr << "Error: Unable to get element block ids." << std::endl;
+        std::exit(2);
+    }
+    // - Read element block parameters.
+    for (int i=0; i<num_elem_blk; i++) {
+        error = ex_get_block (exoid, EX_ELEM_BLOCK, ids[i], elem_type,
+                                &(num_elem_in_block[i]), &(num_nodes_per_elem[i]),
+                                &(num_edges_per_elem[i]), &(num_faces_per_elem[i]), 
+                                &(num_attr[i]));
+        if( error != 0 ) {
+            std::cerr << "Error: Unable to element block " << ids[i] ;
+            std::cerr << " out of " << num_elem_blk << " blocks." << std::endl;
+            std::exit(2);
+        }
+        if( NODES_PER_ELEM != num_nodes_per_elem[i] ) {
+            std::cerr << "Error: Element has " << num_nodes_per_elem[i] << " nodes per element but should have "<<NODES_PER_ELEM<<" because element type should be uniformly tetrahedral."<< std::endl;
+            std::exit(2);
+        }
+    }
+
+    // Create the array of region attributes.
+    // Element blocks must be numbered to be consistent
+    // with the following simplistic mapping between block id and mat. id:
+    //
+    // block id: 1 2 3 4 ...
+    // mat.  id: 0 1 2 3 ...
+    //
+    // Will need a more general mapping from block id to mat id.
+    // One way is to provide a map from block names to mat id. TBD.
+    //
+    var.regattr = new regattr_t(var.nelem);
+    double *attr = var.regattr->data();
+    int start = 0;
+    for (int i=0; i<num_elem_blk; i++) {
+        for(int j=0; j<num_elem_in_block[i]; j++)
+            attr[start+j] = static_cast<double>(ids[i]-1);
+        start += num_elem_in_block[i];
+    }
+
+    // - Read and append element connectivity
+    int* connect[num_elem_blk];
+    for (int i=0; i<num_elem_blk; i++) {
+        connect[i] = (int *) calloc((num_nodes_per_elem[i] * num_elem_in_block[i]), sizeof(int));
+        error = ex_get_conn (exoid, EX_ELEM_BLOCK, ids[i], connect[i], 0, 0);
+        if( error != 0 ) {
+            std::cerr << "Error: Unable to connectivity for element block " << ids[i] ;
+            std::cerr << " out of " << num_elem_blk << " blocks." << std::endl;
+            std::exit(2);
+        }
+    }
+
+    { // To render 'int *conn' local to this block.
+        var.connectivity = new conn_t(var.nelem);
+        int *conn = var.connectivity->data();
+        start = 0;
+        for (int i=0; i<num_elem_blk; i++) {
+            for(int j=0; j<num_elem_in_block[i]; j++) {
+                const int elem_num = start + j;
+                for(int k=0; k < NODES_PER_ELEM; k++ )
+                    conn[ NODES_PER_ELEM*elem_num + k ] = connect[i][ NODES_PER_ELEM*j + k ]-1;
+            }
+            // can the j and k loops be replaced with memcpy?
+            // std::memcpy( &(conn[NODES_PER_ELEM*start]), &(connect[i]), num_elem_in_block[i]*NODES_PER_ELEM*sizeof(int) );
+            start += num_elem_in_block[i];
+        }
+    } // code block to localize conn
+
+    for (int i=0; i<num_elem_blk; i++) free(connect[i]);
+    free (ids);
+    free (num_elem_in_block);
+    free (num_nodes_per_elem);
+    free (num_edges_per_elem);
+    free (num_faces_per_elem);
+    free (num_attr);
+
+    //
+    // Read side sets (i.e., boundaries) one by one.
+    //
+    ids = (int *) calloc(num_side_sets, sizeof(int));
+    int *num_sides_in_set = (int *) calloc(num_side_sets, sizeof(int));
+    int *num_df_in_set = (int *) calloc(num_side_sets, sizeof(int));
+
+    // - Read side set ids.
+    error = ex_get_ids (exoid, EX_SIDE_SET, ids);
+    if( error != 0 ) {
+            std::cerr << "Error: Unable to get side set ids." << std::endl;
+            std::exit(2);
+    }
+    var.nseg = 0;
+    for(int i=0; i<num_side_sets; i++) {
+        error = ex_get_set_param (exoid, EX_SIDE_SET, ids[i], &(num_sides_in_set[i]),
+                                       &(num_df_in_set[i]));
+        if( error != 0 ) {
+            std::cerr << "Error: Unable to read "<<i<<"-th side set parameters." << std::endl;
+            std::exit(2);
+        }
+        var.nseg += num_sides_in_set[i];
+    }
+    std::cerr <<" Numbers of segments are " << var.nseg <<"."<<std::endl;
+
+    // list of elements in the side set
+    int *elem_list[num_side_sets];
+    // list of facets (sides) of a corresponding element in the side set
+    int *side_list[num_side_sets];
+    // list of the number of nodes of a facet. Uniformly 3 in DES3D.
+    int *node_cnt_list[num_side_sets];
+    // list of node IDs of the facet-composing nodes
+    int *node_list[num_side_sets];
+    // list of distribution factors
+    float *dist_fact[num_side_sets];
+
+    for(int i=0; i<num_side_sets; i++) {
+        elem_list[i]     = (int *) calloc(num_sides_in_set[i], sizeof(int));
+        side_list[i]     = (int *) calloc(num_sides_in_set[i], sizeof(int));
+        node_cnt_list[i] = (int *) calloc(num_sides_in_set[i], sizeof(int));
+        node_list[i]     = (int *) calloc(num_sides_in_set[i]*FACETS_PER_ELEM, sizeof(int));
+        dist_fact[i]     = (float *) calloc(num_df_in_set[i], sizeof(float));
+
+        // list of elements of which facet belongs to a side set
+        // Note: The # of elements is same as # of sides!
+        error = ex_get_set (exoid, EX_SIDE_SET, ids[i], elem_list[i], side_list[i]);
+        if( error != 0 ) {
+            std::cerr << "Error: Unable to read "<< i <<"-th side set." << std::endl;
+            std::exit(2);
+        }
+        if (num_df_in_set > 0) {
+            error = ex_get_set_dist_fact (exoid, EX_SIDE_SET, ids[i], dist_fact[i]);
+            if( error != 0 ) {
+                std::cerr << "Error: Unable to read "<< i;
+                std::cerr <<"-th side set's distribution factor list." << std::endl;
+                std::exit(2);
+            }
+        }
+    }
+
+    // Assign memory to segments (boundary facets)
+    var.segment = new segment_t(var.nseg, 0);
+    int *segments = var.segment->data();
+
+    // Assign memory to segment flags (which boundary a segments belong to).
+    var.segflag = new segflag_t(var.nseg, 0);
+    int *segflags = var.segflag->data();
+
+    // Populate segment and segflag arrays
+    // For sideset node ordering,
+    // refer Table 4.2 on p. 30, "Exodus: A finite element data model" by Sjaardema et al.
+    // Retrieved on 2019/09/28 from gsjaardema.github.io/seacas/exodusII-new.pdf.
+    std::vector< std::vector<int> > local_node_list{{1,2,4},{2,3,4},{1,4,3},{1,3,2}};
+    start = 0;
+    const int *conn = var.connectivity->data();
+    for (int i=0; i<num_side_sets; i++) {
+        for (int j=0; j<num_sides_in_set[i]; j++) {
+            const int elem_num = elem_list[i][j] - 1;
+            const int side_num = side_list[i][j] - 1;
+            for (int k=0; k<NODES_PER_FACET; k++) { // 3 nodes per triangular facet
+                const int local_node_number = local_node_list[side_num][k] - 1;
+                segments[ (start + j)*NODES_PER_FACET + k] = conn[ elem_num*NODES_PER_ELEM + local_node_number ];
+            }
+            segflags[start + j] = ids[i];
+        }
+        start += num_sides_in_set[i];
+    }
+
+    // free up memory.
+    for (int i=0; i<num_side_sets; i++) {
+        free (elem_list[i]);
+        free (side_list[i]);
+        free (node_cnt_list[i]);
+        free (node_list[i]);
+        free (dist_fact[i]);
+    }
+    free (num_sides_in_set);
+    free (num_df_in_set);
+    free (ids);
+
+} // end of function new_mesh_from_exofile
+#endif // end of USEEXODUS
+
+} // end of anonymous namespace
 
 
 void points_to_new_mesh(const Mesh &mesh, int npoints, const double *points,
@@ -1579,6 +1848,14 @@ void create_new_mesh(const Param& param, Variables& var)
     case 90:
     case 91:
         new_mesh_from_polyfile(param, var);
+        break;
+    case 95:
+#ifdef USEEXODUS
+        new_mesh_from_exofile(param, var);
+#else
+        std::cout << "Error: Install Exodus library and rebuild with 'useexo' turned on in Makefile." << std::endl;
+        std::exit(1);
+#endif
         break;
     default:
         std::cout << "Error: unknown meshing option: " << param.mesh.meshing_option << '\n';

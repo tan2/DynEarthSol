@@ -13,15 +13,15 @@
 ## useadapt = 1: use libadaptivity for mesh optimization during remeshing
 ## adaptive_time_step = 1: use adaptive time stepping technique
 ## use_R_S = 1: use Rate - State friction law
-## useexo = 1: get ready to import a exodusII mesh (e.g., from Trelis)
+## useexo = 1: import a exodusII mesh (e.g., created with Trelis)
 
-ndims = 3
+ndims = 2
 opt = 2
 openmp = 1
 useadapt = 1
 adaptive_time_step = 1
 use_R_S = 1
-useexo = 1
+useexo = 0
 
 ifeq ($(ndims), 2)
 	useadapt = 0  # libadaptivity is 3d only
@@ -87,7 +87,7 @@ ifeq ($(useexo), 1)
 	# path of exodus library files, if not in standard system location
 	EXO_LIB_DIR = ${HOME}/opt/seacas/lib
 
-	EXO_CXXFLAGS = -I$(EXO_INCLUDE)
+	EXO_CXXFLAGS = -I$(EXO_INCLUDE) -DUSEEXODUS
 	EXO_LDFLAGS = -L$(EXO_LIB_DIR) -lexodus
 	ifneq ($(OSNAME), Darwin)  # Apple's ld doesn't support -rpath
 		EXO_LDFLAGS += -Wl,-rpath=$(EXO_LIB_DIR)
@@ -168,7 +168,7 @@ SRCS =	\
 	ic-read-temp.cxx \
 	input.cxx \
 	matprops.cxx \
-	mesh_exo.cxx \
+	mesh.cxx \
 	nn-interpolation.cxx \
 	output.cxx \
 	phasechanges.cxx \
