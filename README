@@ -27,8 +27,11 @@ Requirement:
 * You will need Python 2.6+ or 3.2+ and the Numpy package.
 
 For libadaptiviy, you further need
-* VTK5 (v5.8 and v5.10 tested) built from source or development packages.
+* VTK5 (v5.8 and v5.10 tested) or later versions built from source or development packages.
 * MPI (openmpi v1.4~v1.6, and mpich2 v1.4 tested).
+
+For importing a mesh in the ExodusII format, you need to install the exodus library
+* exodus is available as a part of SEACAS project https://github.com/gsjaardema/seacas/
 
 Procedures:
 * Edit 'Makefile', 
@@ -40,6 +43,9 @@ Procedures:
     2.1) Set 'useadapt = 1' and 'ndims = 3'. libadaptivity works only for 3D.
     2.2) Set VTK_INCLUDE and VTK_LIBS paths if vtk is not in standard location.
     2.3) Set LIB_MPIFORTRAN for your mpi library
+  3) If importing an exodus mesh:
+    3.1) Set 'useexo = 1' and 'ndims = 3'. Only 3D exodus mesh can be imported.
+    3.2) Set EXO_INCLUDE and EXO_LIB_DIR paths.
 * Run "make" to build optimized executable.
 * Or run "make opt=0" to build a debugging executable.
 * Or run "make openmp=0" to build the executable without OpenMP. This is
