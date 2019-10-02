@@ -62,6 +62,12 @@
 
 #endif
 
+#ifdef USEMMG
+#include "mmg/mmg3d/libmmg3d.h"
+#define MAX0(a,b)     (((a) > (b)) ? (a) : (b))
+#define MAX4(a,b,c,d)  (((MAX0(a,b)) > (MAX0(c,d))) ? (MAX0(a,b)) : (MAX0(c,d)))
+#endif
+
 namespace {
 
 
@@ -1098,6 +1104,243 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
 }
 
 #ifdef THREED
+#ifdef USEMMG
+void optimize_mesh(const Param &param, Variables &var, int bad_quality,
+              const array_t &original_coord, const conn_t &original_connectivity,
+              const segment_t &original_segment, const segflag_t &original_segflag)
+{
+    // create a copy of original_coord and original_segment
+    array_t old_coord(original_coord);
+    conn_t old_connectivity(original_connectivity);
+    segment_t old_segment(original_segment);
+    segflag_t old_segflag(original_segflag);
+
+    double *qcoord = old_coord.data();
+    int *qconn = old_connectivity.data();
+    int *qsegment = old_segment.data();
+    int *qsegflag = old_segflag.data();
+
+    int old_nnode = old_coord.size();
+    int old_nelem = old_connectivity.size();
+    int old_nseg = old_segment.size();
+
+
+    // --- STEP I: Initialization
+    // 1) Initialisation of mesh and sol structures
+    //   args of InitMesh:
+    //     MMG5_ARG_start: we start to give the args of a variadic func
+    //     MMG5_ARG_ppMesh: next arg will be a pointer over a MMG5_pMesh
+    //     &mmgMesh: pointer toward your MMG5_pMesh (that store your mesh)
+    //     MMG5_ARG_ppMet: next arg will be a pointer over a MMG5_pSol storing a metric
+    //     &mmgSol: pointer toward your MMG5_pSol (that store your metric) */
+    MMG5_pMesh      mmgMesh = NULL;
+    MMG5_pSol       mmgSol  = NULL;
+  
+    MMG3D_Init_mesh(MMG5_ARG_start,
+                    MMG5_ARG_ppMesh, &mmgMesh, MMG5_ARG_ppMet,
+                    &mmgSol, MMG5_ARG_end);
+
+    // 2) Build mesh in MMG5 format
+    // Manually set of the mesh 
+    //  a) give the size of the mesh: vertices, tetra, prisms, triangles, quads, edges
+    if ( MMG3D_Set_meshSize(mmgMesh, old_nnode, old_nelem,
+                            0,old_nseg,0,0) != 1 )
+        exit(EXIT_FAILURE);
+    //   b) give the vertex coordinates. References are NULL but can be an integer array for boundary flag etc.
+    if( MMG3D_Set_vertices(mmgMesh, qcoord, NULL) != 1)
+        exit(EXIT_FAILURE);
+    //   c) give the connectivity. References are NULL but can be an integer array for boundary flag etc.
+    if( MMG3D_Set_tetrahedra(mmgMesh, qconn, NULL) != 1 )
+        exit(EXIT_FAILURE);
+    //   d) give the segments (i.e., boundary facet)
+    if( MMG3D_Set_triangles(mmgMesh, qsegment, qsegflag) != 1 )
+        exit(EXIT_FAILURE);
+
+    // 3) Build sol in MMG5 format
+    //      Here a 'solution' is a nodal field that becomes
+    //      the basis for metric tensor for isotropic and anisotropic
+    //      mesh adaptation.
+    //
+    //   a) give info for the sol structure
+    if( MMG3D_Set_solSize(mmgMesh, mmgSol, MMG5_Vertex, old_nnode,MMG5_Scalar) != 1 )
+        exit(EXIT_FAILURE);
+    //   b) give solutions values and positions
+    //      If sol array is available:
+    // if( MMG3D_Set_scalarSol(mmgSol, sol) != 1 ) exit(EXIT_FAILURE);
+    //      Otherwise, set a value node by node:
+    for (std::size_t i = 0; i < var.nnode; ++i) {
+        if( MMG3D_Set_scalarSol(mmgSol, 0.5, i+1) != 1 )
+            exit(EXIT_FAILURE);
+    }
+
+    // 4) (not mandatory): check if the number of given entities match with mesh size
+    if( MMG3D_Chk_meshData(mmgMesh, mmgSol) != 1 ) exit(EXIT_FAILURE);
+
+    //--- STEP  II: Remesh function
+    ier = MMG3D_mmg3dlib(mmgMesh, mmgSol);
+    if ( ier == MMG5_STRONGFAILURE ) {
+        fprintf(stdout,"BAD ENDING OF MMG3DLIB: UNABLE TO SAVE MESH\n");
+        return(ier);
+    } else if ( ier == MMG5_LOWFAILURE )
+        fprintf(stdout,"BAD ENDING OF MMG3DLIB\n");
+
+    //--- STEP III: Get results
+    // 1) Manually get the mesh
+    //   a) get the size of the mesh: vertices, tetra, triangles, edges */
+    if ( MMG3D_Get_meshSize(mmgMesh, &(var.nnode), &(var.nelem), NULL,
+                            &(var.nseg), NULL, NULL) !=1 )
+        exit(EXIT_FAILURE);
+
+    // Table to know if a vertex is corner
+    auto corner = (int*)calloc(np+1,sizeof(int));
+    if ( !corner ) {
+        perror("  ## Memory problem: calloc");
+        exit(EXIT_FAILURE);
+    }
+    // Table to know if a vertex/tetra/tria/edge is required
+    auto required = (int*)calloc(MAX4(np,ne,nt,na)+1 ,sizeof(int));
+    if ( !required ) {
+        perror("  ## Memory problem: calloc");
+        exit(EXIT_FAILURE);
+    }
+    // Table to know if an edge delimits a sharp angle
+    auto ridge = (int*)calloc(na+1 ,sizeof(int));
+    if ( !ridge ) {
+        perror("  ## Memory problem: calloc");
+        exit(EXIT_FAILURE);
+    }
+
+  nreq = 0; nc = 0;
+  fprintf(inm,"\nVertices\n%d\n",np);
+  for(k=1; k<=np; k++) {
+    /** b) Vertex recovering */
+    if ( MMG3D_Get_vertex(mmgMesh,&(Point[0]),&(Point[1]),&(Point[2]),
+                          &ref,&(corner[k]),&(required[k])) != 1 )
+      exit(EXIT_FAILURE);
+    fprintf(inm,"%.15lg %.15lg %.15lg %d \n",Point[0],Point[1],Point[2],ref);
+    if ( corner[k] )  nc++;
+    if ( required[k] )  nreq++;
+  }
+  fprintf(inm,"\nCorners\n%d\n",nc);
+  for(k=1; k<=np; k++) {
+    if ( corner[k] )  fprintf(inm,"%d \n",k);
+  }
+  fprintf(inm,"\nRequiredVertices\n%d\n",nreq);
+  for(k=1; k<=np; k++) {
+    if ( required[k] )  fprintf(inm,"%d \n",k);
+  }
+  free(corner);
+  corner = NULL;
+
+  nreq = 0;
+  fprintf(inm,"\nTriangles\n%d\n",nt);
+  for(k=1; k<=nt; k++) {
+    /** d) Triangles recovering */
+    if ( MMG3D_Get_triangle(mmgMesh,&(Tria[0]),&(Tria[1]),&(Tria[2]),
+                            &ref,&(required[k])) != 1 )
+      exit(EXIT_FAILURE);
+    fprintf(inm,"%d %d %d %d \n",Tria[0],Tria[1],Tria[2],ref);
+    if ( required[k] )  nreq++;
+  }
+  fprintf(inm,"\nRequiredTriangles\n%d\n",nreq);
+  for(k=1; k<=nt; k++) {
+    if ( required[k] )  fprintf(inm,"%d \n",k);
+  }
+
+  /* Facultative step : if you want to know with which tetrahedra a triangle is
+   * connected */
+  for(k=1; k<=nt; k++) {
+    ktet[0]  = ktet[1]  = 0;
+    iface[0] = iface[1] = 0;
+
+    if (! MMG3D_Get_tetFromTria(mmgMesh,k,ktet,iface) ) {
+      printf("Get tet from tria fail.\n");
+      return 0;
+    }
+    printf("Tria %d is connected with tet %d (face %d) and %d (face %d) \n",
+           k,ktet[0],iface[0],ktet[1],iface[1]);
+  }
+
+  nreq = 0;nr = 0;
+  fprintf(inm,"\nEdges\n%d\n",na);
+  for(k=1; k<=na; k++) {
+    /** e) Edges recovering */
+    if ( MMG3D_Get_edge(mmgMesh,&(Edge[0]),&(Edge[1]),&ref,
+                        &(ridge[k]),&(required[k])) != 1 )  exit(EXIT_FAILURE);
+    fprintf(inm,"%d %d %d \n",Edge[0],Edge[1],ref);
+    if ( ridge[k] )  nr++;
+    if ( required[k] )  nreq++;
+  }
+  fprintf(inm,"\nRequiredEdges\n%d\n",nreq);
+  for(k=1; k<=na; k++) {
+    if ( required[k] )  fprintf(inm,"%d \n",k);
+  }
+  fprintf(inm,"\nRidges\n%d\n",nr);
+  for(k=1; k<=na; k++) {
+    if ( ridge[k] )  fprintf(inm,"%d \n",k);
+  }
+
+  nreq = 0;
+  fprintf(inm,"\nTetrahedra\n%d\n",ne);
+  for(k=1; k<=ne; k++) {
+    /** c) Tetra recovering */
+    if ( MMG3D_Get_tetrahedron(mmgMesh,&(Tetra[0]),&(Tetra[1]),&(Tetra[2]),&(Tetra[3]),
+                               &ref,&(required[k])) != 1 )  exit(EXIT_FAILURE);
+    fprintf(inm,"%d %d %d %d %d \n",Tetra[0],Tetra[1],Tetra[2],Tetra[3],ref);
+    if ( required[k] )  nreq++;
+  }
+  fprintf(inm,"\nRequiredTetrahedra\n%d\n",nreq);
+  for(k=1; k<=ne; k++) {
+    if ( required[k] )  fprintf(inm,"%d \n",k);
+  }
+
+  fprintf(inm,"\nEnd\n");
+  fclose(inm);
+
+  free(required);
+  required = NULL;
+  free(ridge);
+  ridge    = NULL;
+
+  /** 2) Manually get the solution */
+  if( !(inm = fopen(solout,"w")) ) {
+    fprintf(stderr,"  ** UNABLE TO OPEN OUTPUT FILE.\n");
+    exit(EXIT_FAILURE);
+  }
+  fprintf(inm,"MeshVersionFormatted 2\n");
+  fprintf(inm,"\nDimension 3\n");
+
+  /** a) get the size of the sol: type of entity (SolAtVertices,...),
+      number of sol, type of solution (scalar, tensor...) */
+  if ( MMG3D_Get_solSize(mmgMesh,mmgSol,&typEntity,&np,&typSol) != 1 )
+    exit(EXIT_FAILURE);
+
+  if ( ( typEntity != MMG5_Vertex )  || ( typSol != MMG5_Scalar ) )
+    exit(EXIT_FAILURE);
+
+  fprintf(inm,"\nSolAtVertices\n%d\n",np);
+  fprintf(inm,"1 1 \n\n");
+  for(k=1; k<=np; k++) {
+    /** b) Vertex recovering */
+    if ( MMG3D_Get_scalarSol(mmgSol,&Sol) != 1 )  exit(EXIT_FAILURE);
+    fprintf(inm,"%.15lg \n",Sol);
+  }
+  fprintf(inm,"\nEnd\n");
+  fclose(inm);
+
+  /** 3) Free the MMG3D5 structures */
+  MMG3D_Free_all(MMG5_ARG_start,
+                 MMG5_ARG_ppMesh,&mmgMesh,MMG5_ARG_ppMet,&mmgSol,
+                 MMG5_ARG_end);
+
+  free(fileout);
+  fileout = NULL;
+
+  free(solout);
+  solout = NULL;
+}
+#endif
+
 #ifdef ADAPT
 void optimize_mesh(const Param &param, Variables &var, int bad_quality,
               const array_t &original_coord, const conn_t &original_connectivity,
