@@ -72,6 +72,7 @@ static void declare_parameters(po::options_description &cfg,
          "2: rectangular box with rectangular zone of refined resolution\n"
          "90: read the bounding polygon from a .poly file\n"
          "91: same as 90, but the max. element size is normalized with resolution.\n"
+         "95: read the mesh from from a .exo file\n"
          )
         ("mesh.meshing_verbosity", po::value<int>(&p.mesh.meshing_verbosity)->default_value(-1),
          "Output verbose during mesh/remeshing. -1 for no output.")
@@ -117,6 +118,13 @@ static void declare_parameters(po::options_description &cfg,
          "http://wias-berlin.de/software/tetgen/fformats.poly.html (3D).\n"
          "Limitation: no point attributes, no boundary marker for points, no holes, "
          "and no regional attributes.\n"
+         "Users still need to provide these parameters: mesh.xlength, mesh.ylength, and mesh.zlength.")
+
+        // for meshing_option = 95 only
+        ("mesh.exo_filename", po::value<std::string>(&p.mesh.exo_filename)->default_value("mesh.exo"),
+         "Filename of the input polygon, for meshing_option=95 only.\n"
+         "Meshing software like Trelis is supposed to be used for creating a mesh in the ExodusII format.\n"
+         "Limitation: Only box-like domains with six sides are supported.\n"
          "Users still need to provide these parameters: mesh.xlength, mesh.ylength, and mesh.zlength.")
 
         ("mesh.quality_check_step_interval", po::value<int>(&p.mesh.quality_check_step_interval)->default_value(100),
