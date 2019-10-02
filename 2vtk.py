@@ -450,7 +450,7 @@ def compute_pt_axis(stress):
                 w[e,:], v[e,:,:] = eigh(s[e])
 
         # isotropic part to be removed
-        m = np.sum(w, axis=1)
+        m = np.sum(w, axis=1) / 3
 
         p = w.argmin(axis=1)
         t = w.argmax(axis=1)
