@@ -6,6 +6,7 @@ libadaptivity/lib
 libadaptivity/CMakeFiles
 *.a
 *.so
+*.pyc
 *.save.*
 *.chkpt.*
 *.info
