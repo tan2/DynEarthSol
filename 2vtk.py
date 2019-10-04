@@ -41,6 +41,15 @@ output_pt_axis = False
 # Save markers?
 output_markers = False
 
+########################
+# Is numpy version < 1.8?
+eigh_vectorized = True
+npversion = np.__version__.split('.')
+npmajor = int(npversion[0])
+npminor = int(npversion[1])
+if npmajor < 1 or (npmajor == 1 and npminor < 8):
+    eigh_vectorized = False
+
 
 def main(modelname, start, end, delta):
     prefix = modelname
@@ -439,7 +448,7 @@ def compute_pt_axis(stress):
         s[:,2,1] = stress[:,5]
 
         # eigenvalues and eigenvectors
-        if np.version.version[:3] >= '1.8':
+        if eigh_vectorized:
             # Numpy-1.8 or newer
             w, v = eigh(s)
         else:
@@ -450,7 +459,7 @@ def compute_pt_axis(stress):
                 w[e,:], v[e,:,:] = eigh(s[e])
 
         # isotropic part to be removed
-        m = np.sum(w, axis=1)
+        m = np.sum(w, axis=1) / 3
 
         p = w.argmin(axis=1)
         t = w.argmax(axis=1)
