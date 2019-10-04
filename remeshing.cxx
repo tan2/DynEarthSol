@@ -1185,159 +1185,101 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
         fprintf(stdout,"BAD ENDING OF MMG3DLIB\n");
 
     //--- STEP III: Get results
-    // 1) Manually get the mesh
+    // 1) Preparations
     //   a) get the size of the mesh: vertices, tetra, triangles, edges */
-    if ( MMG3D_Get_meshSize(mmgMesh, &(var.nnode), &(var.nelem), NULL,
-                            &(var.nseg), NULL, NULL) !=1 )
+    int na;
+    if ( MMG3D_Get_meshSize(mmgMesh, &(var.nnode), &(var.nelem), NULL, &(var.nseg), NULL, &na) !=1 )
         exit(EXIT_FAILURE);
+    std::cerr << "Updated mesh size\n";
+    std::cerr << "New number of vertices:" << var.nnode << std::endl;
+    std::cerr << "New number of elements:" << var.nelem << std::endl;
+    std::cerr << "New number of segments:" << var.nseg << std::endl;
 
-    // Table to know if a vertex is corner
+    //   b) Create mesh-defining arrays of new sizes
+    array_t new_coord( var.nnode );
+    conn_t new_connectivity( var.nelem );
+    segment_t new_segment( var.nseg );
+    segflag_t new_segflag( var.nseg );
+    std::cerr << "Resized arrays\n";
+
+    double *ncoord = new_coord.data();
+    int *nconn = new_connectivity.data();
+    int *nsegment = new_segment.data();
+    int *nsegflag = new_segflag.data();
+
+    //   c) Table to know if a vertex is corner
     auto corner = (int*)calloc(np+1,sizeof(int));
     if ( !corner ) {
         perror("  ## Memory problem: calloc");
         exit(EXIT_FAILURE);
     }
-    // Table to know if a vertex/tetra/tria/edge is required
+
+    //   d) Table to know if a vertex/tetra/tria/edge is required
     auto required = (int*)calloc(MAX4(np,ne,nt,na)+1 ,sizeof(int));
     if ( !required ) {
         perror("  ## Memory problem: calloc");
         exit(EXIT_FAILURE);
     }
-    // Table to know if an edge delimits a sharp angle
+
+    //   e) Table to know if an edge delimits a sharp angle
     auto ridge = (int*)calloc(na+1 ,sizeof(int));
     if ( !ridge ) {
         perror("  ## Memory problem: calloc");
         exit(EXIT_FAILURE);
     }
-
-  nreq = 0; nc = 0;
-  fprintf(inm,"\nVertices\n%d\n",np);
-  for(k=1; k<=np; k++) {
-    /** b) Vertex recovering */
-    if ( MMG3D_Get_vertex(mmgMesh,&(Point[0]),&(Point[1]),&(Point[2]),
-                          &ref,&(corner[k]),&(required[k])) != 1 )
-      exit(EXIT_FAILURE);
-    fprintf(inm,"%.15lg %.15lg %.15lg %d \n",Point[0],Point[1],Point[2],ref);
-    if ( corner[k] )  nc++;
-    if ( required[k] )  nreq++;
-  }
-  fprintf(inm,"\nCorners\n%d\n",nc);
-  for(k=1; k<=np; k++) {
-    if ( corner[k] )  fprintf(inm,"%d \n",k);
-  }
-  fprintf(inm,"\nRequiredVertices\n%d\n",nreq);
-  for(k=1; k<=np; k++) {
-    if ( required[k] )  fprintf(inm,"%d \n",k);
-  }
-  free(corner);
-  corner = NULL;
-
-  nreq = 0;
-  fprintf(inm,"\nTriangles\n%d\n",nt);
-  for(k=1; k<=nt; k++) {
-    /** d) Triangles recovering */
-    if ( MMG3D_Get_triangle(mmgMesh,&(Tria[0]),&(Tria[1]),&(Tria[2]),
-                            &ref,&(required[k])) != 1 )
-      exit(EXIT_FAILURE);
-    fprintf(inm,"%d %d %d %d \n",Tria[0],Tria[1],Tria[2],ref);
-    if ( required[k] )  nreq++;
-  }
-  fprintf(inm,"\nRequiredTriangles\n%d\n",nreq);
-  for(k=1; k<=nt; k++) {
-    if ( required[k] )  fprintf(inm,"%d \n",k);
-  }
-
-  /* Facultative step : if you want to know with which tetrahedra a triangle is
-   * connected */
-  for(k=1; k<=nt; k++) {
-    ktet[0]  = ktet[1]  = 0;
-    iface[0] = iface[1] = 0;
-
-    if (! MMG3D_Get_tetFromTria(mmgMesh,k,ktet,iface) ) {
-      printf("Get tet from tria fail.\n");
-      return 0;
+////////////////////////
+// update mesh info.
+    for (std::size_t i = 0; i < var.nnode; ++i) {
+        double *x = adapted_ug->GetPoints()->GetPoint(i);
+        for(int j=0; j < NDIMS; j++ )
+            new_coord[i][j] = x[j];
     }
-    printf("Tria %d is connected with tet %d (face %d) and %d (face %d) \n",
-           k,ktet[0],iface[0],ktet[1],iface[1]);
-  }
+    std::cerr << "New coordinates populated\n";
 
-  nreq = 0;nr = 0;
-  fprintf(inm,"\nEdges\n%d\n",na);
-  for(k=1; k<=na; k++) {
-    /** e) Edges recovering */
-    if ( MMG3D_Get_edge(mmgMesh,&(Edge[0]),&(Edge[1]),&ref,
-                        &(ridge[k]),&(required[k])) != 1 )  exit(EXIT_FAILURE);
-    fprintf(inm,"%d %d %d \n",Edge[0],Edge[1],ref);
-    if ( ridge[k] )  nr++;
-    if ( required[k] )  nreq++;
-  }
-  fprintf(inm,"\nRequiredEdges\n%d\n",nreq);
-  for(k=1; k<=na; k++) {
-    if ( required[k] )  fprintf(inm,"%d \n",k);
-  }
-  fprintf(inm,"\nRidges\n%d\n",nr);
-  for(k=1; k<=na; k++) {
-    if ( ridge[k] )  fprintf(inm,"%d \n",k);
-  }
+    for (std::size_t i = 0; i < var.nelem; ++i) {
+        vtkSmartPointer<vtkTetra> tetra = (vtkTetra *)adapted_ug->GetCell(i);
+        for (int j = 0; j < NODES_PER_ELEM; ++j)
+            new_connectivity[i][j] = tetra->GetPointId(j);
+    }
+    std::cerr << "New connectivity populated\n";
 
-  nreq = 0;
-  fprintf(inm,"\nTetrahedra\n%d\n",ne);
-  for(k=1; k<=ne; k++) {
-    /** c) Tetra recovering */
-    if ( MMG3D_Get_tetrahedron(mmgMesh,&(Tetra[0]),&(Tetra[1]),&(Tetra[2]),&(Tetra[3]),
-                               &ref,&(required[k])) != 1 )  exit(EXIT_FAILURE);
-    fprintf(inm,"%d %d %d %d %d \n",Tetra[0],Tetra[1],Tetra[2],Tetra[3],ref);
-    if ( required[k] )  nreq++;
-  }
-  fprintf(inm,"\nRequiredTetrahedra\n%d\n",nreq);
-  for(k=1; k<=ne; k++) {
-    if ( required[k] )  fprintf(inm,"%d \n",k);
-  }
+    // copy optimized surface triangle connectivity to dynearthsol3d.
+    for (std::size_t i = 0; i < var.nseg; ++i) {
+        for(int j=0; j < NODES_PER_FACET; j++ )
+            new_segment[i][j] = SENList[i*NODES_PER_FACET + j];
+        new_segflag.data()[i] = sids[i];
+    }
+    std::cerr << "New segments populated\n";
 
-  fprintf(inm,"\nEnd\n");
-  fclose(inm);
 
-  free(required);
-  required = NULL;
-  free(ridge);
-  ridge    = NULL;
+////////////////////////////////////
+    int nreq = 0, nc = 0;
+    //   b) Vertex recovering
+    if ( MMG3D_Get_vertices(mmgMesh, ncoord, NULL, NULL, NULL) != 1 )
+        exit(EXIT_FAILURE);        
+    std::cerr << "New coordinates populated\n";
 
-  /** 2) Manually get the solution */
-  if( !(inm = fopen(solout,"w")) ) {
-    fprintf(stderr,"  ** UNABLE TO OPEN OUTPUT FILE.\n");
-    exit(EXIT_FAILURE);
-  }
-  fprintf(inm,"MeshVersionFormatted 2\n");
-  fprintf(inm,"\nDimension 3\n");
+    //   c) Tetra recovering
+    if ( MMG3D_Get_tetrahedra(mmgMesh , nconn, NULL, NULL) != 1 )  
+        exit(EXIT_FAILURE);
+    std::cerr << "New connectivity populated\n";
 
-  /** a) get the size of the sol: type of entity (SolAtVertices,...),
-      number of sol, type of solution (scalar, tensor...) */
-  if ( MMG3D_Get_solSize(mmgMesh,mmgSol,&typEntity,&np,&typSol) != 1 )
-    exit(EXIT_FAILURE);
+    //   d) segments recovering
+    if ( MMG3D_Get_triangles(mmgMesh, nsegment, nsegflag, NULL) != 1 )
+        exit(EXIT_FAILURE);
+    std::cerr << "New segments populated\n";
+   
+    // Free the MMG3D5 structures
+    MMG3D_Free_all(MMG5_ARG_start,
+                    MMG5_ARG_ppMesh,&mmgMesh,MMG5_ARG_ppMet,&mmgSol,
+                    MMG5_ARG_end);
 
-  if ( ( typEntity != MMG5_Vertex )  || ( typSol != MMG5_Scalar ) )
-    exit(EXIT_FAILURE);
+    var.coord->steal_ref( new_coord );
+    var.connectivity->steal_ref( new_connectivity );
+    var.segment->steal_ref( new_segment );
+    var.segflag->steal_ref( new_segflag );
+    std::cerr << "Arrays transferred. Mesh optimization done \n";
 
-  fprintf(inm,"\nSolAtVertices\n%d\n",np);
-  fprintf(inm,"1 1 \n\n");
-  for(k=1; k<=np; k++) {
-    /** b) Vertex recovering */
-    if ( MMG3D_Get_scalarSol(mmgSol,&Sol) != 1 )  exit(EXIT_FAILURE);
-    fprintf(inm,"%.15lg \n",Sol);
-  }
-  fprintf(inm,"\nEnd\n");
-  fclose(inm);
-
-  /** 3) Free the MMG3D5 structures */
-  MMG3D_Free_all(MMG5_ARG_start,
-                 MMG5_ARG_ppMesh,&mmgMesh,MMG5_ARG_ppMet,&mmgSol,
-                 MMG5_ARG_end);
-
-  free(fileout);
-  fileout = NULL;
-
-  free(solout);
-  solout = NULL;
 }
 #endif
 
