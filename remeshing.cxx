@@ -1165,9 +1165,9 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     if( MMG3D_Set_solSize(mmgMesh, mmgSol, MMG5_Vertex, old_nnode,MMG5_Scalar) != 1 )
         exit(EXIT_FAILURE);
     //   b) give solutions values and positions
-    //      If sol array is available:
+    //      i) If sol array is available:
     // if( MMG3D_Set_scalarSol(mmgSol, sol) != 1 ) exit(EXIT_FAILURE);
-    //      Otherwise, set a value node by node:
+    //      ii) Otherwise, set a value node by node:
     for (std::size_t i = 0; i < var.nnode; ++i) {
         if( MMG3D_Set_scalarSol(mmgSol, 0.5, i+1) != 1 )
             exit(EXIT_FAILURE);
@@ -1177,12 +1177,14 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     if( MMG3D_Chk_meshData(mmgMesh, mmgSol) != 1 ) exit(EXIT_FAILURE);
 
     //--- STEP  II: Remesh function
-    ier = MMG3D_mmg3dlib(mmgMesh, mmgSol);
+    const int ier = MMG3D_mmg3dlib(mmgMesh, mmgSol);
     if ( ier == MMG5_STRONGFAILURE ) {
         fprintf(stdout,"BAD ENDING OF MMG3DLIB: UNABLE TO SAVE MESH\n");
-        return(ier);
-    } else if ( ier == MMG5_LOWFAILURE )
+        exit(EXIT_FAILURE);
+    } else if ( ier == MMG5_LOWFAILURE ) {
         fprintf(stdout,"BAD ENDING OF MMG3DLIB\n");
+        exit(EXIT_FAILURE);
+    }
 
     //--- STEP III: Get results
     // 1) Preparations
@@ -1207,79 +1209,33 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     int *nsegment = new_segment.data();
     int *nsegflag = new_segflag.data();
 
-    //   c) Table to know if a vertex is corner
-    auto corner = (int*)calloc(np+1,sizeof(int));
-    if ( !corner ) {
-        perror("  ## Memory problem: calloc");
-        exit(EXIT_FAILURE);
-    }
-
-    //   d) Table to know if a vertex/tetra/tria/edge is required
-    auto required = (int*)calloc(MAX4(np,ne,nt,na)+1 ,sizeof(int));
-    if ( !required ) {
-        perror("  ## Memory problem: calloc");
-        exit(EXIT_FAILURE);
-    }
-
-    //   e) Table to know if an edge delimits a sharp angle
-    auto ridge = (int*)calloc(na+1 ,sizeof(int));
-    if ( !ridge ) {
-        perror("  ## Memory problem: calloc");
-        exit(EXIT_FAILURE);
-    }
-////////////////////////
-// update mesh info.
-    for (std::size_t i = 0; i < var.nnode; ++i) {
-        double *x = adapted_ug->GetPoints()->GetPoint(i);
-        for(int j=0; j < NDIMS; j++ )
-            new_coord[i][j] = x[j];
-    }
-    std::cerr << "New coordinates populated\n";
-
-    for (std::size_t i = 0; i < var.nelem; ++i) {
-        vtkSmartPointer<vtkTetra> tetra = (vtkTetra *)adapted_ug->GetCell(i);
-        for (int j = 0; j < NODES_PER_ELEM; ++j)
-            new_connectivity[i][j] = tetra->GetPointId(j);
-    }
-    std::cerr << "New connectivity populated\n";
-
-    // copy optimized surface triangle connectivity to dynearthsol3d.
-    for (std::size_t i = 0; i < var.nseg; ++i) {
-        for(int j=0; j < NODES_PER_FACET; j++ )
-            new_segment[i][j] = SENList[i*NODES_PER_FACET + j];
-        new_segflag.data()[i] = sids[i];
-    }
-    std::cerr << "New segments populated\n";
-
-
-////////////////////////////////////
-    int nreq = 0, nc = 0;
-    //   b) Vertex recovering
+    // 2) Pupolate DES3D mesh-defining arrays
+    //   a) Vertex recovering
     if ( MMG3D_Get_vertices(mmgMesh, ncoord, NULL, NULL, NULL) != 1 )
         exit(EXIT_FAILURE);        
     std::cerr << "New coordinates populated\n";
 
-    //   c) Tetra recovering
+    //   b) Tetra recovering
     if ( MMG3D_Get_tetrahedra(mmgMesh , nconn, NULL, NULL) != 1 )  
         exit(EXIT_FAILURE);
     std::cerr << "New connectivity populated\n";
 
-    //   d) segments recovering
+    //   c) segments recovering
     if ( MMG3D_Get_triangles(mmgMesh, nsegment, nsegflag, NULL) != 1 )
         exit(EXIT_FAILURE);
     std::cerr << "New segments populated\n";
-   
-    // Free the MMG3D5 structures
-    MMG3D_Free_all(MMG5_ARG_start,
-                    MMG5_ARG_ppMesh,&mmgMesh,MMG5_ARG_ppMet,&mmgSol,
-                    MMG5_ARG_end);
 
+    //   d) Let the DES3D arrays point to the newly populated data 
     var.coord->steal_ref( new_coord );
     var.connectivity->steal_ref( new_connectivity );
     var.segment->steal_ref( new_segment );
     var.segflag->steal_ref( new_segflag );
     std::cerr << "Arrays transferred. Mesh optimization done \n";
-
+    
+    // 3) Free the MMG3D5 structures
+    MMG3D_Free_all(MMG5_ARG_start,
+                    MMG5_ARG_ppMesh,&mmgMesh,MMG5_ARG_ppMet,&mmgSol,
+                    MMG5_ARG_end);
 }
 #endif
 
@@ -1597,7 +1553,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         old_segflag.steal_ref(*var.segflag);
 
 #ifdef THREED
-#ifdef ADAPT
+#if defined ADAPT || defined USEMMG
         optimize_mesh(param, var, bad_quality, old_coord, old_connectivity,
                  old_segment, old_segflag);
 #else
