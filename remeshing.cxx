@@ -1150,6 +1150,9 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     if( MMG3D_Set_vertices(mmgMesh, qcoord, NULL) != 1)
         exit(EXIT_FAILURE);
     //   c) give the connectivity. References are NULL but can be an integer array for boundary flag etc.
+    for (int i = 0; i < old_nelem; ++i)
+        for (int j = 0; j < NODES_PER_ELEM; ++j)
+            ++qconn[i*NODES_PER_ELEM + j];
     if( MMG3D_Set_tetrahedra(mmgMesh, qconn, NULL) != 1 )
         exit(EXIT_FAILURE);
     //   d) give the segments (i.e., boundary facet)
@@ -1168,7 +1171,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     //      i) If sol array is available:
     // if( MMG3D_Set_scalarSol(mmgSol, sol) != 1 ) exit(EXIT_FAILURE);
     //      ii) Otherwise, set a value node by node:
-    for (std::size_t i = 0; i < var.nnode; ++i) {
+    for (int i = 0; i < var.nnode; ++i) {
         if( MMG3D_Set_scalarSol(mmgSol, 0.5, i+1) != 1 )
             exit(EXIT_FAILURE);
     }
