@@ -1165,21 +1165,48 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     //      mesh adaptation.
     //
     //   a) give info for the sol structure
-    if( MMG3D_Set_solSize(mmgMesh, mmgSol, MMG5_Vertex, old_nnode,MMG5_Scalar) != 1 )
-        exit(EXIT_FAILURE);
+    //if( MMG3D_Set_solSize(mmgMesh, mmgSol, MMG5_Vertex, old_nnode,MMG5_Scalar) != 1 )
+    //    exit(EXIT_FAILURE);
     //   b) give solutions values and positions
     //      i) If sol array is available:
     // if( MMG3D_Set_scalarSol(mmgSol, sol) != 1 ) exit(EXIT_FAILURE);
     //      ii) Otherwise, set a value node by node:
-    for (int i = 0; i < var.nnode; ++i) {
-        if( MMG3D_Set_scalarSol(mmgSol, 0.5, i+1) != 1 )
-            exit(EXIT_FAILURE);
-    }
+    // for (int i = 0; i < var.nnode; ++i) {
+    //     if( MMG3D_Set_scalarSol(mmgSol, 0.5, i+1) != 1 )
+    //         exit(EXIT_FAILURE);
+    // }
 
     // 4) (not mandatory): check if the number of given entities match with mesh size
     if( MMG3D_Chk_meshData(mmgMesh, mmgSol) != 1 ) exit(EXIT_FAILURE);
 
     //--- STEP  II: Remesh function
+    /* debug mode ON (default value = OFF) */
+    if ( MMG3D_Set_iparameter(mmgMesh,mmgSol,MMG3D_IPARAM_debug, 1) != 1 )
+    exit(EXIT_FAILURE);
+
+    if ( MMG3D_Set_iparameter(mmgMesh,mmgSol,MMG3D_IPARAM_optim, 1) != 1 )
+    exit(EXIT_FAILURE);
+     
+    /* maximal memory size (default value = 50/100*ram) */
+    //if ( MMG3D_Set_iparameter(mmgMesh,mmgSol,MMG3D_IPARAM_mem, 600) != 1 )
+    //exit(EXIT_FAILURE);
+
+    /* Maximal mesh size (default FLT_MAX)*/
+    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hmax,5000.0) != 1 )
+    exit(EXIT_FAILURE);
+
+    /* Minimal mesh size (default 0)*/
+    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hmin,100.0) != 1 )
+    exit(EXIT_FAILURE);
+
+    /* Global hausdorff value (default value = 0.01) applied on the whole boundary */
+    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hausd, 0.1) != 1 )
+    exit(EXIT_FAILURE);
+
+    /* Gradation control*/
+    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hgrad, 2) != 1 )
+    exit(EXIT_FAILURE);
+
     const int ier = MMG3D_mmg3dlib(mmgMesh, mmgSol);
     if ( ier == MMG5_STRONGFAILURE ) {
         fprintf(stdout,"BAD ENDING OF MMG3DLIB: UNABLE TO SAVE MESH\n");
