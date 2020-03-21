@@ -36,7 +36,7 @@ output_in_cwd = False
 output_tensor_components = False
 
 # Save principle stresses
-output_princile_stress = False
+output_principle_stress = False
 
 # Save markers?
 output_markers = False
