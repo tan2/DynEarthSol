@@ -1,4 +1,5 @@
 #include <iostream>
+#include <limits>
 
 #ifdef USE_OMP
 #include <omp.h>
@@ -362,8 +363,12 @@ int main(int argc, const char* argv[])
         if (param.sim.is_outputting_averaged_fields)
             output.average_fields(var);
 
-        if ((((var.steps - starting_step) == next_regular_frame * param.sim.output_step_interval) ||
-             ((var.time - starting_time) > next_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC))
+        if (( (param.sim.output_step_interval != std::numeric_limits<int>::max() &&
+               (var.steps - starting_step) == next_regular_frame * param.sim.output_step_interval)
+              ||
+              (param.sim.output_time_interval_in_yr != std::numeric_limits<double>::max() &&
+               (var.time - starting_time) > next_regular_frame * param.sim.output_time_interval_in_yr * YEAR2SEC)
+             )
             // time or step output requirements are met
             &&
             ((! param.sim.is_outputting_averaged_fields) ||
