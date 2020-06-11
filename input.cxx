@@ -200,15 +200,15 @@ static void declare_parameters(po::options_description &cfg,
         ("control.ref_pressure_option", po::value<int>(&p.control.ref_pressure_option)->default_value(0),
          "How to define reference pressure?\n"
          "0: using density of the 0-th element to compute lithostatic pressure.\n"
-         "1: computing rerence pressure from the PREM model.\n"
-         "2: computing rerence pressure from the PREM model, modified for continent.\n")
+         "1: computing reference pressure from the PREM model.\n"
+         "2: computing reference pressure from the PREM model, modified for continent.\n")
 
         ("control.surface_process_option", po::value<int>(&p.control.surface_process_option)->default_value(0),
          "What kind of surface processes? 0: no surface processes. "
          "1: using simple diffusion to modify surface topography. "
          "101: custom function.")
         ("control.surface_diffusivity", po::value<double>(&p.control.surface_diffusivity)->default_value(1e-6),
-         "Diffusition coefficient of surface topography (m^2/s)")
+         "Diffusion coefficient of surface topography (m^2/s)")
 
         ("control.has_thermal_diffusion", po::value<bool>(&p.control.has_thermal_diffusion)->default_value(true),
          "Does the model have thermal diffusion? If not, temperature is advected, but not diffused.\n")
@@ -216,7 +216,7 @@ static void declare_parameters(po::options_description &cfg,
         ("control.has_hydration_processes", po::value<bool>(&p.control.has_hydration_processes)->default_value(false),
          "Does the model have hydration processes? It is required to model some types of phase changes.")
         ("control.hydration_migration_speed", po::value<double>(&p.control.hydration_migration_speed)->default_value(3e-9),
-         "The uppward migration speed of hydrous fluid (in m/s).\n")
+         "The upward migration speed of hydrous fluid (in m/s).\n")
         ;
 
     cfg.add_options()
