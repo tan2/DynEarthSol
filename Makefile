@@ -19,7 +19,7 @@ ndims = 3
 opt = 2
 openmp = 1
 useadapt = 0
-usemmg = 1
+usemmg = 0
 adaptive_time_step = 0
 use_R_S = 0
 useexo = 0
@@ -97,15 +97,19 @@ endif
 
 ifeq ($(usemmg), 1)
 	# path to MMG3D header files
-	MMG_INCLUDE = ${HOME}/opt/mmg/build/include
+	MMG_INCLUDE = ${HOME}/opt/mmg/Release/include
 
 	# path of MMG3D library files, if not in standard system location
-	MMG_LIB_DIR = ${HOME}/opt/mmg/build/lib
+	MMG_LIB_DIR = ${HOME}/opt/mmg/Release/lib
 
 	MMG_CXXFLAGS = -I$(MMG_INCLUDE) -DUSEMMG
-	MMG_LDFLAGS = -L$(MMG_LIB_DIR) -lmmg3d
+	ifeq ($(ndims), 3)	
+		MMG_LDFLAGS = -L$(MMG_LIB_DIR) -lmmg3d
+	else
+		MMG_LDFLAGS = -L$(MMG_LIB_DIR) -lmmg2d
+	endif
 	ifneq ($(OSNAME), Darwin)  # Apple's ld doesn't support -rpath
-		EXO_LDFLAGS += -Wl,-rpath=$(MMG_LIB_DIR)
+		MMG_LDFLAGS += -Wl,-rpath=$(MMG_LIB_DIR)
 	endif
 endif
 
@@ -301,7 +305,7 @@ ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
 		install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
 endif
 endif
-else
+else # IF useadapt is 0
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
 		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
 			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
@@ -312,8 +316,12 @@ ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
 		install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
 endif
 ifeq ($(usemmg), 1)  # fix for dynamic library problem on Mac
+ifeq ($(ndims), 3)
 		install_name_tool -change libmmg3d.dylib $(MMG_LIB_DIR)/libmmg3d.dylib $@
+else
+		install_name_tool -change libmmg2d.dylib $(MMG_LIB_DIR)/libmmg2d.dylib $@
 endif
+endif # end of usemmg
 endif # end of Darwin
 endif # end of useadapt
 
