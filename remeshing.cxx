@@ -1130,7 +1130,7 @@ void compute_metric_field(const Variables &var, const conn_t &connectivity, cons
         void operator()(int e)
         {
             const int *conn = connectivity[e];
-            double plstrain = resolution/(1.0+(*var.plstrain)[e]);
+            double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);
             // resolution/(1.0+(*var.plstrain)[e]);
             for (int i=0; i<NODES_PER_ELEM; ++i) {
                 int n = conn[i];
@@ -1272,6 +1272,8 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     //      i) If sol array is available:
     if( MMG3D_Set_scalarSols(mmgSol, (*var.ntmp).data()) != 1 )
         exit(EXIT_FAILURE);
+
+    /*save init mesh*/
     //      ii) Otherwise, set a value node by node:
     // for (int i = 0; i < var.nnode; ++i) {
     //     if( MMG3D_Set_scalarSol(mmgSol, 100.0, i+1) != 1 )
@@ -1287,9 +1289,9 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
 
     //--- STEP  II: Remesh function
     /* debug mode ON (default value = OFF) */
-    if ( MMG3D_Set_iparameter(mmgMesh,mmgSol,MMG3D_IPARAM_debug, 1) != 1 )
+    if ( MMG3D_Set_iparameter(mmgMesh,mmgSol,MMG3D_IPARAM_debug, param.mesh.mmg_debug) != 1 )
         exit(EXIT_FAILURE);
-    if ( MMG3D_Set_iparameter(mmgMesh,mmgSol,MMG3D_IPARAM_verbose, 5) != 1 )
+    if ( MMG3D_Set_iparameter(mmgMesh,mmgSol,MMG3D_IPARAM_verbose, param.mesh.mmg_verbose) != 1 )
         exit(EXIT_FAILURE);
  
     /* maximal memory size (default value = 50/100*ram) */
@@ -1297,15 +1299,15 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     //exit(EXIT_FAILURE);
 
     // /* Maximal mesh size (default FLT_MAX)*/
-    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hmax,5.0*param.mesh.resolution) != 1 )
+    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hmax, param.mesh.mmg_hmax_factor*param.mesh.resolution) != 1 )
     exit(EXIT_FAILURE);
 
     /* Minimal mesh size (default 0)*/
-    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hmin,0.05*param.mesh.resolution) != 1 )
+    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hmin, param.mesh.mmg_hmin_factor*param.mesh.resolution) != 1 )
     exit(EXIT_FAILURE);
 
     /* Global hausdorff value (default value = 0.01) applied on the whole boundary */
-    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hausd,0.01*param.mesh.resolution) != 1 )
+    if ( MMG3D_Set_dparameter(mmgMesh,mmgSol,MMG3D_DPARAM_hausd, param.mesh.mmg_hausd_factor*param.mesh.resolution) != 1 )
     exit(EXIT_FAILURE);
 
     // /* Gradation control*/
@@ -1499,8 +1501,12 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
     //   d) give the segments (i.e., boundary edges)
     for (int i = 0; i < old_nseg*NODES_PER_FACET; ++i)
         ++qsegment_from_1[i];
-    if( MMG2D_Set_edges(mmgMesh, qsegment_from_1, qsegflag) != 1 )
-        exit(EXIT_FAILURE);
+    for (int i = 0; i < old_nseg; ++i)        
+        if( MMG2D_Set_edge(mmgMesh, qsegment_from_1[i*NODES_PER_FACET], 
+                qsegment_from_1[i*NODES_PER_FACET+1], qsegflag[i], i+1) != 1)
+            exit(EXIT_FAILURE);
+    // if( MMG2D_Set_edges(mmgMesh, qsegment_from_1, qsegflag) != 1 )
+    //     exit(EXIT_FAILURE);
 
     // 3) Build sol in MMG5 format
     //      Here a 'solution' is a nodal field that becomes
@@ -1528,10 +1534,10 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
 
     //--- STEP  II: Remesh function
     /* debug mode ON (default value = OFF) */
-    if ( MMG2D_Set_iparameter(mmgMesh,mmgSol,MMG2D_IPARAM_debug, 1) != 1 )
+    if ( MMG2D_Set_iparameter(mmgMesh,mmgSol,MMG2D_IPARAM_debug, param.mesh.mmg_debug) != 1 )
     exit(EXIT_FAILURE);
 
-    if ( MMG2D_Set_iparameter(mmgMesh,mmgSol,MMG2D_IPARAM_verbose, 5) != 1 )
+    if ( MMG2D_Set_iparameter(mmgMesh,mmgSol,MMG2D_IPARAM_verbose, param.mesh.mmg_verbose) != 1 )
     exit(EXIT_FAILURE);
 
     // if ( MMG2D_Set_iparameter(mmgMesh,mmgSol,MMG2D_IPARAM_iso, 1) != 1 )
@@ -1542,15 +1548,15 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
     //exit(EXIT_FAILURE);
 
     /* Maximal mesh size (default FLT_MAX)*/
-    if ( MMG2D_Set_dparameter(mmgMesh,mmgSol,MMG2D_DPARAM_hmax,5*param.mesh.resolution) != 1 )
+    if ( MMG2D_Set_dparameter(mmgMesh,mmgSol,MMG2D_DPARAM_hmax, param.mesh.mmg_hmax_factor*param.mesh.resolution) != 1 )
     exit(EXIT_FAILURE);
 
     /* Minimal mesh size (default 0)*/
-    if ( MMG2D_Set_dparameter(mmgMesh,mmgSol,MMG2D_DPARAM_hmin,0.05*param.mesh.resolution) != 1 )
+    if ( MMG2D_Set_dparameter(mmgMesh,mmgSol,MMG2D_DPARAM_hmin, param.mesh.mmg_hmin_factor*param.mesh.resolution) != 1 )
     exit(EXIT_FAILURE);
 
     /* Global hausdorff value (default value = 0.01) applied on the whole boundary */
-    if ( MMG2D_Set_dparameter(mmgMesh,mmgSol,MMG2D_DPARAM_hausd, 0.01*param.mesh.resolution) != 1 )
+    if ( MMG2D_Set_dparameter(mmgMesh,mmgSol,MMG2D_DPARAM_hausd, param.mesh.mmg_hausd_factor*param.mesh.resolution) != 1 )
     exit(EXIT_FAILURE);
 
     // /* Gradation control*/
@@ -1568,7 +1574,7 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
     } else if ( ier == MMG5_LOWFAILURE ) {
         fprintf(stdout,"BAD ENDING OF MMG3DLIB\n");
         exit(EXIT_FAILURE);
-    }
+    }    
 
     //--- STEP III: Get results
     // 1) Preparations
@@ -1589,14 +1595,14 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
 
     // 2) Pupolate DES3D mesh-defining arrays
     //   a) Vertexes recovering
-    for (std::size_t i = 0; i < var.nnode; ++i) {
+    for (int i = 0; i < var.nnode; ++i) {
         if ( MMG2D_Get_vertex(mmgMesh, &(new_coord[i][0]), &(new_coord[i][1]), NULL, NULL, NULL) != 1 )
             exit(EXIT_FAILURE);
     }
     std::cerr << "New coordinates populated\n";
 
     //   b) Triangles recovering
-    for (std::size_t i = 0; i < var.nelem; ++i) {
+    for (int i = 0; i < var.nelem; ++i) {
         if ( MMG2D_Get_triangle(mmgMesh, &(new_connectivity[i][0]), &(new_connectivity[i][1]), &(new_connectivity[i][2]), NULL, NULL) != 1 )  
             exit(EXIT_FAILURE);
         for(std::size_t j = 0; j < NODES_PER_ELEM; ++j)
@@ -1605,12 +1611,12 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
     std::cerr << "New connectivity populated\n";
 
     //   c) segments recovering
-    for (std::size_t i = 0; i < var.nseg; ++i) {
+    for (int i = 0; i < var.nseg; ++i) {
         if ( MMG2D_Get_edge(mmgMesh, &(new_segment[i][0]), &(new_segment[i][1]), &(new_segflag.data()[i]), NULL, NULL) != 1 )
             exit(EXIT_FAILURE);
         for(std::size_t j = 0; j < NODES_PER_FACET; ++j)
             new_segment[i][j] -= 1;
-    }     
+    }
     std::cerr << "New segments populated\n";
 
     //   d) Let the DES3D arrays point to the newly populated data 

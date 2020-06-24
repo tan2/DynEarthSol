@@ -70,6 +70,13 @@ struct Mesh {
 
     bool is_discarding_internal_segments;
     int remeshing_option;
+
+    // Parameters for mesh optimizer MMG
+    int mmg_debug;
+    int mmg_verbose;
+    double mmg_hmax_factor;
+    double mmg_hmin_factor;
+    double mmg_hausd_factor;
 };
 
 struct Control {
