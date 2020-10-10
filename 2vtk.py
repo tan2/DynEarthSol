@@ -9,15 +9,20 @@ options:
     -c          save files in current directory (default: same directory as
                 the data files)
     -m          save marker data
-    -p          save P-axis and T-axis
+    -p          save principle components (s1 and s3) of deviatoric stress
     -t          save all tensor components (default: only 1st/2nd invariants)
     -h,--help   show this help
+
+If 'start' is not provided, start from the 0th frame.
+If 'start' is -1, resume previous conversion.
+If 'end' is not provided or is -1, end at the last output.
 '''
 
 from __future__ import print_function, unicode_literals
 import sys, os
-import base64, zlib
+import base64, zlib, glob
 import numpy as np
+from scipy import spatial
 from numpy.linalg  import eigh
 from Dynearthsol import Dynearthsol
 
@@ -31,11 +36,24 @@ output_in_cwd = False
 # Save indivisual components?
 output_tensor_components = False
 
-# Save P-/T-axis
-output_pt_axis = False
+# Save principle stresses
+output_principle_stress = False
 
 # Save markers?
-output_markers = False
+output_markers = True
+
+# index of material type
+mattype = {}
+mattype["sediment"] =  3 # need to change if need to show marker time
+
+########################
+# Is numpy version < 1.8?
+eigh_vectorized = True
+npversion = np.__version__.split('.')
+npmajor = int(npversion[0])
+npminor = int(npversion[1])
+if npmajor < 1 or (npmajor == 1 and npminor < 8):
+    eigh_vectorized = False
 
 
 def main(modelname, start, end, delta):
@@ -46,6 +64,11 @@ def main(modelname, start, end, delta):
         output_prefix = modelname
 
     des = Dynearthsol(modelname)
+
+    if start == -1:
+        vtulist = sorted(glob.glob(modelname + '.*.vtu'))
+        lastframe = int(vtulist[-1][(len(modelname)+1):-4]) if vtulist else des.frames[0]
+        start = des.frames.index(lastframe) + 1
 
     if end == -1:
         end = len(des.frames)
@@ -62,7 +85,7 @@ def main(modelname, start, end, delta):
         print('Converting frame #{0}'.format(suffix), end='\r', file=sys.stderr)
 
         filename = '{0}.{1}.vtu'.format(output_prefix, suffix)
-        fvtu = open(filename, 'wb')
+        fvtu = open(filename, 'w')
 
         try:
             vtu_header(fvtu, nnode, nelem, time_in_yr, step)
@@ -70,7 +93,7 @@ def main(modelname, start, end, delta):
             #
             # node-based field
             #
-            fvtu.write(b'  <PointData>\n')
+            fvtu.write('  <PointData>\n')
 
             # averaged velocity is more stable and is preferred
             try:
@@ -84,6 +107,50 @@ def main(modelname, start, end, delta):
             disp = np.zeros((nnode, 3), dtype=coord.dtype)
             disp[:,0:des.ndims] = coord - coord0
             vtk_dataarray(fvtu, disp, 'total displacement', 3)
+            horizon = np.zeros((nnode), dtype=coord.dtype)
+            horizon[:] = coord0[:,-1]
+            vtk_dataarray(fvtu, horizon, 'horizon', 1)
+
+
+
+
+            '''
+            # find nearest neighbour marker of nodes
+            markersetname = 'markerset'
+            marker_data = des.read_markers(frame, markersetname)
+            nmarkers = marker_data['size']
+            if nmarkers <= 0:
+                raise MarkerSizeError()
+            marker_coord = marker_data[markersetname + '.coord']
+            marker_mattype = marker_data[markersetname + '.mattype']
+            kdtree = spatial.KDTree(marker_coord)
+            nn = kdtree.query(coord,1)
+            nnmattype = np.zeros((nnode), dtype=marker_mattype.dtype)
+
+            try:
+                marker_time = marker_data[markersetname + '.time']
+                nnchron = np.zeros((nnode), dtype=marker_time.dtype)
+                nnchron[:] = marker_time[nn[1]]
+            except:
+                pass
+
+            # abjust horizon of sediment node
+            horizon_max = max(horizon)
+            for j in range(nnode):
+                if marker_mattype[nn[1][j]] == 3:
+                    horizon[j] = horizon_max
+                else:
+                    try:
+                        nnchron[j] = 0.
+                    except:
+                        pass
+
+
+            try:
+                vtk_dataarray(fvtu, nnchron, 'chron', 1)
+            except:
+                pass
+            '''
 
             convert_field(des, frame, 'temperature', fvtu)
             convert_field(des, frame, 'bcflag', fvtu)
@@ -94,11 +161,11 @@ def main(modelname, start, end, delta):
             # node number for debugging
             vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node number')
 
-            fvtu.write(b'  </PointData>\n')
+            fvtu.write('  </PointData>\n')
             #
             # element-based field
             #
-            fvtu.write(b'  <CellData>\n')
+            fvtu.write('  <CellData>\n')
 
             #convert_field(des, frame, 'volume', fvtu)
             #convert_field(des, frame, 'edvoldt', fvtu)
@@ -137,10 +204,10 @@ def main(modelname, start, end, delta):
                     vtk_dataarray(fvtu, stress[:,d] - tI, 'stress ' + des.component_names[d] + ' dev.')
                 for d in range(des.ndims, des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
-            if output_pt_axis:
-                p_axis, t_axis = compute_pt_axis(stress)
-                vtk_dataarray(fvtu, p_axis, 'P-axis', 3)
-                vtk_dataarray(fvtu, t_axis, 'T-axis', 3)
+            if output_principle_stress:
+                s1, s3 = compute_principle_stress(stress)
+                vtk_dataarray(fvtu, s1, 's1', 3)
+                vtk_dataarray(fvtu, s3, 's3', 3)
 
             convert_field(des, frame, 'density', fvtu)
             convert_field(des, frame, 'material', fvtu)
@@ -151,19 +218,19 @@ def main(modelname, start, end, delta):
             # element number for debugging
             vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem number')
 
-            fvtu.write(b'  </CellData>\n')
+            fvtu.write('  </CellData>\n')
 
             #
             # node coordinate
             #
-            fvtu.write(b'  <Points>\n')
+            fvtu.write('  <Points>\n')
             convert_field(des, frame, 'coordinate', fvtu)
-            fvtu.write(b'  </Points>\n')
+            fvtu.write('  </Points>\n')
 
             #
             # element connectivity & types
             #
-            fvtu.write(b'  <Cells>\n')
+            fvtu.write('  <Cells>\n')
             convert_field(des, frame, 'connectivity', fvtu)
             vtk_dataarray(fvtu, (des.ndims+1)*np.array(range(1, nelem+1), dtype=np.int32), 'offsets')
             if des.ndims == 2:
@@ -173,7 +240,7 @@ def main(modelname, start, end, delta):
                 # VTK_ TETRA == 10
                 celltype = 10
             vtk_dataarray(fvtu, celltype*np.ones((nelem,), dtype=np.int32), 'types')
-            fvtu.write(b'  </Cells>\n')
+            fvtu.write('  </Cells>\n')
 
             vtu_footer(fvtu)
             fvtu.close()
@@ -202,7 +269,7 @@ def main(modelname, start, end, delta):
 
 
 def output_vtp_file(des, frame, filename, markersetname, time_in_yr, step):
-    fvtp = open(filename, 'wb')
+    fvtp = open(filename, 'w')
 
     class MarkerSizeError(RuntimeError):
         pass
@@ -221,11 +288,21 @@ def output_vtp_file(des, frame, filename, markersetname, time_in_yr, step):
         # point-based data
         fvtp.write('  <PointData>\n')
         name = markersetname + '.mattype'
-        vtk_dataarray(fvtp, marker_data[name], name)
+        marker_type = marker_data[name]
+        vtk_dataarray(fvtp, marker_type, name)
         name = markersetname + '.elem'
         vtk_dataarray(fvtp, marker_data[name], name)
         name = markersetname + '.id'
         vtk_dataarray(fvtp, marker_data[name], name)
+        try:
+            name = markersetname + '.time'
+            marker_time = marker_data[name]
+            for i in range(nmarkers):
+                if marker_type[i] != mattype["sediment"]:
+                    marker_time[i] = 0
+            vtk_dataarray(fvtp, marker_time, name)
+        except:
+            pass
         fvtp.write('  </PointData>\n')
 
         # point coordinates
@@ -305,7 +382,7 @@ def vtk_dataarray(f, data, data_name=None, data_comps=None):
         fmt = 'ascii'
     header = '<DataArray type="{0}" {1} {2} format="{3}">\n'.format(
         dtype, name, ncomp, fmt)
-    f.write(header.encode('ascii'))
+    f.write(header)
     if output_in_binary:
         header = np.zeros(4, dtype=np.int32)
         header[0] = 1
@@ -314,11 +391,11 @@ def vtk_dataarray(f, data, data_name=None, data_comps=None):
         header[2] = len(a)
         b = zlib.compress(a)
         header[3] = len(b)
-        f.write(base64.standard_b64encode(header.tostring()))
-        f.write(base64.standard_b64encode(b))
+        f.write(base64.standard_b64encode(header.tostring()).decode('ascii'))
+        f.write(base64.standard_b64encode(b).decode('ascii'))
     else:
-        data.tofile(f, sep=b' ')
-    f.write(b'\n</DataArray>\n')
+        data.tofile(f, sep=' ')
+    f.write('\n</DataArray>\n')
     return
 
 
@@ -336,13 +413,13 @@ def vtu_header(f, nnode, nelem, time, step):
   </DataArray>
 </FieldData>
 <Piece NumberOfPoints="{0}" NumberOfCells="{1}">
-'''.format(nnode, nelem, time, step).encode('ascii'))
+'''.format(nnode, nelem, time, step))
     return
 
 
 def vtu_footer(f):
     f.write(
-b'''</Piece>
+'''</Piece>
 </UnstructuredGrid>
 </VTKFile>
 ''')
@@ -363,13 +440,13 @@ def vtp_header(f, nmarkers, time, step):
   </DataArray>
 </FieldData>
 <Piece NumberOfPoints="{0}">
-'''.format(nmarkers, time, step).encode('ascii'))
+'''.format(nmarkers, time, step))
     return
 
 
 def vtp_footer(f):
     f.write(
-b'''</Piece>
+'''</Piece>
 </PolyData>
 </VTKFile>
 ''')
@@ -397,15 +474,15 @@ def second_invariant(t):
                         t[:,3]**2 + t[:,4]**2 + t[:,5]**2)
 
 
-def compute_pt_axis(stress):
-    '''The compression and dilation axis of the deviatoric stress tensor.'''
+def compute_principle_stress(stress):
+    '''The principle stress (s1 and s3) of the deviatoric stress tensor.'''
 
     nelem = stress.shape[0]
     nstr = stress.shape[1]
     # VTK requires vector field (velocity, coordinate) has 3 components.
     # Allocating a 3-vector tmp array for VTK data output.
-    p_axis = np.zeros((nelem, 3), dtype=stress.dtype)
-    t_axis = np.zeros((nelem, 3), dtype=stress.dtype)
+    s1 = np.zeros((nelem, 3), dtype=stress.dtype)
+    s3 = np.zeros((nelem, 3), dtype=stress.dtype)
 
     if nstr == 3:  # 2D
         sxx, szz, sxz = stress[:,0], stress[:,1], stress[:,2]
@@ -414,10 +491,10 @@ def compute_pt_axis(stress):
         cost = np.cos(theta)
         sint = np.sin(theta)
 
-        p_axis[:,0] = mag * sint
-        p_axis[:,1] = mag * cost
-        t_axis[:,0] = mag * cost
-        t_axis[:,1] = -mag * sint
+        s1[:,0] = mag * sint
+        s1[:,1] = mag * cost
+        s3[:,0] = mag * cost
+        s3[:,1] = -mag * sint
 
     else:  # 3D
         # lower part of symmetric stress tensor
@@ -430,7 +507,7 @@ def compute_pt_axis(stress):
         s[:,2,1] = stress[:,5]
 
         # eigenvalues and eigenvectors
-        if np.version.version[:3] >= '1.8':
+        if eigh_vectorized:
             # Numpy-1.8 or newer
             w, v = eigh(s)
         else:
@@ -441,17 +518,17 @@ def compute_pt_axis(stress):
                 w[e,:], v[e,:,:] = eigh(s[e])
 
         # isotropic part to be removed
-        m = np.sum(w, axis=1)
+        m = np.sum(w, axis=1) / 3
 
         p = w.argmin(axis=1)
         t = w.argmax(axis=1)
         #print(w.shape, v.shape, p.shape)
 
         for e in range(nelem):
-            p_axis[e,:] = (w[e,p[e]] - m[e]) * v[e,:,p[e]]
-            t_axis[e,:] = (w[e,t[e]] - m[e]) * v[e,:,t[e]]
+            s1[e,:] = (w[e,p[e]] - m[e]) * v[e,:,p[e]]
+            s3[e,:] = (w[e,t[e]] - m[e]) * v[e,:,t[e]]
 
-    return p_axis, t_axis
+    return s1, s3
 
 
 if __name__ == '__main__':
@@ -470,7 +547,7 @@ if __name__ == '__main__':
     if '-c' in sys.argv:
         output_in_cwd = True
     if '-p' in sys.argv:
-        output_pt_axis = True
+        output_principle_stress = True
     if '-t' in sys.argv:
         output_tensor_components = True
     if '-m' in sys.argv:

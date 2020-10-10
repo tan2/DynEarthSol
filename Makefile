@@ -1,4 +1,4 @@
-# -*- Makefile -*-
+#-*- Makefile -*-
 #
 # Makefile for DynEarthSol3D
 #
@@ -10,44 +10,24 @@
 ## ndims = 3: 3D code; 2: 2D code
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openmp = 1: enable OpenMP
-## useadapt = 1: use libadaptivity for mesh optimization during remeshing
 
-ndims = 3
+ndims = 2
 opt = 2
 openmp = 1
-useadapt = 1
 
-ifeq ($(ndims), 2)
-	useadapt = 0   # libadaptivity is 3d only
-endif
+UNAME_S := $(shell uname -s)
 
 ## Select C++ compiler
-ifeq ($(useadapt), 1)
-	CXX = mpicxx # g++-mp-4.7
-	CXX_BACKEND = g++
+CXX = g++
+#CXX = g++-5
 
-	# path to vtk header files, if not in standard system location
-	VTK_INCLUDE =
-
-	# path of vtk library files, if not in standard system location
-	VTK_LIBS =
-
-	# flag to link with fortran binding of MPI library
-	LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
-else
-	CXX = g++
-	CXX_BACKEND = ${CXX}
-endif
-
-## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR = ${HOME}/opt/boost_1_55_0
+## Boost location and library name
+BOOST_ROOT_DIR = ${HOME}/opt/boost_1_62_0
 
 ########################################################################
 ## Select compiler and linker flags
 ## (Usually you won't need to modify anything below)
 ########################################################################
-
-OSNAME := $(shell uname -s)
 
 BOOST_LDFLAGS = -lboost_program_options
 ifdef BOOST_ROOT_DIR
@@ -56,19 +36,18 @@ ifdef BOOST_ROOT_DIR
 	ifeq (, $(has_stage_dir))
 		# no stage dir, BOOST_ROOT_DIR is the installation directory
 		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
-		BOOST_LIB_DIR = $(BOOST_ROOT_DIR)/lib
+		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,-rpath,$(BOOST_ROOT_DIR)/lib
+		#BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Xlinker -rpath -Xlinker$(BOOST_ROOT_DIR)/lib
 	else
 		# with stage dir, BOOST_ROOT_DIR is the build directory
 		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)
-		BOOST_LIB_DIR = $(BOOST_ROOT_DIR)/stage/lib
-	endif
-	BOOST_LDFLAGS += -L$(BOOST_LIB_DIR)
-	ifneq ($(OSNAME_S), Darwin)  # Apple's ld doesn't support -rpath
-		BOOST_LDFLAGS += -Wl,-rpath=$(BOOST_LIB_DIR)
+		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath,$(BOOST_ROOT_DIR)/stage/lib
+		#BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Xlinker -rpath -Xlinker $(BOOST_ROOT_DIR)/stage/lib
+
 	endif
 endif
 
-ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
+ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
 
@@ -79,7 +58,7 @@ ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 	else ifeq ($(opt), 3) # experimental, use at your own risk :)
 		CXXFLAGS += -march=native -O3 -ffast-math -funroll-loops
 	else # debugging flags
-		CXXFLAGS += -O0 -Wall -Wno-unused-variable -Wno-unused-function -Wno-unknown-pragmas -fbounds-check -ftrapv
+		CXXFLAGS += -O0 -Wall -Wno-unused-variable -Wno-unused-function -Wno-unknown-pragmas -fbounds-check #-ftrapv
 	endif
 
 	ifeq ($(openmp), 1)
@@ -87,26 +66,24 @@ ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 		LDFLAGS += -fopenmp
 	endif
 
-else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tested with v14
-		CXXFLAGS = -g -std=c++0x
-	        LDFLAGS = -lm
+else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with v14
+        CXXFLAGS = -g -std=c++0x
+        LDFLAGS = -lm
 
-	        ifeq ($(opt), 1)
-	                CXXFLAGS += -O1
-	        else ifeq ($(opt), 2)
-	                CXXFLAGS += -O2
-	        else ifeq ($(opt), 3) # experimental, use at your own risk :)
-	                CXXFLAGS += -fast -fast-transcendentals -fp-model fast=2
-	        else # debugging flags
-	                CXXFLAGS += -O0 -check=uninit -check-pointers=rw -check-pointers-dangling=all -fp-trap-all=all
-	        endif
+        ifeq ($(opt), 1)
+                CXXFLAGS += -O1
+        else ifeq ($(opt), 2)
+                CXXFLAGS += -O2
+        else ifeq ($(opt), 3) # experimental, use at your own risk :)
+                CXXFLAGS += -fast -fast-transcendentals -fp-model fast=2
+        else # debugging flags
+                CXXFLAGS += -O0 -check=uninit -check-pointers=rw -check-pointers-dangling=all -fp-trap-all=all
+        endif
 
-	        ifeq ($(openmp), 1)
-	                CXXFLAGS += -fopenmp -DUSE_OMP
-	                LDFLAGS += -fopenmp
-	        endif
-
-
+        ifeq ($(openmp), 1)
+                CXXFLAGS += -fopenmp -DUSE_OMP
+                LDFLAGS += -fopenmp
+        endif
 
 else
 # the only way to display the error message in Makefile ...
@@ -186,56 +163,18 @@ ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
 
-ifeq ($(useadapt), 1)
-	LIBADAPTIVITY_DIR = ./libadaptivity
-	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
-	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
-	LIBADAPTIVITY_LIBNAME = adaptivity
-	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -DADAPT -DHAVE_VTK=1 \
-		-I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
-		-I$(LIBADAPTIVITY_DIR)/load_balance/include
-endif
-
 ## Action
 
 .PHONY: all clean take-snapshot
 
 all: $(EXE) take-snapshot
 
-ifeq ($(useadapt), 1)
-
-$(LIBADAPTIVITY_DIR)/lflags.mk:
-	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
-
-$(LIBADAPTIVITY_DIR)/cppflags.mk:
-	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
-
-$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
-	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk
-
-$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
-	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
-
--include $(LIBADAPTIVITY_DIR)/lflags.mk
--include $(LIBADAPTIVITY_DIR)/cppflags.mk
-LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
-CXXFLAGS += $(CPPFLAGS)
-
-$(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a $(OBJS)
-		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
-			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
-			$(LIBADAPTIVITY_LIBS) \
-			-o $@
-ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
-		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
-endif
-else
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
-		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
-			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
-			-o $@
+	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
+		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) -o $@
+ifeq ($(UNAME_S),Darwin)
+	install_name_tool -change libboost_program_options.dylib $(BOOST_ROOT_DIR)/stage/lib/libboost_program_options.dylib dynearthsol$(ndims)d
 endif
-
 take-snapshot:
 	@# snapshot of the code for building the executable
 	@echo Flags used to compile the code: > snapshot.diff
@@ -249,9 +188,16 @@ ifneq ($(HAS_HG),)
 	@hg summary >> snapshot.diff
 	@echo >> snapshot.diff
 	@echo >> snapshot.diff
+	@echo '== Code based on (last public revision) ==' >> snapshot.diff
+	@hg log -r "last(public())" >> snapshot.diff
+	@echo >> snapshot.diff
+	@echo >> snapshot.diff
 	@echo '== Code modification (not checked-in) ==' >> snapshot.diff
 	@hg diff >> snapshot.diff
-	@hg log --patch -r "draft()" >> snapshot.diff
+	@echo >> snapshot.diff
+	@echo >> snapshot.diff
+	@echo '== Code modification (checked-in but not public) ==' >> snapshot.diff
+	@hg log --patch -r "not public()" >> snapshot.diff
 else
 	@echo \'hg\' is not in path, cannot take code snapshot. >> snapshot.diff
 endif
@@ -278,13 +224,16 @@ $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
 $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 	@+$(MAKE) -C $(ANN_DIR) linux-g++
 
-deepclean: cleanadapt
+deepclean:
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
 	@+$(MAKE) -C $(C3X3_DIR) clean
+	@+$(MAKE) -C $(ANN_DIR) realclean
 
 clean:
-	@rm -f $(OBJS) $(EXE)
+	@rm -f $(OBJS) $(EXE) *.o
 
-cleanadapt:
-	@rm -f $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
-	@+$(MAKE) -C $(LIBADAPTIVITY_DIR) clean
+clean-data:
+	@rm -rf result.save.* result.chkpt.* result.info
+
+run:
+	dynearthsol$(ndims)d ./curiosity.cfg

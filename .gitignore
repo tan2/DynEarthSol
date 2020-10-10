@@ -1,0 +1,9 @@
+*.o
+*.pyc
+dynearthsol2d
+dynearthsol3d
+snapshot.diff
+test*
+*.diff
+ann/lib/*
+3x3-C/lib3x3.a
