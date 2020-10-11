@@ -75,6 +75,8 @@ static void declare_parameters(po::options_description &cfg,
          )
         ("mesh.meshing_verbosity", po::value<int>(&p.mesh.meshing_verbosity)->default_value(-1),
          "Output verbose during mesh/remeshing. -1 for no output.")
+        ("mesh.meshing_sediment", po::value<bool>(&p.mesh.meshing_sediment)->default_value(false),
+         "Refine the elements with sediment marker during remeshing.")
         ("mesh.tetgen_optlevel", po::value<int>(&p.mesh.tetgen_optlevel)->default_value(3),
          "Optimization level for tetgen. 0: no optimization; 1: multiple edge filps; 2: 1 & free vertex deletion; 3: 2 & new vertex insertion. High optimization level could slow down the speed of mesh generation. For 3D only.")
 
@@ -91,6 +93,8 @@ static void declare_parameters(po::options_description &cfg,
          "The size of smallest element relative to an element with typical resolution")
         ("mesh.largest_size", po::value<double>(&p.mesh.largest_size)->default_value(30),
          "The size of largest element relative to an element with typical resolution")
+        ("mesh.sediment_size", po::value<double>(&p.mesh.sediment_size)->default_value(1.),
+         "The size threshold of the refined sediment elements")
         // for 2D only
         ("mesh.min_angle", po::value<double>(&p.mesh.min_angle)->default_value(32.),
          "Min. angle of all triangles (in degrees), for 2D only")
@@ -199,9 +203,23 @@ static void declare_parameters(po::options_description &cfg,
         ("control.surface_process_option", po::value<int>(&p.control.surface_process_option)->default_value(0),
          "What kind of surface processes? 0: no surface processes. "
          "1: using simple diffusion to modify surface topography. "
-         "101: custom function.")
+         "101: custom function."
+         "2: using simple deposition."
+         "102: using simple deposition and diffusion.")
         ("control.surface_diffusivity", po::value<double>(&p.control.surface_diffusivity)->default_value(1e-6),
-         "Diffusition coefficient of surface topography (m^2/s)")
+         "Standard diffusition coefficient of surface topography (m^2/s)")
+        ("control.surf_diff_ratio_terrig", po::value<double>(&p.control.surf_diff_ratio_terrig)->default_value(1.),
+         "Ratio between terrigenous and standard Diffusition coefficients.")
+        ("control.surf_diff_ratio_marine", po::value<double>(&p.control.surf_diff_ratio_marine)->default_value(1.),
+         "Ratio between marine and standard Diffusition coefficients.")
+        ("control.surf_base_level",po::value<double>(&p.control.surf_base_level)->default_value(0.e0),
+         "Base level of surface processes")
+        ("control.surf_src_vol",po::value<double>(&p.control.surf_src_vol)->default_value(1.),
+         "The volume of the sediment bring from continent source (in m^3/s). "
+         "5e7 ton/yr ~= 1 m^3/s")
+        ("control.surf_src_area",po::value<double>(&p.control.surf_src_area)->default_value(2.e-5),
+         "The are of the sediment bring from continent source (in m^2/s). "
+         "Assuming the width of the channel is 50 km, 5e7 ton/yr ~= 2.e-5 m^2/s")
 
         ("control.has_thermal_diffusion", po::value<bool>(&p.control.has_thermal_diffusion)->default_value(true),
          "Does the model have thermal diffusion? If not, temperature is advected, but not diffused.\n")
@@ -245,8 +263,42 @@ static void declare_parameters(po::options_description &cfg,
          "Type of boundary condition for the right/eastern side")
         ("bc.vbc_val_x0", po::value<double>(&p.bc.vbc_val_x0)->default_value(-1e-9),
          "Value of boundary condition for left/western side (if velocity, unit is m/s; if stress, unit is Pa)")
+        ("bc.vbc_val_division_x0_min", po::value<double>(&p.bc.vbc_val_division_x0_min)->default_value(1.),
+         "Ratio of first rate change division from the top to the right boundary width (for option = 8)")
+        ("bc.vbc_val_division_x0_max", po::value<double>(&p.bc.vbc_val_division_x0_max)->default_value(1.),
+         "Ratio of second rate change division from the top to the right boundary width (for option = 8)")
+        ("bc.vbc_val_x0_ratio0", po::value<double>(&p.bc.vbc_val_x0_ratio0)->default_value(1.),
+         "Ratio of the velocity before the vbc_val_division_x1_min to vbc_val_x0 of the left boundary width (for option = 1 and 3)")
+        ("bc.vbc_val_x0_ratio1", po::value<double>(&p.bc.vbc_val_x0_ratio1)->default_value(1.),
+         "Ratio of the velocity before the vbc_val_division_x1_max to vbc_val_x0 of the left boundary width (for option = 1 and 3)")
+        ("bc.vbc_val_x0_ratio2", po::value<double>(&p.bc.vbc_val_x0_ratio2)->default_value(1.),
+         "Ratio of the velocity after the vbc_val_division_x1_max to vbc_val_x0 of the right boundary width (for option = 1 and 3)")
+
+        ("bc.num_vbc_period_x0", po::value<int>(&p.bc.num_vbc_period_x0)->default_value(1),
+         "Number of velocity period at x0")
+        ("bc.num_vbc_period_x1", po::value<int>(&p.bc.num_vbc_period_x1)->default_value(1),
+         "Number of velocity period at x1")
+        ("bc.vbc_period_x0_time_in_yr", po::value<std::string>()->default_value("[1.e6]"),
+         "End time of BC velocity periods at x0 side '[t0, t1, t2, ...]' (in yr)")
+        ("bc.vbc_period_x1_time_in_yr", po::value<std::string>()->default_value("[1.e6]"),
+         "End time of BC velocity periods at x1 side '[t0, t1, t2, ...]' (in yr)")
+        ("bc.vbc_period_x0_ratio", po::value<std::string>()->default_value("[1.]"),
+         "rate ratio of BC velocity periods at x0 side '[r0, r1, r2, ...]'")
+        ("bc.vbc_period_x1_ratio", po::value<std::string>()->default_value("[1.]"),
+         "rate ratio of BC velocity periods at x1 side '[r0, r1, r2, ...]'")
+
         ("bc.vbc_val_x1", po::value<double>(&p.bc.vbc_val_x1)->default_value(1e-9),
          "Value of boundary condition for the right/eastern side (if velocity, unit is m/s; if stress, unit is Pa)")
+        ("bc.vbc_val_division_x1_min", po::value<double>(&p.bc.vbc_val_division_x1_min)->default_value(1.),
+         "Ratio of first rate change division from the top to the right boundary width (for option = 8)")
+        ("bc.vbc_val_division_x1_max", po::value<double>(&p.bc.vbc_val_division_x1_max)->default_value(1.),
+         "Ratio of second rate change division from the top to the right boundary width (for option = 8)")
+        ("bc.vbc_val_x1_ratio0", po::value<double>(&p.bc.vbc_val_x1_ratio0)->default_value(1.),
+         "Ratio of the velocity before the vbc_val_division_x1_min to vbc_val_x1 of the right boundary width (for option = 1 and 3)")
+        ("bc.vbc_val_x1_ratio1", po::value<double>(&p.bc.vbc_val_x1_ratio1)->default_value(1.),
+         "Ratio of the velocity before the vbc_val_division_x1_max to vbc_val_x1 of the right boundary width (for option = 1 and 3)")
+        ("bc.vbc_val_x1_ratio2", po::value<double>(&p.bc.vbc_val_x1_ratio2)->default_value(1.),
+         "Ratio of the velocity after the vbc_val_division_x1_max to vbc_val_x1 of the right boundary width (for option = 1 and 3)")
 
         ("bc.vbc_y0", po::value<int>(&p.bc.vbc_y0)->default_value(0),
          "Type of boundary condition for the southern side")
@@ -344,6 +396,18 @@ static void declare_parameters(po::options_description &cfg,
 	("ic.oceanic_plate_age_in_yr", po::value<double>(&p.ic.oceanic_plate_age_in_yr)->default_value(60e6),
          "Age of the oceanic plate (in years), used for the temperature profile on the plate.\n")
 
+        // for temperature_option = 1
+        ("ic.continental_plate_age_in_yr", po::value<double>(&p.ic.continental_plate_age_in_yr)->default_value(100.e6),
+         "Age of the continental plate (in years), used for the temperature profile on the plate.\n")
+        ("ic.radiogenic_crustal_thickness", po::value<double>(&p.ic.radiogenic_crustal_thickness)->default_value(30.e3),
+         "Radiogenic crustal thickness (in meters), used for the temperature profile on the plate.\n")
+        ("ic.radiogenic_folding_depth", po::value<double>(&p.ic.radiogenic_folding_depth)->default_value(10.e3),
+         "Radiogenic folding depth (in meters), used for the temperature profile on the plate.\n")
+        ("ic.radiogenic_heating_of_crust", po::value<double>(&p.ic.radiogenic_heating_of_crust)->default_value(1.e-9),
+         "Radiogenic heating of crust (in W/kg), used for the temperature profile on the plate.\n")
+        ("ic.lithospheric_thickness", po::value<double>(&p.ic.lithospheric_thickness)->default_value(100.e3),
+         "Lithospheric thickness (in meters), used for the temperature profile on the plate.\n")
+
         // for temperature_option = 90
         ("ic.Temp_filename", po::value<std::string>(&p.ic.Temp_filename)->default_value("Thermal.dat"),
          "Filename of the input thermal field, for temperature_option=90.\n"
@@ -377,6 +441,12 @@ static void declare_parameters(po::options_description &cfg,
          "101: custom phase changes.")
         ("mat.num_materials", po::value<int>(&p.mat.nmat)->default_value(1),
          "Number of material types")
+        ("mat.mattype_mantle", po::value<int>(&p.mat.mattype_mantle)->default_value(0),
+         "Index of mantle material. For continental thermal gradient")
+        ("mat.mattype_crust", po::value<int>(&p.mat.mattype_crust)->default_value(0),
+         "Index of crust material.  For continental thermal gradient")
+        ("mat.mattype_sed", po::value<int>(&p.mat.mattype_sed)->default_value(0),
+         "Index of sediment material. Should be the same as mattype['sediment'] in 2vtk.py for sediment time convertion")
         ("mat.max_viscosity", po::value<double>(&p.mat.visc_max)->default_value(1e24),
          "Max. value of viscosity (in Pa.s)")
         ("mat.min_viscosity", po::value<double>(&p.mat.visc_min)->default_value(1e18),
@@ -530,18 +600,18 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         std::exit(1);
     }
     if ( ! vm.count("sim.max_steps") )
-        p.sim.max_steps = std::numeric_limits<int>::max();;
+        p.sim.max_steps = std::numeric_limits<int>::max();
     if ( ! vm.count("sim.max_time_in_yr") )
-        p.sim.max_time_in_yr = std::numeric_limits<double>::max();;
+        p.sim.max_time_in_yr = std::numeric_limits<double>::max();
 
     if ( ! (vm.count("sim.output_step_interval") || vm.count("sim.output_time_interval_in_yr")) ) {
         std::cerr << "Must provide either sim.output_step_interval or sim.output_time_interval_in_yr\n";
         std::exit(1);
     }
     if ( ! vm.count("sim.output_step_interval") )
-        p.sim.output_step_interval = std::numeric_limits<int>::max();;
+        p.sim.output_step_interval = std::numeric_limits<int>::max();
     if ( ! vm.count("sim.output_time_interval_in_yr") )
-        p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();;
+        p.sim.output_time_interval_in_yr = std::numeric_limits<double>::max();
 
     //
     // These parameters are required when restarting
@@ -766,6 +836,11 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             p.markers.replenishment_option = 1;
             std::cerr << "Warning: mat.num_materials is 1, using simplest markers.replenishment_option.\n";
         }
+
+        get_numbers(vm, "bc.vbc_period_x0_time_in_yr", p.bc.vbc_period_x0_time_in_yr, p.bc.num_vbc_period_x0, 1);
+        get_numbers(vm, "bc.vbc_period_x1_time_in_yr", p.bc.vbc_period_x1_time_in_yr, p.bc.num_vbc_period_x1, 1);
+        get_numbers(vm, "bc.vbc_period_x0_ratio", p.bc.vbc_period_x0_ratio, p.bc.num_vbc_period_x0, 1);
+        get_numbers(vm, "bc.vbc_period_x1_ratio", p.bc.vbc_period_x1_ratio, p.bc.num_vbc_period_x1, 1);
 
         get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat, 1);
         get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat, 1);

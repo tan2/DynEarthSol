@@ -5,13 +5,17 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "constants.hpp"
 #include "array2d.hpp"
 
 typedef std::pair<double,double> double_pair;
+typedef std::unordered_map<int,int> int_map;
+typedef std::vector<int_map> int_map2D;
 
 typedef std::vector<double> double_vec;
+typedef std::vector<double_vec> double_vec2D;
 typedef std::vector<int> int_vec;
 typedef std::vector<int_vec> int_vec2D;
 typedef std::vector<uint> uint_vec;
@@ -52,6 +56,7 @@ struct Sim {
 struct Mesh {
     int meshing_option;
     int meshing_verbosity;
+    bool meshing_sediment;
     int tetgen_optlevel;
     int quality_check_step_interval;
 
@@ -59,6 +64,7 @@ struct Mesh {
     double resolution;
     double smallest_size;
     double largest_size;
+    double sediment_size;
     double min_angle;  // for 2D only
     double min_tet_angle, max_ratio; // for 3D only
     double min_quality;
@@ -83,6 +89,11 @@ struct Control {
 
     int surface_process_option;
     double surface_diffusivity;
+    double surf_diff_ratio_terrig;
+    double surf_diff_ratio_marine;
+    double surf_base_level;
+    double surf_src_vol;
+    double surf_src_area;
 
     bool is_quasi_static;
     bool has_thermal_diffusion;
@@ -124,6 +135,27 @@ struct BC {
     double vbc_val_n1;
     double vbc_val_n2;
     double vbc_val_n3;
+
+    double vbc_val_division_x0_min;
+    double vbc_val_division_x0_max;
+    double vbc_val_division_x1_min;
+    double vbc_val_division_x1_max;
+
+    double vbc_val_x0_ratio0;
+    double vbc_val_x0_ratio1;
+    double vbc_val_x0_ratio2;
+    double vbc_val_x1_ratio0;
+    double vbc_val_x1_ratio1;
+    double vbc_val_x1_ratio2;
+
+    int num_vbc_period_x0;
+    int num_vbc_period_x1;
+
+    double_vec vbc_period_x0_time_in_yr;
+    double_vec vbc_period_x1_time_in_yr;
+
+    double_vec vbc_period_x0_ratio;
+    double_vec vbc_period_x1_ratio;
 };
 
 struct IC {
@@ -153,6 +185,11 @@ struct IC {
     std::string Nodes_filename;
     std::string Connectivity_filename;
     double oceanic_plate_age_in_yr;
+    double continental_plate_age_in_yr;
+    double radiogenic_crustal_thickness;
+    double radiogenic_folding_depth;
+    double radiogenic_heating_of_crust;
+    double lithospheric_thickness;
 
     double isostasy_adjustment_time_in_yr;
 };
@@ -161,6 +198,9 @@ struct Mat {
     int rheol_type;
     int phase_change_option;
     int nmat;
+    int mattype_mantle;
+    int mattype_crust;
+    int mattype_sed;
     bool is_plane_strain;
     double visc_min;
     double visc_max;
@@ -211,6 +251,59 @@ struct Param {
     Debug debug;
 };
 
+//
+// Structures for surface processes
+//
+struct SurfaceInfo {
+
+//    const double sec_year = 31556925.2;
+
+    int efacet_top;
+    int ntop;
+
+    double base_level;
+    double surf_diff;
+    double diff_ratio_terrig;
+    double diff_ratio_marine;
+    double dep_rate;
+    double ero_rate;
+
+    double dh_max;
+    double dh_min;
+
+    int_vec *top_nodes;
+    int_vec *top_facet_elems;
+
+    int_vec *landform_map;
+    double_vec *drainage;
+    double_vec *dh;
+
+    double_vec *dhacc;
+    double_vec2D *edhacc;
+    int_vec2D *edhacc_ind;
+    int_vec2D *node_and_elems;
+    int_vec2D *elem_and_nodes;
+    int_vec2D *node_and_nodes;
+
+    std::vector<double_vec> *fcenters;
+    std::vector<double_vec> *normals;
+    std::vector<double_vec> *dips;
+
+    std::unordered_map<int,int> arctop_facet_elems;
+    std::unordered_map<int,int> arctop_nodes;
+    std::vector<int_map> *arcelem_and_nodes_num;
+
+
+    int ntops;
+    int nbots;
+    int_vec tops;
+    int_vec coasts;
+    int_vec bots;
+
+    double_vec top_elev;
+    double_vec bot_elev;
+
+};
 
 //
 // Structures for model variables
@@ -227,6 +320,7 @@ struct Variables {
     int nseg;
 
     double max_vbc_val;
+    double_vec vbc_period_ratio_x[2];
     double compensation_pressure;
 
     // These 5 arrays are allocated by external library
@@ -235,6 +329,9 @@ struct Variables {
     segment_t *segment;
     segflag_t *segflag;
     regattr_t *regattr;
+    array_t *old_coord;
+    conn_t *old_connectivity;
+
 
     uint_vec *bcflag;
     int_vec bnodes[nbdrytypes];
@@ -244,15 +341,21 @@ struct Variables {
     double vbc_values[nbdrytypes];
     std::map<std::pair<int,int>, double*> edge_vectors;
 
+    int_vec *top_elems;
+    int_vec2D *marker_in_elem;
+
     int_vec2D *support;
     int_vec egroups;
 
-    double_vec *volume, *volume_old, *volume_n;
+    double_vec *volume, *volume_old, *volume_n, *volume_sp;
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
     double_vec *stressyy;
     double_vec *ntmp;
+
+    // For surface processes
+    SurfaceInfo surfinfo;
 
     array_t *vel, *force, *coord0;
     tensor_t *strain_rate, *strain, *stress;
@@ -267,6 +370,9 @@ struct Variables {
     Array2D<int,1> *hydrous_elemmarkers; // for markersets[hydrous_marker_index] (hydrous markers)
 
     PhaseChange *phch;
+
+    double time_else, time_surf;
+    clock_t tmp_else, tmp_surf;
 };
 
 #endif

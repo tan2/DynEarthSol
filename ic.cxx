@@ -221,6 +221,59 @@ void initial_temperature(const Param &param, const Variables &var,
             }
             break;
         }
+    case 1:
+        {
+            // Continental geotherm
+            const double pi = 3.14159265358979323846;
+
+            const int dens_c = param.mat.rho0[param.mat.mattype_crust];
+            const int dens_m = param.mat.rho0[param.mat.mattype_mantle];
+            const double cond_c = param.mat.therm_cond[std::min(int(param.mat.therm_cond.size())-1, param.mat.mattype_crust)];
+            const double cond_m = param.mat.therm_cond[std::min(int(param.mat.therm_cond.size())-1, param.mat.mattype_mantle)];
+            const double diff_m = cond_m/1000./dens_m;
+
+            const double age = param.ic.continental_plate_age_in_yr * YEAR2SEC;
+            const double hs = param.ic.radiogenic_heating_of_crust; 
+            const double hr = param.ic.radiogenic_folding_depth;
+            const double hc = param.ic.radiogenic_crustal_thickness;
+            const double hl = param.ic.lithospheric_thickness;
+
+            const double t_top = param.bc.surface_temperature;
+            const double t_bot = param.bc.mantle_temperature;
+
+            const double tr = dens_c * hs * hr*hr / cond_c * exp(1.-exp(-hc/hr));
+            const double q_m = (t_bot - t_top - tr) / (hc / cond_c+(hl-hc) / cond_m);
+            const double tm  = t_top + (q_m/cond_c) * hc + tr;
+            const double tau_d = hl*hl / (pi*pi*diff_m);
+
+            for (int i=0; i<var.nnode; ++i) {
+                double y = -(*var.coord)[i][NDIMS-1];
+                double tss;
+                // steady state part
+                if (y <= hc)
+                    tss = t_top + (q_m/cond_c)*y + (dens_c*hs*hr*hr/cond_c) * exp(1.-exp(-y/hr));
+                else 
+                    tss = tm + (q_m/cond_m) * (y - hc);
+                // time-dependent part
+                double tt = 0.;
+                double pp = -1.;
+                double an;
+                for (int k=1;k<101;k++) {
+                    an = 1.*k;
+                    pp = -pp;
+                    tt = tt +pp/(an)*exp(-an*an*age/tau_d)*sin(pi*k*(hl-y)/hl);
+                }
+
+                temperature[i] = tss + 2./pi*(t_bot-t_top)*tt;
+
+                if (temperature[i] > t_bot || y >= hl)
+                    temperature[i] = t_bot;
+
+                if (y == 0.)
+                    temperature[i] = t_top;
+            }
+            break;
+        }
     case 90:
         read_external_temperature_from_comsol(param, var, *var.temperature);
         break;
