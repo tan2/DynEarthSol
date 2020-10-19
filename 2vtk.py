@@ -44,7 +44,7 @@ output_markers = True
 
 # index of material type
 mattype = {}
-mattype["sediment"] =  3 # need to change if need to show marker time
+mattype["sediment"] =  4 # need to change if need to show marker time
 
 ########################
 # Is numpy version < 1.8?

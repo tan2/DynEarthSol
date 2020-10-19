@@ -3,6 +3,7 @@
 #include <time.h> // for time()
 #include <assert.h>
 #include <unordered_map>
+#include <set>
 
 #include "ANN/ANN.h"
 
@@ -79,6 +80,7 @@ void MarkerSet::allocate_markerdata( const int max_markers )
     _elem = new int_vec( max_markers );
     _mattype = new int_vec( max_markers );
     _id = new int_vec( max_markers );
+    _time = new double_vec( max_markers );
 }
 
 
@@ -102,7 +104,7 @@ void MarkerSet::random_eta( double *eta )
 }
 
 
-void MarkerSet::append_marker( const double *eta, int el, int mt )
+void MarkerSet::append_marker( const double *eta, int el, int mt , double ti)
 {
     // Ensure sufficient array size
     if( _nmarkers == _reserved_space ) {
@@ -116,6 +118,7 @@ void MarkerSet::append_marker( const double *eta, int el, int mt )
     (*_elem)[m] = el;
     (*_mattype)[m] = mt;
     (*_id)[m] = _last_id;
+    (*_time)[m] = ti;
 
     if(DEBUG > 1) {
         std::cout << el << " " << m << " "
@@ -133,12 +136,11 @@ void MarkerSet::append_marker( const double *eta, int el, int mt )
     ++_last_id;
 }
 
-
-void MarkerSet::append_random_marker_in_elem( int el, int mt )
+void MarkerSet::append_random_marker_in_elem( int el, int mt, double ti)
 {
     double eta[NODES_PER_ELEM];
     random_eta(eta);
-    append_marker(eta, el, mt);
+    append_marker(eta, el, mt, ti / YEAR2SEC);
 }
 
 
@@ -167,7 +169,7 @@ void MarkerSet::random_markers( const Param& param, Variables &var )
 
             // decide the mattype of markers
             int mt = initial_mattype(param, var, e, eta);
-            append_marker(eta, e, mt);
+            append_marker(eta, e, mt, var.time / YEAR2SEC);
             ++(*var.elemmarkers)[e][mt];
         }
 }
@@ -255,7 +257,7 @@ void MarkerSet::regularly_spaced_markers( const Param& param, Variables &var )
 
             if (bary.is_inside(eta)) {
                 int mt = initial_mattype(param, var, e, eta, x);
-                append_marker(eta, e, mt);
+                append_marker(eta, e, mt, var.time / YEAR2SEC);
                 ++(*var.elemmarkers)[e][mt];
                 found = true;
                 break;
@@ -345,6 +347,7 @@ void MarkerSet::remove_marker(int i)
     (*_id)[i] = (*_id)[_nmarkers];
     (*_elem)[i] = (*_elem)[_nmarkers];
     (*_mattype)[i] = (*_mattype)[_nmarkers];
+    (*_time)[i] = (*_time)[_nmarkers];
 }
 
 
@@ -372,6 +375,7 @@ void MarkerSet::resize( const int newsize )
         _elem->resize( newsize );
         _mattype->resize( newsize );
         _id->resize( newsize );
+        _time->resize( newsize );
     }
     // else if( nmarkers_new < _reserved_space ) {
     //     // TBD: shrink arrays
@@ -394,6 +398,7 @@ void MarkerSet::write_chkpt_file(BinaryOutput &bin) const
     bin.write_array(*_elem, (_name + ".elem").c_str(), _nmarkers);
     bin.write_array(*_mattype, (_name + ".mattype").c_str(), _nmarkers);
     bin.write_array(*_id, (_name + ".id").c_str(), _nmarkers);
+    bin.write_array(*_time, (_name + ".time").c_str(), _nmarkers);
 
 }
 
@@ -412,6 +417,7 @@ void MarkerSet::read_chkpt_file(Variables &var, BinaryInput &bin)
         bin.read_array(*_elem, (_name + ".elem").c_str());
         bin.read_array(*_mattype, (_name + ".mattype").c_str());
         bin.read_array(*_id, (_name + ".id").c_str());
+        bin.read_array(*_time, (_name + ".time").c_str());
     }
 
     if (_name == "markerset")
@@ -455,6 +461,7 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
     bin.write_array(*_elem, (_name + ".elem").c_str(), _nmarkers);
     bin.write_array(*_mattype, (_name + ".mattype").c_str(), _nmarkers);
     bin.write_array(*_id, (_name + ".id").c_str(), _nmarkers);
+    bin.write_array(*_time, (_name + ".time").c_str(), _nmarkers);
 
 }
 
@@ -543,7 +550,7 @@ namespace {
     {
         while( num_marker_in_elem < param.markers.min_num_markers_in_element ) {
             const int mt = 0;
-            var.markersets[0]->append_random_marker_in_elem(e, mt);
+            var.markersets[0]->append_random_marker_in_elem(e, mt, var.time);
             if (DEBUG) {
                 std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
             }
@@ -603,7 +610,7 @@ namespace {
             // Determine new marker's matttype based on cpdf
             auto upper = std::upper_bound(cpdf.begin(), cpdf.end(), rand()/(double)RAND_MAX);
             const int mt = upper - cpdf.begin();
-            var.markersets[0]->append_random_marker_in_elem(e, mt);
+            var.markersets[0]->append_random_marker_in_elem(e, mt, var.time);
             if (DEBUG) {
                 std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
             }
@@ -671,8 +678,9 @@ namespace {
 
             int m = nn_idx[0]; // nearest marker
             const int mt = ms.get_mattype(m);
+            const double ti = ms.get_time(m);
 
-            ms.append_marker(eta, e, mt);
+            ms.append_marker(eta, e, mt, ti);
             if (DEBUG) {
                 std::cout << "Add marker with mattype " << mt << " in element " << e << '\n';
             }

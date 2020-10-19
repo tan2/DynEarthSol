@@ -17,6 +17,7 @@ public:
     MarkerSet( const Param& param, Variables& var, BinaryInput& bin, const std::string& name );
     ~MarkerSet()
     { 
+        delete _time;
         delete _id;
         delete _eta; 
         delete _elem;
@@ -25,8 +26,8 @@ public:
 
     static void random_eta( double* ); // class method
 
-    void append_random_marker_in_elem( int el, int mt );
-    void append_marker( const double *eta, int el, int mt );
+    void append_random_marker_in_elem( int el, int mt, double time);
+    void append_marker( const double *eta, int el, int mt, double time);
     void remove_marker(int i);
     void resize(const int);
     void write_chkpt_file(BinaryOutput &bin) const;
@@ -44,6 +45,9 @@ public:
 
     inline int get_mattype(int m) const { return (*_mattype)[m]; }
     inline void set_mattype(const int m, const int mt) { (*_mattype)[m] = mt; }
+
+    inline double get_time(int m) const { return (*_time)[m]; }
+    inline void set_time(const int m, const double ti) { (*_time)[m] = ti; }
 
     inline const double *get_eta(int m) const { return (*_eta)[m]; }
     inline void set_eta( const int i, const double r[NDIMS] );
@@ -66,6 +70,8 @@ private:
     int_vec *_mattype;
     // Unique id
     int_vec *_id;
+    // Cearte time
+    double_vec *_time;
 
     void random_markers( const Param&, Variables& );
     void regularly_spaced_markers( const Param&, Variables& );
