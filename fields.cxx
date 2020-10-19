@@ -14,6 +14,7 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.volume = new double_vec(e);
     var.volume_old = new double_vec(e);
+    var.volume_sp = new double_vec(e);
     var.volume_n = new double_vec(n);
 
     var.mass = new double_vec(n);
@@ -21,9 +22,12 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.edvoldt = new double_vec(e);
 
+    var.marker_in_elem = NULL;
+
     {
         // these fields are reallocated during remeshing interpolation
         var.temperature = new double_vec(n);
+        var.surfinfo.edhacc = new array_t(e);
         var.coord0 = new array_t(n);
         var.plstrain = new double_vec(e);
         var.delta_plstrain = new double_vec(e);
@@ -54,9 +58,11 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.volume;
     delete var.volume_old;
+    delete var.volume_sp;
     delete var.volume_n;
     var.volume = new double_vec(e);
     var.volume_old = new double_vec(e);
+    var.volume_sp = new double_vec(e);
     var.volume_n = new double_vec(n);
 
     delete var.mass;

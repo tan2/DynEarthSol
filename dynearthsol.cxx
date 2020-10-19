@@ -78,6 +78,9 @@ void init(const Param& param, Variables& var)
 
     allocate_variables(param, var);
 
+    create_top_elems(var);
+    create_surface_info(param,var,var.surfinfo);
+
     for(int i=0; i<var.nnode; i++)
         for(int d=0; d<NDIMS; d++)
             (*var.coord0)[i][d] = (*var.coord)[i][d];
@@ -176,6 +179,9 @@ void restart(const Param& param, Variables& var)
     }
 
     allocate_variables(param, var);
+
+    create_top_elems(var);
+    create_surface_info(param,var,var.surfinfo);
 
     bin_save.read_array(*var.coord0, "coord0");
 

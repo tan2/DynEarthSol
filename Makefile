@@ -22,7 +22,7 @@ CXX = g++
 #CXX = g++-5
 
 ## Boost location and library name
-BOOST_ROOT_DIR = ${HOME}/opt/boost_1_62_0
+BOOST_ROOT_DIR = ${HOME}/lib/boost_1_62_0
 
 ########################################################################
 ## Select compiler and linker flags

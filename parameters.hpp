@@ -279,10 +279,13 @@ struct SurfaceInfo {
     double_vec *dh;
 
     double_vec *dhacc;
-    double_vec2D *edhacc;
-    int_vec2D *edhacc_ind;
+//    double_vec2D *edhacc;
+    array_t *edhacc;
+//    int_vec2D *edhacc_ind;
+    segment_t *edhacc_ind;
     int_vec2D *node_and_elems;
-    int_vec2D *elem_and_nodes;
+//    int_vec2D *elem_and_nodes;
+    segment_t *elem_and_nodes;
     int_vec2D *node_and_nodes;
 
     std::vector<double_vec> *fcenters;
