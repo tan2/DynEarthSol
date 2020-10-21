@@ -227,7 +227,7 @@ void restart(const Param& param, Variables& var)
 void update_mesh(const Param& param, Variables& var)
 {
     update_coordinate(var, *var.coord);
-    surface_processes(param, var, *var.coord, var.surfinfo, var.markersets);
+    surface_processes(param, var, *var.coord, var.surfinfo, var.markersets, *var.elemmarkers);
 //    surface_processes(param, var, *var.coord, *var.plstrain, var.surfinfo, var.markersets, *var.elemmarkers);
     var.markersets[0]->find_marker_in_elem(var);
 

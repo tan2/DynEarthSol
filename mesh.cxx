@@ -1328,7 +1328,7 @@ void create_top_elems(Variables& var)
             
 
  
-    int_vec *telems = new int_vec;
+    int_vec telems;
     std::set<int> elem_set;
 
     //  get top elements
@@ -1342,9 +1342,9 @@ void create_top_elems(Variables& var)
     }
     // turn set to vector
     for (auto it = elem_set.begin(); it != elem_set.end();it++)
-        (*telems).push_back(*it);
+        telems.push_back(*it);
 
-    var.top_elems = telems;
+    var.top_elems = new int_vec(telems.begin(),telems.end());
 }
 
 void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
@@ -1424,7 +1424,7 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
     }
 
     // go through all surface nodes
-    for (size_t i=0; i<surfinfo.top_nodes->size(); i++) {
+    for (size_t i=0; i<ntop; i++) {
         // get global index of node
         int n = (*surfinfo.top_nodes)[i];
 

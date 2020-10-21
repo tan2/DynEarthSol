@@ -27,7 +27,7 @@ public:
     static void random_eta( double* ); // class method
     void find_marker_in_elem(Variables& var);
     void correct_surface_marker(const Variables& var);
-
+    void set_sediment_marker(const Variables& var, const int mattype_sed, array_t& edhacc, int_vec2D& elemmarkers);
     void remap_marker(const Variables &var, const double *m_coord, const int e, int &new_elem, double *new_eta, int &inc);
     void append_random_marker_in_elem( int el, int mt, double time);
     void append_marker( const double *eta, int el, int mt, double time);

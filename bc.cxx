@@ -688,7 +688,7 @@ namespace {
 //void surface_processes(const Param& param, const Variables& var, array_t& coord, double_vec& plstrain, \
 //                      SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
 void surface_processes(const Param& param, const Variables& var, array_t& coord, \
-                       SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets)
+                       SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
 {
     int ntop = surfinfo.top_nodes->size();
     double_vec dh(ntop,0.);
@@ -741,9 +741,8 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         // correct surface marker.
         markersets[0]->correct_surface_marker(var);
         std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
-
         // set marker of sediment.
-//        markersets[0]->set_sediment_marker(var,param.mat.mattype_sed,*surfinfo.edhacc, elemmarkers);
+        markersets[0]->set_sediment_marker(var,param.mat.mattype_sed,*surfinfo.edhacc, elemmarkers);
 
     }
 }
