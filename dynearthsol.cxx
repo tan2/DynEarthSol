@@ -77,6 +77,7 @@ void init(const Param& param, Variables& var)
     create_markers(param, var);
 
     allocate_variables(param, var);
+    var.markersets[0]->find_marker_in_elem(var);
 
     create_top_elems(var);
     create_surface_info(param,var,var.surfinfo);
@@ -226,7 +227,10 @@ void restart(const Param& param, Variables& var)
 void update_mesh(const Param& param, Variables& var)
 {
     update_coordinate(var, *var.coord);
-    surface_processes(param, var, *var.coord);
+    surface_processes(param, var, *var.coord, var.surfinfo, var.markersets);
+//    surface_processes(param, var, *var.coord, *var.plstrain, var.surfinfo, var.markersets, *var.elemmarkers);
+    var.markersets[0]->find_marker_in_elem(var);
+
 
     var.volume->swap(*var.volume_old);
     compute_volume(*var.coord, *var.connectivity, *var.volume);

@@ -24,6 +24,7 @@ void create_boundary_nodes(Variables& var);
 void create_boundary_facets(Variables& var);
 void create_top_elems(Variables& var);
 void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& surfinfo);
+void update_surface_info(const Variables& var, SurfaceInfo& surfinfo);
 void create_support(Variables& var);
 void create_elem_groups(Variables& var);
 void create_elemmarkers(const Param&, Variables&);

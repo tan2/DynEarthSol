@@ -15,7 +15,7 @@
 /* Given two points, returns the distance^2 */
 double dist2(const double* a, const double* b)
 {
-    double sum = 0;;
+    double sum = 0;
     for (int i=0; i<NDIMS; ++i) {
         double d = b[i] - a[i];
         sum += d * d;
@@ -82,6 +82,19 @@ static double triangle_area(const double *a,
 #endif
 }
 
+void compute_volume_sg(const double **coord, double &volume)
+{
+    const double *a = coord[0];
+    const double *b = coord[1];
+    const double *c = coord[2];
+#ifdef THREED
+    const double *d = coord[3];
+    volume = tetrahedron_volume(a, b, c, d);
+#else
+    volume = triangle_area(a, b, c);
+#endif
+
+}
 
 void compute_volume(const array_t &coord, const conn_t &connectivity,
                     double_vec &volume)

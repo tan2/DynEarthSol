@@ -1,8 +1,11 @@
 #include <iostream>
-
+#include <unordered_map>
+#include <iomanip>
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "matprops.hpp"
+#include "markerset.hpp"
+
 
 #include "bc.hpp"
 
@@ -521,22 +524,25 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
 namespace {
 
-    void simple_diffusion(const Variables& var, array_t& coord,
-                          double surface_diffusivity)
+    void simple_diffusion(const Variables& var, array_t& coord, double_vec& dh)
     {
         /* Diffusing surface topography to simulate the effect of erosion and
          * sedimentation.
          */
 
+//        const array_t& coord = *var.coord;
+        const SurfaceInfo& surfinfo = var.surfinfo;
+        const int_vec& top_nodes = *surfinfo.top_nodes;
+
         const int top_bdry = iboundz1;
         const auto& top = var.bfacets[top_bdry];
 
-        const int_vec& top_nodes = var.bnodes[top_bdry];
         const std::size_t ntop = top_nodes.size();
         double_vec total_dx(var.nnode, 0);
         double_vec total_slope(var.nnode, 0);
 
         // loops over all top facets
+#ifdef THREED
         for (std::size_t i=0; i<top.size(); ++i) {
             // this facet belongs to element e
             int e = top[i].first;
@@ -547,7 +553,7 @@ namespace {
             int n0 = (*var.connectivity)[e][NODE_OF_FACET[f][0]];
             int n1 = (*var.connectivity)[e][NODE_OF_FACET[f][1]];
 
-#ifdef THREED
+//#ifdef THREED
             int n2 = (*var.connectivity)[e][NODE_OF_FACET[f][2]];
 
             double projected_area;
@@ -619,6 +625,9 @@ namespace {
             /* The 1D diffusion operation is implemented ad hoc, not using FEM
              * formulation (e.g. computing shape function derivation on the edges).
              */
+        for (size_t i=0; i<ntop-1;i++) {
+            int n0 = top_nodes[i];
+            int n1 = top_nodes[i+1];
 
             double dx = std::fabs(coord[n1][0] - coord[n0][0]);
             total_dx[n0] += dx;
@@ -636,9 +645,10 @@ namespace {
         for (std::size_t i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
-            double dh = surface_diffusivity * var.dt * total_slope[n] / total_dx[n];
-            coord[n][NDIMS-1] -= dh;
-            max_dh = std::max(max_dh, std::fabs(dh));
+            dh[i] -= var.surfinfo.surf_diff * var.dt * total_slope[n] / total_dx[n];
+//            double dh = surface_diffusivity * var.dt * total_slope[n] / total_dx[n];
+//            coord[n][NDIMS-1] -= dh;
+//            max_dh = std::max(max_dh, std::fabs(dh));
             // std::cout << n << "  dh:  " << dh << '\n';
         }
 
@@ -675,14 +685,21 @@ namespace {
 }
 
 
-void surface_processes(const Param& param, const Variables& var, array_t& coord)
+//void surface_processes(const Param& param, const Variables& var, array_t& coord, double_vec& plstrain, \
+//                      SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
+void surface_processes(const Param& param, const Variables& var, array_t& coord, \
+                       SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets)
 {
+    int ntop = surfinfo.top_nodes->size();
+    double_vec dh(ntop,0.);
+    
     switch (param.control.surface_process_option) {
     case 0:
         // no surface process
         break;
     case 1:
-        simple_diffusion(var, coord, param.control.surface_diffusivity);
+//        simple_diffusion(var, *surfinfo.dh);
+        simple_diffusion(var, coord, dh);
         break;
     case 101:
         custom_surface_processes(var, coord);
@@ -691,6 +708,42 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord)
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
         std::exit(1);
     }
+
+    for (size_t i=0; i<ntop; i++) {
+        // get global index of node
+        int n = (*surfinfo.top_nodes)[i];
+//        printf("%d\n",n);
+        //if ( var.steps%10000 == 0 )  
+        //   printf("%d ",n);
+        // update coordinate via dh
+        (coord)[n][NDIMS-1] += dh[i];
+        // update dhacc for marker correction
+//        printf("%d %d\n",i, n);
+        (*surfinfo.dhacc)[n] += dh[i];
+
+        // go through connected elements
+        for (size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+            // get local index of surface element
+            int e = (*surfinfo.node_and_elems)[i][j];
+            // get global index of element
+            int eg = (*surfinfo.top_facet_elems)[e];
+            // get local index of node in connected element
+            int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
+            // update edhacc of connected elements
+            (*surfinfo.edhacc)[eg][ind] += dh[i];
+        }
+    }
+//    printf("\n");
+
+    if (!(var.steps % param.mesh.quality_check_step_interval)) {
+        // correct surface element value.
+//        correct_surface_element(var,param.mat.mattype_sed,plstrain);
+        // correct surface marker.
+        markersets[0]->correct_surface_marker(var);
+        std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
+
+        // set marker of sediment.
+//        markersets[0]->set_sediment_marker(var,param.mat.mattype_sed,*surfinfo.edhacc, elemmarkers);
+
+    }
 }
-
-

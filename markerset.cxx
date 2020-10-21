@@ -136,6 +136,134 @@ void MarkerSet::append_marker( const double *eta, int el, int mt , double ti)
     ++_last_id;
 }
 
+void MarkerSet::find_marker_in_elem(Variables& var)
+{
+    delete var.marker_in_elem;
+    var.marker_in_elem = new std::vector<int_vec>(var.nelem);
+
+    for (int i=0; i<_nmarkers; ++i)
+        (*var.marker_in_elem)[(*_elem)[i]].push_back(i);
+
+    if (DEBUG) {
+        std::cout << "Markers in elements";
+        for (int i=0; i<var.nelem; i++) {
+            std::cout <<"Element: "<< i  << "\n" << "Markers: "; 
+            for (size_t j=0; j<(*var.marker_in_elem)[i].size();j++)
+                std::cout << (*var.marker_in_elem)[i][j] << " ";
+            std::cout << "\n"; 
+        }
+    }
+}
+
+// surface processes correcttion of marker
+void MarkerSet::correct_surface_marker(const Variables& var)
+{
+        
+    int_vec top_nodes = (*var.surfinfo.top_nodes);
+    int ntop = top_nodes.size();
+
+    int_vec delete_marker;
+
+    // omp for marker correction of every surface connected element
+//    #pragma omp parallel for default(none) \
+//        shared(var,std::cout,delete_marker)
+
+    // go through all surface connected elements
+    for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
+        double m_coord[NDIMS], new_volume, new_eta[NDIMS], b[NODES_PER_ELEM][NDIMS];
+        int_vec& markers = (*var.marker_in_elem)[*e];
+        int* tnodes = (*var.connectivity)[*e];
+        const double *coord1[NODES_PER_ELEM];
+        const double *coord0[NODES_PER_ELEM];
+
+        // restore the reference node locations before deposition/erosion 
+        for (int j=0; j<NODES_PER_ELEM;j++) {
+            for (size_t k=0; k<NDIMS-1; k++)
+                b[j][k] = (*var.coord)[tnodes[j]][k];
+            b[j][NDIMS-1] = (*var.coord)[tnodes[j]][NDIMS-1] - (*var.surfinfo.dhacc)[tnodes[j]];
+            coord0[j] = b[j];
+            coord1[j] = (*var.coord)[tnodes[j]];
+        }
+
+        compute_volume_sg(coord1,new_volume);
+        Barycentric_transformation bary(coord1, new_volume);
+
+        // go through all markers of each element
+        for (auto imark=markers.begin(); imark<markers.end(); imark++) {
+            for (int k=0; k<NDIMS; k++) {
+                m_coord[k] = 0.;
+                // correct marker coordinate
+                for (int l=0; l<NODES_PER_ELEM; l++)
+                    m_coord[k] += (*_eta)[*imark][l] * coord0[l][k];
+            }
+            // check if the marker is still in original element
+            bary.transform(m_coord,0,new_eta);
+            if (bary.is_inside(new_eta))
+                set_eta(*imark, new_eta);
+            else {
+                int inc, new_elem;
+
+                std::cout << "Marker " << *imark << " in element " << *e << " is trying to remap in ";
+                // find new element of the marker
+                remap_marker(var,m_coord,*e,new_elem,new_eta,inc);
+                if (inc) {
+                    set_eta(*imark, new_eta);
+                    set_elem(*imark, new_elem);
+                    std::cout << "... Success!.\n";
+                }
+                else {
+                    delete_marker.push_back(*imark);
+                    std::cout << "... Fail!. (Erosion might have occurred)\n";
+                }
+            }
+        }
+    }
+
+    // delete recorded marker
+    for (auto m=delete_marker.begin(); m<delete_marker.end(); m++)
+            remove_marker(*m);
+
+}
+
+void MarkerSet::remap_marker(const Variables &var, const double *m_coord, const int e, int& new_elem, double *new_eta, int& inc)
+{
+    const double *coord[NODES_PER_ELEM];
+    double volume, eta[NODES_PER_ELEM];
+    int_vec nodes((*var.connectivity)[e],(*var.connectivity)[e]+NODES_PER_ELEM);
+    int_vec searched(var.nelem,0);
+    searched[e]=1;
+
+//    std::cout << "Try to remap in ";
+
+    for (auto n = nodes.begin(); n<nodes.end(); n++) {
+        for(auto ee = (*var.support)[*n].begin(); ee < (*var.support)[*n].end(); ++ee) {
+            if (searched[*ee]) continue;
+            searched[*ee]=1;
+
+            std::cout << *ee << " ";
+
+            for (int j=0; j<NODES_PER_ELEM; j++)
+                coord[j] = (*var.coord)[(*var.connectivity)[*ee][j]];
+
+            compute_volume_sg(coord,volume);
+            Barycentric_transformation bary(coord,volume);
+            bary.transform(m_coord,0,eta);
+
+            if (bary.is_inside(eta)) {
+                for (int j=0; j<NDIMS; j++)
+                    new_eta[j] = eta[j];
+
+                new_elem = *ee;
+                inc = 1;
+                return;
+            }
+            for (int j=0; j<NODES_PER_ELEM; j++)   
+                coord[j] = NULL;
+        }
+    }
+    inc = 0;
+}
+
 void MarkerSet::append_random_marker_in_elem( int el, int mt, double ti)
 {
     double eta[NODES_PER_ELEM];

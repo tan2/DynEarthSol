@@ -190,6 +190,28 @@ void prepare_interpolation(const Variables &var,
 
 } // anonymous namespace
 
+void prepare_dhacc(SurfaceInfo &surfinfo)
+{
+
+    // go through all surface nodes
+    for (size_t i=0; i<surfinfo.top_nodes->size(); i++) {
+        // get global index of node
+        int n = (*surfinfo.top_nodes)[i];
+        // go through connected elements
+        for (size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+            // get local index of surface element
+            int e = (*surfinfo.node_and_elems)[i][j];
+            // get global index of element
+            int eg = (*surfinfo.top_facet_elems)[e];
+            // get local index of node in connected element
+            int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
+            // update edhacc of connected elements
+            (*surfinfo.dhacc)[n] += (*surfinfo.edhacc)[eg][ind];
+        }
+        (*surfinfo.dhacc)[n] /= (*surfinfo.node_and_elems)[i].size();
+    }
+
+}
 
 void barycentric_node_interpolation(Variables &var,
                                     const Barycentric_transformation &bary,
@@ -206,6 +228,12 @@ void barycentric_node_interpolation(Variables &var,
     delete var.temperature;
     var.temperature = a;
 
+    a = new double_vec(var.nnode);
+    prepare_dhacc(var.surfinfo);
+    interpolate_field(brc, el, old_connectivity, *var.surfinfo.dhacc, *a);
+    delete var.surfinfo.dhacc;
+    var.surfinfo.dhacc = a;
+
     array_t *b = new array_t(var.nnode);
     interpolate_field(brc, el, old_connectivity, *var.vel, *b);
     delete var.vel;
@@ -215,7 +243,6 @@ void barycentric_node_interpolation(Variables &var,
     interpolate_field(brc, el, old_connectivity, *var.coord0, *b);
     delete var.coord0;
     var.coord0 = b;
-
 }
 
 

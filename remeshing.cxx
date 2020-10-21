@@ -1451,6 +1451,12 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     }
     create_boundary_nodes(var);
     create_boundary_facets(var);
+
+    delete var.top_elems;
+    create_top_elems(var);
+
+    update_surface_info(var, var.surfinfo);
+
     /* // moved before remap_markers()
      * delete var.support;
      * create_support(var);
