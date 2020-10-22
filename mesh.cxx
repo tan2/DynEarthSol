@@ -1475,6 +1475,7 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.surf_diff = param.control.surface_diffusivity;
     surfinfo.diff_ratio_terrig = param.control.surf_diff_ratio_terrig;
     surfinfo.diff_ratio_marine = param.control.surf_diff_ratio_marine;
+    surfinfo.depo_universal = param.control.surf_depo_universal;
 
     // create globle --> local map
     surfinfo.arctop_nodes.clear();

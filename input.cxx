@@ -212,6 +212,8 @@ static void declare_parameters(po::options_description &cfg,
          "Ratio between terrigenous and standard Diffusition coefficients.")
         ("control.surf_diff_ratio_marine", po::value<double>(&p.control.surf_diff_ratio_marine)->default_value(1.),
          "Ratio between marine and standard Diffusition coefficients.")
+        ("control.surf_depo_universal", po::value<double>(&p.control.surf_depo_universal)->default_value(0.),
+         "Sedimentation rate of universal suspended deposite (in m/s).")
         ("control.surf_base_level",po::value<double>(&p.control.surf_base_level)->default_value(0.e0),
          "Base level of surface processes")
         ("control.surf_src_vol",po::value<double>(&p.control.surf_src_vol)->default_value(1.),

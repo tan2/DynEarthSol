@@ -524,13 +524,13 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
 namespace {
 
-    void simple_diffusion(const Variables& var, array_t& coord, double_vec& dh)
+    void simple_diffusion(const Variables& var, double_vec& dh)
     {
         /* Diffusing surface topography to simulate the effect of erosion and
          * sedimentation.
          */
 
-//        const array_t& coord = *var.coord;
+        const array_t& coord = *var.coord;
         const SurfaceInfo& surfinfo = var.surfinfo;
         const int_vec& top_nodes = *surfinfo.top_nodes;
 
@@ -625,7 +625,7 @@ namespace {
             /* The 1D diffusion operation is implemented ad hoc, not using FEM
              * formulation (e.g. computing shape function derivation on the edges).
              */
-        for (size_t i=0; i<ntop-1;i++) {
+        for (std::size_t i=0; i<ntop-1;i++) {
             int n0 = top_nodes[i];
             int n1 = top_nodes[i+1];
 
@@ -641,7 +641,6 @@ namespace {
 #endif
         }
 
-        double max_dh = 0., min_dh = 0.;
         for (std::size_t i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
@@ -653,20 +652,11 @@ namespace {
             } else{
                 dh[i] -= conv;
             }
-            max_dh = std::max(max_dh, dh[i]);
-            min_dh = std::min(min_dh, dh[i]);
-            // std::cout << n << "  dh:  " << dh << '\n';
-        }
-        if ( var.steps%10000 == 0 ){
-            std::cout << "max erosion / sedimentation rate (mm/yr):  "
-                      << min_dh / var.dt * 1000 * YEAR2SEC << " / "
-                      << max_dh / var.dt * 1000 * YEAR2SEC << '\n';
         }
     }
 
 
-    void custom_surface_processes(const Variables& var, array_t& coord)
-    {
+    void custom_surface_processes(const Variables& var, array_t& coord) {
         const int top_bdry = iboundz1;
         const int_vec& top_nodes = var.bnodes[top_bdry];
         const std::size_t ntop = top_nodes.size();
@@ -690,6 +680,331 @@ namespace {
         }
     }
 
+    void get_surface_info(const Variables& var, \
+        double_vec& top_base, double_vec& top_slope, double_vec& top_deg, \
+        double_vec& top_depth) {
+
+        const array_t& coord = *var.coord;
+        const SurfaceInfo& surfinfo = var.surfinfo;
+        const int_vec& top_nodes = *surfinfo.top_nodes;
+        const std::size_t ntop = top_nodes.size();
+
+        for (std::size_t i=0; i<ntop-1;i++) {
+            int n0 = top_nodes[i];
+            int n1 = top_nodes[i+1];
+
+            double dx = std::fabs(coord[n1][0] - coord[n0][0]);
+            top_base[i] += dx;
+            top_base[i+1] += dx;
+
+            double slope = (coord[n1][1] - coord[n0][1]) / dx;
+            top_slope[i] += slope;
+            top_slope[i+1] += slope;
+        }
+
+        for (std::size_t i=0; i<ntop; i++) {
+            top_depth[i] = surfinfo.base_level - coord[top_nodes[i]][1];
+            top_deg[i] = atan(top_slope[i]);
+            top_base[i] *= 0.5;
+        }
+
+/*
+        for (std::size_t i=0; i<ntop-1; i++) {
+            top_slope[i] = ( coord[top_nodes[i+1]][1] - coord[top_nodes[i]][1] );
+            top_base[i] = ( coord[top_nodes[i+1]][0] - coord[top_nodes[i]][0] );
+            top_slope[i] /= top_base[i];
+            top_deg[i] = atan(top_slope[i]);
+        }
+
+
+        // calculate base of node
+        top_base[ntop-1] = top_base[ntop-2] / 2.;
+        for (std::size_t i=ntop-2; i>0; i--)
+            top_base[i] = ( top_base[i] + top_base[i-1] ) / 2.;
+        top_base[0] = top_base[0] / 2.;
+*/
+    }
+
+    void get_basin_info(const Variables& var, double_vec& top_depth, \
+        std::vector<bool>& if_source, int_vec2D& source_pair) {
+
+        const array_t& coord = *var.coord;
+        const SurfaceInfo& surfinfo = var.surfinfo;
+        const int_vec& top_nodes = *surfinfo.top_nodes;
+        const std::size_t ntop = top_nodes.size();
+
+        int_vec if_land(ntop,0);
+        int_vec imouth_loc;
+        int_vec left_mouse, right_mouse;
+        int imouth_left, imouth_right;
+        int_vec mouths(ntop,0);
+
+        // find land:1 and sea:0
+        for (std::size_t i=0; i<ntop; i++)
+            if (top_depth[i] <= 0.) if_land[i] = 1;
+
+        // find river mouth
+        for (std::size_t i=0; i<ntop-1; i++)
+            if (if_land[i] + if_land[i+1] == 1) {
+                if (if_land[i] == 1) {
+                    imouth_loc.push_back(i);
+                    left_mouse.push_back(i);
+                    mouths[i] += 1;
+                }
+                else {
+                    imouth_loc.push_back(i+1);
+                    right_mouse.push_back(i+1);
+                    mouths[i+1] += 2;
+                }
+            }
+        
+        // find basin sets
+        int left_mouth_num = left_mouse.size();
+        int right_mouth_num = right_mouse.size();
+
+        if ( var.steps%10000 == 0 ) {
+            for (std::size_t i=0;i<ntop;i++)
+                printf("%d",if_land[i]);
+            printf("\n");
+        }
+
+        int left_source_point;
+        int right_source_point;
+
+        if (left_mouth_num > 0) {
+            if_source[0] = true;
+            left_source_point = left_mouse[0];
+        }
+        if (right_mouth_num > 0) {
+            if_source[1] = true;
+            right_source_point = right_mouse[right_mouth_num-1];
+        }
+
+        // find basin pairs
+        if (if_source[0] == true) {
+            if (right_mouth_num != 0 and left_source_point < right_mouse[0]) {
+                source_pair[0][0] = left_source_point;
+                source_pair[0][1] = right_mouse[0];
+            }
+            else {
+                source_pair[0][0] = left_source_point;
+                source_pair[0][1] = ntop-3;
+            }
+        }
+
+        if (if_source[1] == true ) {
+            if (left_mouth_num != 0 and left_mouse[left_mouth_num-1] < right_source_point) {
+                source_pair[1][0] = left_mouse[left_mouth_num-1];
+                source_pair[1][1] = right_source_point;
+            }
+            else {
+                source_pair[1][0] = 2;
+                source_pair[1][1] = right_source_point;                
+            }
+        }
+    }
+
+
+    void simple_deposition(const Param& param,const Variables& var, double_vec& dh) {
+
+#ifdef THREED
+        // not ready for 3D
+        std::cout << "3D deposition of sediment processes is not ready yet.";
+        exit(168);
+//        std::cout << "Press enter to continue ...";
+//        std::cin.get();
+#endif
+        const array_t& coord = *var.coord;
+        const SurfaceInfo& surfinfo = var.surfinfo;
+        const int_vec& top_nodes = *surfinfo.top_nodes;
+        const std::size_t ntop = top_nodes.size();
+
+        double_vec top_base(ntop,0.);
+        double_vec top_slope(ntop,0.);
+        double_vec top_deg(ntop,0.);
+        double_vec top_depth(ntop,0.);
+
+        std::vector<bool> if_source(2,false);
+        double_vec dh_terrig(ntop,0.);
+        double_vec dhacc_tmp(ntop,0.);
+
+        if ( var.steps%10000 == 0 )
+            printf("** Sedimentation report:\n");
+        get_surface_info(var,top_base,top_slope,top_deg,top_depth);
+
+//******************************************************************
+//              sedimentation by terrigenous source
+//******************************************************************
+
+        // The Pearl River Shibao et al. (2007)
+        // 5.e7 ton/yr ~= 1. m^3/s
+        // assuming the width is 50 km --> 2.e-5 m^2/s
+        double max_sedi_vol = param.control.surf_src_area * var.dt;
+
+        double vol_ratio = 10;
+        int ntry = 200;
+        int_vec2D source_pair(2,int_vec(2,0));
+        double basin_vol, dh_tmp, mul_conv;
+
+        get_basin_info(var,top_depth,if_source, source_pair);
+
+        int_vec start(2,0);
+        int_vec end(2,0);
+        int_vec sign(2,0);
+        int_vec width(2,0);
+        int_vec isedi(2,0);
+
+        int_vec2D loccation_index(2,int_vec(ntop,0));
+        double_vec sedi_vol(2,0.);
+        double_vec unit_vol(2,0.);
+        std::vector<bool> if_space_limited(2,false);
+        std::vector<bool> if_slope_limited(2,false);
+
+        start[0] = source_pair[0][0];
+        end[0] = source_pair[0][1];
+        sign[0] = 1;
+
+        start[1] = source_pair[1][1];
+        end[1] = source_pair[1][0]; 
+        sign[1] = -1;
+
+        // deal with the sedimentation for the aspect of coastal source
+        for (int i=0; i<2; i++) {
+
+            if (! if_source[i]) continue;
+            // the source is too close to boundary
+            if (abs(start[i]-int(ntop)/2) >= int(ntop)/2) {
+                if_source[i] = false;
+                continue;
+            }
+            width[i] = abs(end[i] - start[i]);
+
+            loccation_index[i][0] = start[i];
+            for (int j=1; j<width[i];j++)
+                loccation_index[i][j] = loccation_index[i][j-1] + sign[i];
+
+            basin_vol = 0;
+            for (int ind=0; ind<width[i]; ind++) {
+                int j = loccation_index[i][ind];
+                basin_vol += top_depth[j] * top_base[j];
+            }
+            // the space of basin is too small
+//            if (basin_vol < max_sedi_vol / 10.) if_source[i] = false;
+        }
+
+        //
+        for (int k=0; k<10;k++) {
+
+            for (int i=0; i<2; i++) {
+                if (! if_source[i]) continue;
+
+                unit_vol[i] = std::min(max_sedi_vol / 10., max_sedi_vol - sedi_vol[i]);
+                bool if_finish = false;
+                int iloop = 0;
+                double dist;
+                double_vec depo_vol(2,0.);
+
+                do {
+                    iloop++;
+                    
+                    // calculate the dh of basin
+                    for (int ind=1; ind<width[i]; ind++) {
+                        int j = loccation_index[i][ind];
+                        int pj = loccation_index[i][ind-1];
+                        // stop propagate if slope is increasing
+                        if ( top_slope[j - 1 + i ] * sign[i] > 0. ) {
+                            if_slope_limited[i] = true;
+                            break;
+                        }
+
+                        dist = abs(coord[top_nodes[j]][0] - coord[top_nodes[start[i]]][0]);
+
+                        dh_tmp = 8.e-9 * pow(1.25,iloop) * (unit_vol[i] - depo_vol[i]) * dist;
+
+                        if ( dh_tmp != dh_tmp ) {
+                            printf("dh_tmp is NaN.\n");
+                            printf("%e\t%e\t%f\n",dh_tmp, (unit_vol[i] - depo_vol[i]), dist);
+                        }
+
+                        dhacc_tmp[j] += dh_tmp;
+
+                        if (dhacc_tmp[j] > top_depth[j])
+                            dhacc_tmp[j] = top_depth[j] + 0.1;
+
+                        depo_vol[i] += top_base[j] * dh_tmp;
+
+                        if (depo_vol[i] >= unit_vol[i]) {
+                            if_finish = true;
+                            break;
+                        }
+                    }
+                    
+
+                    // move coast if is full.
+                    bool if_shift = false;
+                    if (dhacc_tmp[start[i]+sign[i]] >= top_depth[start[i]+sign[i]]) {
+                        start[i] += sign[i];
+                        if_shift = true;
+                        if (start[i] == end[i]) {
+                            if_space_limited[i] = true;
+                            break;
+                        }
+                    }
+
+                    // if the coast is shifted, change the coast index
+                    if (if_shift) {
+                        width[i] = abs(end[i] - start[i]);
+                        loccation_index[i][0] = start[i];
+                        for (int j=1; j<width[i]; j++)
+                            loccation_index[i][j] = loccation_index[i][j-1] + sign[i];
+                    }
+
+                } while (unit_vol[i] - depo_vol[i] > 1.e-4 && !if_finish && iloop <= ntry);
+
+                isedi[i] += iloop;
+                sedi_vol[i] += depo_vol[i];
+            }
+
+            if (if_space_limited[0] || if_space_limited[1]) break;
+
+            for (std::size_t j=0; j<ntop; j++) {
+                dh_terrig[j] += dhacc_tmp[j];
+                dhacc_tmp[j] = 0.;
+            }
+            if (sedi_vol[0] >= max_sedi_vol || sedi_vol[1] >= max_sedi_vol) break;
+
+
+        }
+
+        if ( var.steps%10000 == 0 ) {
+            for (int i=0;i<2;i++) {
+                if (if_space_limited[i]) printf("   Space limited at %d\n",i);
+                if (if_slope_limited[i]) printf("   Slope limited at %d\n",i);
+                if (!if_source[i]) {
+                    printf("    No source from %d\n",i);
+                } else {
+                    printf("    Side %d: Location: %10.2f km (Index: %5d - %5d). Sediment: %10.2f m^2 (max: %10.2f) Loop: %5d\n",\
+                        i,coord[top_nodes[start[i]]][0]/1000.,start[i],end[i],sedi_vol[i], max_sedi_vol,isedi[i]);
+                }
+            }
+
+            if (if_space_limited[0] || if_space_limited[1])
+                printf("    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",isedi[0],isedi[1]);
+        }
+
+        for (std::size_t i=0; i<ntop; i++)
+            dh[i] += dh_terrig[i];
+
+//******************************************************************
+//              sedimentation by suspended source
+//******************************************************************
+
+        double ddh = surfinfo.depo_universal * var.dt;
+        for (std::size_t i=0; i<ntop; i++)
+            // if below the base level
+            if (top_depth[i] > 0.) dh[i] += ddh;
+    }
+
 }
 
 
@@ -706,31 +1021,43 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         // no surface process
         break;
     case 1:
-//        simple_diffusion(var, *surfinfo.dh);
-        simple_diffusion(var, coord, dh);
+        simple_diffusion(var, dh);
         break;
     case 101:
         custom_surface_processes(var, coord);
+        break;
+    case 102:
+        simple_diffusion(var, dh);
+        simple_deposition(param, var, dh);
         break;
     default:
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
         std::exit(1);
     }
 
-    for (size_t i=0; i<ntop; i++) {
+    if ( var.steps%10000 == 0 ) {
+        double max_dh = 0., min_dh = 0.;
+        for (int i=0;i<ntop;i++) {
+            max_dh = std::max(max_dh, dh[i]);
+            min_dh = std::min(min_dh, dh[i]);
+            // std::cout << n << "  dh:  " << dh << '\n';
+        }
+        std::cout << "max erosion / sedimentation rate (mm/yr):  "
+                    << min_dh / var.dt * 1000 * YEAR2SEC << " / "
+                    << max_dh / var.dt * 1000 * YEAR2SEC << '\n';
+    }
+
+    // go through all surface nodes and abject all surface node by dh
+    for (std::size_t i=0; i<ntop; i++) {
         // get global index of node
         int n = (*surfinfo.top_nodes)[i];
-//        printf("%d\n",n);
-        //if ( var.steps%10000 == 0 )  
-        //   printf("%d ",n);
         // update coordinate via dh
         (coord)[n][NDIMS-1] += dh[i];
         // update dhacc for marker correction
-//        printf("%d %d\n",i, n);
         (*surfinfo.dhacc)[n] += dh[i];
 
         // go through connected elements
-        for (size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+        for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
             // get local index of surface element
             int e = (*surfinfo.node_and_elems)[i][j];
             // get global index of element
@@ -741,7 +1068,6 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             (*surfinfo.edhacc)[eg][ind] += dh[i];
         }
     }
-//    printf("\n");
 
     if (!(var.steps % param.mesh.quality_check_step_interval)) {
         // correct surface element value.

@@ -91,6 +91,7 @@ struct Control {
     double surface_diffusivity;
     double surf_diff_ratio_terrig;
     double surf_diff_ratio_marine;
+    double surf_depo_universal;
     double surf_base_level;
     double surf_src_vol;
     double surf_src_area;
@@ -265,7 +266,7 @@ struct SurfaceInfo {
     double surf_diff;
     double diff_ratio_terrig;
     double diff_ratio_marine;
-    double dep_rate;
+    double depo_universal;
     double ero_rate;
 
     double dh_max;
