@@ -641,19 +641,27 @@ namespace {
 #endif
         }
 
-        double max_dh = 0;
+        double max_dh = 0., min_dh = 0.;
         for (std::size_t i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
-            dh[i] -= var.surfinfo.surf_diff * var.dt * total_slope[n] / total_dx[n];
-//            double dh = surface_diffusivity * var.dt * total_slope[n] / total_dx[n];
-//            coord[n][NDIMS-1] -= dh;
-//            max_dh = std::max(max_dh, std::fabs(dh));
+            double conv =  surfinfo.surf_diff * var.dt * total_slope[n] / total_dx[n];
+            if ( coord[n][1] >  surfinfo.base_level && conv > 0.) {
+                dh[i] -= surfinfo.diff_ratio_terrig * conv;
+            } else if ( coord[n][1] < surfinfo.base_level && conv < 0. ) {
+                dh[i] -= surfinfo.diff_ratio_marine * conv;
+            } else{
+                dh[i] -= conv;
+            }
+            max_dh = std::max(max_dh, dh[i]);
+            min_dh = std::min(min_dh, dh[i]);
             // std::cout << n << "  dh:  " << dh << '\n';
         }
-
-        // std::cout << "max erosion / sedimentation rate (cm/yr):  "
-        //           << max_dh / var.dt * 100 * YEAR2SEC << '\n';
+        if ( var.steps%10000 == 0 ){
+            std::cout << "max erosion / sedimentation rate (mm/yr):  "
+                      << min_dh / var.dt * 1000 * YEAR2SEC << " / "
+                      << max_dh / var.dt * 1000 * YEAR2SEC << '\n';
+        }
     }
 
 
