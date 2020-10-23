@@ -838,7 +838,11 @@ namespace {
         // The Pearl River Shibao et al. (2007)
         // 5.e7 ton/yr ~= 1. m^3/s
         // assuming the width is 50 km --> 2.e-5 m^2/s
-        double max_sedi_vol = param.control.surf_src_area * var.dt;
+        double max_sedi_vol = param.control.surf_src_vol;
+        if (max_sedi_vol != 1.)
+            max_sedi_vol = max_sedi_vol / 50.e3 * var.dt;
+        else
+            max_sedi_vol = param.control.surf_src_area * var.dt;
 
         double vol_ratio = 10;
         int ntry = 200;
