@@ -199,6 +199,10 @@ static void declare_parameters(po::options_description &cfg,
          "0: using density of the 0-th element to compute lithostatic pressure.\n"
          "1: computing rerence pressure from the PREM model.\n"
          "2: computing rerence pressure from the PREM model, modified for continent.\n")
+        ("control.surface_pressure_correction", po::value<bool>(&p.control.surface_pressure_correction)->default_value(false),
+         "Correct the pressure of surface elements"
+         "which has positive stress 1st invariant"
+         "and force the 1st invariant to zero.")
 
         ("control.surface_process_option", po::value<int>(&p.control.surface_process_option)->default_value(0),
          "What kind of surface processes? 0: no surface processes. "

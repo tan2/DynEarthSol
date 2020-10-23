@@ -507,7 +507,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
 }
 
 
-void update_stress(const Variables& var, tensor_t& stress,
+void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                    double_vec& stressyy,
                    tensor_t& strain, double_vec& plstrain,
                    double_vec& delta_plstrain, tensor_t& strain_rate)
@@ -640,5 +640,21 @@ void update_stress(const Variables& var, tensor_t& stress,
         // std::cerr << "stress " << e << ": ";
         // print(std::cerr, s, NSTR);
         // std::cerr << '\n';
+    }
+
+    // correct stress 1st invariant of surface elements
+    if (param.control.surface_pressure_correction) {
+        #pragma omp parallel for default(none) shared(var, stress)
+        for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
+            double* s = stress[*e];
+            double first_inv = 0.;
+            for (int j=0;j<NDIMS;j++) first_inv += s[j];
+
+            if (first_inv > 0.) {
+                first_inv = first_inv / NDIMS;
+                for (int j=0;j<NDIMS;j++)
+                    s[j] -= first_inv;
+            }
+        }
     }
 }

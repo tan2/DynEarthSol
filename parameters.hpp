@@ -86,6 +86,7 @@ struct Control {
     double damping_factor;
     int damping_option;
     int ref_pressure_option;
+    bool surface_pressure_correction;
 
     int surface_process_option;
     double surface_diffusivity;
