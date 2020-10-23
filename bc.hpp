@@ -7,8 +7,8 @@ void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][N
                              std::map<std::pair<int,int>, double*>  &edge_vectors);
 void apply_vbcs(const Param &param, const Variables &var, array_t &vel);
 void apply_stress_bcs(const Param& param, const Variables& var, array_t& force);
-void surface_processes(const Param& param, const Variables& var, array_t& coord, \
+void correct_surface_element(const Variables& var, const int mattype_sed, double_vec& plstrain);
+void surface_processes(const Param& param, const Variables& var, array_t& coord,  double_vec& plstrain, \
                        SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers);
-//void surface_processes(const Param& param, const Variables& var, array_t& coord, double_vec& plstrain, SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers);
 
 #endif

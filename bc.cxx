@@ -1010,10 +1010,19 @@ namespace {
 
 }
 
+void correct_surface_element(const Variables& var, const int mattype_sed, double_vec& plstrain)
+{
+    for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
+        // Find the most abundant marker mattype in this element
+        int_vec &a = (*var.elemmarkers)[*e];
+        int mat = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
+        if (mat == mattype_sed)
+            plstrain[*e] = 0.;
+    }
+}
 
-//void surface_processes(const Param& param, const Variables& var, array_t& coord, double_vec& plstrain, \
-//                      SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
-void surface_processes(const Param& param, const Variables& var, array_t& coord, \
+
+void surface_processes(const Param& param, const Variables& var, array_t& coord,  double_vec& plstrain, \
                        SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
 {
     int ntop = surfinfo.top_nodes->size();
@@ -1073,8 +1082,8 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
     }
 
     if (!(var.steps % param.mesh.quality_check_step_interval)) {
-        // correct surface element value.
-//        correct_surface_element(var,param.mat.mattype_sed,plstrain);
+        // correct the plastic strain of urface element for preventing surface landslide.
+        correct_surface_element(var,param.mat.mattype_sed,plstrain);
         // correct surface marker.
         markersets[0]->correct_surface_marker(var);
         std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
