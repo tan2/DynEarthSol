@@ -1083,12 +1083,12 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
 
     if (!(var.steps % param.mesh.quality_check_step_interval)) {
         // correct the plastic strain of urface element for preventing surface landslide.
-        correct_surface_element(var,param.mat.mattype_sed,plstrain);
+//        correct_surface_element(var,param.mat.mattype_sed,plstrain);
         // correct surface marker.
         markersets[0]->correct_surface_marker(var);
         std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
         // set marker of sediment.
-        markersets[0]->set_sediment_marker(var,param.mat.mattype_sed,*surfinfo.edhacc, elemmarkers);
+        markersets[0]->set_sediment_marker(var,param.mat.mattype_sed,*surfinfo.edhacc,elemmarkers,plstrain);
 
     }
 }
