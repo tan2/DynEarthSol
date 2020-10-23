@@ -489,12 +489,11 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             }
             else if (i==iboundz1 && param.bc.has_water_loading) {
                 // hydrostatic water loading for the surface boundary
-                const double sea_level = 0;
                 p = 0;
-                if (zcenter < sea_level) {
+                if (zcenter < param.control.surf_base_level) {
                     // below sea level
                     const double sea_water_density = 1030;
-                    p = sea_water_density * param.control.gravity * (sea_level - zcenter);
+                    p = sea_water_density * param.control.gravity * (param.control.surf_base_level - zcenter);
                 }
             }
             else {
