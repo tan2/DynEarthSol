@@ -22,7 +22,7 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.edvoldt = new double_vec(e);
 
-    var.marker_in_elem = NULL;
+    var.marker_in_elem = new int_vec2D(e);
 
     {
         // these fields are reallocated during remeshing interpolation
@@ -116,7 +116,7 @@ void update_temperature(const Param &param, const Variables &var,
             double D[NODES_PER_ELEM][NODES_PER_ELEM];
 
             const int *conn = (*var.connectivity)[e];
-            double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
+            double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volume
             const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
             const double *shpdy = (*var.shpdy)[e];

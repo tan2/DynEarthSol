@@ -1436,6 +1436,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         std::cout << "    Remapping markers.\n";
         // remap markers. elemmarkers are updated here, too.
         remap_markers(param, var, old_coord, old_connectivity);
+        var.markersets[0]->find_marker_in_elem(var);
   
         // old_coord et al. are destroyed before exiting this block
     }

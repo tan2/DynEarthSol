@@ -139,7 +139,7 @@ void MarkerSet::append_marker( const double *eta, int el, int mt , double ti)
 void MarkerSet::find_marker_in_elem(Variables& var)
 {
     delete var.marker_in_elem;
-    var.marker_in_elem = new std::vector<int_vec>(var.nelem);
+    var.marker_in_elem = new int_vec2D(var.nelem);
 
     for (int i=0; i<_nmarkers; ++i)
         (*var.marker_in_elem)[(*_elem)[i]].push_back(i);
