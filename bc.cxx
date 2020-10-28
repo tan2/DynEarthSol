@@ -838,13 +838,14 @@ namespace {
         // The Pearl River Shibao et al. (2007)
         // 5.e7 ton/yr ~= 1. m^3/s
         // assuming the width is 50 km --> 2.e-5 m^2/s
+        double terrig_width = 50.e3;
         double max_sedi_vol = param.control.surf_src_vol;
         if (max_sedi_vol != 1.)
-            max_sedi_vol = max_sedi_vol / 50.e3 * var.dt;
+            max_sedi_vol = max_sedi_vol / terrig_width * var.dt;
         else
             max_sedi_vol = param.control.surf_src_area * var.dt;
 
-        double vol_ratio = 10;
+        int vol_ratio = 10;
         int ntry = 200;
         int_vec2D source_pair(2,int_vec(2,0));
         double basin_vol, dh_tmp, mul_conv;
@@ -895,13 +896,12 @@ namespace {
 //            if (basin_vol < max_sedi_vol / 10.) if_source[i] = false;
         }
 
-        //
-        for (int k=0; k<10;k++) {
-
+        for (int k=0; k<vol_ratio;k++) {
             for (int i=0; i<2; i++) {
                 if (! if_source[i]) continue;
 
-                unit_vol[i] = std::min(max_sedi_vol / 10., max_sedi_vol - sedi_vol[i]);
+                unit_vol[i] = std::min(max_sedi_vol / vol_ratio, max_sedi_vol - sedi_vol[i]);
+//                if (unit_vol[i] <= 0.) continue;
                 bool if_finish = false;
                 int iloop = 0;
                 double dist;
@@ -931,6 +931,7 @@ namespace {
 
                         dhacc_tmp[j] += dh_tmp;
 
+                        // if dhacc larger than depth, dhacc = depth (down is negative)
                         if (dhacc_tmp[j] > top_depth[j])
                             dhacc_tmp[j] = top_depth[j] + 0.1;
 
@@ -975,9 +976,22 @@ namespace {
                 dhacc_tmp[j] = 0.;
             }
             if (sedi_vol[0] >= max_sedi_vol || sedi_vol[1] >= max_sedi_vol) break;
-
-
         }
+
+        if (if_source[0] || if_source[1]) {
+            double_vec tmp_slope(ntop,0.);
+            for (std::size_t i=0;i<ntop-1;i++) {
+                tmp_slope[i] = 0.5 * ( dh_terrig[i+1] - dh_terrig[i] ) / top_base[i];
+                tmp_slope[i+1] = 0.5 * ( dh_terrig[i+1] - dh_terrig[i] ) / top_base[i];
+            }
+            for (std::size_t i=0;i<ntop;i++)
+                if (dh_terrig[i]!=0.)
+                    if (fabs(tmp_slope[i]) > 1.e-3 )
+                        printf("%3d %4d %09.2e %09.2e\n",i,top_nodes[i], dh_terrig[i], tmp_slope[i]);
+        }
+
+        for (std::size_t i=0; i<ntop; i++)
+            dh[i] += dh_terrig[i];
 
         if ( var.steps%10000 == 0 ) {
             for (int i=0;i<2;i++) {
@@ -995,8 +1009,6 @@ namespace {
                 printf("    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",isedi[0],isedi[1]);
         }
 
-        for (std::size_t i=0; i<ntop; i++)
-            dh[i] += dh_terrig[i];
 
 //******************************************************************
 //              sedimentation by suspended source
@@ -1012,12 +1024,14 @@ namespace {
 
 void correct_surface_element(const Variables& var, const int mattype_sed, double_vec& plstrain)
 {
+    double half_life = 1.e3 * YEAR2SEC;
+    double lambha = 0.69314718056 / half_life; // ln2
     for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
         // Find the most abundant marker mattype in this element
         int_vec &a = (*var.elemmarkers)[*e];
         int mat = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
         if (mat == mattype_sed)
-            plstrain[*e] = 0.;
+            plstrain[*e] -= plstrain[*e] * lambha * var.dt;
     }
 }
 
@@ -1083,7 +1097,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
 
     if (!(var.steps % param.mesh.quality_check_step_interval)) {
         // correct the plastic strain of urface element for preventing surface landslide.
-//        correct_surface_element(var,param.mat.mattype_sed,plstrain);
+        correct_surface_element(var,param.mat.mattype_sed,plstrain);
         // correct surface marker.
         markersets[0]->correct_surface_marker(var);
         std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
