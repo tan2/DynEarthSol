@@ -920,7 +920,7 @@ namespace {
                             break;
                         }
 
-                        dist = abs(coord[top_nodes[j]][0] - coord[top_nodes[start[i]]][0]);
+                        dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[start[i]]][0]);
 
                         dh_tmp = 8.e-9 * pow(1.25,iloop) * (unit_vol[i] - depo_vol[i]) * dist;
 
