@@ -321,7 +321,7 @@ struct Variables {
     int nseg;
 
     double max_vbc_val;
-    double_vec vbc_period_ratio_x[2];
+    double_vec *vbc_period_ratio_x;
     double compensation_pressure;
 
     // These 5 arrays are allocated by external library

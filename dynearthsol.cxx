@@ -32,6 +32,8 @@ void init_var(const Param& param, Variables& var)
     var.time = 0;
     var.steps = 0;
 
+    var.vbc_period_ratio_x = new double_vec(2,1.);
+
     if (param.control.characteristic_speed == 0)
         var.max_vbc_val = find_max_vbc(param.bc);
     else
@@ -94,7 +96,7 @@ void init(const Param& param, Variables& var)
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, var.bnormals, var.edge_vectors);
-    apply_vbcs(param, var, *var.vel);
+    apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
     // temperature should be init'd before stress and strain
     initial_temperature(param, var, *var.temperature);
     initial_stress_state(param, var, *var.stress, *var.stressyy, *var.strain, var.compensation_pressure);
@@ -194,7 +196,7 @@ void restart(const Param& param, Variables& var)
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, var.bnormals, var.edge_vectors);
-    apply_vbcs(param, var, *var.vel);
+    apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
 
     // Initializing field variables
     {
@@ -343,7 +345,7 @@ int main(int argc, const char* argv[])
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
         update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
-        apply_vbcs(param, var, *var.vel);
+        apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
         update_mesh(param, var);
 
         // elastic stress/strain are objective (frame-indifferent)
