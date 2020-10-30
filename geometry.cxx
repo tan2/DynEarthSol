@@ -10,6 +10,7 @@
 #include "matprops.hpp"
 #include "utils.hpp"
 #include "geometry.hpp"
+#include "bc.hpp"
 
 
 /* Given two points, returns the distance^2 */
@@ -247,9 +248,15 @@ double compute_dt(const Param& param, const Variables& var)
 	minl = std::min(minl, minh);
     }
 
-    double dt_advection = 0.5 * minl / var.max_vbc_val;
+    double max_vbc_val;
+    if (param.control.characteristic_speed == 0)
+        max_vbc_val = find_max_vbc(param.bc, *var.vbc_period_ratio_x);
+    else
+        max_vbc_val = param.control.characteristic_speed;
+
+    double dt_advection = 0.5 * minl / max_vbc_val;
     double dt_elastic = (param.control.is_quasi_static) ?
-        0.5 * minl / (var.max_vbc_val * param.control.inertial_scaling) :
+        0.5 * minl / (max_vbc_val * param.control.inertial_scaling) :
         0.5 * minl / std::sqrt(var.mat->bulkm(0) / var.mat->rho(0));
     double dt = std::min(std::min(dt_elastic, dt_maxwell),
                          std::min(dt_advection, dt_diffusion)) * param.control.dt_fraction;

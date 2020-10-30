@@ -59,13 +59,13 @@ bool is_on_boundary(const Variables &var, int node)
 }
 
 
-double find_max_vbc(const BC &bc)
+double find_max_vbc(const BC &bc, const double_vec &vbc_period_ratio_x)
 {
     double max_vbc_val = 0;
     if (bc.vbc_x0 % 2 == 1) // odd number indicates fixed velocity component
-        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x0));
+        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x0 * std::max(0.5, vbc_period_ratio_x[0])));
     if (bc.vbc_x1 % 2 == 1)
-        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x1));
+        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x1 * std::max(0.5, vbc_period_ratio_x[1])));
     if (bc.vbc_y0 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_y0));
     if (bc.vbc_y1 % 2 == 1)
@@ -208,8 +208,8 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
     double_vec2D period_ratios(2,double_vec(max_nperiod,0.));
     int izone;
 
-    if ( var.steps%10000 == 0 )
-        printf("Before: %f %f\n", vbc_period_ratio_x[0],vbc_period_ratio_x[1]);
+//    if ( var.steps%10000 == 0 )
+//        printf("Before: %f %f\n", vbc_period_ratio_x[0],vbc_period_ratio_x[1]);
 
     // for x0
     for (int i=0;i<bc.num_vbc_period_x0;i++) {
@@ -281,8 +281,8 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
         vbc_period_ratio_x[1] = period_ratios[1][iperiod[1]-1] +  dr * dt0/dt;
     }
 
-    if ( var.steps%10000 == 0 )
-      printf("After: %f %f\n", vbc_period_ratio_x[0],vbc_period_ratio_x[1]); 
+//    if ( var.steps%10000 == 0 )
+//      printf("After: %f %f\n", vbc_period_ratio_x[0],vbc_period_ratio_x[1]); 
 
     double vbc_applied_x1 = bc.vbc_val_x1 * vbc_period_ratio_x[1];
 

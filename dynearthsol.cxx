@@ -35,7 +35,7 @@ void init_var(const Param& param, Variables& var)
     var.vbc_period_ratio_x = new double_vec(2,1.);
 
     if (param.control.characteristic_speed == 0)
-        var.max_vbc_val = find_max_vbc(param.bc);
+        var.max_vbc_val = find_max_vbc(param.bc, *var.vbc_period_ratio_x);
     else
         var.max_vbc_val = param.control.characteristic_speed;
 
