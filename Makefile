@@ -275,7 +275,7 @@ endif
 
 .PHONY: all clean take-snapshot
 
-all: $(EXE) take-snapshot
+all: $(EXE) tetgen/tetgen triangle/triangle take-snapshot
 
 ifeq ($(useadapt), 1)
 
@@ -367,6 +367,9 @@ $(TRI_OBJS): %.o : %.c $(TRI_INCS)
 	@# Triangle cannot be compiled with -O2
 	$(CXX) $(CXXFLAGS) -O1 -DTRILIBRARY -DREDUCED -DANSI_DECLARATORS -c $< -o $@
 
+triangle/triangle: triangle/triangle.c
+	$(CXX) $(CXXFLAGS) -O1 -DREDUCED -DANSI_DECLARATORS triangle/triangle.c -o $@
+
 tetgen/predicates.o: tetgen/predicates.cxx $(TET_INCS)
 	@# Compiling J. Shewchuk predicates, should always be
 	@# equal to -O0 (no optimization). Otherwise, TetGen may not
@@ -375,6 +378,9 @@ tetgen/predicates.o: tetgen/predicates.cxx $(TET_INCS)
 
 tetgen/tetgen.o: tetgen/tetgen.cxx $(TET_INCS)
 	$(CXX) $(CXXFLAGS) -DNDEBUG -DTETLIBRARY -Wno-unused-but-set-variable -Wno-int-to-pointer-cast -c $< -o $@
+
+tetgen/tetgen: tetgen/predicates.cxx tetgen/tetgen.cxx
+	$(CXX) $(CXXFLAGS) -O0 -DNDEBUG -Wno-unused-but-set-variable -Wno-int-to-pointer-cast tetgen/predicates.cxx tetgen/tetgen.cxx -o $@
 
 $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
 	@+$(MAKE) -C $(C3X3_DIR)
