@@ -205,7 +205,7 @@ void MarkerSet::set_sediment_marker(const Variables& var, const int mattype_sed,
         // if the ratio of increased Vol. and element Vol. up to certain level,
         // set a marker in the area between edhacc.
         double rv = dv / (*var.volume)[e];
-        if (rv < 0.1) continue;
+        if (rv < 0.05) continue;
 
         // correct the plastic strain overestimation of surface element caused by sedimentation.
         plstrain[e] /= (1. + rv);
