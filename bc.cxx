@@ -63,9 +63,9 @@ double find_max_vbc(const BC &bc, const double_vec &vbc_period_ratio_x)
 {
     double max_vbc_val = 0;
     if (bc.vbc_x0 % 2 == 1) // odd number indicates fixed velocity component
-        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x0 * std::max(0.5, vbc_period_ratio_x[0])));
+        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x0));
     if (bc.vbc_x1 % 2 == 1)
-        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x1 * std::max(0.5, vbc_period_ratio_x[1])));
+        max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x1));
     if (bc.vbc_y0 % 2 == 1)
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_y0));
     if (bc.vbc_y1 % 2 == 1)
