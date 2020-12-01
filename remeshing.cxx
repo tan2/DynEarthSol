@@ -898,6 +898,66 @@ void delete_points_on_boundary(int_vec &points_to_delete,
 }
 
 
+void refine_surface_elem(const Param &param, const Variables &var,
+                         const array_t &old_coord, const conn_t &old_connectivity,
+                         const double_vec &old_volume, int &old_nnode, double *qcoord)
+{
+    const double surface_vol = param.mesh.sediment_size * sizefactor * std::pow(param.mesh.resolution, NDIMS);
+
+    std::cout << "    Checking surface element volume.\n";
+
+//    #pragma omp parallel for default(none) \
+//        shared(param, var, old_coord, old_connectivity, old_volume, old_nnode, qcoord)
+
+    for (size_t i=0; i<(*var.surfinfo.top_facet_elems).size(); i++) {
+        int e = (*var.surfinfo.top_facet_elems)[i];
+
+        int_vec &a = (*var.elemmarkers)[e];
+        if (a[param.mat.mattype_sed] == 0) continue;
+//        int mat = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
+//        if (mat != param.mat.mattype_sed) continue;
+
+        if (old_volume[e] < surface_vol) continue;
+
+        const int *conn = old_connectivity[e];
+        int_vec n(NDIMS);
+
+//        if (DEBUG)
+            std::printf("      Surface node added (%4d %.1e %.1e)\n",e, old_volume[e], surface_vol);
+        // get the nodes of the element on surface
+        for (int j=0; j<NDIMS; j++)
+            n[j] = (*var.surfinfo.top_nodes)[(*var.surfinfo.elem_and_nodes)[i][j]];
+
+        int nsub_node = -1;
+        for (int j=0;j<NODES_PER_ELEM; j++)
+            if (std::find(n.begin(),n.end(),conn[j]) == n.end()) {
+                nsub_node = conn[j];
+                break;
+            }
+
+        if (nsub_node >= 0) {
+            // for nodes on surface
+            for (int j=0; j<NDIMS; j++) {
+                double mcoord[NDIMS]    ;
+
+                for (int d=0;d<NDIMS; d++) {
+                    mcoord[d] = old_coord[ n[j] ][d];
+                    mcoord[d] += old_coord[nsub_node][d];
+                    mcoord[d] /= 2.;
+                }
+
+//                #pragma omp critical(refine_surface_elem)
+                {
+                    for (int d=0;d<NDIMS; d++)
+                        qcoord[old_nnode*NDIMS + d] = mcoord[d];
+                    old_nnode++;
+                }
+            }
+        }
+    }
+}
+
+
 void new_mesh(const Param &param, Variables &var, int bad_quality,
               const array_t &original_coord, const conn_t &original_connectivity,
               const segment_t &original_segment, const segflag_t &original_segflag)
@@ -1005,6 +1065,14 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         break;
     }
 
+    // refine surface element where volume is too large
+    if (param.mesh.meshing_sediment) {
+        double *nqcoord = new double[(old_nnode + var.surfinfo.top_nodes->size() * 2 ) * NDIMS];
+        std::memcpy(nqcoord, qcoord, sizeof(double) * old_nnode * NDIMS);
+        qcoord = nqcoord;
+        refine_surface_elem(param, var, old_coord, old_connectivity, old_volume, old_nnode, qcoord);
+    }
+
     int new_nnode, new_nelem, new_nseg;
     double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;
@@ -1095,6 +1163,10 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     var.connectivity->reset(pconnectivity, new_nelem);
     var.segment->reset(psegment, var.nseg);
     var.segflag->reset(psegflag, var.nseg);
+
+    if (param.mesh.meshing_sediment)
+        delete [] qcoord;
+
 }
 
 #ifdef THREED
