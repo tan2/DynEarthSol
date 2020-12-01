@@ -1185,14 +1185,14 @@ namespace {
 
 void correct_surface_element(const Variables& var, const int mattype_sed, double_vec& plstrain)
 {
-    double half_life = 1.e3 * YEAR2SEC;
+    double half_life = 1.e2 * YEAR2SEC;
     double lambha = 0.69314718056 / half_life; // ln2
     for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
         // Find the most abundant marker mattype in this element
         int_vec &a = (*var.elemmarkers)[*e];
         int mat = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
-        if (mat == mattype_sed)
-            plstrain[*e] -= plstrain[*e] * lambha * var.dt;
+//        if (mat == mattype_sed)
+        plstrain[*e] -= plstrain[*e] * lambha * var.dt;
     }
 }
 
