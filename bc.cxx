@@ -917,6 +917,11 @@ namespace {
         int_vec left_mouse, right_mouse;
         int imouth_left, imouth_right;
 
+        int_vec starts0(2,0);
+
+        starts0[0] = starts[0];
+        starts0[1] = starts[1];
+
         // find land:1 and sea:0
         for (std::size_t i=0; i<ntop; i++) {
             double topo_tmp = top_depth[i] - dhacc_tmp[i];
@@ -925,12 +930,6 @@ namespace {
         }
 //        printf("\n");
 
-        if ( var.steps%10000 == 0 ) {
-            out_basin_info(if_land);
-//            for (std::size_t i=0;i<ntop;i++)
-//                printf("%d",if_land[i]);
-//            printf("\n");
-        }
 
 
         // find river mouth
@@ -1001,6 +1000,18 @@ namespace {
             }
 
         }
+        if ( var.steps%10000 == 0 ) {
+            if (starts0[0] != starts[0] || starts0[1] != starts[1]) {
+                printf("%d starts0: %d %d; starts: %d %d\n", \
+                        var.steps,starts0[0],starts0[1],starts[0],starts[1]);
+                out_basin_info(if_land);
+//                for (std::size_t i=0;i<ntop;i++)
+//                printf("%d",if_land[i]);
+//                printf("\n");
+            }
+        }
+
+
         // the source is too close to boundary
         if (abs(starts[0]-int(ntop)/2) >= int(ntop)/2)
             if_source[0] = false;
