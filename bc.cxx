@@ -842,8 +842,7 @@ namespace {
     }
 
     void get_surface_info(const Variables& var, \
-        double_vec& top_base, double_vec& top_slope, double_vec& top_deg, \
-        double_vec& top_depth) {
+        double_vec& top_base, double_vec& top_depth) {
 
         const array_t& coord = *var.coord;
         const SurfaceInfo& surfinfo = var.surfinfo;
@@ -857,33 +856,12 @@ namespace {
             double dx = std::fabs(coord[n1][0] - coord[n0][0]);
             top_base[i] += dx;
             top_base[i+1] += dx;
-
-            double slope = (coord[n1][1] - coord[n0][1]) / dx;
-            top_slope[i] += slope;
-            top_slope[i+1] += slope;
         }
 
         for (std::size_t i=0; i<ntop; i++) {
             top_depth[i] = surfinfo.base_level - coord[top_nodes[i]][1];
-            top_deg[i] = atan(top_slope[i]);
             top_base[i] *= 0.5;
         }
-
-/*
-        for (std::size_t i=0; i<ntop-1; i++) {
-            top_slope[i] = ( coord[top_nodes[i+1]][1] - coord[top_nodes[i]][1] );
-            top_base[i] = ( coord[top_nodes[i+1]][0] - coord[top_nodes[i]][0] );
-            top_slope[i] /= top_base[i];
-            top_deg[i] = atan(top_slope[i]);
-        }
-
-
-        // calculate base of node
-        top_base[ntop-1] = top_base[ntop-2] / 2.;
-        for (std::size_t i=ntop-2; i>0; i--)
-            top_base[i] = ( top_base[i] + top_base[i-1] ) / 2.;
-        top_base[0] = top_base[0] / 2.;
-*/
     }
 
     void out_basin_info(const int_vec& if_land) {
@@ -913,10 +891,7 @@ namespace {
         const SurfaceInfo& surfinfo = var.surfinfo;
         const int_vec& top_nodes = *surfinfo.top_nodes;
         const std::size_t ntop = top_nodes.size();
-
         int_vec left_mouse, right_mouse;
-        int imouth_left, imouth_right;
-
         int_vec starts0(2,0);
 
         starts0[0] = starts[0];
@@ -926,11 +901,7 @@ namespace {
         for (std::size_t i=0; i<ntop; i++) {
             double topo_tmp = top_depth[i] - dhacc_tmp[i];
             if (topo_tmp <= 0.) if_land[i] = 1;
-//            printf("%f ",topo_tmp);
         }
-//        printf("\n");
-
-
 
         // find river mouth
         for (std::size_t i=0; i<ntop-1; i++)
@@ -951,25 +922,26 @@ namespace {
             if_source[0] = true;
             starts[0] = left_mouse[0];
 
-            if (left_mouth_num < right_mouth_num) {
-                ends[0] = right_mouse[1];
-            } else if (left_mouth_num == right_mouth_num) {
 
+            if (left_mouth_num == right_mouth_num) {
                 if (left_mouse[0] < right_mouse[0]) {
                     ends[0] = right_mouse[0];
                 } else {
-                    if (left_mouth_num > 1)
+                    if (left_mouth_num > 1) {
                         ends[0] = right_mouse[1];
-                    else {
+                    } else {
                         ends[0] = ntop-3;
                     }
                 }
+            } else if (left_mouth_num < right_mouth_num) {
+                ends[0] = right_mouse[1];
+            } else {
+                if (left_mouth_num == 1) {
+                    ends[0] = ntop-3;
+                } else {
+                    ends[0] = right_mouse[0];
+                }
             }
-
-//            if (left_mouse[0] < right_mouse[0])
-//                ends[0] = right_mouse[0];
-//            else
-//                ends[0] = ntop-3;
         }
 
         if (right_mouth_num == 0 ) {
@@ -978,25 +950,24 @@ namespace {
             if_source[1] = true;
             starts[1] = right_mouse[right_mouth_num-1];
 
-            if (left_mouth_num > right_mouth_num) {
-                ends[1] = left_mouse[left_mouth_num-2];
-            }
-            else if (left_mouth_num == right_mouth_num) {
+            if (left_mouth_num == right_mouth_num) {
                 if (left_mouse[0] < right_mouse[0]) {
                     ends[1] = left_mouse[left_mouth_num-1];
                 } else {
-                    if (right_mouth_num > 1)
+                    if (right_mouth_num > 1) {
                         ends[1] = left_mouse[left_mouth_num-2];
-                    else {
+                    } else {
                         ends[1] = 2;
                     }
                 }
-            }
-            else {
-                if (left_mouth_num == 1)
+            } else if (left_mouth_num > right_mouth_num) {
+                ends[1] = left_mouse[left_mouth_num-2];
+            } else {
+                if (right_mouth_num == 1) {
                     ends[1] = 2;
-                else
-                    left_mouse[left_mouth_num-1];
+                } else {
+                    ends[1] = left_mouse[left_mouth_num-1];
+                }
             }
 
         }
@@ -1037,8 +1008,6 @@ namespace {
         const std::size_t ntop = top_nodes.size();
 
         double_vec top_base(ntop,0.);
-        double_vec top_slope(ntop,0.);
-        double_vec top_deg(ntop,0.);
         double_vec top_depth(ntop,0.);
 
         std::vector<bool> if_source(2,true);
@@ -1047,7 +1016,7 @@ namespace {
 
         if ( var.steps%10000 == 0 )
             printf("** Sedimentation report:\n");
-        get_surface_info(var,top_base,top_slope,top_deg,top_depth);
+        get_surface_info(var,top_base,top_depth);
 
 //******************************************************************
 //              sedimentation by terrigenous source
@@ -1065,18 +1034,11 @@ namespace {
 
         int vol_ratio = 10;
         int ntry = 200;
-        double dh_tmp, mul_conv;
-        int_vec starts(2,0);
-        int_vec ends(2,0);
-        double_vec basin_vols(2,0.);
+        double dh_tmp, dist;
         int_vec if_land(ntop,0);
-
-
-        int_vec sign(2,0);
-        int_vec isedi(2,0);
-
+        int_vec starts(2,0), ends(2,0);
+        int_vec sign(2,0), isedi(2,0);
         double_vec sedi_vol(2,0.);
-        double_vec unit_vol(2,0.);
         std::vector<bool> if_space_limited(2,false);
         std::vector<bool> if_slope_limited(2,false);
 
@@ -1091,17 +1053,11 @@ namespace {
                 
                 if (! if_source[i]) continue;
 
-                unit_vol[i] = std::min(max_sedi_vol / vol_ratio, max_sedi_vol - sedi_vol[i]);
-//                if (unit_vol[i] <= 0.) continue;
-                bool if_finish = false;
-                int iloop = 0;
-                double dist;
-                double_vec depo_vol(2,0.);
+                double unit_vol = std::min(max_sedi_vol / vol_ratio, max_sedi_vol - sedi_vol[i]);
 
-                bool if_shift = true;
-
+                bool if_finish = false, if_shift = true;
+                int iloop = 0, depo_vol = 0.;
                 do {
-                    
                     if (if_shift || if_space_limited[i] || if_slope_limited[i]) {
                         if_shift = false;
                         if_slope_limited[i] = false;
@@ -1115,9 +1071,7 @@ namespace {
                     }
                     if (! if_source[i]) break;
 
-
                     iloop++;
-
 
                     int w = abs(ends[i] - starts[i]);
 
@@ -1130,49 +1084,35 @@ namespace {
                         double slope_tmp = -1. * ( top_depth[j] - top_depth[j-sign[i]] );
                         slope_tmp += dhacc_tmp[j] - dhacc_tmp[j-sign[i]];
 
-
                         // stop propagate if slope is increasing
                         if ( slope_tmp > 0. ) {
                             if_slope_limited[i] = true;
                             break;
                         }
 
-//                        if ( var.steps%100 == 0 && i==1)
-//                            printf("%d %f\n",j,slope_tmp); 
-
                         dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[starts[i]]][0]);
 
-                        dh_tmp = 8.e-9 * pow(1.25,iloop) * (unit_vol[i] - depo_vol[i]) * dist;
+                        dh_tmp = 8.e-9 * pow(1.25,iloop) * (unit_vol - depo_vol) * dist;
 
                         if ( dh_tmp != dh_tmp ) {
                             printf("dh_tmp is NaN.\n");
-                            printf("%e\t%e\t%f\n",dh_tmp, (unit_vol[i] - depo_vol[i]), dist);
+                            printf("%e\t%e\t%f\n",dh_tmp, (unit_vol - depo_vol), dist);
                         }
 
                         dhacc_tmp[j] += dh_tmp;
-
-//                        if (i==1) {
-//                            printf("%d %d %d %e %e\n",w,iloop,j,dh_tmp,dhacc_tmp[j]);
-//                        }
-
 
                         // if dhacc larger than depth, dhacc = depth (down is negative)
                         if (dhacc_tmp[j] > top_depth[j])
                             dhacc_tmp[j] = top_depth[j] + 0.1;
 
-                        depo_vol[i] += top_base[j] * dh_tmp;
+                        depo_vol += top_base[j] * dh_tmp;
 
-                        if (depo_vol[i] >= unit_vol[i]) {
+                        if (depo_vol >= unit_vol) {
                             if_finish = true;
                             break;
                         }
                     }
 
-//                    if ( i==1 )
-//                        for (int jjj=0; jjj<ntop; jjj++)                 
-//                            printf("%e ",dhacc_tmp[jjj]);
-//                        printf("\n");
-                    
                     // move coast if is full.
                     if (dhacc_tmp[starts[i]+sign[i]] >= top_depth[starts[i]+sign[i]]) {
                         starts[i] += sign[i];
@@ -1181,10 +1121,10 @@ namespace {
                             if_space_limited[i] = true;
                     }
 
-                } while (unit_vol[i] - depo_vol[i] > 1.e-4 && !if_finish && iloop <= ntry);
+                } while (unit_vol - depo_vol > 1.e-4 && !if_finish && iloop <= ntry);
 
                 isedi[i] += iloop;
-                sedi_vol[i] += depo_vol[i];
+                sedi_vol[i] += depo_vol;
             }
 
             if (if_space_limited[0] || if_space_limited[1]) break;
@@ -1227,11 +1167,9 @@ namespace {
                         i,coord[top_nodes[starts[i]]][0]/1000.,starts[i],ends[i],sedi_vol[i], max_sedi_vol,isedi[i]);
                 }
             }
-
             if (if_space_limited[0] || if_space_limited[1])
                 printf("    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",isedi[0],isedi[1]);
         }
-
 
 //******************************************************************
 //              sedimentation by suspended source
