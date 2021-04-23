@@ -44,7 +44,7 @@ output_markers = True
 
 # index of material type
 mattype = {}
-mattype["sediment"] =  4 # need to change if need to show marker time
+mattype["sediment"] =  5 # need to change if need to show marker time of sediment
 
 ########################
 # Is numpy version < 1.8?
@@ -54,6 +54,23 @@ npmajor = int(npversion[0])
 npminor = int(npversion[1])
 if npmajor < 1 or (npmajor == 1 and npminor < 8):
     eigh_vectorized = False
+
+class Filter():
+
+  def marker(self,par,x, z, m, t):
+    ind = (par.xmin <= x) * (x <= par.xmax) * \
+          (par.zmin <= z) * (z <= par.zmax)
+    x = x[ind]
+    z = z[ind]
+    m = m[ind]
+    t = t[ind]
+    return x, z, m, t
+
+  def node(self,x,z,f):
+    ind = (f >= 32 ) * (f <= 34)
+    x = x[ind]
+    z = z[ind]
+    return x, z
 
 
 def main(modelname, start, end, delta):
@@ -217,6 +234,33 @@ def main(modelname, start, end, delta):
 
             # element number for debugging
             vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem number')
+
+            # melting mantle
+            from scipy import interpolate
+            material = des.read_field(frame, 'material')
+            temperature = des.read_field(frame, 'temperature')
+            connectivity = des.read_field(frame, 'connectivity')
+            # Calculate the temperature of element
+            ecoord = np.array([coord[connectivity[e,:],:].mean(axis=0) for e in range(nelem)])
+            etemp = np.array([temperature[connectivity[e,:]].mean(axis=0) for e in range(nelem)])
+
+            melting = np.zeros(sI.shape)
+
+            # find surface
+            bcflag = des.read_field(frame, 'bcflag')
+            filter = Filter()
+            surfx, surfz = filter.node(coord[:,0],coord[:,1],bcflag)
+            orders = np.argsort(surfx)
+            surface = np.vstack((surfx[orders],surfz[orders]))
+            depth = np.interp(ecoord[:,0], surface[0], surface[1]) - ecoord[:,1]
+            pressure = depth * 9.8 * 2900.
+            # Hirschmann, 2000  https://doi.org/10.1029/2000GC000070
+            # Assumeing solidus is a line between (0 GPa, 1120 C) - (7 GPa, 1800 C)
+            #                                                    adibatic  themral gradient 0.3 C/km
+            melting[:] = -1000
+            ind = material < 2
+            melting[ind] = (etemp[ind]-273. + depth[ind]*3.e-4) - (1120 + (680./7.e9)*pressure[ind])
+            vtk_dataarray(fvtu, melting, 'melting')
 
             fvtu.write('  </CellData>\n')
 
