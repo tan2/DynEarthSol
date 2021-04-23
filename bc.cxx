@@ -1032,12 +1032,14 @@ namespace {
         else
             max_sedi_vol = param.control.surf_src_area * var.dt;
 
+        bool if_finish, if_shift;
         int vol_ratio = 10;
         int ntry = 200;
-        double dh_tmp, dist;
+        int nloop, nstep_in_basin;
+        double unit_vol, depo_vol, dh_tmp, dist;
         int_vec if_land(ntop,0);
         int_vec starts(2,0), ends(2,0);
-        int_vec sign(2,0), isedi(2,0);
+        int_vec sign(2,0), nsedi(2,0);
         double_vec sedi_vol(2,0.);
         std::vector<bool> if_space_limited(2,false);
         std::vector<bool> if_slope_limited(2,false);
@@ -1048,51 +1050,60 @@ namespace {
         get_basin_info(var,top_depth,if_source, if_land, starts, ends, dhacc_tmp);
 
         // deal with the sedimentation for the aspect of coastal source
-        for (int k=0; k<vol_ratio;k++) {
-            for (int i=0; i<2; i++) {
-                
-                if (! if_source[i]) continue;
-
-                double unit_vol = std::min(max_sedi_vol / vol_ratio, max_sedi_vol - sedi_vol[i]);
-
-                bool if_finish = false, if_shift = true;
-                int iloop = 0, depo_vol = 0.;
+        // to n times of both two sides
+        for (int islide=0; islide<vol_ratio; islide++) {
+            // do deposit for two sides
+            for (int iside=0; iside<2; iside++) {
+                // if iside is on source, do next side directly
+                if (! if_source[iside]) continue;
+                // of this side reach max_sedi_vol, do next side directly
+                if (sedi_vol[iside] - max_sedi_vol > -1.e-4 ) continue;
+                // slided volumn for each side
+                unit_vol = std::min(max_sedi_vol / vol_ratio, max_sedi_vol - sedi_vol[iside]);
+                // recorder of deposited volumn for do loop
+                depo_vol = 0.;
+                if_shift = true;
+                // start do loop
+                if_finish = false;
+                nloop = 0;
                 do {
-                    if (if_shift || if_space_limited[i] || if_slope_limited[i]) {
+                    // if coast line is changed or basin is filled, search topo for finding basin again
+                    if (if_shift || if_space_limited[iside] || if_slope_limited[iside]) {
                         if_shift = false;
-                        if_slope_limited[i] = false;
+                        if_slope_limited[iside] = false;
                         get_basin_info(var,top_depth,if_source, if_land, starts, ends, dhacc_tmp);
-                        if (starts[i] == ends[i]) {
-                            if_space_limited[i] = true;
+                        if (starts[iside] == ends[iside]) {
+                            if_space_limited[iside] = true;
                             break;
                         } else {
-                            if_space_limited[i] = false;
+                            if_space_limited[iside] = false;
                         }
                     }
-                    if (! if_source[i]) break;
-
-                    iloop++;
-
-                    int w = abs(ends[i] - starts[i]);
+                    // if this side become no source, do next side directly
+                    if (! if_source[iside]) break;
+                    // record times of one side loop
+                    nloop++;
+                    // the times for one side deposit
+                    nstep_in_basin = abs(ends[iside] - starts[iside]);
 
                     // calculate the dh of basin
-                    for (int ind=1; ind<w; ind++) {
+                    for (int istep=1; istep<nstep_in_basin; istep++) {
 
-                        int j = starts[i] + sign[i]*ind;
-                        int pj = starts[i] + sign[i]*(ind-1);
-                        int ind_tmp = j - (1-i);
-                        double slope_tmp = -1. * ( top_depth[j] - top_depth[j-sign[i]] );
-                        slope_tmp += dhacc_tmp[j] - dhacc_tmp[j-sign[i]];
+                        int j = starts[iside] + sign[iside]*istep;
+                        int pj = starts[iside] + sign[iside]*(istep-1);
+                        double slope_tmp = -1. * ( top_depth[j] - top_depth[j-sign[iside]] );
+                        slope_tmp += dhacc_tmp[j] - dhacc_tmp[j-sign[iside]];
 
                         // stop propagate if slope is increasing
                         if ( slope_tmp > 0. ) {
-                            if_slope_limited[i] = true;
+                            if_slope_limited[iside] = true;
                             break;
                         }
 
-                        dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[starts[i]]][0]);
-
-                        dh_tmp = 8.e-9 * pow(1.25,iloop) * (unit_vol - depo_vol) * dist;
+                        // distance to the coastline
+                        dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[starts[iside]]][0]);
+                        // deposit based on distance to coastline and remained unit volumn
+                        dh_tmp = 8.e-9 * pow(1.25,nloop) * (unit_vol - depo_vol) * dist;
 
                         if ( dh_tmp != dh_tmp ) {
                             printf("dh_tmp is NaN.\n");
@@ -1113,19 +1124,21 @@ namespace {
                         }
                     }
 
-                    // move coast if is full.
-                    if (dhacc_tmp[starts[i]+sign[i]] >= top_depth[starts[i]+sign[i]]) {
-                        starts[i] += sign[i];
+                    // move coast if basin is filled.
+                    if (dhacc_tmp[starts[iside]+sign[iside]] >= top_depth[starts[iside]+sign[iside]]) {
+                        starts[iside] += sign[iside];
                         if_shift = true;
-                        if (starts[i] == ends[i])
-                            if_space_limited[i] = true;
+                        if (starts[iside] == ends[iside])
+                            if_space_limited[iside] = true;
                     }
 
-                } while (unit_vol - depo_vol > 1.e-4 && !if_finish && iloop <= ntry);
+                // end of do loop of one side deposit
+                // finish of reach unit_vol or ntry
+                } while (unit_vol - depo_vol > 1.e-4 && !if_finish && nloop <= ntry);
 
-                isedi[i] += iloop;
-                sedi_vol[i] += depo_vol;
-            }
+                nsedi[iside] += nloop;
+                sedi_vol[iside] += depo_vol;
+            } // end of each side
 
             if (if_space_limited[0] || if_space_limited[1]) break;
 
@@ -1133,8 +1146,9 @@ namespace {
                 dh_terrig[j] += dhacc_tmp[j];
                 dhacc_tmp[j] = 0.;
             }
-            if (sedi_vol[0] >= max_sedi_vol || sedi_vol[1] >= max_sedi_vol) break;
-        }
+            if (sedi_vol[0] >= max_sedi_vol && sedi_vol[1] >= max_sedi_vol) break;
+        } // end of deposit slides
+
 
         if (if_source[0] || if_source[1]) {
             double_vec tmp_slope(ntop,0.);
@@ -1151,8 +1165,6 @@ namespace {
         for (std::size_t i=0; i<ntop; i++)
             dh[i] += dh_terrig[i];
 
-//        printf("%f %f\n",sedi_vol[0],sedi_vol[1]);
-
         if ( var.steps%10000 == 0 ) {
             if (!if_source[0] || (!if_source[0]) ) {
                 if (!if_source[0]) printf("    No source from 0");
@@ -1164,11 +1176,11 @@ namespace {
                     if (if_space_limited[i]) printf("   Space limited at %d\n",i);
                     if (if_slope_limited[i]) printf("   Slope limited at %d\n",i);
                     printf("    Side %d: Loc.: %8.2f km (%5d - %5d). Sediment: %8.2f m^2 (max: %8.2f) Loop: %5d\n",\
-                        i,coord[top_nodes[starts[i]]][0]/1000.,starts[i],ends[i],sedi_vol[i], max_sedi_vol,isedi[i]);
+                        i,coord[top_nodes[starts[i]]][0]/1000.,starts[i],ends[i],sedi_vol[i], max_sedi_vol,nsedi[i]);
                 }
             }
             if (if_space_limited[0] || if_space_limited[1])
-                printf("    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",isedi[0],isedi[1]);
+                printf("    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",nsedi[0],nsedi[1]);
         }
 
 //******************************************************************
@@ -1230,8 +1242,8 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             // std::cout << n << "  dh:  " << dh << '\n';
         }
         std::cout << "max erosion / sedimentation rate (mm/yr):  "
-                    << min_dh / var.dt * 1000 * YEAR2SEC << " / "
-                    << max_dh / var.dt * 1000 * YEAR2SEC << '\n';
+                    << min_dh / var.dt * 1000. * YEAR2SEC << " / "
+                    << max_dh / var.dt * 1000. * YEAR2SEC << '\n';
     }
 
     // go through all surface nodes and abject all surface node by dh
