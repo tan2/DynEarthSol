@@ -201,8 +201,10 @@ struct Mat {
     int phase_change_option;
     int nmat;
     int mattype_mantle;
+    int mattype_depleted_mantle;
     int mattype_crust;
     int mattype_sed;
+    int mattype_oceanic_crust;
     bool is_plane_strain;
     double visc_min;
     double visc_max;

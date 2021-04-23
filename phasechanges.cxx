@@ -171,6 +171,58 @@ namespace {
         }
     };
 
+    // A template to phase change function
+    class SimpleRifting : public PhaseChange
+    {
+        // mattype --> lithology
+        enum {
+            mt_mantle = 0,
+//            mt_serpentinized_mantle = 1,
+//            mt_oceanic_crust = 4,
+//            mt_eclogite = 3,
+//            mt_sediment = 4,
+//            mt_schist = 5,
+//            mt_upper_continental_crust = 6,
+//            mt_lower_continental_crust = 7,
+        };
+    public:
+        SimpleRifting(const Param& param, const Variables& var, const MarkerSet& ms) :
+            PhaseChange(param, var, ms)
+        {}
+
+        int operator()(int m)
+        {
+            double Z, P, T;
+            get_ZPT(m, Z, P, T);
+
+            int current_mt = ms.get_mattype(m);
+            // Set new mattype the same as current mattype for now
+            int new_mt = current_mt;
+
+            switch (current_mt) {
+            case mt_mantle:
+                {
+                    // temperature (C) and depth (m) of 10% partial melting of upper mantle.
+//                    const double min_partial_melt_temp = 873; // 273 + 600
+                    // thickness of new crust
+//                    const double new_crust_thickness = -7.e3;
+//                    const int el = ms.get_elem(m);
+//                    if (T >= min_partial_melt_temp && Z >= new_crust_thickness) {
+//                        new_mt = param.mat.mattype_oceanic_crust;
+//                    }
+                    // Hirschmann, 2000  https://doi.org/10.1029/2000GC000070
+                    // Assumeing solidus is a line between (0 GPa, 1120 C) - (7 GPa, 1800 C)
+                    //                                                    adibatic  themral gradient 0.3 C/km
+                    if ( T >= ((1120 + (680./7.e9)*P) + 273. - Z*3.e-4)) {
+                        new_mt = param.mat.mattype_depleted_mantle;
+                    }
+                }
+                break;
+        }
+
+        return new_mt;
+        }
+    };
 
     // A template to phase change function
     class Custom_PhCh : public PhaseChange
@@ -216,6 +268,9 @@ void phase_changes_init(const Param& param, Variables& var)
         phch = new SimpleSubduction(param, var, ms,
                                     *var.markersets[var.hydrous_marker_index],
                                     *var.hydrous_elemmarkers);
+        break;
+    case 2:
+        phch = new SimpleRifting(param, var, ms);
         break;
     case 101:
         phch = new Custom_PhCh(param, var, ms);

@@ -444,13 +444,18 @@ static void declare_parameters(po::options_description &cfg,
          "What kind of phase changes?\n"
          "0: no phase changes.\n"
          "1: simple rules of subduction-related phase changes. See SimpleSubduction class in phasechanges.cxx for more details.\n"
+         "2: simple rules of middle ocean ridge formation. See SimpleRifting class in phasechanges.cxx for more details.\n"
          "101: custom phase changes.")
         ("mat.num_materials", po::value<int>(&p.mat.nmat)->default_value(1),
          "Number of material types")
         ("mat.mattype_mantle", po::value<int>(&p.mat.mattype_mantle)->default_value(0),
          "Index of mantle material. For continental thermal gradient")
+        ("mat.mattype_depleted_mantle", po::value<int>(&p.mat.mattype_depleted_mantle)->default_value(0),
+         "Index of depleted mantle material. For phase change of middle ocean ridge")
         ("mat.mattype_crust", po::value<int>(&p.mat.mattype_crust)->default_value(0),
          "Index of crust material.  For continental thermal gradient")
+        ("mat.mattype_oceanic_crust", po::value<int>(&p.mat.mattype_oceanic_crust)->default_value(0),
+         "Index of oceanic crust. For formation of middle ocean ridge in phasechanges.cxx")
         ("mat.mattype_sed", po::value<int>(&p.mat.mattype_sed)->default_value(0),
          "Index of sediment material. Should be the same as mattype['sediment'] in 2vtk.py for sediment time convertion")
         ("mat.max_viscosity", po::value<double>(&p.mat.visc_max)->default_value(1e24),
