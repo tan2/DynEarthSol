@@ -202,9 +202,12 @@ struct Mat {
     int nmat;
     int mattype_mantle;
     int mattype_depleted_mantle;
+    int mattype_partial_melting_mantle;
     int mattype_crust;
     int mattype_sed;
     int mattype_oceanic_crust;
+    double convert_rate_oceanic_crust;
+
     bool is_plane_strain;
     double visc_min;
     double visc_max;
@@ -288,6 +291,10 @@ struct SurfaceInfo {
     segment_t *elem_and_nodes;
     int_vec2D *node_and_nodes;
 
+    double_vec *dhacc_oc;
+    array_t *edhacc_oc;
+    segment_t *edhacc_ind_oc;
+
     std::vector<double_vec> *fcenters;
     std::vector<double_vec> *normals;
     std::vector<double_vec> *dips;
@@ -359,6 +366,7 @@ struct Variables {
 
     // For surface processes
     SurfaceInfo surfinfo;
+    int_vec melt_markers;
 
     array_t *vel, *force, *coord0;
     tensor_t *strain_rate, *strain, *stress;

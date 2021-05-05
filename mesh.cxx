@@ -1394,6 +1394,11 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
     delete surfinfo.arcelem_and_nodes_num;
     surfinfo.arcelem_and_nodes_num = new std::vector<int_map>(etop);
 
+    delete surfinfo.edhacc_oc;
+    surfinfo.edhacc_oc = new array_t(var.nelem);
+    delete surfinfo.edhacc_ind_oc;
+    surfinfo.edhacc_ind_oc = new segment_t(etop);
+
     for (size_t i=0; i<etop; i++) {
         auto j = var.bfacets[iboundz1][i];
         int e = j.first;
@@ -1438,9 +1443,12 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
             int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
             // pass dhacc to new edhacc of connected elements
             (*surfinfo.edhacc)[eg][ind] = (*surfinfo.dhacc)[n];
+            // oc
+            (*surfinfo.edhacc_oc)[eg][ind] = (*surfinfo.dhacc_oc)[n];
         }
     }
     std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
+    std::fill(surfinfo.dhacc_oc->begin(), surfinfo.dhacc_oc->end(), 0.);
 }
 
 void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& surfinfo)
@@ -1489,6 +1497,11 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.node_and_elems = new int_vec2D(ntop,int_vec());
     surfinfo.node_and_nodes = new int_vec2D(ntop,int_vec());
     surfinfo.arcelem_and_nodes_num = new std::vector<int_map>(etop);
+
+    surfinfo.dhacc_oc = new double_vec(var.nnode,0);
+    surfinfo.edhacc_oc = new array_t(var.nelem);
+    surfinfo.edhacc_ind_oc = new segment_t(etop);
+
 
     for (size_t i=0; i<etop; i++) {
         auto j = var.bfacets[iboundz1][i];

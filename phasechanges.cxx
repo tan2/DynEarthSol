@@ -174,53 +174,58 @@ namespace {
     // A template to phase change function
     class SimpleRifting : public PhaseChange
     {
-        // mattype --> lithology
+        int_vec& melt_markers;
+
         enum {
-            mt_mantle = 0,
-//            mt_serpentinized_mantle = 1,
-//            mt_oceanic_crust = 4,
-//            mt_eclogite = 3,
-//            mt_sediment = 4,
-//            mt_schist = 5,
-//            mt_upper_continental_crust = 6,
-//            mt_lower_continental_crust = 7,
+//            mt_mantle = 0,
         };
     public:
-        SimpleRifting(const Param& param, const Variables& var, const MarkerSet& ms) :
-            PhaseChange(param, var, ms)
-        {}
+        SimpleRifting(const Param& param, const Variables& var, const MarkerSet& ms, int_vec& melt_markers_) :
+            PhaseChange(param, var, ms), melt_markers(melt_markers_)
+        {
+            melt_markers.reserve(200);
+        }
 
         int operator()(int m)
         {
             double Z, P, T;
-            get_ZPT(m, Z, P, T);
 
             int current_mt = ms.get_mattype(m);
             // Set new mattype the same as current mattype for now
             int new_mt = current_mt;
 
-            switch (current_mt) {
-            case mt_mantle:
-                {
-                    // temperature (C) and depth (m) of 10% partial melting of upper mantle.
-//                    const double min_partial_melt_temp = 873; // 273 + 600
-                    // thickness of new crust
-//                    const double new_crust_thickness = -7.e3;
-//                    const int el = ms.get_elem(m);
-//                    if (T >= min_partial_melt_temp && Z >= new_crust_thickness) {
-//                        new_mt = param.mat.mattype_oceanic_crust;
-//                    }
-                    // Hirschmann, 2000  https://doi.org/10.1029/2000GC000070
-                    // Assumeing solidus is a line between (0 GPa, 1120 C) - (7 GPa, 1800 C)
-                    //                                                    adibatic  themral gradient 0.3 C/km
-                    if ( T >= ((1120 + (680./7.e9)*P) + 273. - Z*3.e-4)) {
-                        new_mt = param.mat.mattype_depleted_mantle;
-                    }
+            if (current_mt == param.mat.mattype_mantle) {
+                get_ZPT(m, Z, P, T);
+                if ( T >= ((1120 + (680./7.e9)*P) + 273. - Z*3.e-4)) {
+                    new_mt = param.mat.mattype_partial_melting_mantle;
+//                    melt_markers.push_back(m);
+                    printf("**Marker %d change from mantle to paritial melting\n", m);
                 }
-                break;
-        }
+            } else if (current_mt == param.mat.mattype_partial_melting_mantle) {
+                get_ZPT(m, Z, P, T);
+                if ( T < ((1120 + (680./7.e9)*P) + 273. - Z*3.e-4)) {
+                    new_mt = param.mat.mattype_depleted_mantle;
 
-        return new_mt;
+//                    size_t nm = melt_markers.size();
+//                    int found = 0;
+//                    for (size_t i=0; i<nm; i++) {
+//                        if(melt_markers[i] == m) {
+//                            for(size_t j=i; j<(nm-1); j++)
+//                                melt_markers[j] = melt_markers[j+1];
+//                            found++;
+//                            i--;
+//                            nm--;
+//                        }
+//                    }
+//                    if(found==0)
+//                        std::cout<<"\nElement doesn't found in the Array!";
+//                    else
+//                        std::cout<<"\nElement Deleted Successfully!";
+//                    std::cout<<std::endl;
+                    printf("**Marker %d change from paritial melting to depleted\n", m);
+                }
+            }
+            return new_mt;
         }
     };
 
@@ -270,7 +275,7 @@ void phase_changes_init(const Param& param, Variables& var)
                                     *var.hydrous_elemmarkers);
         break;
     case 2:
-        phch = new SimpleRifting(param, var, ms);
+        phch = new SimpleRifting(param, var, ms, var.melt_markers);
         break;
     case 101:
         phch = new Custom_PhCh(param, var, ms);

@@ -452,6 +452,8 @@ static void declare_parameters(po::options_description &cfg,
          "Index of mantle material. For continental thermal gradient")
         ("mat.mattype_depleted_mantle", po::value<int>(&p.mat.mattype_depleted_mantle)->default_value(0),
          "Index of depleted mantle material. For phase change of middle ocean ridge")
+        ("mat.mattype_partial_melting_mantle", po::value<int>(&p.mat.mattype_partial_melting_mantle)->default_value(0),
+         "Index of parital melting mantle material. For phase change of middle ocean ridge")
         ("mat.mattype_crust", po::value<int>(&p.mat.mattype_crust)->default_value(0),
          "Index of crust material.  For continental thermal gradient")
         ("mat.mattype_oceanic_crust", po::value<int>(&p.mat.mattype_oceanic_crust)->default_value(0),
@@ -466,6 +468,9 @@ static void declare_parameters(po::options_description &cfg,
          "Max. value of tensile stress (in Pa)")
         ("mat.max_thermal_diffusivity", po::value<double>(&p.mat.therm_diff_max)->default_value(5e-6),
          "Max. value of thermal diffusivity (in m^2/s)")
+        ("mat.convert_rate_oceanic_crust", po::value<double>(&p.mat.convert_rate_oceanic_crust)->default_value(1.e-13),
+         "Converting rate from melting to oceanic crust. For formation of middle ocean ridge in bc.cxx")
+
 
         // these parameters need to parsed later
         ("mat.rho0", po::value<std::string>()->default_value("[3210]"),

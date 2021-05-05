@@ -1193,9 +1193,112 @@ namespace {
             if (top_depth[i] > 0.) dh[i] += ddh;
     }
 
+    void simple_igneous(const Param& param,const Variables& var, double_vec& dh_oc, bool& has_partial_melting) {
+#ifdef THREED
+        // not ready for 3D
+        std::cout << "3D deposition of igneous processes is not ready yet.";
+        exit(168);
+#endif
+        const array_t& coord = *var.coord;
+        const SurfaceInfo& surfinfo = var.surfinfo;
+        const int_vec& top_nodes = *surfinfo.top_nodes;
+        const std::size_t ntop = top_nodes.size();
+        int_vec melting_marker;
+
+        int nmarkers = var.markersets[0]->get_nmarkers();
+
+        has_partial_melting = var.markersets[0]->if_melt(param.mat.mattype_partial_melting_mantle);
+
+        if (!has_partial_melting) return;
+
+        double_vec top_base(ntop,0.);
+        double_vec top_depth(ntop,0.);
+
+        get_surface_info(var,top_base,top_depth);
+
+        double_vec melting_depth_elem(ntop,-101.e3);
+        double_vec melting_depth(ntop, 0);
+
+        for (int i=0;i<nmarkers;i++) {
+            int m = var.markersets[0]->get_mattype(i);
+
+            if (m == param.mat.mattype_partial_melting_mantle) {
+                melting_marker.push_back(i); 
+
+                int e = var.markersets[0]->get_elem(i);
+                double vol = (*var.volume)[e];
+                int num_markers_in_elem = 0;
+
+                for( int k = 0; k < param.mat.nmat; k++ )
+                    num_markers_in_elem += (*var.elemmarkers)[e][k];
+
+                double x[NDIMS] = {0};
+                for (int j = 0; j < NDIMS; j++) {
+                    for (int k = 0; k < NODES_PER_ELEM; k++)
+                        x[j] += var.markersets[0]->get_eta(i)[k]*
+                            (*var.coord)[ (*var.connectivity)[e][k] ][j];
+                }
+
+                // search top element node for melting marker
+                for (int j=1; j<ntop;j++) {
+                    double dx0 = x[0] - coord[top_nodes[j-1]][0];
+                    double dx1 = x[0] - coord[top_nodes[j]][0];
+                    if (dx0*dx1 >= 0) continue;
+
+                    double ratio = dx0/(dx0-dx1);
+                    double dvol = param.mat.convert_rate_oceanic_crust * vol / num_markers_in_elem * var.dt;// * param.mesh.quality_check_step_interval;
+
+                    dh_oc[j-1] += ratio * dvol / top_base[j-1];
+                    dh_oc[j] += (1.-ratio) * dvol / top_base[j];
+                    // find the melting tops on each element facet
+                    if (melting_depth_elem[j-1] < x[NDIMS-1] ) {
+                        melting_depth_elem[j-1] = x[NDIMS-1];
+                    }
+                }
+            }
+        }
+        if (melting_marker.size() == 0)
+            return;
+        // find the depth of melting top of node
+        for (int i=1;i<ntop-1;i++) {
+            if (melting_depth_elem[i-1] < -100.e3 && melting_depth_elem[i] < -100.e3) continue;
+            if (melting_depth_elem[i-1] < -100.e3)
+                melting_depth[i] = melting_depth_elem[i];
+            else if (melting_depth_elem[i] < -100.e3)
+                melting_depth[i] = melting_depth_elem[i-1];
+            else
+                melting_depth[i] = 0.5 * ( melting_depth_elem[i-1] + melting_depth_elem[i] );
+        }
+        // find the max depth of melting top
+        double max_dp = 0.;
+        for (int i=0;i<ntop;i++)
+            max_dp = std::min(max_dp, melting_depth[i]);
+        // normalizing the depth of melting
+        for (int i=0;i<ntop;i++) {
+            if (melting_depth[i] == 0.)
+                melting_depth[i] = max_dp;
+            melting_depth_elem[i] = melting_depth[i] / max_dp;
+        }
+        // smoothing the depth of melting
+        for (int i=1;i<ntop-1;i++)
+            melting_depth[i] = (melting_depth_elem[i-1] + melting_depth_elem[i] + melting_depth_elem[i+1])/3.;
+        melting_depth[0] = melting_depth[1];
+        melting_depth[ntop-1] = melting_depth[ntop-2];
+        for (int i=0;i<ntop;i++)
+            dh_oc[i] = dh_oc[i] / melting_depth[i];
+        if (var.steps % param.mesh.quality_check_step_interval == 0)
+            if (melting_marker.size() > 0) {
+                for (int i=0;i<ntop;i++)
+                    if (dh_oc[i] > 0) {
+                        double coef = dh_oc[i]/ var.dt * 1000. * YEAR2SEC; // / param.mesh.quality_check_step_interval ;
+                        printf("%d x: %f dh_oc: %f (mm/yr) depth: %f\n",i, coord[top_nodes[i]][0],coef, melting_depth[i]);
+                    }
+            }
+    }
 }
 
-void correct_surface_element(const Variables& var, const int mattype_sed, double_vec& plstrain)
+
+void correct_surface_element(const Param &param, const Variables& var, double_vec& plstrain)
 {
     double half_life = 1.e2 * YEAR2SEC;
     double lambha = 0.69314718056 / half_life; // ln2
@@ -1203,8 +1306,8 @@ void correct_surface_element(const Variables& var, const int mattype_sed, double
         // Find the most abundant marker mattype in this element
         int_vec &a = (*var.elemmarkers)[*e];
         int mat = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
-//        if (mat == mattype_sed)
-        plstrain[*e] -= plstrain[*e] * lambha * var.dt;
+        if (mat != param.mat.mattype_oceanic_crust)
+            plstrain[*e] -= plstrain[*e] * lambha * var.dt;
     }
 }
 
@@ -1213,7 +1316,9 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                        SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
 {
     int ntop = surfinfo.top_nodes->size();
-    double_vec dh(ntop,0.);
+    double_vec dh(ntop,0.), dh_oc(ntop,0.);
+    const int slow_updates_interval = 10;
+    bool has_partial_melting = false;
     
     switch (param.control.surface_process_option) {
     case 0:
@@ -1227,55 +1332,103 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         break;
     case 102:
         simple_diffusion(var, dh);
-        simple_deposition(param, var, dh);
+        if (var.steps != 0) {
+            simple_deposition(param, var, dh);
+//        if (var.steps % param.mesh.quality_check_step_interval == 0)
+            simple_igneous(param,var, dh_oc, has_partial_melting);
+        }
         break;
     default:
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
         std::exit(1);
     }
 
-    if ( var.steps%10000 == 0 ) {
-        double max_dh = 0., min_dh = 0.;
+    if ( var.steps%10000 == 0 &&  var.steps != 0  ) {
+        double max_dh = 0., min_dh = 0., max_dh_oc = 0.;
         for (int i=0;i<ntop;i++) {
             max_dh = std::max(max_dh, dh[i]);
             min_dh = std::min(min_dh, dh[i]);
             // std::cout << n << "  dh:  " << dh << '\n';
         }
+        for (int i=0;i<ntop;i++)
+            max_dh_oc = std::max(max_dh_oc, dh_oc[i]);
+
         std::cout << "max erosion / sedimentation rate (mm/yr):  "
                     << min_dh / var.dt * 1000. * YEAR2SEC << " / "
                     << max_dh / var.dt * 1000. * YEAR2SEC << '\n';
+        std::cout << "max igneous eruption rate (mm/yr):  "
+                    << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
     }
 
     // go through all surface nodes and abject all surface node by dh
     for (int i=0; i<ntop; i++) {
         // get global index of node
-        int n = (*surfinfo.top_nodes)[i];
         // update coordinate via dh
-        (coord)[n][NDIMS-1] += dh[i];
         // update dhacc for marker correction
+        int n = (*surfinfo.top_nodes)[i];
+        (coord)[n][NDIMS-1] += dh[i];
         (*surfinfo.dhacc)[n] += dh[i];
 
         // go through connected elements
+        // get local index of surface element
+        // get global index of element
+        // get local index of node in connected element
+        // update edhacc of connected elements
         for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
-            // get local index of surface element
             int e = (*surfinfo.node_and_elems)[i][j];
-            // get global index of element
             int eg = (*surfinfo.top_facet_elems)[e];
-            // get local index of node in connected element
             int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
-            // update edhacc of connected elements
             (*surfinfo.edhacc)[eg][ind] += dh[i];
         }
     }
-
-    if (!(var.steps % param.mesh.quality_check_step_interval)) {
-        // correct the plastic strain of urface element for preventing surface landslide.
-        correct_surface_element(var,param.mat.mattype_sed,plstrain);
-        // correct surface marker.
-        markersets[0]->correct_surface_marker(var);
-        std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
-        // set marker of sediment.
-        markersets[0]->set_sediment_marker(var,param.mat.mattype_sed,*surfinfo.edhacc,elemmarkers,plstrain);
-
+    if (var.steps != 0) {
+        if ( var.steps % param.mesh.quality_check_step_interval == 0) {
+            // correct surface marker.
+            markersets[0]->correct_surface_marker(var, *surfinfo.dhacc);
+            std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
+            // set marker of sediment.
+            markersets[0]->set_sediment_marker(var,param.mat.mattype_sed,*surfinfo.edhacc,elemmarkers,plstrain);
+        }
     }
+
+    if ( has_partial_melting ) {
+        // go through all surface nodes and abject all surface node by dh_oc
+        for (int i=0; i<ntop; i++) {
+            // get global index of node
+            // update coordinate via dh_oc
+            // update dhacc_oc for marker correction
+            int n = (*surfinfo.top_nodes)[i];
+            (coord)[n][NDIMS-1] += dh_oc[i];
+            (*surfinfo.dhacc_oc)[n] += dh_oc[i];
+
+            // go through connected elements
+            // get local index of surface element
+            // get global index of element
+            // get local index of node in connected element
+            // update edhacc_oc of connected elements
+            for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+                int e = (*surfinfo.node_and_elems)[i][j];
+                int eg = (*surfinfo.top_facet_elems)[e];
+                int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
+                (*surfinfo.edhacc_oc)[eg][ind] += dh_oc[i];
+            }
+        }
+    }
+
+    if ( has_partial_melting ) {
+        if (!(var.steps % param.mesh.quality_check_step_interval)) {
+            // correct surface marker.
+            markersets[0]->correct_surface_marker(var, *surfinfo.dhacc_oc);
+            std::fill(surfinfo.dhacc_oc->begin(), surfinfo.dhacc_oc->end(), 0.);
+            // set marker of sediment.
+            markersets[0]->set_sediment_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers,plstrain);
+        }
+    }
+
+    if (!(var.steps % param.mesh.quality_check_step_interval &&  var.steps != 0))
+        // correct the plastic strain of urface element for preventing surface landslide.
+        correct_surface_element(param,var,plstrain);
+
+
+
 }

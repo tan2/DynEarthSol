@@ -207,8 +207,10 @@ void prepare_dhacc(SurfaceInfo &surfinfo)
             int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
             // update edhacc of connected elements
             (*surfinfo.dhacc)[n] += (*surfinfo.edhacc)[eg][ind];
+            (*surfinfo.dhacc_oc)[n] += (*surfinfo.edhacc_oc)[eg][ind];
         }
         (*surfinfo.dhacc)[n] /= (*surfinfo.node_and_elems)[i].size();
+        (*surfinfo.dhacc_oc)[n] /= (*surfinfo.node_and_elems)[i].size();
     }
 
 }
@@ -233,6 +235,11 @@ void barycentric_node_interpolation(Variables &var,
     interpolate_field(brc, el, old_connectivity, *var.surfinfo.dhacc, *a);
     delete var.surfinfo.dhacc;
     var.surfinfo.dhacc = a;
+
+    a = new double_vec(var.nnode);
+    interpolate_field(brc, el, old_connectivity, *var.surfinfo.dhacc_oc, *a);
+    delete var.surfinfo.dhacc_oc;
+    var.surfinfo.dhacc_oc = a;
 
     array_t *b = new array_t(var.nnode);
     interpolate_field(brc, el, old_connectivity, *var.vel, *b);

@@ -26,7 +26,8 @@ public:
 
     static void random_eta( double* ); // class method
     void find_marker_in_elem(Variables& var);
-    void correct_surface_marker(const Variables& var);
+    void create_melt_markers(const int mat, int_vec& melt_markers);
+    void correct_surface_marker(const Variables& var, const double_vec& dhacc);
     void set_sediment_marker(const Variables& var, const int mattype_sed, array_t& edhacc, int_vec2D& elemmarkers, double_vec& plstrain);
     void remap_marker(const Variables &var, const double *m_coord, const int e, int &new_elem, double *new_eta, int &inc);
     void append_random_marker_in_elem( int el, int mt, double time);
@@ -39,6 +40,8 @@ public:
 
     inline int get_nmarkers() const { return _nmarkers; }
     inline void set_nmarkers(int n) { _nmarkers = n; }
+
+    inline bool if_melt(const int mat) const { return (std::find((*_mattype).begin(), (*_mattype).end(), mat) != (*_mattype).end()); }
 
     inline int get_id(int m) const { return (*_id)[m]; }
     inline void set_id(const int m, const int i) { (*_id)[m] = i; }
