@@ -79,7 +79,7 @@ void init(const Param& param, Variables& var)
     create_markers(param, var);
 
     allocate_variables(param, var);
-    var.markersets[0]->find_marker_in_elem(var);
+    var.markersets[0]->create_marker_in_elem(var);
 //    var.markersets[0]->create_melt_markers(param.mat.mattype_partial_melting_mantle,var.melt_markers);
 
     create_top_elems(var);
@@ -185,7 +185,7 @@ void restart(const Param& param, Variables& var)
     allocate_variables(param, var);
 
     create_top_elems(var);
-    var.markersets[0]->find_marker_in_elem(var);
+    var.markersets[0]->create_marker_in_elem(var);
 //    var.markersets[0]->create_melt_markers(param.mat.mattype_partial_melting_mantle,var.melt_markers);
     create_surface_info(param,var,var.surfinfo);
 
@@ -233,7 +233,7 @@ void update_mesh(const Param& param, Variables& var)
 {
     update_coordinate(var, *var.coord);
     surface_processes(param, var, *var.coord, *var.plstrain, var.surfinfo, var.markersets, *var.elemmarkers);
-    var.markersets[0]->find_marker_in_elem(var);
+    var.markersets[0]->update_marker_in_elem(var);
 //    var.markersets[0]->create_melt_markers(param.mat.mattype_partial_melting_mantle,var.melt_markers);
 
 

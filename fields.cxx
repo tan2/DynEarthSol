@@ -27,8 +27,8 @@ void allocate_variables(const Param &param, Variables& var)
     {
         // these fields are reallocated during remeshing interpolation
         var.temperature = new double_vec(n);
-        var.surfinfo.edhacc = new array_t(e);
-        var.surfinfo.edhacc_oc = new array_t(e);
+//        var.surfinfo.edhacc = new array_t(e);
+//        var.surfinfo.edhacc_oc = new array_t(e);
         var.coord0 = new array_t(n);
         var.plstrain = new double_vec(e);
         var.delta_plstrain = new double_vec(e);
@@ -73,6 +73,9 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.edvoldt;
     var.edvoldt = new double_vec(e);
+
+//    delete var.marker_in_elem;
+//    var.marker_in_elem = new int_vec2D(e);
 
     delete var.ntmp;
     var.ntmp = new double_vec(n);

@@ -1318,11 +1318,11 @@ void create_top_elems(Variables& var)
 
     for (size_t i=0;i<ntop;i++)
         top_ind[i] = i;
-    sort(top_ind.begin(), top_ind.end(),
-        [&](const int& a, const int& b) {
+
+    sort(top_ind.begin(), top_ind.end(), [&](const int& a, const int& b) {
             return ((*var.coord)[top_tmp[a]][0] < (*var.coord)[top_tmp[b]][0]);
-        }
-    );
+    });
+
     for (size_t i=0;i<ntop;i++)
         top_nodes[i] = top_tmp[top_ind[i]];
             

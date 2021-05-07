@@ -136,7 +136,24 @@ void MarkerSet::append_marker( const double *eta, int el, int mt , double ti)
     ++_last_id;
 }
 
-void MarkerSet::find_marker_in_elem(Variables& var)
+void MarkerSet::create_marker_in_elem(Variables& var)
+{
+
+    for (int i=0; i<_nmarkers; ++i)
+        (*var.marker_in_elem)[(*_elem)[i]].push_back(i);
+
+    if (DEBUG) {
+        std::cout << "Markers in elements";
+        for (int i=0; i<var.nelem; i++) {
+            std::cout <<"Element: "<< i  << "\n" << "Markers: ";
+            for (size_t j=0; j<(*var.marker_in_elem)[i].size();j++)
+                std::cout << (*var.marker_in_elem)[i][j] << " ";
+            std::cout << "\n";
+        }
+    }
+}
+
+void MarkerSet::update_marker_in_elem(Variables& var)
 {
     delete var.marker_in_elem;
     var.marker_in_elem = new int_vec2D(var.nelem);
@@ -147,10 +164,10 @@ void MarkerSet::find_marker_in_elem(Variables& var)
     if (DEBUG) {
         std::cout << "Markers in elements";
         for (int i=0; i<var.nelem; i++) {
-            std::cout <<"Element: "<< i  << "\n" << "Markers: "; 
+            std::cout <<"Element: "<< i  << "\n" << "Markers: ";
             for (size_t j=0; j<(*var.marker_in_elem)[i].size();j++)
                 std::cout << (*var.marker_in_elem)[i][j] << " ";
-            std::cout << "\n"; 
+            std::cout << "\n";
         }
     }
 }
