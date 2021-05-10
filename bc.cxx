@@ -882,7 +882,6 @@ namespace {
         printf(" (ntop: %d)\n",data_num);
     }
 
-
     void get_basin_info(const Variables& var, double_vec& top_depth, \
         std::vector<bool>& if_source, int_vec& if_land,\
         int_vec& starts, int_vec& ends, double_vec& dhacc_tmp) {
@@ -993,7 +992,6 @@ namespace {
             if_source[1] = false;
 
     }
-
 
     void simple_deposition(const Param& param,const Variables& var, double_vec& dh) {
 
@@ -1346,13 +1344,14 @@ void correct_surface_element(const Variables& var, const double_vec& dhacc, Mark
 
         double rdv = dArea1 / dArea0;
 
-        plstrain[*e] /= rdv;
-        for (int i=0;i<NSTR;i++) {
-            stress[*e][i] /= rdv;
-            strain[*e][i] /= rdv;
-            strain_rate[*e][i] /= rdv;
+        if (rdv > 1.) {
+            plstrain[*e] /= rdv;
+            for (int i=0;i<NSTR;i++) {
+                stress[*e][i] /= rdv;
+                strain[*e][i] /= rdv;
+                strain_rate[*e][i] /= rdv;
+            }
         }
-
         ms.correct_surface_marker(var, markers, *e, coord0, coord1, delete_marker);
     }
 
@@ -1361,7 +1360,6 @@ void correct_surface_element(const Variables& var, const double_vec& dhacc, Mark
             ms.remove_marker(*m);
 
 }
-
 
 void surface_processes(const Param& param, const Variables& var, array_t& coord, tensor_t& stress, tensor_t& strain, \
                        tensor_t& strain_rate, double_vec& plstrain, SurfaceInfo& surfinfo, \
