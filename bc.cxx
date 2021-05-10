@@ -893,6 +893,8 @@ namespace {
         const std::size_t ntop = top_nodes.size();
         int_vec left_mouse, right_mouse;
         int_vec starts0(2,0);
+        left_mouse.reserve(4);
+        right_mouse.reserve(4);
 
         starts0[0] = starts[0];
         starts0[1] = starts[1];
@@ -1298,7 +1300,7 @@ namespace {
 }
 
 
-void correct_surface_element(const Param &param, const Variables& var, double_vec& plstrain)
+void surface_plstrain_diffusion(const Param &param, const Variables& var, double_vec& plstrain)
 {
     double half_life = 1.e2 * YEAR2SEC;
     double lambha = 0.69314718056 / half_life; // ln2
@@ -1311,9 +1313,59 @@ void correct_surface_element(const Param &param, const Variables& var, double_ve
     }
 }
 
+void correct_surface_element(const Variables& var, const double_vec& dhacc, MarkerSet& ms, \
+                              tensor_t& stress, tensor_t& strain, tensor_t& strain_rate, double_vec& plstrain)
+{
+    int_vec delete_marker;
+    delete_marker.reserve(100);
 
-void surface_processes(const Param& param, const Variables& var, array_t& coord,  double_vec& plstrain, \
-                       SurfaceInfo& surfinfo, std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
+    // go through all surface connected elements
+    for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
+        double m_coord[NDIMS], new_eta[NDIMS], b[NODES_PER_ELEM][NDIMS];
+        int_vec& markers = (*var.marker_in_elem)[*e];
+        int* tnodes = (*var.connectivity)[*e];
+        const double *coord0[NODES_PER_ELEM], *coord1[NODES_PER_ELEM];
+
+        // restore the reference node locations before deposition/erosion 
+        for (int j=0; j<NODES_PER_ELEM;j++) {
+            for (size_t k=0; k<NDIMS-1; k++)
+                b[j][k] = (*var.coord)[tnodes[j]][k];
+            b[j][NDIMS-1] = (*var.coord)[tnodes[j]][NDIMS-1] - dhacc[tnodes[j]];
+            coord0[j] = b[j];
+            coord1[j] = (*var.coord)[tnodes[j]];
+        }
+        
+        // correct stress and strain
+        double dArea0 = ((coord0[1][0] - coord0[0][0])*(coord0[2][1] - coord0[0][1]) \
+                       - (coord0[2][0] - coord0[0][0])*(coord0[1][1] - coord0[0][1]))/2.0;
+        dArea0 = (dArea0 > 0.0) ? dArea0 : -dArea0;
+
+        double dArea1 = ((coord1[1][0] - coord1[0][0])*(coord1[2][1] - coord1[0][1]) \
+                       - (coord1[2][0] - coord1[0][0])*(coord1[1][1] - coord1[0][1]))/2.0;
+        dArea1 = (dArea1 > 0.0) ? dArea1 : -dArea1;
+
+        double rdv = dArea1 / dArea0;
+
+        plstrain[*e] /= rdv;
+        for (int i=0;i<NSTR;i++) {
+            stress[*e][i] /= rdv;
+            strain[*e][i] /= rdv;
+            strain_rate[*e][i] /= rdv;
+        }
+
+        ms.correct_surface_marker(var, markers, *e, coord0, coord1, delete_marker);
+    }
+
+    // delete recorded marker
+    for (auto m=delete_marker.begin(); m<delete_marker.end(); m++)
+            ms.remove_marker(*m);
+
+}
+
+
+void surface_processes(const Param& param, const Variables& var, array_t& coord, tensor_t& stress, tensor_t& strain, \
+                       tensor_t& strain_rate, double_vec& plstrain, SurfaceInfo& surfinfo, \
+                        std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
 {
     int ntop = surfinfo.top_nodes->size();
     double_vec dh(ntop,0.), dh_oc(ntop,0.);
@@ -1332,32 +1384,12 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         break;
     case 102:
         simple_diffusion(var, dh);
-        if (var.steps != 0) {
+        if (var.steps != 0)
             simple_deposition(param, var, dh);
-//        if (var.steps % param.mesh.quality_check_step_interval == 0)
-            simple_igneous(param,var, dh_oc, has_partial_melting);
-        }
         break;
     default:
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
         std::exit(1);
-    }
-
-    if ( var.steps%10000 == 0 &&  var.steps != 0  ) {
-        double max_dh = 0., min_dh = 0., max_dh_oc = 0.;
-        for (int i=0;i<ntop;i++) {
-            max_dh = std::max(max_dh, dh[i]);
-            min_dh = std::min(min_dh, dh[i]);
-            // std::cout << n << "  dh:  " << dh << '\n';
-        }
-        for (int i=0;i<ntop;i++)
-            max_dh_oc = std::max(max_dh_oc, dh_oc[i]);
-
-        std::cout << "max erosion / sedimentation rate (mm/yr):  "
-                    << min_dh / var.dt * 1000. * YEAR2SEC << " / "
-                    << max_dh / var.dt * 1000. * YEAR2SEC << '\n';
-        std::cout << "max igneous eruption rate (mm/yr):  "
-                    << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
     }
 
     // go through all surface nodes and abject all surface node by dh
@@ -1384,51 +1416,69 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
     if (var.steps != 0) {
         if ( var.steps % param.mesh.quality_check_step_interval == 0) {
             // correct surface marker.
-            markersets[0]->correct_surface_marker(var, *surfinfo.dhacc);
+//            markersets[0]->correct_surface_marker(var, *surfinfo.dhacc, plstrain, strain);
+            correct_surface_element(var, *surfinfo.dhacc, *markersets[0], stress, strain, strain_rate, plstrain);
             std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
             // set marker of sediment.
-            markersets[0]->set_sediment_marker(var,param.mat.mattype_sed,*surfinfo.edhacc,elemmarkers,plstrain);
+            markersets[0]->set_surface_marker(var,param.mat.mattype_sed,*surfinfo.edhacc,elemmarkers);
         }
     }
 
-    if ( has_partial_melting ) {
-        // go through all surface nodes and abject all surface node by dh_oc
-        for (int i=0; i<ntop; i++) {
-            // get global index of node
-            // update coordinate via dh_oc
-            // update dhacc_oc for marker correction
-            int n = (*surfinfo.top_nodes)[i];
-            (coord)[n][NDIMS-1] += dh_oc[i];
-            (*surfinfo.dhacc_oc)[n] += dh_oc[i];
+    if ( param.mat.phase_change_option == 2) {
 
-            // go through connected elements
-            // get local index of surface element
-            // get global index of element
-            // get local index of node in connected element
-            // update edhacc_oc of connected elements
-            for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
-                int e = (*surfinfo.node_and_elems)[i][j];
-                int eg = (*surfinfo.top_facet_elems)[e];
-                int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
-                (*surfinfo.edhacc_oc)[eg][ind] += dh_oc[i];
+        simple_igneous(param,var, dh_oc, has_partial_melting);
+
+        if ( has_partial_melting ) {
+            // go through all surface nodes and abject all surface node by dh_oc
+            // as same as dh
+            for (int i=0; i<ntop; i++) {
+                int n = (*surfinfo.top_nodes)[i];
+                (coord)[n][NDIMS-1] += dh_oc[i];
+                (*surfinfo.dhacc_oc)[n] += dh_oc[i];
+
+                for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+                    int e = (*surfinfo.node_and_elems)[i][j];
+                    int eg = (*surfinfo.top_facet_elems)[e];
+                    int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
+                    (*surfinfo.edhacc_oc)[eg][ind] += dh_oc[i];
+                }
+            }
+
+            if (!(var.steps % param.mesh.quality_check_step_interval)) {
+                // correct surface marker.
+//                markersets[0]->correct_surface_marker(var, *surfinfo.dhacc_oc, plstrain, strain);
+                correct_surface_element(var, *surfinfo.dhacc_oc, *markersets[0], stress, strain, strain_rate, plstrain);
+                std::fill(surfinfo.dhacc_oc->begin(), surfinfo.dhacc_oc->end(), 0.);
+                // set marker of sediment.
+                markersets[0]->set_surface_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers);
             }
         }
-    }
 
-    if ( has_partial_melting ) {
-        if (!(var.steps % param.mesh.quality_check_step_interval)) {
-            // correct surface marker.
-            markersets[0]->correct_surface_marker(var, *surfinfo.dhacc_oc);
-            std::fill(surfinfo.dhacc_oc->begin(), surfinfo.dhacc_oc->end(), 0.);
-            // set marker of sediment.
-            markersets[0]->set_sediment_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers,plstrain);
-        }
     }
 
     if (!(var.steps % param.mesh.quality_check_step_interval &&  var.steps != 0))
         // correct the plastic strain of urface element for preventing surface landslide.
-        correct_surface_element(param,var,plstrain);
+        surface_plstrain_diffusion(param,var,plstrain);
 
+    if ( var.steps%10000 == 0 &&  var.steps != 0  ) {
+        double max_dh = 0., min_dh = 0., max_dh_oc = 0.;
+        for (int i=0;i<ntop;i++) {
+            max_dh = std::max(max_dh, dh[i]);
+            min_dh = std::min(min_dh, dh[i]);
+            // std::cout << n << "  dh:  " << dh << '\n';
+        }
+
+        std::cout << "max erosion / sedimentation rate (mm/yr):  "
+                    << min_dh / var.dt * 1000. * YEAR2SEC << " / "
+                    << max_dh / var.dt * 1000. * YEAR2SEC << '\n';
+
+        if ( param.mat.phase_change_option == 2) {
+            for (int i=0;i<ntop;i++)
+                max_dh_oc = std::max(max_dh_oc, dh_oc[i]);
+            std::cout << "max igneous eruption rate (mm/yr):  "
+                        << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
+        }
+    }
 
 
 }

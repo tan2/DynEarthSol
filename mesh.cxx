@@ -1329,6 +1329,7 @@ void create_top_elems(Variables& var)
 
  
     int_vec telems;
+    telems.reserve(100);
     std::set<int> elem_set;
 
     //  get top elements

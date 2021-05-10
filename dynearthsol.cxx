@@ -232,7 +232,8 @@ void restart(const Param& param, Variables& var)
 void update_mesh(const Param& param, Variables& var)
 {
     update_coordinate(var, *var.coord);
-    surface_processes(param, var, *var.coord, *var.plstrain, var.surfinfo, var.markersets, *var.elemmarkers);
+    surface_processes(param, var, *var.coord, *var.stress, *var.strain, *var.strain_rate, \
+                      *var.plstrain, var.surfinfo, var.markersets, *var.elemmarkers);
     var.markersets[0]->update_marker_in_elem(var);
 //    var.markersets[0]->create_melt_markers(param.mat.mattype_partial_melting_mantle,var.melt_markers);
 
