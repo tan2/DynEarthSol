@@ -16,7 +16,10 @@ public:
     MarkerSet( const Param& param, Variables& var, const std::string& name );
     MarkerSet( const Param& param, Variables& var, BinaryInput& bin, const std::string& name );
     ~MarkerSet()
-    { 
+    {
+        delete _slope;
+        delete _distance;
+        delete _z;
         delete _time;
         delete _id;
         delete _eta; 
@@ -31,10 +34,10 @@ public:
 //    void correct_surface_marker(const Variables& var, const double_vec& dhacc, double_vec& plstrain, tensor_t& strain);
     void correct_surface_marker(const Variables& var, int_vec& markers, const int e,const double **coord0, \
                                 const double **coord1, int_vec& delete_marker);
-    void set_surface_marker(const Variables& var, const int mattype_sed, array_t& edhacc, int_vec2D& elemmarkers);
+    void set_surface_marker(const Variables& var, const int mattype_sed, array_t& edhacc, int_vec2D& elemmarkers, double_vec& src_locs, double_vec& src_abj);
     void remap_marker(const Variables &var, const double *m_coord, const int e, int &new_elem, double *new_eta, int &inc);
-    void append_random_marker_in_elem( int el, int mt, double time);
-    void append_marker( const double *eta, int el, int mt, double time);
+    void append_random_marker_in_elem( int el, int mt);
+    void append_marker( const double *eta, int el, int mt, double time, double z, double distance, double slope);
     void remove_marker(int i);
     void resize(const int);
     void write_chkpt_file(BinaryOutput &bin) const;
@@ -57,6 +60,15 @@ public:
 
     inline double get_time(int m) const { return (*_time)[m]; }
     inline void set_time(const int m, const double ti) { (*_time)[m] = ti; }
+
+    inline double get_z(int m) const { return (*_z)[m]; }
+    inline void set_z(const int m, const double z) { (*_z)[m] = z; }
+
+    inline double get_distance(int m) const { return (*_distance)[m]; }
+    inline void set_distance(const int m, const double d) { (*_distance)[m] = d; }
+
+    inline double get_slope(int m) const { return (*_slope)[m]; }
+    inline void set_slope(const int m, const double s) { (*_slope)[m] = s; }
 
     inline const double *get_eta(int m) const { return (*_eta)[m]; }
     inline void set_eta( const int i, const double r[NDIMS] );
@@ -81,6 +93,12 @@ private:
     int_vec *_id;
     // Cearte time
     double_vec *_time;
+    // Cearte z
+    double_vec *_z;
+    // Distance to coastline
+    double_vec *_distance;
+    // Slope of surface
+    double_vec *_slope;
 
     void random_markers( const Param&, Variables& );
     void regularly_spaced_markers( const Param&, Variables& );

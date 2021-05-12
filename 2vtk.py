@@ -42,10 +42,6 @@ output_principle_stress = False
 # Save markers?
 output_markers = True
 
-# index of material type
-mattype = {}
-mattype["sediment"] =  5 # need to change if need to show marker time of sediment
-
 ########################
 # Is numpy version < 1.8?
 eigh_vectorized = True
@@ -338,15 +334,11 @@ def output_vtp_file(des, frame, filename, markersetname, time_in_yr, step):
         vtk_dataarray(fvtp, marker_data[name], name)
         name = markersetname + '.id'
         vtk_dataarray(fvtp, marker_data[name], name)
-        try:
-            name = markersetname + '.time'
-            marker_time = marker_data[name]
-            for i in range(nmarkers):
-                if marker_type[i] != mattype["sediment"]:
-                    marker_time[i] = 0
-            vtk_dataarray(fvtp, marker_time, name)
-        except:
-            pass
+        for name in (markersetname + '.time',markersetname + '.z', markersetname + '.distance',markersetname+'.slope'):    
+            try:
+                vtk_dataarray(fvtp, marker_data[name], name)
+            except:
+                pass
         fvtp.write('  </PointData>\n')
 
         # point coordinates

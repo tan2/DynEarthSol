@@ -876,15 +876,17 @@ namespace {
                 int diff = ceil(prec) - sum;
                 sum += diff;
                 for (int j=0;j<diff;j++)
-                    printf("%d",if_land[i]);
+                    std::cout << std::setw(1) << std::hex << << if_land[i];
+//                    printf("%d",if_land[i]);
             }
         }
-        printf(" (ntop: %d)\n",data_num);
+        std::cout << " (ntop: " << std::setw(3) << data_num << ")\n";
+//        printf(" (ntop: %d)\n",data_num);
     }
 
     void get_basin_info(const Variables& var, double_vec& top_depth, \
         std::vector<bool>& if_source, int_vec& if_land,\
-        int_vec& starts, int_vec& ends, double_vec& dhacc_tmp) {
+        int_vec& starts, int_vec& ends, double_vec& dhacc_tmp, double_vec& dx) {
 
         const array_t& coord = *var.coord;
         const SurfaceInfo& surfinfo = var.surfinfo;
@@ -972,6 +974,20 @@ namespace {
             }
 
         }
+        for (int i=0;i<2;i++){
+            if (if_source[i]) {
+                int inext = pow(-1, i);
+                double topo_tmp0 = top_depth[starts[i]] - dhacc_tmp[starts[i]];
+                double topo_tmp1 = top_depth[starts[i]+inext] - dhacc_tmp[starts[i]+inext];
+                double x0 = (*var.coord)[top_nodes[starts[i]]][0];
+                double x1 = (*var.coord)[top_nodes[starts[i]+inext]][0];
+                dx[i] = fabs( (x1-x0) * topo_tmp0 / (topo_tmp0 - topo_tmp1) );
+//                printf("%d %d %f %f %f ",top_nodes[starts[i]],top_nodes[starts[i]+inext],x0,x1,dx[i]);
+//                printf("%f %f \n",topo_tmp0,topo_tmp1);
+            }
+        }
+
+
         if ( var.steps%10000 == 0 ) {
             if (starts0[0] != starts[0] || starts0[1] != starts[1]) {
                 printf("%d starts0: %d %d; starts: %d %d\n", \
@@ -993,7 +1009,7 @@ namespace {
 
     }
 
-    void simple_deposition(const Param& param,const Variables& var, double_vec& dh) {
+    void simple_deposition(const Param& param,const Variables& var, double_vec& dh, double_vec& src_locs, double_vec& src_abj) {
 
 #ifdef THREED
         // not ready for 3D
@@ -1015,7 +1031,7 @@ namespace {
         double_vec dhacc_tmp(ntop,0.);
 
         if ( var.steps%10000 == 0 )
-            printf("** Sedimentation report:\n");
+            std::cout << "** Sedimentation report: ";
         get_surface_info(var,top_base,top_depth);
 
 //******************************************************************
@@ -1040,14 +1056,24 @@ namespace {
         int_vec if_land(ntop,0);
         int_vec starts(2,0), ends(2,0);
         int_vec sign(2,0), nsedi(2,0);
-        double_vec sedi_vol(2,0.);
+        double_vec sedi_vol(2,0.), dx(2,0.);
         std::vector<bool> if_space_limited(2,false);
         std::vector<bool> if_slope_limited(2,false);
 
         sign[0] = 1;
         sign[1] = -1;
 
-        get_basin_info(var,top_depth,if_source, if_land, starts, ends, dhacc_tmp);
+        get_basin_info(var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
+
+        // recored possible source locations
+        for (int i=0;i<2;i++) {
+//            printf("%d %d\n",if_source[0],if_source[1]);
+            if (if_source[i]) {
+                src_locs[i] = coord[top_nodes[starts[i]]][0] + dx[i] * pow(-1,i);
+//                src_abj[i] = dx[i];
+//                printf("side %d: %f\n",i, src_abj[i]);
+            }
+        }
 
         // deal with the sedimentation for the aspect of coastal source
         // to n times of both two sides
@@ -1071,7 +1097,9 @@ namespace {
                     if (if_shift || if_space_limited[iside] || if_slope_limited[iside]) {
                         if_shift = false;
                         if_slope_limited[iside] = false;
-                        get_basin_info(var,top_depth,if_source, if_land, starts, ends, dhacc_tmp);
+                        dx[0] = 0.;
+                        dx[1] = 0.;
+                        get_basin_info(var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
                         if (starts[iside] == ends[iside]) {
                             if_space_limited[iside] = true;
                             break;
@@ -1101,13 +1129,22 @@ namespace {
                         }
 
                         // distance to the coastline
-                        dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[starts[iside]]][0]);
+                        dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[starts[iside]]][0]); //Todo - dx[iside] + 1.;
+                        if (dist < 1.) {
+                            std::cout << dist << " ";
+//                            printf("%f",dist);
+                        }
+
+//                        printf("%f\n",dist);
                         // deposit based on distance to coastline and remained unit volumn
                         dh_tmp = 8.e-9 * pow(1.25,nloop) * (unit_vol - depo_vol) * dist;
 
                         if ( dh_tmp != dh_tmp ) {
-                            printf("dh_tmp is NaN.\n");
-                            printf("%e\t%e\t%f\n",dh_tmp, (unit_vol - depo_vol), dist);
+                            std::cout << "\ndh_tmp is NaN.\n";
+                            std::cout << std::fixed << std::scientific << dh_tmp << "\t" << (unit_vol - depo_vol);
+                            std::cout << "\t" << std::hex << dist << std::endl;
+//                            printf("\ndh_tmp is NaN.\n");
+//                            printf("\n%e\t%e\t%f\n",dh_tmp, (unit_vol - depo_vol), dist);
                         }
 
                         dhacc_tmp[j] += dh_tmp;
@@ -1158,8 +1195,11 @@ namespace {
             }
             for (std::size_t i=0;i<ntop;i++)
                 if (dh_terrig[i]!=0.)
-                    if (fabs(tmp_slope[i]) > 3.e-3 )
-                        printf("large ddh: %3d %4d %09.2e %09.2e\n",i,top_nodes[i], dh_terrig[i], tmp_slope[i]);
+                    if (fabs(tmp_slope[i]) > 3.e-3 ) {
+                        std::cout << "arge ddh:" << std::setw(5) << std::hex << i << top_nodes[i];
+                        std::cout <<  std::setw(9) << std::setprecision(2) << std::scientific << dh_terrig[i] << tmp_slope[i] << std::endl;
+                    }
+//                        printf("large ddh: %3d %4d %09.2e %09.2e\n",i,top_nodes[i], dh_terrig[i], tmp_slope[i]);
         }
 
         for (std::size_t i=0; i<ntop; i++)
@@ -1167,20 +1207,27 @@ namespace {
 
         if ( var.steps%10000 == 0 ) {
             if (!if_source[0] || (!if_source[0]) ) {
-                if (!if_source[0]) printf("    No source from 0");
-                if (!if_source[1]) printf("    No source from 1");
-                printf("\n");
+                if (!if_source[0]) std::cout << "No source from 0. ";
+                if (!if_source[1]) std::cout << "No source from 1. ";
+                std::cout << std::endl;
             }
             for (int i=0;i<2;i++) {
                 if (if_source[i]) {
-                    if (if_space_limited[i]) printf("   Space limited at %d\n",i);
-                    if (if_slope_limited[i]) printf("   Slope limited at %d\n",i);
-                    printf("    Side %d: Loc.: %8.2f km (%5d - %5d). Sediment: %8.2f m^2 (max: %8.2f) Loop: %5d\n",\
-                        i,coord[top_nodes[starts[i]]][0]/1000.,starts[i],ends[i],sedi_vol[i], max_sedi_vol,nsedi[i]);
+                    if (if_space_limited[i]) std::cout << "\n   Space limited at " << i;
+                    if (if_slope_limited[i]) std::cout << "\n   Slope limited at " << i;
+                    std::cout << "\n    Side " << std::setw(1) << std::hex << i << ": Loc.: " << std::setw(8) << std::setprecision(2) << coord[top_nodes[starts[i]]][0]/1000.;
+                    std::cout << " km (" << std::setw(5) << std::hex << starts[i] << " - " << ends[i] << "). Sediment: ";
+                    std::cout << std::setw(8) << std::setprecision(2) << sedi_vol[i] << " m^2 (max: " << max_sedi_vol << " Loop: ";
+                    std::cout << std::setw(5) << std::hex << nsedi[i] << std::endl;
+//                    printf("\n    Side %d: Loc.: %8.2f km (%5d - %5d). Sediment: %8.2f m^2 (max: %8.2f) Loop: %5d\n",\
+//                        i,coord[top_nodes[starts[i]]][0]/1000.,starts[i],ends[i],sedi_vol[i], max_sedi_vol,nsedi[i]);
                 }
             }
-            if (if_space_limited[0] || if_space_limited[1])
-                printf("    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",nsedi[0],nsedi[1]);
+            if (if_space_limited[0] || if_space_limited[1]) {
+                std::cout << "\n    Space of basin is not enough for sediment . Do next round.";
+                std::cout << std::setw(5) << std::hex << nsedi[0] << "/" << nsedi[1] << std::endl;
+            }
+//                printf("\n    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",nsedi[0],nsedi[1]);
         }
 
 //******************************************************************
@@ -1366,7 +1413,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                         std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
 {
     int ntop = surfinfo.top_nodes->size();
-    double_vec dh(ntop,0.), dh_oc(ntop,0.);
+    double_vec dh(ntop,0.), dh_oc(ntop,0.), src_locs(2,0.), src_abj(2,0.);
     const int slow_updates_interval = 10;
     bool has_partial_melting = false;
     
@@ -1383,7 +1430,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
     case 102:
         simple_diffusion(var, dh);
         if (var.steps != 0)
-            simple_deposition(param, var, dh);
+            simple_deposition(param, var, dh, src_locs, src_abj);
         break;
     default:
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
@@ -1418,11 +1465,12 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             correct_surface_element(var, *surfinfo.dhacc, *markersets[0], stress, strain, strain_rate, plstrain);
             std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
             // set marker of sediment.
-            markersets[0]->set_surface_marker(var,param.mat.mattype_sed,*surfinfo.edhacc,elemmarkers);
+            markersets[0]->set_surface_marker(var, param.mat.mattype_sed, *surfinfo.edhacc, elemmarkers, src_locs, src_abj);
         }
     }
 
     if ( param.mat.phase_change_option == 2) {
+        double_vec tmp(2,0.);
 
         simple_igneous(param,var, dh_oc, has_partial_melting);
 
@@ -1448,7 +1496,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                 correct_surface_element(var, *surfinfo.dhacc_oc, *markersets[0], stress, strain, strain_rate, plstrain);
                 std::fill(surfinfo.dhacc_oc->begin(), surfinfo.dhacc_oc->end(), 0.);
                 // set marker of sediment.
-                markersets[0]->set_surface_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers);
+                markersets[0]->set_surface_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers, tmp, tmp);
             }
         }
 
@@ -1466,15 +1514,15 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             // std::cout << n << "  dh:  " << dh << '\n';
         }
 
-        std::cout << "max erosion / sedimentation rate (mm/yr):  "
-                    << min_dh / var.dt * 1000. * YEAR2SEC << " / "
-                    << max_dh / var.dt * 1000. * YEAR2SEC << '\n';
+        std::cout << "   max erosion / sedimentation rate (mm/yr):  "
+                    << std::fixed << std::setprecision(3) << min_dh / var.dt * 1000. * YEAR2SEC << " / "
+                    << std::fixed << std::setprecision(3) << max_dh / var.dt * 1000. * YEAR2SEC << '\n';
 
         if ( param.mat.phase_change_option == 2) {
             for (int i=0;i<ntop;i++)
                 max_dh_oc = std::max(max_dh_oc, dh_oc[i]);
-            std::cout << "max igneous eruption rate (mm/yr):  "
-                        << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
+            std::cout << "   max igneous eruption rate (mm/yr):  "
+                        << std::fixed << std::setprecision(3) << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
         }
     }
 
