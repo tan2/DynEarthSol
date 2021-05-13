@@ -876,7 +876,7 @@ namespace {
                 int diff = ceil(prec) - sum;
                 sum += diff;
                 for (int j=0;j<diff;j++)
-                    std::cout << std::setw(1) << std::hex << << if_land[i];
+                    std::cout << std::setw(1) << std::dec << if_land[i];
 //                    printf("%d",if_land[i]);
             }
         }
@@ -1142,7 +1142,7 @@ namespace {
                         if ( dh_tmp != dh_tmp ) {
                             std::cout << "\ndh_tmp is NaN.\n";
                             std::cout << std::fixed << std::scientific << dh_tmp << "\t" << (unit_vol - depo_vol);
-                            std::cout << "\t" << std::hex << dist << std::endl;
+                            std::cout << "\t" << std::dec << dist << std::endl;
 //                            printf("\ndh_tmp is NaN.\n");
 //                            printf("\n%e\t%e\t%f\n",dh_tmp, (unit_vol - depo_vol), dist);
                         }
@@ -1196,7 +1196,7 @@ namespace {
             for (std::size_t i=0;i<ntop;i++)
                 if (dh_terrig[i]!=0.)
                     if (fabs(tmp_slope[i]) > 3.e-3 ) {
-                        std::cout << "arge ddh:" << std::setw(5) << std::hex << i << top_nodes[i];
+                        std::cout << "arge ddh:" << std::setw(5) << std::dec << i << top_nodes[i];
                         std::cout <<  std::setw(9) << std::setprecision(2) << std::scientific << dh_terrig[i] << tmp_slope[i] << std::endl;
                     }
 //                        printf("large ddh: %3d %4d %09.2e %09.2e\n",i,top_nodes[i], dh_terrig[i], tmp_slope[i]);
@@ -1215,17 +1215,17 @@ namespace {
                 if (if_source[i]) {
                     if (if_space_limited[i]) std::cout << "\n   Space limited at " << i;
                     if (if_slope_limited[i]) std::cout << "\n   Slope limited at " << i;
-                    std::cout << "\n    Side " << std::setw(1) << std::hex << i << ": Loc.: " << std::setw(8) << std::setprecision(2) << coord[top_nodes[starts[i]]][0]/1000.;
-                    std::cout << " km (" << std::setw(5) << std::hex << starts[i] << " - " << ends[i] << "). Sediment: ";
+                    std::cout << "\n    Side " << std::setw(1) << std::dec << i << ": Loc.: " << std::setw(8) << std::setprecision(2) << coord[top_nodes[starts[i]]][0]/1000.;
+                    std::cout << " km (" << std::setw(5) << std::dec << starts[i] << " - " << std::setw(5) << ends[i] << "). Sediment: ";
                     std::cout << std::setw(8) << std::setprecision(2) << sedi_vol[i] << " m^2 (max: " << max_sedi_vol << " Loop: ";
-                    std::cout << std::setw(5) << std::hex << nsedi[i] << std::endl;
+                    std::cout << std::setw(5) << std::dec << nsedi[i] << std::endl;
 //                    printf("\n    Side %d: Loc.: %8.2f km (%5d - %5d). Sediment: %8.2f m^2 (max: %8.2f) Loop: %5d\n",\
 //                        i,coord[top_nodes[starts[i]]][0]/1000.,starts[i],ends[i],sedi_vol[i], max_sedi_vol,nsedi[i]);
                 }
             }
             if (if_space_limited[0] || if_space_limited[1]) {
                 std::cout << "\n    Space of basin is not enough for sediment . Do next round.";
-                std::cout << std::setw(5) << std::hex << nsedi[0] << "/" << nsedi[1] << std::endl;
+                std::cout << std::setw(5) << std::dec << nsedi[0] << "/" << nsedi[1] << std::endl;
             }
 //                printf("\n    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",nsedi[0],nsedi[1]);
         }
