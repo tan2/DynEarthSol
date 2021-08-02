@@ -1029,8 +1029,9 @@ namespace {
         std::vector<bool> if_source(2,true);
         double_vec dh_terrig(ntop,0.);
         double_vec dhacc_tmp(ntop,0.);
+        int interval_report = 10000;
 
-        if ( var.steps%10000 == 0 )
+        if ( var.steps%interval_report == 0 )
             std::cout << "** Sedimentation report: ";
         get_surface_info(var,top_base,top_depth);
 
@@ -1048,11 +1049,12 @@ namespace {
         else
             max_sedi_vol = param.control.surf_src_area * var.dt;
 
-        bool if_finish, if_shift;
         int vol_ratio = 10;
         int ntry = 200;
+
+        bool if_finish, if_shift;
         int nloop, nstep_in_basin;
-        double unit_vol, depo_vol, dh_tmp, dist;
+        double unit_vol, depo_vol, dh_tmp, dist, old_dhacc_tmp;
         int_vec if_land(ntop,0);
         int_vec starts(2,0), ends(2,0);
         int_vec sign(2,0), nsedi(2,0);
@@ -1137,7 +1139,7 @@ namespace {
 
 //                        printf("%f\n",dist);
                         // deposit based on distance to coastline and remained unit volumn
-                        dh_tmp = 8.e-9 * pow(1.25,nloop) * (unit_vol - depo_vol) * dist;
+                        dh_tmp = surfinfo.terrig_coeff * pow(surfinfo.terrig_base,nloop) * (unit_vol - depo_vol) * dist;
 
                         if ( dh_tmp != dh_tmp ) {
                             std::cout << "\ndh_tmp is NaN.\n";
@@ -1147,13 +1149,15 @@ namespace {
 //                            printf("\n%e\t%e\t%f\n",dh_tmp, (unit_vol - depo_vol), dist);
                         }
 
+                        old_dhacc_tmp = dhacc_tmp[j];
                         dhacc_tmp[j] += dh_tmp;
 
                         // if dhacc larger than depth, dhacc = depth (down is negative)
                         if (dhacc_tmp[j] > top_depth[j])
                             dhacc_tmp[j] = top_depth[j] + 0.1;
 
-                        depo_vol += top_base[j] * dh_tmp;
+
+                        depo_vol += top_base[j] * (dhacc_tmp[j] - old_dhacc_tmp);
 
                         if (depo_vol >= unit_vol) {
                             if_finish = true;
@@ -1186,7 +1190,6 @@ namespace {
             if (sedi_vol[0] >= max_sedi_vol && sedi_vol[1] >= max_sedi_vol) break;
         } // end of deposit slides
 
-
         if (if_source[0] || if_source[1]) {
             double_vec tmp_slope(ntop,0.);
             for (std::size_t i=0;i<ntop-1;i++) {
@@ -1199,13 +1202,12 @@ namespace {
                         std::cout << "arge ddh:" << std::setw(5) << std::dec << i << top_nodes[i];
                         std::cout <<  std::setw(9) << std::setprecision(2) << std::scientific << dh_terrig[i] << tmp_slope[i] << std::endl;
                     }
-//                        printf("large ddh: %3d %4d %09.2e %09.2e\n",i,top_nodes[i], dh_terrig[i], tmp_slope[i]);
         }
 
         for (std::size_t i=0; i<ntop; i++)
             dh[i] += dh_terrig[i];
 
-        if ( var.steps%10000 == 0 ) {
+        if ( var.steps%interval_report == 0 ) {
             if (!if_source[0] || (!if_source[0]) ) {
                 if (!if_source[0]) std::cout << "No source from 0. ";
                 if (!if_source[1]) std::cout << "No source from 1. ";
@@ -1219,15 +1221,12 @@ namespace {
                     std::cout << " km (" << std::setw(5) << std::dec << starts[i] << " - " << std::setw(5) << ends[i] << "). Sediment: ";
                     std::cout << std::setw(8) << std::setprecision(2) << sedi_vol[i] << " m^2 (max: " << max_sedi_vol << " Loop: ";
                     std::cout << std::setw(5) << std::dec << nsedi[i] << std::endl;
-//                    printf("\n    Side %d: Loc.: %8.2f km (%5d - %5d). Sediment: %8.2f m^2 (max: %8.2f) Loop: %5d\n",\
-//                        i,coord[top_nodes[starts[i]]][0]/1000.,starts[i],ends[i],sedi_vol[i], max_sedi_vol,nsedi[i]);
                 }
             }
             if (if_space_limited[0] || if_space_limited[1]) {
                 std::cout << "\n    Space of basin is not enough for sediment . Do next round.";
                 std::cout << std::setw(5) << std::dec << nsedi[0] << "/" << nsedi[1] << std::endl;
             }
-//                printf("\n    Space of basin is not enough for sediment . Do next round. %5d/%5d\n",nsedi[0],nsedi[1]);
         }
 
 //******************************************************************

@@ -96,6 +96,8 @@ struct Control {
     double surf_base_level;
     double surf_src_vol;
     double surf_src_area;
+    double surf_terrig_coeff;
+    double surf_terrig_base;
 
     bool is_quasi_static;
     bool has_thermal_diffusion;
@@ -272,6 +274,8 @@ struct SurfaceInfo {
     double surf_diff;
     double diff_ratio_terrig;
     double diff_ratio_marine;
+    double terrig_coeff;
+    double terrig_base;
     double depo_universal;
     double ero_rate;
 

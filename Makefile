@@ -48,7 +48,7 @@ ifdef BOOST_ROOT_DIR
 endif
 
 ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
-	CXXFLAGS = -g -std=c++0x
+	CXXFLAGS = -g -std=c++0x # -Wuninitialized -Fsanitize=address
 	LDFLAGS = -lm
 
 	ifeq ($(opt), 1)

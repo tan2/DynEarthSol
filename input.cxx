@@ -219,7 +219,12 @@ static void declare_parameters(po::options_description &cfg,
         ("control.surf_depo_universal", po::value<double>(&p.control.surf_depo_universal)->default_value(0.),
          "Sedimentation rate of universal suspended deposite (in m/s).")
         ("control.surf_base_level",po::value<double>(&p.control.surf_base_level)->default_value(0.e0),
-         "Base level of surface processes")
+         "Base level of surface processes.")
+        ("control.surf_terrig_coeff",po::value<double>(&p.control.surf_terrig_coeff)->default_value(8.e-9),
+         "Coefficient of terrigenous deposition formula.")
+        ("control.surf_terrig_base",po::value<double>(&p.control.surf_terrig_base)->default_value(1.25),
+         "Power base of terrigenous deposition formula.")
+
         ("control.surf_src_vol",po::value<double>(&p.control.surf_src_vol)->default_value(1.),
          "The volume of the sediment bring from continent source (in m^3/s). "
          "5e7 ton/yr ~= 1 m^3/s")
