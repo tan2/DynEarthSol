@@ -183,6 +183,7 @@ struct IC {
     double weakzone_xsemi_axis;
     double weakzone_ysemi_axis;
     double weakzone_zsemi_axis;
+    double weakzone_standard_deviation;
 
     int temperature_option;
     std::string Temp_filename;

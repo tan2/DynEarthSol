@@ -368,7 +368,8 @@ static void declare_parameters(po::options_description &cfg,
          "How to set the initial weak zone?\n"
          "0: no weak zone.\n"
          "1: planar weak zone with specified azimuth, inclination, halfwidth, min/max depth range, and center location.\n"
-         "2: ellipsoidal weak zone with specified center location and semi-axes.\n")
+         "2: ellipsoidal weak zone with specified center location and semi-axes.\n"
+         "3: Gaussian distribution point weak zone with specified center location and standard deviation.\n")
         ("ic.weakzone_plstrain", po::value<double>(&p.ic.weakzone_plstrain)->default_value(0.1),
          "Initial plastic strain in the weak zone")
         ("ic.weakzone_azimuth", po::value<double>(&p.ic.weakzone_azimuth)->default_value(0),
@@ -397,6 +398,8 @@ static void declare_parameters(po::options_description &cfg,
          "Length of weak zone semi-axis in y direction (in meters)")
         ("ic.weakzone_zsemi_axis", po::value<double>(&p.ic.weakzone_zsemi_axis)->default_value(1e3),
          "Length of weak zone semi-axis in z direction (in meters)\n")
+        ("ic.weakzone_standard_deviation", po::value<double>(&p.ic.weakzone_standard_deviation)->default_value(1e3),
+         "Standard deviation of Gussian distribution point weak zone (in meters)\n")
 
         ("ic.temperature_option", po::value<int>(&p.ic.temperature_option)->default_value(0),
          "How to set the initial temperature?\n"
