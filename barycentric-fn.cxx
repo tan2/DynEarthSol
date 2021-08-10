@@ -7,7 +7,7 @@ Barycentric_transformation::Barycentric_transformation(const array_t &coord,
                                                        const double_vec &volume)
     : coeff_(connectivity.size())
 {
-//    #pragma omp parallel for default(none) \
+    #pragma omp parallel for default(none) \
         shared(coord, connectivity, volume)
     for (std::size_t e=0; e<connectivity.size(); ++e) {
         int n0 = connectivity[e][0];

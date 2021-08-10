@@ -1839,7 +1839,7 @@ double** elem_center(const array_t &coord, const conn_t &connectivity)
     int nelem = connectivity.size();
     double *tmp = new double[nelem*NDIMS];
     double **center = new double*[nelem];
-    //#pragma omp parallel for default(none)          \
+    #pragma omp parallel for default(none)          \
         shared(nelem, tmp, coord, connectivity, center)
     for(int e=0; e<nelem; e++) {
         const int* conn = connectivity[e];

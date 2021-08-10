@@ -62,7 +62,7 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 	endif
 
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP
+		CXXFLAGS += -fopenmp # -DUSE_OMP
 		LDFLAGS += -fopenmp
 	endif
 

@@ -384,6 +384,7 @@ void MarkerSet::correct_surface_marker(const Variables& var,int_vec& markers, co
 //                    std::cout << "... Success!.\n";
             }
             else {
+                #pragma omp critical
                 delete_marker.push_back(*imark);
 //                    std::cout << "... Fail!. (Erosion might have occurred)\n";
             }

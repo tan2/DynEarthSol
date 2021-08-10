@@ -514,7 +514,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 {
     const int rheol_type = var.mat->rheol_type;
 
-    //#pragma omp parallel for default(none)                           \
+    #pragma omp parallel for default(none)                           \
         shared(var, stress, stressyy, strain, plstrain, delta_plstrain, \
                strain_rate, std::cerr)
     for (int e=0; e<var.nelem; ++e) {
@@ -644,7 +644,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 
     // correct stress 1st invariant of surface elements
     if (param.control.surface_pressure_correction) {
-        //#pragma omp parallel for default(none) shared(var, stress)
+        #pragma omp parallel for default(none) shared(var, stress)
         for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
             double* s = stress[*e];
             double first_inv = 0.;

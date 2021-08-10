@@ -318,7 +318,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 
 
     // diverging x-boundary
-//    //#pragma omp parallel for default(none) \
+    #pragma omp parallel for default(none) \
         shared(bc, var, vel,BOUNDX0_max,BOUNDX0_min,BOUNDX0_width,BOUNDX0_ratio_width, \
                vbc_applied_x0, vbc_applied_x1)
     for (int i=0; i<var.nnode; ++i) {
@@ -1348,6 +1348,7 @@ void surface_plstrain_diffusion(const Param &param, const Variables& var, double
 {
     double half_life = 1.e2 * YEAR2SEC;
     double lambha = 0.69314718056 / half_life; // ln2
+    #pragma omp parallel for default(none) shared(param, var, plstrain, lambha)
     for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
         // Find the most abundant marker mattype in this element
         int_vec &a = (*var.elemmarkers)[*e];
@@ -1364,6 +1365,7 @@ void correct_surface_element(const Variables& var, const double_vec& dhacc, Mark
     delete_marker.reserve(100);
 
     // go through all surface connected elements
+    #pragma omp parallel for default(none) shared(var,dhacc,ms,stress,strain,strain_rate,plstrain,delete_marker)
     for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
         double m_coord[NDIMS], new_eta[NDIMS], b[NODES_PER_ELEM][NDIMS];
         int_vec& markers = (*var.marker_in_elem)[*e];

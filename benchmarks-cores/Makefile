@@ -1,13 +1,15 @@
 
 CASE := test-tiny.cfg
-#CASE := test-tiny-long.inp
-#CASE := test-big.inp
+#CASE := test-tiny-long.cfg
+#CASE := test-big.cfg
+#CASE := test-topo.cfg
 FRAME := 4
 EXE := ../dynearthsol2d
 OMP := 1
+TFLAG = #-v
 
 # Use single cpu for omp to avoid round-off errors
-RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP} ${EXE} ${CASE}
+RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP}; time ${TFLAG} ${EXE} ${CASE}; echo
 
 ORIG = orig-${CASE}
 
@@ -27,5 +29,8 @@ store:
 	mkdir -p ${ORIG}
 	mv benchmark.* ${ORIG}
 	cp ../snapshot.diff ${ORIG}
+
+vtk:
+	python ../2vtk.py -m  benchmark
 
 .PHONY: all set cmp store

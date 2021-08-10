@@ -138,7 +138,7 @@ namespace {
                 // Dehydration metamorphism, hydrous marker is released.
                 const int el = ms.get_elem(m);
                 const double *eta = ms.get_eta(m);
-                //#pragma omp critical(phase_change_simple_subduction)
+                #pragma omp critical(phase_change_simple_subduction)
                 {
                     // Add new marker, which has the same coordinate as the dehydrated marker
                     hydms.append_marker(eta, el, 0, 0., 0., 0., 0.);
@@ -158,7 +158,7 @@ namespace {
                     std::cerr << "Error: hydrous marker phase change\n";
                     std::exit(12);
                 }
-                //#pragma omp critical(phase_change_simple_subduction)
+                #pragma omp critical(phase_change_simple_subduction)
                 {
                     // delete the marker
                     hydms.remove_marker(mh);
@@ -297,7 +297,7 @@ void phase_changes(const Param& param, Variables& var)
     MarkerSet& ms = *(var.markersets[0]);
     int_vec2D& elemmarkers = *var.elemmarkers;
 
-    //#pragma omp parallel for default(none)          \
+    #pragma omp parallel for default(none)          \
         shared(ms, elemmarkers, phch)
     for (int m=0; m<ms.get_nmarkers(); m++) {
         int current_mt = ms.get_mattype(m);
@@ -308,9 +308,9 @@ void phase_changes(const Param& param, Variables& var)
 
             // update marker count
             int e = ms.get_elem(m);
-            //#pragma omp atomic  // prevent concurrent modification on elemmarkers
+            #pragma omp atomic  // prevent concurrent modification on elemmarkers
             --elemmarkers[e][current_mt];
-            //#pragma omp atomic  // prevent concurrent modification on elemmarkers
+            #pragma omp atomic  // prevent concurrent modification on elemmarkers
             ++elemmarkers[e][new_mt];
         }
 
