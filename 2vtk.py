@@ -9,7 +9,7 @@ options:
     -c          save files in current directory (default: same directory as
                 the data files)
     -m          save marker data
-    -p          save principle components (s1 and s3) of deviatoric stress
+    -p          save principal components (s1 and s3) of deviatoric stress
     -t          save all tensor components (default: only 1st/2nd invariants)
     -h,--help   show this help
 
@@ -155,8 +155,8 @@ def main(modelname, start, end, delta):
                     vtk_dataarray(fvtu, stress[:,d] - tI, 'stress ' + des.component_names[d] + ' dev.')
                 for d in range(des.ndims, des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
-            if output_principle_stress:
-                s1, s3 = compute_principle_stress(stress)
+            if output_principal_stress:
+                s1, s3 = compute_principal_stress(stress)
                 vtk_dataarray(fvtu, s1, 's1', 3)
                 vtk_dataarray(fvtu, s3, 's3', 3)
 
@@ -415,8 +415,8 @@ def second_invariant(t):
                         t[:,3]**2 + t[:,4]**2 + t[:,5]**2)
 
 
-def compute_principle_stress(stress):
-    '''The principle stress (s1 and s3) of the deviatoric stress tensor.'''
+def compute_principal_stress(stress):
+    '''The principal stress (s1 and s3) of the deviatoric stress tensor.'''
 
     nelem = stress.shape[0]
     nstr = stress.shape[1]
@@ -488,7 +488,7 @@ if __name__ == '__main__':
     if '-c' in sys.argv:
         output_in_cwd = True
     if '-p' in sys.argv:
-        output_principle_stress = True
+        output_principal_stress = True
     if '-t' in sys.argv:
         output_tensor_components = True
     if '-m' in sys.argv:
