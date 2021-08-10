@@ -155,7 +155,7 @@ def main(modelname, start, end, delta):
                     vtk_dataarray(fvtu, stress[:,d] - tI, 'stress ' + des.component_names[d] + ' dev.')
                 for d in range(des.ndims, des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
-            if output_principal_stress:
+            if output_principle_stress:
                 s1, s3 = compute_principal_stress(stress)
                 vtk_dataarray(fvtu, s1, 's1', 3)
                 vtk_dataarray(fvtu, s3, 's3', 3)
@@ -488,7 +488,7 @@ if __name__ == '__main__':
     if '-c' in sys.argv:
         output_in_cwd = True
     if '-p' in sys.argv:
-        output_principal_stress = True
+        output_principle_stress = True
     if '-t' in sys.argv:
         output_tensor_components = True
     if '-m' in sys.argv:
