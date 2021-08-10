@@ -1493,7 +1493,7 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     for (size_t i=0; i<ntop; i++)
         surfinfo.arctop_nodes[(*surfinfo.top_nodes)[i]] = i;
     surfinfo.dhacc = new double_vec(var.nnode,0);
-    surfinfo.edhacc = new array_t(var.nelem);
+    surfinfo.edhacc = new array_t(var.nelem,0);
     surfinfo.edhacc_ind = new segment_t(etop);
     surfinfo.top_facet_elems = new int_vec(etop,0);
     surfinfo.elem_and_nodes = new segment_t(etop);
