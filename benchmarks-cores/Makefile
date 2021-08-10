@@ -7,9 +7,13 @@ FRAME := 4
 EXE := ../dynearthsol2d
 OMP := 1
 TFLAG = #-v
+DEBUG := 0
+ifeq ($(DEBUG), 1)
+	DEBUGFLAG = valgrind --tool=helgrind --log-file=valgrind-out.txt -v
+endif
 
 # Use single cpu for omp to avoid round-off errors
-RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP}; time ${TFLAG} ${EXE} ${CASE}; echo
+RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP}; time ${TFLAG} ${DEBUGFLAG} ${EXE} ${CASE}; echo
 
 ORIG = orig-${CASE}
 

@@ -272,7 +272,8 @@ void initial_weak_zone(const Param &param, const Variables &var,
         // int material = std::distance(a.begin(), std::max_element(a.begin(), a.end()));
     }
 
-    delete weakzone, weakvalue;
+    delete weakzone;
+    delete weakvalue;
 }
 
 

@@ -63,6 +63,9 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 
 	ifeq ($(openmp), 1)
 		CXXFLAGS += -fopenmp # -DUSE_OMP
+		ifeq ($(opt), 0)
+			CXXFLAGS += -pthread
+		endif
 		LDFLAGS += -fopenmp
 	endif
 
