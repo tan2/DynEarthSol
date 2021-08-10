@@ -8,3 +8,4 @@ test*
 ann/lib/*
 3x3-C/lib3x3.a
 *.code*
+benchmark.*

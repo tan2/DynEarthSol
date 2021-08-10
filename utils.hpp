@@ -21,14 +21,14 @@ inline void loop_all_elem(const std::vector<int> &egroups, ElemFunc &functor)
     // See mesh.cxx::create_elem_groups() for parallel strategy
 
     // loop over elements in even element groups
-    #pragma omp parallel for default(none) shared(egroups, functor)
+    //#pragma omp parallel for default(none) shared(egroups, functor)
     for (std::size_t i=0; i<egroups.size()-1; i+=2) {
         for (int e=egroups[i]; e<egroups[i+1]; ++e)
             functor(e);
     }
 
     // loop over elements in odd element groups
-    #pragma omp parallel for default(none) shared(egroups, functor)
+    //#pragma omp parallel for default(none) shared(egroups, functor)
     for (std::size_t i=1; i<egroups.size()-1; i+=2) {
         for (int e=egroups[i]; e<egroups[i+1]; ++e)
             functor(e);

@@ -204,7 +204,7 @@ namespace {
                       const double_vec &source,
                       double_vec &target)
     {
-        #pragma omp parallel for default(none)          \
+        //#pragma omp parallel for default(none)          \
             shared(idx, source, target)
         for (std::size_t i=0; i<target.size(); i++) {
             int n = idx[i];
@@ -234,7 +234,7 @@ namespace {
                       const tensor_t &source,
                       tensor_t &target)
     {
-        #pragma omp parallel for default(none)          \
+        //#pragma omp parallel for default(none)          \
             shared(idx, source, target)
         for (std::size_t i=0; i<target.size(); i++) {
             int n = idx[i];

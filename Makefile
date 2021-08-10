@@ -92,9 +92,12 @@ all:
 	@false
 endif
 
-## Is this a mercurial repository?
-HAS_HG := $(shell hg log -r tip --template '{node}' 2>/dev/null)
-
+## Is git in the path?
+HAS_GIT := $(shell git --version 2>/dev/null)
+ifneq ($(HAS_GIT),)
+        ## Is this a git repository?
+        IS_REPO := $(shell git rev-parse --s-inside-work-tree 2>/dev/null)
+endif
 ##
 
 SRCS =	\
@@ -181,25 +184,27 @@ take-snapshot:
 	@echo '  '  CXX=$(CXX) opt=$(opt) openmp=$(openmp) >> snapshot.diff
 	@echo '  '  PATH=$(PATH) >> snapshot.diff
 	@echo '  '  LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) >> snapshot.diff
-ifneq ($(HAS_HG),)
-	@echo >> snapshot.diff
-	@echo >> snapshot.diff
+ifneq ($(HAS_GIT),)
+ifneq ($(IS_REPO),)
 	@echo '==== Summary of the code ====' >> snapshot.diff
-	@hg summary >> snapshot.diff
+	@git show -s >> snapshot.diff
 	@echo >> snapshot.diff
 	@echo >> snapshot.diff
-	@echo '== Code based on (last public revision) ==' >> snapshot.diff
-	@hg log -r "last(public())" >> snapshot.diff
-	@echo >> snapshot.diff
+	@git status >> snapshot.diff
 	@echo >> snapshot.diff
 	@echo '== Code modification (not checked-in) ==' >> snapshot.diff
-	@hg diff >> snapshot.diff
 	@echo >> snapshot.diff
+	@git diff >> snapshot.diff
 	@echo >> snapshot.diff
-	@echo '== Code modification (checked-in but not public) ==' >> snapshot.diff
-	@hg log --patch -r "not public()" >> snapshot.diff
+	@echo '== Code modification (checked-in but not in "origin") ==' >> snapshot.diff
+	@echo >> snapshot.diff
+	@git log --patch -- origin..HEAD >> snapshot.diff
 else
-	@echo \'hg\' is not in path, cannot take code snapshot. >> snapshot.diff
+	@echo "Warning: Not a git repository. Cannot take code snapshot." | tee -a snapshot.diff
+	@echo "Warning: Use 'git clone' to copy the code!" | tee -a snapshot.diff
+endif
+else
+	@echo "'git' is not in path, cannot take code snapshot." >> snapshot.diff
 endif
 
 $(OBJS): %.$(ndims)d.o : %.cxx $(INCS)

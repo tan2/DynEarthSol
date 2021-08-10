@@ -318,7 +318,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 
 
     // diverging x-boundary
-    #pragma omp parallel for default(none) \
+//    //#pragma omp parallel for default(none) \
         shared(bc, var, vel,BOUNDX0_max,BOUNDX0_min,BOUNDX0_width,BOUNDX0_ratio_width, \
                vbc_applied_x0, vbc_applied_x1)
     for (int i=0; i<var.nnode; ++i) {

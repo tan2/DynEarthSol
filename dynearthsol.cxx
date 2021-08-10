@@ -266,7 +266,7 @@ void isostasy_adjustment(const Param &param, Variables &var)
         // do not apply vbc to allow free boundary
 
         // displacment is vertical only
-        #pragma omp parallel for default(none)          \
+        //#pragma omp parallel for default(none)          \
             shared(var, param)
         for (int i=0; i<var.nnode; ++i) {
             for (int j=0; j<NDIMS-1; ++j) {

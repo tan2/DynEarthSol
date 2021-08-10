@@ -142,7 +142,7 @@ void update_temperature(const Param &param, const Variables &var,
                 double diffusion = 0;
                 for (int j=0; j<NODES_PER_ELEM; ++j)
                     diffusion += D[i][j] * temperature[conn[j]];
-
+//#pragma omp atomic update
                 tdot[conn[i]] += diffusion * kv;
             }
         }
@@ -153,7 +153,7 @@ void update_temperature(const Param &param, const Variables &var,
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
-     #pragma omp parallel for default(none)      \
+     //#pragma omp parallel for default(none)      \
          shared(var, param, tdot, temperature)
      for (int n=0; n<var.nnode; ++n) {
         if ((*var.bcflag)[n] & BOUNDZ1)
@@ -168,7 +168,7 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 {
     double *v[NODES_PER_ELEM];
 
-    #pragma omp parallel for default(none) \
+    //#pragma omp parallel for default(none) \
         shared(var, strain_rate) private(v)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
@@ -247,7 +247,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     case 1:
         // damping when force and velocity are parallel
         // acclerating when force and velocity are anti-parallel
-        #pragma omp parallel for default(none)          \
+        //#pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
         for (int i=0; i<var.nnode*NDIMS; ++i) {
             if (std::fabs(v[i]) > small_vel) {
@@ -257,7 +257,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         break;
     case 2:
         // damping prop. to force
-        #pragma omp parallel for default(none)          \
+        //#pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
         for (int i=0; i<var.nnode*NDIMS; ++i) {
             ff[i] -= param.control.damping_factor * ff[i];
@@ -266,7 +266,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     case 3:
         // damping when force and velocity are parallel
         // weakly acclerating when force and velocity are anti-parallel
-        #pragma omp parallel for default(none)          \
+        //#pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
         for (int i=0; i<var.nnode*NDIMS; ++i) {
             if ((ff[i]<0) == (v[i]<0)) {
@@ -347,7 +347,7 @@ void update_velocity(const Variables& var, array_t& vel)
     // flatten 2d arrays to simplify indexing
     const double* f = var.force->data();
     double* v = vel.data();
-    #pragma omp parallel for default(none) \
+    //#pragma omp parallel for default(none) \
         shared(var, m, f, v)
     for (int i=0; i<var.nnode*NDIMS; ++i) {
         int n = i / NDIMS;
@@ -361,7 +361,7 @@ void update_coordinate(const Variables& var, array_t& coord)
     double* x = var.coord->data();
     const double* v = var.vel->data();
 
-    #pragma omp parallel for default(none) \
+    //#pragma omp parallel for default(none) \
         shared(var, x, v)
     for (int i=0; i<var.nnode*NDIMS; ++i) {
         x[i] += v[i] * var.dt;
@@ -427,7 +427,7 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
     // sj[4] = dt * ( s0 * w4 - s2 * w4 + s3 * w5 - s5 * w3)
     // sj[5] = dt * ( s1 * w5 - s2 * w5 + s3 * w4 + s4 * w3)
 
-    #pragma omp parallel for default(none) \
+    //#pragma omp parallel for default(none) \
         shared(var, stress, strain)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];

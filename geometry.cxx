@@ -100,7 +100,7 @@ void compute_volume_sg(const double **coord, double &volume)
 void compute_volume(const array_t &coord, const conn_t &connectivity,
                     double_vec &volume)
 {
-    #pragma omp parallel for default(none)      \
+    //#pragma omp parallel for default(none)      \
         shared(coord, connectivity, volume)
     for (std::size_t e=0; e<volume.size(); ++e) {
         int n0 = connectivity[e][0];
@@ -158,7 +158,7 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
     loop_all_elem(var.egroups, elemf);
 
 
-    #pragma omp parallel for default(none)      \
+    //#pragma omp parallel for default(none)      \
         shared(var, dvoldt, volume_n)
     for (int n=0; n<var.nnode; ++n)
          dvoldt[n] /= volume_n[n];
@@ -175,7 +175,7 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
     /* edvoldt is the averaged (i.e. smoothed) dvoldt on the element.
      * It is used in update_stress() to prevent mesh locking.
      */
-    #pragma omp parallel for default(none)      \
+    //#pragma omp parallel for default(none)      \
         shared(var, dvoldt, edvoldt)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
