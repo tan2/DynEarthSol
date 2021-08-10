@@ -4,9 +4,10 @@ CASE := test-tiny.cfg
 #CASE := test-big.inp
 FRAME := 4
 EXE := ../dynearthsol2d
+OMP := 1
 
 # Use single cpu for omp to avoid round-off errors
-RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=1 ${EXE} ${CASE}
+RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP} ${EXE} ${CASE}
 
 ORIG = orig-${CASE}
 
