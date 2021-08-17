@@ -136,16 +136,21 @@ def compare(old, new):
 
 
 olddir = sys.argv[1]
-frame = int(sys.argv[2])
-
 curdir = os.getcwd()
-newdir = curdir
+
+if len(sys.argv) > 3:
+    frame = int(sys.argv[3])
+    newdir = sys.argv[2]
+    modelname = 'result'
+else:
+    frame = int(sys.argv[2])
+    newdir = curdir
+    modelname = 'benchmark'
 
 # name holder
 old = 0
 new = 0
 
-modelname = 'benchmark'
 markersetname = 'markerset'
 
 try:

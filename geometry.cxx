@@ -122,7 +122,7 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 }
 
 
-void compute_dvoldt(const Variables &var, double_vec &dvoldt)
+void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt, elem_cache &tmp_result)
 {
     /* dvoldt is the volumetric strain rate, weighted by the element volume,
      * lumped onto the nodes.
@@ -137,9 +137,11 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
         const Variables &var;
         const double_vec &volume;
         double_vec &dvoldt;
+        elem_cache &tmp_result;
+        bool has_two_layers_for;
     public:
-        ElemFunc_dvoldt(const Variables &var, const double_vec &volume, double_vec &dvoldt) :
-            var(var), volume(volume), dvoldt(dvoldt) {};
+        ElemFunc_dvoldt(const Variables &var, const double_vec &volume, double_vec &dvoldt, elem_cache &tmp_result, bool has_two_layers_for) :
+            var(var), volume(volume), dvoldt(dvoldt), tmp_result(tmp_result), has_two_layers_for(has_two_layers_for) {};
         void operator()(int e)
         {
             const int *conn = (*var.connectivity)[e];
@@ -147,16 +149,34 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt)
             // TODO: try another definition:
             // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
             double dj = trace(strain_rate);
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                int n = conn[i];
-                #pragma omp atomic update
-                dvoldt[n] += dj * volume[e];
+            double *tmp_d = tmp_result[e];
+            if (has_two_layers_for) {
+                for (int i=0; i<NODES_PER_ELEM; ++i)
+                    tmp_d[i] = dj * volume[e];
+            } else {
+                for (int i=0; i<NODES_PER_ELEM; ++i) {
+                    int n = conn[i];
+                    #pragma omp atomic update
+                    dvoldt[n] += dj * volume[e];
+                }
             }
         }
-    } elemf(var, volume, dvoldt);
+    } elemf(var, volume, dvoldt, tmp_result, param.debug.has_two_layers_for);
 
+    #pragma omp parallel for default(none) shared(var,elemf)
+    for (int e=0;e<var.nelem;e++)
+        elemf(e);
 
-    loop_all_elem(var.egroups, elemf);
+    if (param.debug.has_two_layers_for) {
+        #pragma omp parallel for default(none) shared(var,dvoldt,tmp_result)
+        for (int n=0;n<var.nnode;n++) {
+            for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+                dvoldt[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] ];
+            }
+        }
+    }
+
+//    loop_all_elem(var.egroups, elemf);
 
 
     #pragma omp parallel for default(none)      \
@@ -276,10 +296,9 @@ double compute_dt(const Param& param, const Variables& var)
 
 
 void compute_mass(const Param &param,
-                  const int_vec &egroups, const conn_t &connectivity,
-                  const double_vec &volume, const MatProps &mat,
+                  const int_vec &egroups, const Variables &var,
                   double max_vbc_val, double_vec &volume_n,
-                  double_vec &mass, double_vec &tmass)
+                  double_vec &mass, double_vec &tmass, elem_cache &tmp_result)
 {
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
     volume_n.assign(volume_n.size(), 0);
@@ -297,17 +316,19 @@ void compute_mass(const Param &param,
         double_vec &volume_n;
         double_vec &mass;
         double_vec &tmass;
+        elem_cache &tmp_result;
         double pseudo_speed;
         bool is_quasi_static;
         bool has_thermal_diffusion;
+        bool has_two_layers_for;
     public:
         ElemFunc_mass(const MatProps &mat, const conn_t &connectivity, const double_vec &volume,
-                      double pseudo_speed, bool is_quasi_static, bool has_thermal_diffusion,
-                      double_vec &volume_n, double_vec &mass, double_vec &tmass) :
+                      double pseudo_speed, bool is_quasi_static, bool has_thermal_diffusion, bool has_two_layers_for,
+                      double_vec &volume_n, double_vec &mass, double_vec &tmass, elem_cache &tmp_result) :
             mat(mat), connectivity(connectivity), volume(volume),
-            volume_n(volume_n), mass(mass), tmass(tmass),
+            volume_n(volume_n), mass(mass), tmass(tmass), tmp_result(tmp_result),
             pseudo_speed(pseudo_speed), is_quasi_static(is_quasi_static),
-            has_thermal_diffusion(has_thermal_diffusion) {};
+            has_thermal_diffusion(has_thermal_diffusion), has_two_layers_for(has_two_layers_for) {};
         void operator()(int e)
         {
             double rho = (is_quasi_static) ?
@@ -316,26 +337,53 @@ void compute_mass(const Param &param,
             double m = rho * volume[e] / NODES_PER_ELEM;
             double tm = mat.rho(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
             const int *conn = connectivity[e];
+
+            double *tmp_v = tmp_result[e];
             for (int i=0; i<NODES_PER_ELEM; ++i) {
-                #pragma omp atomic update
-                volume_n[conn[i]] += volume[e];
-                #pragma omp atomic update
-                mass[conn[i]] += m;
-                if (has_thermal_diffusion) {
+                if (has_two_layers_for) {
+                    tmp_v[i] = volume[e];
+                    tmp_v[i+NODES_PER_ELEM] = m;
+                    if (has_thermal_diffusion) {
+                        tmp_v[i+NODES_PER_ELEM*2] = tm;
+                    }
+                } else {
                     #pragma omp atomic update
-                    tmass[conn[i]] += tm;
+                    volume_n[conn[i]] += volume[e];
+                    #pragma omp atomic update
+                    mass[conn[i]] += m;
+                    if (has_thermal_diffusion) {
+                        #pragma omp atomic update
+                        tmass[conn[i]] += tm;
+                    }
                 }
             }
         }
-    } elemf(mat, connectivity, volume, pseudo_speed, param.control.is_quasi_static,
-            param.control.has_thermal_diffusion, volume_n, mass, tmass);
+    } elemf(*var.mat, *var.connectivity, *var.volume, pseudo_speed, param.control.is_quasi_static,
+            param.control.has_thermal_diffusion, param.debug.has_two_layers_for, volume_n, mass, tmass, tmp_result);
 
-    loop_all_elem(egroups, elemf);
+    #pragma omp parallel for default(none) shared(var,elemf)
+    for (int e=0;e<var.nelem;e++)
+        elemf(e);
+
+    if (param.debug.has_two_layers_for) {
+        #pragma omp parallel for default(none) shared(param,var,volume_n,mass,tmass,tmp_result)
+        for (int n=0;n<var.nnode;n++) {
+            for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+                volume_n[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] ];
+                mass[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] + NODES_PER_ELEM ];
+                if (param.control.has_thermal_diffusion) {
+                    tmass[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] + NODES_PER_ELEM*2 ];
+                }
+            }
+        }
+    }
+
+
+//    loop_all_elem(egroups, elemf);
 }
 
 
-void compute_shape_fn(const array_t &coord, const conn_t &connectivity,
-                      const double_vec &volume, const int_vec &egroups,
+void compute_shape_fn(const Variables &var, const int_vec &egroups,
                       shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
 {
     class ElemFunc_shape_fn : public ElemFunc
@@ -418,9 +466,13 @@ void compute_shape_fn(const array_t &coord, const conn_t &connectivity,
             }
 #endif
         }
-    } elemf(coord, connectivity, volume, shpdx, shpdy, shpdz);
+    } elemf(*var.coord, *var.connectivity, *var.volume, shpdx, shpdy, shpdz);
 
-    loop_all_elem(egroups, elemf);
+    #pragma omp parallel for default(none) shared(var,elemf)
+    for (int e=0;e<var.nelem;e++)
+        elemf(e);
+
+//    loop_all_elem(egroups, elemf);
 }
 
 

@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <nvToolsExt.h> 
 #ifdef USE_OMP
 #include <omp.h>
 #endif
@@ -91,9 +91,9 @@ void init(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     *var.volume_old = *var.volume;
-    compute_mass(param, var.egroups, *var.connectivity, *var.volume, *var.mat,
-                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
+    compute_mass(param, var.egroups, var,
+                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_shape_fn(var, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, var.bnormals, var.edge_vectors);
@@ -193,9 +193,13 @@ void restart(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     bin_chkpt.read_array(*var.volume_old, "volume_old");
-    compute_mass(param, var.egroups, *var.connectivity, *var.volume, *var.mat,
-                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
+
+    nvtxRangePushA("compute_mass");
+    compute_mass(param, var.egroups, var,
+                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    nvtxRangePop();
+
+    compute_shape_fn(var, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, var.bnormals, var.edge_vectors);
@@ -240,9 +244,9 @@ void update_mesh(const Param& param, Variables& var)
 
     var.volume->swap(*var.volume_old);
     compute_volume(*var.coord, *var.connectivity, *var.volume);
-    compute_mass(param, var.egroups, *var.connectivity, *var.volume, *var.mat,
-                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
+    compute_mass(param, var.egroups, var,
+                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_shape_fn(var, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 }
 
@@ -255,18 +259,35 @@ void isostasy_adjustment(const Param &param, Variables &var)
     int iso_steps = param.ic.isostasy_adjustment_time_in_yr*YEAR2SEC / var.dt;
 
     for (int i=0; i<iso_steps; i++) {
+        nvtxRangePushA("update_strain_rate");
         update_strain_rate(var, *var.strain_rate);
-        compute_dvoldt(var, *var.ntmp);
+        nvtxRangePop();
+
+        nvtxRangePushA("compute_dvoldt");
+        compute_dvoldt(param, var, *var.ntmp, *var.tmp_result);
+        nvtxRangePop();
+
+        nvtxRangePushA("compute_edvoldt");
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
+        nvtxRangePop();
+
+        nvtxRangePushA("update_stress");
         update_stress(param ,var, *var.stress, *var.stressyy, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
-        update_force(param, var, *var.force);
+        nvtxRangePop();
+
+        nvtxRangePushA("update_force");
+        update_force(param, var, *var.force, *var.tmp_result);
+        nvtxRangePop();
+
+        nvtxRangePushA("update_velocity");
         update_velocity(var, *var.vel);
+        nvtxRangePop();
 
         // do not apply vbc to allow free boundary
 
         // displacment is vertical only
-        #pragma omp parallel for default(none)          \
+//        #pragma omp parallel for default(none)          \
             shared(var, param)
         for (int i=0; i<var.nnode; ++i) {
             for (int j=0; j<NDIMS-1; ++j) {
@@ -315,7 +336,10 @@ int main(int argc, const char* argv[])
                   (param.sim.is_restarting) ? param.sim.restarting_from_frame : 0);
 
     if (! param.sim.is_restarting) {
+
+        nvtxRangePushA("init");
         init(param, var);
+        nvtxRangePop();
 
         if (param.ic.isostasy_adjustment_time_in_yr > 0) {
             // output.write(var, false);
@@ -340,18 +364,45 @@ int main(int argc, const char* argv[])
         var.steps ++;
         var.time += var.dt;
 
-        if (param.control.has_thermal_diffusion)
-            update_temperature(param, var, *var.temperature, *var.ntmp);
+        if (param.control.has_thermal_diffusion) {
 
+            nvtxRangePushA("update_temperature");
+            update_temperature(param, var, *var.temperature, *var.ntmp, *var.tmp_result);
+            nvtxRangePop();
+
+        }
+        nvtxRangePushA("update_strain_rate");
         update_strain_rate(var, *var.strain_rate);
-        compute_dvoldt(var, *var.ntmp);
+        nvtxRangePop();
+
+        nvtxRangePushA("compute_dvoldt");
+        compute_dvoldt(param, var, *var.ntmp, *var.tmp_result);
+        nvtxRangePop();
+
+        nvtxRangePushA("compute_edvoldt");
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
+        nvtxRangePop();
+
+        nvtxRangePushA("update_stress");
         update_stress(param, var, *var.stress, *var.stressyy, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
-        update_force(param, var, *var.force);
+        nvtxRangePop();
+
+        nvtxRangePushA("update_force");
+        update_force(param, var, *var.force, *var.tmp_result);
+        nvtxRangePop();
+
+        nvtxRangePushA("update_velocity");
         update_velocity(var, *var.vel);
+        nvtxRangePop();
+
+        nvtxRangePushA("apply_vbcs");
         apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
+        nvtxRangePop();
+
+        nvtxRangePushA("update_mesh");
         update_mesh(param, var);
+        nvtxRangePop();
 
         // elastic stress/strain are objective (frame-indifferent)
         if (var.mat->rheol_type & MatProps::rh_elastic)
@@ -397,7 +448,9 @@ int main(int argc, const char* argv[])
                     output.write(var, false);
                 }
 
+                nvtxRangePushA("remesh");
                 remesh(param, var, quality_is_bad);
+                nvtxRangePop();
 
                 if (param.sim.has_output_during_remeshing) {
                     output.write(var, false);

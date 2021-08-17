@@ -14,15 +14,23 @@
 ndims = 2
 opt = 2
 openmp = 1
+nsys = 0
 
 UNAME_S := $(shell uname -s)
 
 ## Select C++ compiler
-CXX = g++
+ifeq ($(nsys), 1)
+	CXX = pgc++
+else
+	CXX = g++
+endif
 #CXX = g++-5
 
 ## Boost location and library name
 BOOST_ROOT_DIR = ${HOME}/lib/boost_1_62_0
+
+## nvToolsExt location
+NVTOOLSEXT_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/include
 
 ########################################################################
 ## Select compiler and linker flags
@@ -69,24 +77,39 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 		LDFLAGS += -fopenmp
 	endif
 
+	ifeq ($(gprof), 1)
+		CXXFLAGS += -pg
+		LDFLAGS += -pg
+	endif
+
+
 else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with v14
-        CXXFLAGS = -g -std=c++0x
-        LDFLAGS = -lm
+	CXXFLAGS = -g -std=c++0x
+	LDFLAGS = -lm
 
-        ifeq ($(opt), 1)
-                CXXFLAGS += -O1
-        else ifeq ($(opt), 2)
-                CXXFLAGS += -O2
-        else ifeq ($(opt), 3) # experimental, use at your own risk :)
-                CXXFLAGS += -fast -fast-transcendentals -fp-model fast=2
-        else # debugging flags
-                CXXFLAGS += -O0 -check=uninit -check-pointers=rw -check-pointers-dangling=all -fp-trap-all=all
-        endif
+	ifeq ($(opt), 1)
+			CXXFLAGS += -O1
+	else ifeq ($(opt), 2)
+			CXXFLAGS += -O2
+	else ifeq ($(opt), 3) # experimental, use at your own risk :)
+			CXXFLAGS += -fast -fast-transcendentals -fp-model fast=2
+	else # debugging flags
+			CXXFLAGS += -O0 -check=uninit -check-pointers=rw -check-pointers-dangling=all -fp-trap-all=all
+	endif
 
-        ifeq ($(openmp), 1)
-                CXXFLAGS += -fopenmp -DUSE_OMP
-                LDFLAGS += -fopenmp
-        endif
+	ifeq ($(openmp), 1)
+			CXXFLAGS += -fopenmp # -DUSE_OMP
+			LDFLAGS += -fopenmp
+	endif
+
+else ifneq (, $(findstring pgc++, $(CXX))) # if using any version of g++
+	CXXFLAGS = -fast -O4 -Minfo=mp -I$(NVTOOLSEXT_DIR)
+	LDFLAGS = 
+
+	ifeq ($(openmp), 1)
+			CXXFLAGS += -mp
+			LDFLAGS += -mp
+	endif
 
 else
 # the only way to display the error message in Makefile ...

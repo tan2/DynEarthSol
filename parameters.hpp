@@ -24,6 +24,7 @@ typedef Array2D<double,NDIMS> array_t;
 typedef Array2D<double,NSTR> tensor_t;
 typedef Array2D<double,NODES_PER_ELEM> shapefn;
 typedef Array2D<double,1> regattr_t;
+typedef Array2D<double,NODES_PER_ELEM*3> elem_cache;
 
 typedef Array2D<int,NODES_PER_ELEM> conn_t;
 typedef Array2D<int,NDIMS> segment_t;
@@ -248,6 +249,7 @@ struct Markers {
 
 struct Debug {
     bool dt;
+    bool has_two_layers_for;
 };
 
 struct Param {
@@ -304,9 +306,10 @@ struct SurfaceInfo {
     std::vector<double_vec> *normals;
     std::vector<double_vec> *dips;
 
-    std::unordered_map<int,int> arctop_facet_elems;
-    std::unordered_map<int,int> arctop_nodes;
-    std::vector<int_map> *arcelem_and_nodes_num;
+    int_map arctop_facet_elems;
+    int_map arctop_nodes;
+    int_map2D *arcelem_and_nodes_num;
+    int_map2D *all_arcelem_and_nodes_num;
 
 
     int ntops;
@@ -376,6 +379,7 @@ struct Variables {
     array_t *vel, *force, *coord0;
     tensor_t *strain_rate, *strain, *stress;
     shapefn *shpdx, *shpdy, *shpdz;
+    elem_cache *tmp_result;
 
     MatProps *mat;
 

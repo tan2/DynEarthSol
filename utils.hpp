@@ -37,7 +37,7 @@ inline void loop_all_elem(const std::vector<int> &egroups, ElemFunc &functor)
 #else
 
     // loop over all elements with default omp method
-    #pragma omp parallel for default(none) shared(egroups, functor)
+//    #pragma omp parallel for default(none) shared(egroups, functor)
     for (int e=egroups[0]; e<egroups[egroups.size()-1]; ++e)
         functor(e);
 
