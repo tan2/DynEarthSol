@@ -10,3 +10,6 @@ ann/lib/*
 *.code*
 benchmark.*
 valgrind-out.txt
+orig-*
+.vscode
+*.out
