@@ -79,7 +79,7 @@ void init(const Param& param, Variables& var)
     create_boundary_nodes(var);
     create_boundary_facets(var);
     create_support(var);
-    create_elem_groups(var);
+//    create_elem_groups(var);
     create_elemmarkers(param, var);
     create_markers(param, var);
 
@@ -248,7 +248,7 @@ void update_mesh(const Param& param, Variables& var)
     update_coordinate(var, *var.coord);
     surface_processes(param, var, *var.coord, *var.stress, *var.strain, *var.strain_rate, \
                       *var.plstrain, var.surfinfo, var.markersets, *var.elemmarkers);
-    var.markersets[0]->update_marker_in_elem(var);
+//    var.markersets[0]->update_marker_in_elem(var);
 //    var.markersets[0]->create_melt_markers(param.mat.mattype_partial_melting_mantle,var.melt_markers);
 
 

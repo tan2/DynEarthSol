@@ -9,6 +9,8 @@
 #include "parameters.hpp"
 #include "matprops.hpp"
 #include "markerset.hpp"
+#include "barycentric-fn.hpp"
+#include "geometry.hpp"
 
 
 #include "bc.hpp"
@@ -1374,51 +1376,54 @@ void correct_surface_element(const Variables& var, const double_vec& dhacc, Mark
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-//    const size_t ntop_elem = var.top_elems->size();
-//    array_t coord0s(ntop_elem*NODES_PER_ELEM,0.);
-//    double_vec new_volumes(ntop_elem,0.);
+    const size_t ntop_elem = var.top_elems->size();
+    array_t coord0s(ntop_elem*NODES_PER_ELEM,0.);
+    double_vec new_volumes(ntop_elem,0.);
 
     int_vec delete_marker;
     delete_marker.reserve(100);
 
-    // go through all surface connected elements
-    #pragma omp parallel for default(none) shared(var,dhacc,ms,stress,strain,strain_rate,plstrain,delete_marker)
-    for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
-        double m_coord[NDIMS], new_eta[NDIMS], b[NODES_PER_ELEM][NDIMS];
-        int_vec& markers = (*var.marker_in_elem)[*e];
-        int* tnodes = (*var.connectivity)[*e];
-        const double *coord0[NODES_PER_ELEM], *coord1[NODES_PER_ELEM];
+    #pragma omp parallel for default(none) shared(var,dhacc,stress,strain,strain_rate,plstrain,coord0s, new_volumes)
+    for (size_t i=0;i<ntop_elem;i++) {
+        const double *coord1[NODES_PER_ELEM];
+
+        auto e = (*var.top_elems)[i];
+        int* tnodes = (*var.connectivity)[e];
+        double *c00 = coord0s[i*NODES_PER_ELEM];
+        double *c01 = coord0s[i*NODES_PER_ELEM+1];
+        double *c02 = coord0s[i*NODES_PER_ELEM+2];
+
+        for (int j=0; j<NODES_PER_ELEM;j++)
+            coord1[j] = (*var.coord)[tnodes[j]];
+        compute_volume_sg(coord1, new_volumes[i]);
 
         // restore the reference node locations before deposition/erosion 
-        for (int j=0; j<NODES_PER_ELEM;j++) {
-            for (size_t k=0; k<NDIMS-1; k++)
-                b[j][k] = (*var.coord)[tnodes[j]][k];
-            b[j][NDIMS-1] = (*var.coord)[tnodes[j]][NDIMS-1] - dhacc[tnodes[j]];
-            coord0[j] = b[j];
-            coord1[j] = (*var.coord)[tnodes[j]];
-        }
-        
+        c00[0] = (*var.coord)[tnodes[0]][0];
+        c00[1] = (*var.coord)[tnodes[0]][1] - dhacc[tnodes[0]];
+        c01[0] = (*var.coord)[tnodes[1]][0];
+        c01[1] = (*var.coord)[tnodes[1]][1] - dhacc[tnodes[1]];
+        c02[0] = (*var.coord)[tnodes[2]][0];
+        c02[1] = (*var.coord)[tnodes[2]][1] - dhacc[tnodes[2]];
+
         // correct stress and strain
-        double dArea0 = ((coord0[1][0] - coord0[0][0])*(coord0[2][1] - coord0[0][1]) \
-                       - (coord0[2][0] - coord0[0][0])*(coord0[1][1] - coord0[0][1]))/2.0;
+        double dArea0 = ((c01[0] - c00[0])*(c02[1] - c00[1]) \
+                       - (c02[0] - c00[0])*(c01[1] - c00[1]))/2.0;
         dArea0 = (dArea0 > 0.0) ? dArea0 : -dArea0;
 
-        double dArea1 = ((coord1[1][0] - coord1[0][0])*(coord1[2][1] - coord1[0][1]) \
-                       - (coord1[2][0] - coord1[0][0])*(coord1[1][1] - coord1[0][1]))/2.0;
-        dArea1 = (dArea1 > 0.0) ? dArea1 : -dArea1;
-
-        double rdv = dArea1 / dArea0;
+        double rdv = new_volumes[i] / dArea0;
 
         if (rdv > 1.) {
-            plstrain[*e] /= rdv;
+            plstrain[e] /= rdv;
             for (int i=0;i<NSTR;i++) {
-                stress[*e][i] /= rdv;
-                strain[*e][i] /= rdv;
-                strain_rate[*e][i] /= rdv;
+                stress[e][i] /= rdv;
+                strain[e][i] /= rdv;
+                strain_rate[e][i] /= rdv;
             }
         }
-        ms.correct_surface_marker(var, markers, *e, coord0, coord1, delete_marker);
     }
+    Barycentric_transformation bary(*var.top_elems, *var.coord, *var.connectivity, new_volumes);
+
+    ms.correct_surface_marker(var, coord0s, bary, delete_marker);
 
     // delete recorded marker
     for (auto m=delete_marker.begin(); m<delete_marker.end(); m++)
@@ -1486,7 +1491,6 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
     if (var.steps != 0) {
         if ( var.steps % param.mesh.quality_check_step_interval == 0) {
             // correct surface marker.
-//            markersets[0]->correct_surface_marker(var, *surfinfo.dhacc, plstrain, strain);
             correct_surface_element(var, *surfinfo.dhacc, *markersets[0], stress, strain, strain_rate, plstrain);
             std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
             // set marker of sediment.
@@ -1517,7 +1521,6 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
 
             if (!(var.steps % param.mesh.quality_check_step_interval)) {
                 // correct surface marker.
-//                markersets[0]->correct_surface_marker(var, *surfinfo.dhacc_oc, plstrain, strain);
                 correct_surface_element(var, *surfinfo.dhacc_oc, *markersets[0], stress, strain, strain_rate, plstrain);
                 std::fill(surfinfo.dhacc_oc->begin(), surfinfo.dhacc_oc->end(), 0.);
                 // set marker of sediment.

@@ -367,43 +367,48 @@ void MarkerSet::set_surface_marker(const Variables& var, const int mattype, arra
 
 }
 
-
 // surface processes correcttion of marker
-void MarkerSet::correct_surface_marker(const Variables& var,int_vec& markers, const int e, const double **coord0, const double **coord1, int_vec& delete_marker) {
-    double m_coord[NDIMS], new_eta[NDIMS], new_volume;
+void MarkerSet::correct_surface_marker(const Variables& var, array_t& coord0s, Barycentric_transformation &bary, int_vec& delete_marker) {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    // calculate barycentric coordinate of markers
-    compute_volume_sg(coord1,new_volume);
-    Barycentric_transformation bary(coord1, new_volume);
+    #pragma omp parallel for default(none) shared(_nmarkers,_elem,_eta,var,coord0s,bary,delete_marker)
+    for (int i=0; i<_nmarkers;i++) {
+        double m_coord[NDIMS], new_eta[NDIMS];
+        int e = (*_elem)[i];
+        auto it = find(var.top_elems->begin(), var.top_elems->end(), e);
+        // If element was not found
+        if (it == var.top_elems->end())
+            continue;
+        int e_ind = it - var.top_elems->begin();
 
-    // go through all markers of each element
-    for (auto imark=markers.begin(); imark<markers.end(); imark++) {
         for (int k=0; k<NDIMS; k++) {
             m_coord[k] = 0.;
             // correct marker coordinate
-            for (int l=0; l<NODES_PER_ELEM; l++)
-                m_coord[k] += (*_eta)[*imark][l] * coord0[l][k];
+//            for (int l=0; l<NODES_PER_ELEM; l++)
+//                m_coord[k] += (*_eta)[i][l] * coord0[l][k];
+                m_coord[k] += (*_eta)[i][0] * coord0s[e_ind*NODES_PER_ELEM][k];
+                m_coord[k] += (*_eta)[i][1] * coord0s[e_ind*NODES_PER_ELEM+1][k];
+                m_coord[k] += (*_eta)[i][2] * coord0s[e_ind*NODES_PER_ELEM+2][k];
         }
         // check if the marker is still in original element
-        bary.transform(m_coord,0,new_eta);
+        bary.transform(m_coord,e_ind,new_eta);
         if (bary.is_inside(new_eta))
-            set_eta(*imark, new_eta);
+            set_eta(i, new_eta);
         else {
             int inc, new_elem;
 //                std::cout << "Marker " << *imark << " in element " << *e << " is trying to remap in element ";
             // find new element of the marker
             remap_marker(var,m_coord,e,new_elem,new_eta,inc);
             if (inc) {
-                set_eta(*imark, new_eta);
-                set_elem(*imark, new_elem);
+                set_eta(i, new_eta);
+                set_elem(i, new_elem);
 //                    std::cout << "... Success!.\n";
             }
             else {
                 #pragma omp critical
-                delete_marker.push_back(*imark);
+                delete_marker.push_back(i);
 //                    std::cout << "... Fail!. (Erosion might have occurred)\n";
             }
         }
@@ -414,7 +419,8 @@ void MarkerSet::correct_surface_marker(const Variables& var,int_vec& markers, co
 }
 
 
-void MarkerSet::remap_marker(const Variables &var, const double *m_coord, const int e, int& new_elem, double *new_eta, int& inc)
+void MarkerSet::remap_marker(const Variables &var, const double *m_coord, \
+                    const int e, int& new_elem, double *new_eta, int& inc)
 {
     const double *coord[NODES_PER_ELEM];
     double volume, eta[NODES_PER_ELEM];
@@ -953,7 +959,7 @@ namespace {
     }
 
 
-    void replenish_markers_with_mattype_from_nn_preparation(const Param& param, const Variables &var,
+    void replenish_markers_with_mattype_from_nn_preparation(const Variables &var,
                                                             ANNkd_tree *&kdtree, double **&points)
     {
         const MarkerSet &ms = *var.markersets[0];
@@ -1059,7 +1065,7 @@ void remap_markers(const Param& param, Variables &var, const array_t &old_coord,
     ANNkd_tree *kdtree = NULL;
     double **points = NULL; // coordinate of markers
     if (param.markers.replenishment_option == 2) {
-        replenish_markers_with_mattype_from_nn_preparation(param, var, kdtree, points);
+        replenish_markers_with_mattype_from_nn_preparation(var, kdtree, points);
     }
 
     for( int e = 0; e < var.nelem; e++ ) {
