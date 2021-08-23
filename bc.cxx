@@ -1,3 +1,6 @@
+#ifdef USE_NPROF
+#include <nvToolsExt.h> 
+#endif
 #include <iostream>
 #include <unordered_map>
 #include <iomanip>
@@ -176,6 +179,9 @@ void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][N
 
 void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_vec &vbc_period_ratio_x)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     // meaning of vbc flags (odd: free; even: fixed) --
     // 0: all components free
     // 1: normal component fixed, shear components free
@@ -605,6 +611,9 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
             }
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -1361,6 +1370,14 @@ void surface_plstrain_diffusion(const Param &param, const Variables& var, double
 void correct_surface_element(const Variables& var, const double_vec& dhacc, MarkerSet& ms, \
                               tensor_t& stress, tensor_t& strain, tensor_t& strain_rate, double_vec& plstrain)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+
+//    const size_t ntop_elem = var.top_elems->size();
+//    array_t coord0s(ntop_elem*NODES_PER_ELEM,0.);
+//    double_vec new_volumes(ntop_elem,0.);
+
     int_vec delete_marker;
     delete_marker.reserve(100);
 
@@ -1406,6 +1423,9 @@ void correct_surface_element(const Variables& var, const double_vec& dhacc, Mark
     // delete recorded marker
     for (auto m=delete_marker.begin(); m<delete_marker.end(); m++)
             ms.remove_marker(*m);
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
 }
 
@@ -1413,6 +1433,10 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                        tensor_t& strain_rate, double_vec& plstrain, SurfaceInfo& surfinfo, \
                         std::vector<MarkerSet*> &markersets, int_vec2D& elemmarkers)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+
     int ntop = surfinfo.top_nodes->size();
     double_vec dh(ntop,0.), dh_oc(ntop,0.), src_locs(2,0.), src_abj(2,0.);
     const int slow_updates_interval = 10;
@@ -1526,6 +1550,9 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                         << std::fixed << std::setprecision(3) << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
 
 }

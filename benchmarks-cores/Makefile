@@ -14,7 +14,7 @@ ifeq ($(DEBUG), 1)
 	DEBUGFLAG = valgrind --tool=helgrind --log-file=valgrind-out.txt -v
 endif
 ifeq ($(NSYS), 1)
-	DEBUGFLAG = nsys profile --output=benchmark
+	DEBUGFLAG = nsys profile --output=benchmark.${CASE}
 endif
 
 # Use single cpu for omp to avoid round-off errors

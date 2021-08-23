@@ -14,15 +14,16 @@
 ndims = 2
 opt = 2
 openmp = 1
-nsys = 0
+nprof = 0
 
 UNAME_S := $(shell uname -s)
 
+
 ## Select C++ compiler
-ifeq ($(nsys), 1)
+CXX = g++
+
+ifeq ($(nprof), 1)
 	CXX = pgc++
-else
-	CXX = g++
 endif
 #CXX = g++-5
 
@@ -31,7 +32,7 @@ BOOST_ROOT_DIR = ${HOME}/lib/boost_1_62_0
 
 ## nvToolsExt location
 NVTOOLSEXT_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/include
-
+NVTOOLSEXT_LIB = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/lib64
 ########################################################################
 ## Select compiler and linker flags
 ## (Usually you won't need to modify anything below)
@@ -70,16 +71,11 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 	endif
 
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp # -DUSE_OMP
+		CXXFLAGS += -fopenmp -I$(NVTOOLSEXT_DIR) # -DUSE_OMP
 		ifeq ($(opt), 0)
 			CXXFLAGS += -pthread
 		endif
-		LDFLAGS += -fopenmp
-	endif
-
-	ifeq ($(gprof), 1)
-		CXXFLAGS += -pg
-		LDFLAGS += -pg
+		LDFLAGS += -fopenmp -L$(NVTOOLSEXT_LIB) -Wl,-rpath,$(NVTOOLSEXT_LIB) -lnvToolsExt
 	endif
 
 
@@ -98,19 +94,23 @@ else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with
 	endif
 
 	ifeq ($(openmp), 1)
-			CXXFLAGS += -fopenmp # -DUSE_OMP
+			CXXFLAGS += -fopenmp -DUSE_OMP
 			LDFLAGS += -fopenmp
 	endif
 
 else ifneq (, $(findstring pgc++, $(CXX))) # if using any version of g++
-	CXXFLAGS = -fast -O4 -Minfo=mp -I$(NVTOOLSEXT_DIR)
+	CXXFLAGS = -fast -O4 -Minfo=mp 
 	LDFLAGS = 
 
 	ifeq ($(openmp), 1)
-			CXXFLAGS += -mp
+			CXXFLAGS += -mp -DUSE_OMP
 			LDFLAGS += -mp
 	endif
 
+	ifeq ($(nprof), 1)
+			CXXFLAGS += -I$(NVTOOLSEXT_DIR) -DUSE_NPROF
+			LDFLAGS += -L$(NVTOOLSEXT_LIB) -lnvToolsExt
+	endif
 else
 # the only way to display the error message in Makefile ...
 all:

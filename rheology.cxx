@@ -1,5 +1,8 @@
 #include <cmath>
 #include <iostream>
+#ifdef USE_NPROF
+#include <nvToolsExt.h>
+#endif
 
 #include "3x3-C/dsyevh3.h"
 
@@ -512,6 +515,9 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                    tensor_t& strain, double_vec& plstrain,
                    double_vec& delta_plstrain, tensor_t& strain_rate)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     const int rheol_type = var.mat->rheol_type;
 
     #pragma omp parallel for default(none)                           \
@@ -644,6 +650,10 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 
     // correct stress 1st invariant of surface elements
     if (param.control.surface_pressure_correction) {
+#ifdef USE_NPROF
+        nvtxRangePushA("surface_pressure_correction");
+#endif
+
         #pragma omp parallel for default(none) shared(var, stress)
         for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
             double* s = stress[*e];
@@ -656,5 +666,11 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                     s[j] -= first_inv;
             }
         }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }

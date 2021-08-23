@@ -4,6 +4,9 @@
 #include <assert.h>
 #include <unordered_map>
 #include <set>
+#ifdef USE_NPROF
+#include <nvToolsExt.h>
+#endif
 
 #include "ANN/ANN.h"
 
@@ -160,11 +163,20 @@ void MarkerSet::create_marker_in_elem(Variables& var)
 
 void MarkerSet::update_marker_in_elem(Variables& var)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     delete var.marker_in_elem;
     var.marker_in_elem = new int_vec2D(var.nelem);
 
+#ifdef USE_NPROF
+    nvtxRangePushA("loop all marker");
+#endif
     for (int i=0; i<_nmarkers; ++i)
         (*var.marker_in_elem)[(*_elem)[i]].push_back(i);
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
     if (DEBUG) {
         std::cout << "Markers in elements";
@@ -175,6 +187,9 @@ void MarkerSet::update_marker_in_elem(Variables& var)
             std::cout << "\n";
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 void MarkerSet::create_melt_markers(const int mat, int_vec& melt_markers)
@@ -356,6 +371,9 @@ void MarkerSet::set_surface_marker(const Variables& var, const int mattype, arra
 // surface processes correcttion of marker
 void MarkerSet::correct_surface_marker(const Variables& var,int_vec& markers, const int e, const double **coord0, const double **coord1, int_vec& delete_marker) {
     double m_coord[NDIMS], new_eta[NDIMS], new_volume;
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
 
     // calculate barycentric coordinate of markers
     compute_volume_sg(coord1,new_volume);
@@ -390,6 +408,9 @@ void MarkerSet::correct_surface_marker(const Variables& var,int_vec& markers, co
             }
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 

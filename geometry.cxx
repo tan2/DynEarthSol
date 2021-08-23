@@ -1,3 +1,6 @@
+#ifdef USE_NPROF
+#include <nvToolsExt.h> 
+#endif
 #include <cmath>
 #include <limits>
 #include <iostream>
@@ -85,6 +88,9 @@ static double triangle_area(const double *a,
 
 void compute_volume_sg(const double **coord, double &volume)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     const double *a = coord[0];
     const double *b = coord[1];
     const double *c = coord[2];
@@ -94,12 +100,18 @@ void compute_volume_sg(const double **coord, double &volume)
 #else
     volume = triangle_area(a, b, c);
 #endif
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
 }
 
 void compute_volume(const array_t &coord, const conn_t &connectivity,
                     double_vec &volume)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     #pragma omp parallel for default(none)      \
         shared(coord, connectivity, volume)
     for (std::size_t e=0; e<volume.size(); ++e) {
@@ -119,11 +131,17 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
         volume[e] = triangle_area(a, b, c);
 #endif
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt, elem_cache &tmp_result)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     /* dvoldt is the volumetric strain rate, weighted by the element volume,
      * lumped onto the nodes.
      */
@@ -187,12 +205,18 @@ void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt
     // std::cout << "dvoldt:\n";
     // print(std::cout, dvoldt);
     // std::cout << "\n";
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void compute_edvoldt(const Variables &var, double_vec &dvoldt,
                      double_vec &edvoldt)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     /* edvoldt is the averaged (i.e. smoothed) dvoldt on the element.
      * It is used in update_stress() to prevent mesh locking.
      */
@@ -207,7 +231,9 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
         }
         edvoldt[e] = dj / NODES_PER_ELEM;
     }
-
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
     // std::cout << "edvoldt:\n";
     // print(std::cout, edvoldt);
     // std::cout << "\n";
@@ -216,6 +242,9 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
 
 double compute_dt(const Param& param, const Variables& var)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     // constant dt
     if (param.control.fixed_dt != 0) return param.control.fixed_dt;
 
@@ -229,6 +258,10 @@ double compute_dt(const Param& param, const Variables& var)
     double dt_diffusion = std::numeric_limits<double>::max();
     double minl = std::numeric_limits<double>::max();
 
+#ifdef USE_NPROF
+    nvtxRangePushA("for_elem");
+#endif
+//    #pragma omp parallel for reduction(min:minl) default(none) shared(param,var, nelem, connectivity, coord, volume, dt_maxwell, dt_diffusion)
     for (int e=0; e<nelem; ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
@@ -266,8 +299,13 @@ double compute_dt(const Param& param, const Variables& var)
         if (param.control.has_thermal_diffusion)
             dt_diffusion = std::min(dt_diffusion,
                                     0.5 * minh * minh / var.mat->therm_diff_max);
-	minl = std::min(minl, minh);
+//        if (minl > minh)
+//            minl = minh;
+	    minl = std::min(minl, minh);
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
     double max_vbc_val;
     if (param.control.characteristic_speed == 0)
@@ -291,6 +329,9 @@ double compute_dt(const Param& param, const Variables& var)
                   << " " << dt_advection << " " << dt_elastic << "\n";
         std::exit(11);
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
     return dt;
 }
 
@@ -300,6 +341,9 @@ void compute_mass(const Param &param,
                   double max_vbc_val, double_vec &volume_n,
                   double_vec &mass, double_vec &tmass, elem_cache &tmp_result)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
     volume_n.assign(volume_n.size(), 0);
     mass.assign(mass.size(), 0);
@@ -377,7 +421,9 @@ void compute_mass(const Param &param,
             }
         }
     }
-
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
 //    loop_all_elem(egroups, elemf);
 }
@@ -386,6 +432,9 @@ void compute_mass(const Param &param,
 void compute_shape_fn(const Variables &var, const int_vec &egroups,
                       shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     class ElemFunc_shape_fn : public ElemFunc
     {
     private:
@@ -473,6 +522,9 @@ void compute_shape_fn(const Variables &var, const int_vec &egroups,
         elemf(e);
 
 //    loop_all_elem(egroups, elemf);
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 

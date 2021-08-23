@@ -1,4 +1,7 @@
 #include <iostream>
+#ifdef USE_NPROF
+#include <nvToolsExt.h> 
+#endif
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "bc.hpp"
@@ -109,6 +112,9 @@ void reallocate_variables(const Param& param, Variables& var)
 void update_temperature(const Param &param, const Variables &var,
                         double_vec &temperature, double_vec &tdot, elem_cache &tmp_result)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     tdot.assign(var.nnode, 0);
 
     class ElemFunc_temperature : public ElemFunc
@@ -188,11 +194,17 @@ void update_temperature(const Param &param, const Variables &var,
         else
             temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     double *v[NODES_PER_ELEM];
 
     #pragma omp parallel for default(none) \
@@ -257,6 +269,9 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
             s[n] += 0.5 * (v[i][1] * shpdz[i] + v[i][2] * shpdy[i]);
 #endif
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -318,6 +333,9 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
 
 void update_force(const Param& param, const Variables& var, array_t& force, elem_cache& tmp_result)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
 
     class ElemFunc_force : public ElemFunc
@@ -401,11 +419,17 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     if (param.control.is_quasi_static) {
         apply_damping(param, var, force);
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void update_velocity(const Variables& var, array_t& vel)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     const double* m = &(*var.mass)[0];
     // flatten 2d arrays to simplify indexing
     const double* f = var.force->data();
@@ -416,11 +440,17 @@ void update_velocity(const Variables& var, array_t& vel)
         int n = i / NDIMS;
         v[i] += var.dt * f[i] / m[n];
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void update_coordinate(const Variables& var, array_t& coord)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     double* x = var.coord->data();
     const double* v = var.vel->data();
 
@@ -429,6 +459,9 @@ void update_coordinate(const Variables& var, array_t& coord)
     for (int i=0; i<var.nnode*NDIMS; ++i) {
         x[i] += v[i] * var.dt;
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -474,6 +507,9 @@ namespace {
 
 void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     // The spin rate tensor, W, and the Cauchy stress tensor, S, are
     //     [  0  w3  w4]     [s0 s3 s4]
     // W = [-w3   0  w5],  S=[s3 s1 s5].
@@ -544,5 +580,8 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 
 #endif
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 

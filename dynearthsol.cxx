@@ -1,5 +1,7 @@
 #include <iostream>
+#ifdef USE_NPROF
 #include <nvToolsExt.h> 
+#endif
 #ifdef USE_OMP
 #include <omp.h>
 #endif
@@ -67,6 +69,9 @@ void init_var(const Param& param, Variables& var)
 
 void init(const Param& param, Variables& var)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     std::cout << "Initializing mesh and field data...\n";
 
     create_new_mesh(param, var);
@@ -104,6 +109,9 @@ void init(const Param& param, Variables& var)
     initial_weak_zone(param, var, *var.plstrain);
 
     phase_changes_init(param, var);
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -194,10 +202,8 @@ void restart(const Param& param, Variables& var)
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     bin_chkpt.read_array(*var.volume_old, "volume_old");
 
-    nvtxRangePushA("compute_mass");
     compute_mass(param, var.egroups, var,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
-    nvtxRangePop();
 
     compute_shape_fn(var, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
@@ -235,6 +241,10 @@ void restart(const Param& param, Variables& var)
 
 void update_mesh(const Param& param, Variables& var)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+
     update_coordinate(var, *var.coord);
     surface_processes(param, var, *var.coord, *var.stress, *var.strain, *var.strain_rate, \
                       *var.plstrain, var.surfinfo, var.markersets, *var.elemmarkers);
@@ -248,41 +258,35 @@ void update_mesh(const Param& param, Variables& var)
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
     compute_shape_fn(var, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void isostasy_adjustment(const Param &param, Variables &var)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     std::cout << "Adjusting isostasy for " << param.ic.isostasy_adjustment_time_in_yr << " yrs...\n";
 
     var.dt = compute_dt(param, var);
     int iso_steps = param.ic.isostasy_adjustment_time_in_yr*YEAR2SEC / var.dt;
 
     for (int i=0; i<iso_steps; i++) {
-        nvtxRangePushA("update_strain_rate");
         update_strain_rate(var, *var.strain_rate);
-        nvtxRangePop();
 
-        nvtxRangePushA("compute_dvoldt");
         compute_dvoldt(param, var, *var.ntmp, *var.tmp_result);
-        nvtxRangePop();
 
-        nvtxRangePushA("compute_edvoldt");
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        nvtxRangePop();
 
-        nvtxRangePushA("update_stress");
         update_stress(param ,var, *var.stress, *var.stressyy, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
-        nvtxRangePop();
 
-        nvtxRangePushA("update_force");
         update_force(param, var, *var.force, *var.tmp_result);
-        nvtxRangePop();
 
-        nvtxRangePushA("update_velocity");
         update_velocity(var, *var.vel);
-        nvtxRangePop();
 
         // do not apply vbc to allow free boundary
 
@@ -304,6 +308,9 @@ void isostasy_adjustment(const Param &param, Variables &var)
 
     }
     std::cout << "Adjusted isostasy for " << iso_steps << " steps.\n";
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -337,9 +344,7 @@ int main(int argc, const char* argv[])
 
     if (! param.sim.is_restarting) {
 
-        nvtxRangePushA("init");
         init(param, var);
-        nvtxRangePop();
 
         if (param.ic.isostasy_adjustment_time_in_yr > 0) {
             // output.write(var, false);
@@ -361,48 +366,33 @@ int main(int argc, const char* argv[])
 
     std::cout << "Starting simulation...\n";
     do {
+#ifdef USE_NPROF
+        nvtxRangePushA("dynearthsol");
+#endif
         var.steps ++;
         var.time += var.dt;
 
         if (param.control.has_thermal_diffusion) {
 
-            nvtxRangePushA("update_temperature");
             update_temperature(param, var, *var.temperature, *var.ntmp, *var.tmp_result);
-            nvtxRangePop();
 
         }
-        nvtxRangePushA("update_strain_rate");
         update_strain_rate(var, *var.strain_rate);
-        nvtxRangePop();
 
-        nvtxRangePushA("compute_dvoldt");
         compute_dvoldt(param, var, *var.ntmp, *var.tmp_result);
-        nvtxRangePop();
 
-        nvtxRangePushA("compute_edvoldt");
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        nvtxRangePop();
 
-        nvtxRangePushA("update_stress");
         update_stress(param, var, *var.stress, *var.stressyy, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
-        nvtxRangePop();
 
-        nvtxRangePushA("update_force");
         update_force(param, var, *var.force, *var.tmp_result);
-        nvtxRangePop();
 
-        nvtxRangePushA("update_velocity");
         update_velocity(var, *var.vel);
-        nvtxRangePop();
 
-        nvtxRangePushA("apply_vbcs");
         apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
-        nvtxRangePop();
 
-        nvtxRangePushA("update_mesh");
         update_mesh(param, var);
-        nvtxRangePop();
 
         // elastic stress/strain are objective (frame-indifferent)
         if (var.mat->rheol_type & MatProps::rh_elastic)
@@ -448,15 +438,16 @@ int main(int argc, const char* argv[])
                     output.write(var, false);
                 }
 
-                nvtxRangePushA("remesh");
                 remesh(param, var, quality_is_bad);
-                nvtxRangePop();
 
                 if (param.sim.has_output_during_remeshing) {
                     output.write(var, false);
                 }
             }
         }
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
 
     } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time_in_yr * YEAR2SEC);
 
