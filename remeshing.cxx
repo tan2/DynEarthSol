@@ -1535,7 +1535,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
      * delete var.support;
      * create_support(var);
      */
-    create_elem_groups(var);
+//    create_elem_groups(var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     // TODO: using edvoldt and volume to get volume_old
