@@ -270,6 +270,12 @@ void MarkerSet::set_surface_marker(const Variables& var, const int mattype, arra
 
         double eta[NDIMS],mcoord[NDIMS] = {},sum = 0.;
 
+        //create random by rv and dv
+//        double_vec rv_rand(NDIMS);
+//        rv_rand[0] = double(int(rv*100000000.)%1000) * 1.e-3;
+//        rv_rand[1] = double(int(dv)%1000) * 1.e-3;
+//        printf("%f %f\n",rv_rand[0],rv_rand[1]);
+
         // random horizontal coordinate (2D:x or 3D:x-y) 
         for( int j = 0; j < NDIMS; j++ ) {
             eta[j] = (rand()/(double)RAND_MAX);

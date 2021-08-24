@@ -309,7 +309,6 @@ struct SurfaceInfo {
     int_map arctop_facet_elems;
     int_map arctop_nodes;
     int_map2D *arcelem_and_nodes_num;
-    int_map2D *all_arcelem_and_nodes_num;
 
 
     int ntops;

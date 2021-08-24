@@ -176,7 +176,13 @@ void update_temperature(const Param &param, const Variables &var,
         #pragma omp parallel for default(none) shared(var,tdot,tmp_result)
         for (int n=0;n<var.nnode;n++) {
             for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-                tdot[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] ];
+                const int *conn = (*var.connectivity)[*e];
+                for (int i=0;i<NODES_PER_ELEM;i++) {
+                    if (n == conn[i]) {
+                        tdot[n] += tmp_result[*e][ i ];
+                        break;
+                    }
+                }
             }
         }
     }
@@ -406,8 +412,14 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
             double *f = force[n];
             for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
                 double *tmp_f = tmp_result[*e];
-                for (int i=0;i<NDIMS;i++)
-                    f[i] -= tmp_f[ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] + NODES_PER_ELEM*i ];
+                const int *conn = (*var.connectivity)[*e];
+                for (int i=0;i<NODES_PER_ELEM;i++) {
+                    if (n == conn[i]) {
+                        for (int j=0;j<NDIMS;j++)
+                            f[j] -= tmp_f[ i + NODES_PER_ELEM*j ];
+                        break;
+                    }
+                }
             }
         }
     }

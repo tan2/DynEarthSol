@@ -189,7 +189,13 @@ void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt
         #pragma omp parallel for default(none) shared(var,dvoldt,tmp_result)
         for (int n=0;n<var.nnode;n++) {
             for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-                dvoldt[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] ];
+                const int *conn = (*var.connectivity)[*e];
+                for (int i=0;i<NODES_PER_ELEM;i++) {
+                    if (n == conn[i]) {
+                        dvoldt[n] += tmp_result[*e][ i ];
+                        break;
+                    }
+                }
             }
         }
     }
@@ -405,10 +411,15 @@ void compute_mass(const Param &param,
         #pragma omp parallel for default(none) shared(param,var,volume_n,mass,tmass,tmp_result)
         for (int n=0;n<var.nnode;n++) {
             for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-                volume_n[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] ];
-                mass[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] + NODES_PER_ELEM ];
-                if (param.control.has_thermal_diffusion) {
-                    tmass[n] += tmp_result[*e][ (*var.surfinfo.all_arcelem_and_nodes_num)[*e][n] + NODES_PER_ELEM*2 ];
+                const int *conn = (*var.connectivity)[*e];
+                for (int i=0;i<NODES_PER_ELEM;i++) {
+                    if (n == conn[i]) {
+                        volume_n[n] += tmp_result[*e][ i ];
+                        mass[n] += tmp_result[*e][ i + NODES_PER_ELEM ];
+                        if (param.control.has_thermal_diffusion)
+                            tmass[n] += tmp_result[*e][ i + NODES_PER_ELEM*2 ];
+                        break;
+                    }
                 }
             }
         }
