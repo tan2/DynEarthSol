@@ -21,7 +21,7 @@ UNAME_S := $(shell uname -s)
 
 ## Select C++ compiler
 CXX = g++
-
+CXX = pgc++
 ifeq ($(nprof), 1)
 	CXX = pgc++
 endif

@@ -9,13 +9,19 @@ OMP := 1
 TFLAG = #-v
 DEBUG := 0
 NSYS := 0
+VTK := 0
 FUNC := compute_mass
 ifeq ($(DEBUG), 1)
 	DEBUGFLAG = valgrind --tool=helgrind --log-file=valgrind-out.txt -v
 endif
 ifeq ($(NSYS), 1)
 	DEBUGFLAG = nsys profile --output=benchmark.${CASE}
+	NSYSSUM = nsys stats  benchmark.${CASE}.qdrep
 endif
+ifeq ($(VTK), 1)
+	VTKFLAG = ${MAKE} vtk
+endif
+
 
 # Use single cpu for omp to avoid round-off errors
 RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP}; time ${TFLAG} ${DEBUGFLAG} ${EXE} ${CASE}; echo
@@ -32,7 +38,9 @@ set:
 
 cmp:
 	${RUN_TEST}
+	${VTKFLAG}
 	python3 compare.py ${ORIG} ${FRAME}
+	${NSYSSUM}
 #	gprof ../dynearthsol2d gmon.out > benchmark.gp
 #	@echo "  %   cumulative   self                self     total"
 #	@echo " time   seconds   seconds    calls    ms/call  ms/call  name"

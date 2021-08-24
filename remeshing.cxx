@@ -4,6 +4,9 @@
 #include <iostream>
 #include <numeric>
 #include <unordered_map>
+#ifdef USE_NPROF
+#include <nvToolsExt.h> 
+#endif
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -902,6 +905,9 @@ void refine_surface_elem(const Param &param, const Variables &var,
                          const array_t &old_coord, const conn_t &old_connectivity,
                          const double_vec &old_volume, int &old_nnode, double *qcoord)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     const double surface_vol = param.mesh.sediment_size * sizefactor * std::pow(param.mesh.resolution, NDIMS);
 
     std::cout << "    Checking surface element volume.\n";
@@ -955,6 +961,9 @@ void refine_surface_elem(const Param &param, const Variables &var,
             }
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -962,6 +971,9 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
               const array_t &original_coord, const conn_t &original_connectivity,
               const segment_t &original_segment, const segflag_t &original_segflag)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     int_vec bdry_polygons[nbdrytypes];
     assemble_bdry_polygons(var, original_coord, original_connectivity, bdry_polygons);
 
@@ -1166,6 +1178,9 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
 
     if (param.mesh.meshing_sediment)
         delete [] qcoord;
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
 }
 
@@ -1409,6 +1424,9 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
 
 int bad_mesh_quality(const Param &param, const Variables &var, int &index)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     /* Check the quality of the mesh, return 0 if the mesh quality (by several
      * measures) is good. Non-zero returned values indicate --
      * 1: an element has bad quality (too acute / narrow / flat).
@@ -1423,6 +1441,9 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
         if ((*var.volume)[e] < smallest_vol) {
             index = e;
             std::cout << "    The size of element #" << index << " is too small.\n";
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
             return 3;
         }
     }
@@ -1439,6 +1460,9 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
                 if (std::fabs(z - bottom) > dist) {
                     index = i;
                     std::cout << "    Node #" << i << " is too far from the bottm: z = " << z << "\n";
+#ifdef USE_NPROF
+                    nvtxRangePop();
+#endif
                     return 2;
                 }
             }
@@ -1456,14 +1480,23 @@ int bad_mesh_quality(const Param &param, const Variables &var, int &index)
     if (q < param.mesh.min_quality) {
         index = worst_elem;
         std::cout << "    Element #" << worst_elem << " has mesh quality = " << q << ".\n";
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
         return 1;
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
     return 0;
 }
 
 
 void remesh(const Param &param, Variables &var, int bad_quality)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     std::cout << "  Remeshing starts...\n";
 
     {
@@ -1563,6 +1596,9 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     }
 
     std::cout << "  Remeshing finished.\n";
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
