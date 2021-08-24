@@ -367,7 +367,7 @@ int main(int argc, const char* argv[])
     std::cout << "Starting simulation...\n";
     do {
 #ifdef USE_NPROF
-        nvtxRangePushA("dynearthsol");
+        nvtxRangePush("dynearthsol");
 #endif
         var.steps ++;
         var.time += var.dt;
@@ -430,6 +430,9 @@ int main(int argc, const char* argv[])
         }
 
         if (var.steps % param.mesh.quality_check_step_interval == 0) {
+#ifdef USE_NPROF
+        nvtxRangePushA("quality_check");
+#endif
             int quality_is_bad, bad_quality_index;
             quality_is_bad = bad_mesh_quality(param, var, bad_quality_index);
             if (quality_is_bad) {
@@ -444,6 +447,9 @@ int main(int argc, const char* argv[])
                     output.write(var, false);
                 }
             }
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
         }
 #ifdef USE_NPROF
         nvtxRangePop();

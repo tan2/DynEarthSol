@@ -80,9 +80,9 @@ void Output::write_info(const Variables& var, double dt)
 
 void Output::write(const Variables& var, bool is_averaged)
 {
-#ifdef USE_NPROF
-    nvtxRangePushA(__FUNCTION__);
-#endif
+//#ifdef USE_NPROF
+//    nvtxRangePushA(__FUNCTION__);
+//#endif
     double dt = var.dt;
     double inv_dt = 1 / var.dt;
     if (average_interval && is_averaged) {
@@ -204,9 +204,9 @@ void Output::write(const Variables& var, bool is_averaged)
 
         #pragma omp single nowait
         {
-#ifdef USE_NPROF
-            nvtxRangePushA("print_close");
-#endif
+//#ifdef USE_NPROF
+//            nvtxRangePushA("print_close");
+//#endif
             std::cout << "  Output # " << frame
                         << ", step = " << var.steps
                         << ", time = " << var.time / YEAR2SEC << " yr"
@@ -228,14 +228,14 @@ void Output::write(const Variables& var, bool is_averaged)
                         }
                     }
             }
-#ifdef USE_NPROF
-            nvtxRangePop();
-#endif
+//#ifdef USE_NPROF
+//            nvtxRangePop();
+//#endif
         }
     }
-#ifdef USE_NPROF
-    nvtxRangePop();
-#endif
+//#ifdef USE_NPROF
+//    nvtxRangePop();
+//#endif
 
 }
 

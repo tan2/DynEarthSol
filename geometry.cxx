@@ -258,10 +258,7 @@ double compute_dt(const Param& param, const Variables& var)
     double dt_diffusion = std::numeric_limits<double>::max();
     double minl = std::numeric_limits<double>::max();
 
-#ifdef USE_NPROF
-    nvtxRangePushA("for_elem");
-#endif
-//    #pragma omp parallel for reduction(min:minl) default(none) shared(param,var, nelem, connectivity, coord, volume, dt_maxwell, dt_diffusion)
+//    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion) default(none) shared(param,var, nelem, connectivity, coord, volume)
     for (int e=0; e<nelem; ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
@@ -299,13 +296,8 @@ double compute_dt(const Param& param, const Variables& var)
         if (param.control.has_thermal_diffusion)
             dt_diffusion = std::min(dt_diffusion,
                                     0.5 * minh * minh / var.mat->therm_diff_max);
-//        if (minl > minh)
-//            minl = minh;
 	    minl = std::min(minl, minh);
     }
-#ifdef USE_NPROF
-    nvtxRangePop();
-#endif
 
     double max_vbc_val;
     if (param.control.characteristic_speed == 0)
