@@ -21,7 +21,7 @@ UNAME_S := $(shell uname -s)
 
 ## Select C++ compiler
 CXX = g++
-#CXX = pgc++
+
 ifeq ($(nprof), 1)
 	CXX = pgc++
 endif
@@ -99,8 +99,16 @@ else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with
 	endif
 
 else ifneq (, $(findstring pgc++, $(CXX))) # if using any version of g++
-	CXXFLAGS = -fast -O4 -Minfo=mp 
+	CXXFLAGS = -march=core2
 	LDFLAGS = 
+
+	ifeq ($(opt), 1)
+			CXXFLAGS += -O1
+	else ifeq ($(opt), 2)
+			CXXFLAGS += -O2
+	else ifeq ($(opt), 3)
+			CXXFLAGS += -O3 -fast
+	endif
 
 	ifeq ($(openmp), 1)
 			CXXFLAGS += -mp -DUSE_OMP
@@ -108,7 +116,7 @@ else ifneq (, $(findstring pgc++, $(CXX))) # if using any version of g++
 	endif
 
 	ifeq ($(nprof), 1)
-			CXXFLAGS += -I$(NVTOOLSEXT_DIR) -DUSE_NPROF
+			CXXFLAGS += -Minfo=mp -I$(NVTOOLSEXT_DIR) -DUSE_NPROF
 			LDFLAGS += -L$(NVTOOLSEXT_LIB) -Wl,-rpath,$(NVTOOLSEXT_LIB) -lnvToolsExt
 	endif
 else
