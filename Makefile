@@ -21,7 +21,7 @@ UNAME_S := $(shell uname -s)
 
 ## Select C++ compiler
 CXX = g++
-CXX = pgc++
+#CXX = pgc++
 ifeq ($(nprof), 1)
 	CXX = pgc++
 endif
@@ -71,11 +71,11 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 	endif
 
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -I$(NVTOOLSEXT_DIR) # -DUSE_OMP
+		CXXFLAGS += -fopenmp -DUSE_OMP
 		ifeq ($(opt), 0)
 			CXXFLAGS += -pthread
 		endif
-		LDFLAGS += -fopenmp -L$(NVTOOLSEXT_LIB) -Wl,-rpath,$(NVTOOLSEXT_LIB) -lnvToolsExt
+		LDFLAGS += -fopenmp
 	endif
 
 
@@ -109,7 +109,7 @@ else ifneq (, $(findstring pgc++, $(CXX))) # if using any version of g++
 
 	ifeq ($(nprof), 1)
 			CXXFLAGS += -I$(NVTOOLSEXT_DIR) -DUSE_NPROF
-			LDFLAGS += -L$(NVTOOLSEXT_LIB) -lnvToolsExt
+			LDFLAGS += -L$(NVTOOLSEXT_LIB) -Wl,-rpath,$(NVTOOLSEXT_LIB) -lnvToolsExt
 	endif
 else
 # the only way to display the error message in Makefile ...

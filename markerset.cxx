@@ -386,12 +386,15 @@ void MarkerSet::set_surface_marker(const Variables& var, const int mattype, arra
 }
 
 // surface processes correcttion of marker
-void MarkerSet::correct_surface_marker(const Variables& var, array_t& coord0s, Barycentric_transformation &bary, int_vec& delete_marker) {
+void MarkerSet::correct_surface_marker(const Variables& var, array_t& coord0s, Barycentric_transformation &bary) {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    #pragma omp parallel for default(none) shared(_nmarkers,_elem,_eta,var,coord0s,bary,delete_marker)
+    int_vec delete_marker;
+    delete_marker.reserve(100);
+
+    #pragma omp parallel for default(none) shared(var,coord0s,bary,delete_marker)
     for (int i=0; i<_nmarkers;i++) {
         double m_coord[NDIMS], new_eta[NDIMS];
         int e = (*_elem)[i];
@@ -428,6 +431,12 @@ void MarkerSet::correct_surface_marker(const Variables& var, array_t& coord0s, B
             }
         }
     }
+
+    // delete recorded marker
+    std::sort(delete_marker.rbegin(),delete_marker.rend());
+    for (auto m=delete_marker.begin(); m<delete_marker.end(); m++)
+            remove_marker(*m);
+
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif

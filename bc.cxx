@@ -1380,9 +1380,6 @@ void correct_surface_element(const Variables& var, const double_vec& dhacc, Mark
     array_t coord0s(ntop_elem*NODES_PER_ELEM,0.);
     double_vec new_volumes(ntop_elem,0.);
 
-    int_vec delete_marker;
-    delete_marker.reserve(100);
-
     #pragma omp parallel for default(none) shared(var,dhacc,stress,strain,strain_rate,plstrain,coord0s, new_volumes)
     for (size_t i=0;i<ntop_elem;i++) {
         const double *coord1[NODES_PER_ELEM];
@@ -1422,12 +1419,7 @@ void correct_surface_element(const Variables& var, const double_vec& dhacc, Mark
         }
     }
     Barycentric_transformation bary(*var.top_elems, *var.coord, *var.connectivity, new_volumes);
-
-    ms.correct_surface_marker(var, coord0s, bary, delete_marker);
-
-    // delete recorded marker
-    for (auto m=delete_marker.begin(); m<delete_marker.end(); m++)
-            ms.remove_marker(*m);
+    ms.correct_surface_marker(var, coord0s, bary);
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
