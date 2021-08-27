@@ -50,9 +50,11 @@ ifdef BOOST_ROOT_DIR
 	else
 		# with stage dir, BOOST_ROOT_DIR is the build directory
 		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)
-		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Wl,-rpath,$(BOOST_ROOT_DIR)/stage/lib
-		#BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/stage/lib -Xlinker -rpath -Xlinker $(BOOST_ROOT_DIR)/stage/lib
-
+		BOOST_LIB_DIR = $(BOOST_ROOT_DIR)/stage/lib
+	endif
+	BOOST_LDFLAGS += -L$(BOOST_LIB_DIR)
+	ifneq ($(OSNAME), Darwin)  # Apple's ld doesn't support -rpath
+		BOOST_LDFLAGS += -Wl,-rpath=$(BOOST_LIB_DIR)
 	endif
 endif
 
@@ -77,7 +79,6 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 		endif
 		LDFLAGS += -fopenmp
 	endif
-
 
 else ifneq (, $(findstring icpc, $(CXX))) # if using intel compiler, tested with v14
 	CXXFLAGS = -g -std=c++0x
@@ -206,6 +207,34 @@ CXXFLAGS += -I$(ANN_DIR)/include
 
 all: $(EXE) take-snapshot
 
+ifeq ($(useadapt), 1)
+
+$(LIBADAPTIVITY_DIR)/lflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
+	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
+
+$(LIBADAPTIVITY_DIR)/cppflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
+	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
+
+$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
+	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk
+
+$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
+	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
+
+-include $(LIBADAPTIVITY_DIR)/lflags.mk
+-include $(LIBADAPTIVITY_DIR)/cppflags.mk
+LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
+CXXFLAGS += $(CPPFLAGS)
+
+$(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a $(OBJS)
+		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
+			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
+			$(LIBADAPTIVITY_LIBS) \
+			-o $@
+ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
+		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+endif
+endif
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
 	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
 		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) -o $@

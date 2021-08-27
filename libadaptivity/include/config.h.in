@@ -1,4 +1,4 @@
-/* include/config.h.in.  Generated from configure.in by autoheader.  */
+/* include/config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to dummy `main' function (if any) required to link to the Fortran
    libraries. */
@@ -42,6 +42,13 @@
 /* Define to 1 if you have the `vtkCommon' library (-lvtkCommon). */
 #undef HAVE_LIBVTKCOMMON
 
+/* Define to 1 if you have the `vtkCommonCore' library (-lvtkCommonCore). */
+#undef HAVE_LIBVTKCOMMONCORE
+
+/* Define to 1 if you have the `vtkCommonDataModel' library
+   (-lvtkCommonDataModel). */
+#undef HAVE_LIBVTKCOMMONDATAMODEL
+
 /* Define to 1 if you have the `vtkexpat' library (-lvtkexpat). */
 #undef HAVE_LIBVTKEXPAT
 
@@ -53,6 +60,15 @@
 
 /* Define to 1 if you have the `vtkIO' library (-lvtkIO). */
 #undef HAVE_LIBVTKIO
+
+/* Define to 1 if you have the `vtkIOCore' library (-lvtkIOCore). */
+#undef HAVE_LIBVTKIOCORE
+
+/* Define to 1 if you have the `vtkIOParallel' library (-lvtkIOParallel). */
+#undef HAVE_LIBVTKIOPARALLEL
+
+/* Define to 1 if you have the `vtkIOXML' library (-lvtkIOXML). */
+#undef HAVE_LIBVTKIOXML
 
 /* Define to 1 if you have the `vtkzlib' library (-lvtkzlib). */
 #undef HAVE_LIBVTKZLIB
