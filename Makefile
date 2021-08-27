@@ -262,46 +262,45 @@ all: $(EXE) take-snapshot
 
 ifeq ($(useadapt), 1)
 
-	$(LIBADAPTIVITY_DIR)/lflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
-		@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
+$(LIBADAPTIVITY_DIR)/lflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
+	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
 
-	$(LIBADAPTIVITY_DIR)/cppflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
-		@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
+$(LIBADAPTIVITY_DIR)/cppflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
+	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
 
-	$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
-		@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk exec_prefix=`pwd`
+$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
+	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk exec_prefix=`pwd`
 
-	$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
-		@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
+$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
+	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
 
-	-include $(LIBADAPTIVITY_DIR)/lflags.mk
-	-include $(LIBADAPTIVITY_DIR)/cppflags.mk
-	LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
-	CXXFLAGS += $(CPPFLAGS)
+-include $(LIBADAPTIVITY_DIR)/lflags.mk
+-include $(LIBADAPTIVITY_DIR)/cppflags.mk
+LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
+CXXFLAGS += $(CPPFLAGS)
 
-	$(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a $(OBJS)
-			$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
-				-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
-				$(LIBADAPTIVITY_LIBS) \
-				-o $@
+$(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a $(OBJS)
+		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
+			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
+			$(LIBADAPTIVITY_LIBS) \
+			-o $@
 #ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
 #		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
 ##ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
 ##		install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
 ##endif
 #endif
-
-	ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
-			install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
-	ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
-			install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
-	endif
-endif
+else
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
-	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
-		-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) -o $@
-ifeq ($(UNAME_S),Darwin)
-	install_name_tool -change libboost_program_options.dylib $(BOOST_ROOT_DIR)/stage/lib/libboost_program_options.dylib dynearthsol$(ndims)d
+		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
+			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
+			-o $@
+ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
+		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
+		install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
+endif
+endif
 endif
 take-snapshot:
 	@# snapshot of the code for building the executable
@@ -314,7 +313,6 @@ ifneq ($(HAS_GIT), "true")
 	@echo >> snapshot.diff
 	@echo '==== Summary of the code ====' >> snapshot.diff
 	@git show -s >> snapshot.diff
-	@echo >> snapshot.diff
 	@echo >> snapshot.diff
 	@git status >> snapshot.diff
 	@echo >> snapshot.diff

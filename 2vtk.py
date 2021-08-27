@@ -77,6 +77,15 @@ npminor = int(npversion[1])
 if npmajor < 1 or (npmajor == 1 and npminor < 8):
     eigh_vectorized = False
 
+########################
+# Is numpy version < 1.8?
+eigh_vectorized = True
+npversion = np.__version__.split('.')
+npmajor = int(npversion[0])
+npminor = int(npversion[1])
+if npmajor < 1 or (npmajor == 1 and npminor < 8):
+    eigh_vectorized = False
+
 
 def main(modelname, start, end, delta):
     prefix = modelname
