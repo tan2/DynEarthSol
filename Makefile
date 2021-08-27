@@ -160,6 +160,23 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 		endif
 	endif
 
+else ifneq (, $(findstring pgc++, $(CXX))) # if using any version of g++
+	CXXFLAGS = -march=core2
+	LDFLAGS = 
+
+	ifeq ($(opt), 1)
+		CXXFLAGS += -O1
+	else ifeq ($(opt), 2)
+		CXXFLAGS += -O2
+	else ifeq ($(opt), 3)
+		CXXFLAGS += -O3 -fast
+	endif
+ 
+	ifeq ($(openmp), 1)
+		CXXFLAGS += -mp -DUSE_OMP
+		LDFLAGS += -mp
+	endif
+
 	ifeq ($(nprof), 1)
 			CXXFLAGS += -Minfo=mp -I$(NVTOOLSEXT_DIR) -DUSE_NPROF
 			LDFLAGS += -L$(NVTOOLSEXT_LIB) -Wl,-rpath,$(NVTOOLSEXT_LIB) -lnvToolsExt
