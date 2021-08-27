@@ -24,12 +24,17 @@ endif
 
 
 # Use single cpu for omp to avoid round-off errors
-RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP}; time ${TFLAG} ${DEBUGFLAG} ${EXE} ${CASE}; echo
+RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP} time ${TFLAG} ${DEBUGFLAG} ${EXE} ${CASE}
 
 ORIG = orig-${CASE}
 CURR = ~/data/jobs/${CASE}
 
 all: cmp
+
+auto:
+	${MAKE} CASE=test-big.cfg OMP=4
+	${MAKE} CASE=test-topo.cfg OMP=4
+	${MAKE} CASE=test-model.cfg OMP=4
 
 set:
 	# run test, store test output to old/

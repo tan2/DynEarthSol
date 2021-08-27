@@ -6,7 +6,7 @@
 #include <vector>
 
 /////////////////////////////////////////////////////////////////////
-
+/*
 class ElemFunc  // base class for functor used in loop_all_elem()
 {
 public:
@@ -43,7 +43,7 @@ inline void loop_all_elem(const std::vector<int> &egroups, ElemFunc &functor)
 
 #endif
 }
-
+*/
 /////////////////////////////////////////////////////////////////////
 
 

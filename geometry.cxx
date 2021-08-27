@@ -148,7 +148,7 @@ void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dvoldt.begin(), var.nnode, 0);
-
+/*
     class ElemFunc_dvoldt : public ElemFunc
     {
     private:
@@ -184,6 +184,27 @@ void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt
     #pragma omp parallel for default(none) shared(var,elemf)
     for (int e=0;e<var.nelem;e++)
         elemf(e);
+*/
+
+    #pragma omp parallel for default(none) shared(var,param,volume,dvoldt,tmp_result)
+    for (int e=0;e<var.nelem;e++) {
+        const int *conn = (*var.connectivity)[e];
+        const double* strain_rate = (*var.strain_rate)[e];
+        // TODO: try another definition:
+        // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
+        double dj = trace(strain_rate);
+        double *tmp_d = tmp_result[e];
+        if (param.debug.has_two_layers_for) {
+            for (int i=0; i<NODES_PER_ELEM; ++i)
+                tmp_d[i] = dj * volume[e];
+        } else {
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                int n = conn[i];
+                #pragma omp atomic update
+                dvoldt[n] += dj * volume[e];
+            }
+        }
+    }
 
     if (param.debug.has_two_layers_for) {
         #pragma omp parallel for default(none) shared(var,dvoldt,tmp_result)
@@ -348,7 +369,7 @@ void compute_mass(const Param &param,
     tmass.assign(tmass.size(), 0);
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
-
+/*
     class ElemFunc_mass : public ElemFunc
     {
     private:
@@ -406,6 +427,37 @@ void compute_mass(const Param &param,
     #pragma omp parallel for default(none) shared(var,elemf)
     for (int e=0;e<var.nelem;e++)
         elemf(e);
+*/
+
+    #pragma omp parallel for default(none) shared(var, param, volume_n, mass, tmass, tmp_result)
+    for (int e=0;e<var.nelem;e++) {
+        double rho = (param.control.is_quasi_static) ?
+            (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
+            (*var.mat).rho(e);                                     // true density for dynamic sim
+        double m = rho * (*var.volume)[e] / NODES_PER_ELEM;
+        double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (*var.volume)[e] / NODES_PER_ELEM;
+        const int *conn = (*var.connectivity)[e];
+
+        double *tmp_v = tmp_result[e];
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            if (param.debug.has_two_layers_for) {
+                tmp_v[i] = (*var.volume)[e];
+                tmp_v[i+NODES_PER_ELEM] = m;
+                if (param.control.has_thermal_diffusion) {
+                    tmp_v[i+NODES_PER_ELEM*2] = tm;
+                }
+            } else {
+                #pragma omp atomic update
+                volume_n[conn[i]] += (*var.volume)[e];
+                #pragma omp atomic update
+                mass[conn[i]] += m;
+                if (param.control.has_thermal_diffusion) {
+                    #pragma omp atomic update
+                    tmass[conn[i]] += tm;
+                }
+            }
+        }
+    }
 
     if (param.debug.has_two_layers_for) {
         #pragma omp parallel for default(none) shared(param,var,volume_n,mass,tmass,tmp_result)
@@ -438,6 +490,7 @@ void compute_shape_fn(const Variables &var, const int_vec &egroups,
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
+/*
     class ElemFunc_shape_fn : public ElemFunc
     {
     private:
@@ -523,6 +576,77 @@ void compute_shape_fn(const Variables &var, const int_vec &egroups,
     #pragma omp parallel for default(none) shared(var,elemf)
     for (int e=0;e<var.nelem;e++)
         elemf(e);
+*/
+
+    #pragma omp parallel for default(none) shared(var, shpdx, shpdy, shpdz)
+    for (int e=0;e<var.nelem;e++) {
+
+        int n0 = (*var.connectivity)[e][0];
+        int n1 = (*var.connectivity)[e][1];
+        int n2 = (*var.connectivity)[e][2];
+
+        const double *d0 = (*var.coord)[n0];
+        const double *d1 = (*var.coord)[n1];
+        const double *d2 = (*var.coord)[n2];
+
+#ifdef THREED
+        {
+            int n3 = (*var.connectivity)[e][3];
+            const double *d3 = (*var.coord)[n3];
+
+            double iv = 1 / (6 * (*var.volume)[e]);
+
+            double x01 = d0[0] - d1[0];
+            double x02 = d0[0] - d2[0];
+            double x03 = d0[0] - d3[0];
+            double x12 = d1[0] - d2[0];
+            double x13 = d1[0] - d3[0];
+            double x23 = d2[0] - d3[0];
+
+            double y01 = d0[1] - d1[1];
+            double y02 = d0[1] - d2[1];
+            double y03 = d0[1] - d3[1];
+            double y12 = d1[1] - d2[1];
+            double y13 = d1[1] - d3[1];
+            double y23 = d2[1] - d3[1];
+
+            double z01 = d0[2] - d1[2];
+            double z02 = d0[2] - d2[2];
+            double z03 = d0[2] - d3[2];
+            double z12 = d1[2] - d2[2];
+            double z13 = d1[2] - d3[2];
+            double z23 = d2[2] - d3[2];
+
+            shpdx[e][0] = iv * (y13*z12 - y12*z13);
+            shpdx[e][1] = iv * (y02*z23 - y23*z02);
+            shpdx[e][2] = iv * (y13*z03 - y03*z13);
+            shpdx[e][3] = iv * (y01*z02 - y02*z01);
+
+            shpdy[e][0] = iv * (z13*x12 - z12*x13);
+            shpdy[e][1] = iv * (z02*x23 - z23*x02);
+            shpdy[e][2] = iv * (z13*x03 - z03*x13);
+            shpdy[e][3] = iv * (z01*x02 - z02*x01);
+
+            shpdz[e][0] = iv * (x13*y12 - x12*y13);
+            shpdz[e][1] = iv * (x02*y23 - x23*y02);
+            shpdz[e][2] = iv * (x13*y03 - x03*y13);
+            shpdz[e][3] = iv * (x01*y02 - x02*y01);
+        }
+#else
+        {
+            double iv = 1 / (2 * (*var.volume)[e]);
+
+            shpdx[e][0] = iv * (d1[1] - d2[1]);
+            shpdx[e][1] = iv * (d2[1] - d0[1]);
+            shpdx[e][2] = iv * (d0[1] - d1[1]);
+
+            shpdz[e][0] = iv * (d2[0] - d1[0]);
+            shpdz[e][1] = iv * (d0[0] - d2[0]);
+            shpdz[e][2] = iv * (d1[0] - d0[0]);
+        }
+    }
+#endif
+
 
 //    loop_all_elem(egroups, elemf);
 #ifdef USE_NPROF
