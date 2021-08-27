@@ -52,9 +52,9 @@ static void declare_parameters(po::options_description &cfg,
         ("sim.is_restarting", po::value<bool>(&p.sim.is_restarting)->default_value(false),
          "Restarting from previous checkpoint file?")
 
-        ("sim.has_initial_checkpoint", po::value<bool>(&p.sim.has_initial_checkpoint)->default_value(false),
+        ("sim.has_initial_checkpoint", po::value<bool>(&p.sim.has_initial_checkpoint)->default_value(true),
          "Output checkpoint file at 0th step?")
-        ("sim.has_marker_output", po::value<bool>(&p.sim.has_marker_output)->default_value(false),
+        ("sim.has_marker_output", po::value<bool>(&p.sim.has_marker_output)->default_value(true),
          "Output marker coordinate and material?")
         ("sim.has_output_during_remeshing", po::value<bool>(&p.sim.has_output_during_remeshing)->default_value(false),
          "Output immediately before and after remeshing?")
@@ -149,6 +149,17 @@ static void declare_parameters(po::options_description &cfg,
          "Discarding internal segments after initial mesh is created? "
          "Using it when remeshing process can modify segments (e.g. remeshing_option=11).")
 
+        // for mesh optimization with MMG2D/3D
+        ("mesh.mmg_debug", po::value<int>(&p.mesh.mmg_debug)->default_value(0),
+         "Run MMG remesher in debug mode? No:0; Yes:1\n")
+        ("mesh.mmg_verbose", po::value<int>(&p.mesh.mmg_verbose)->default_value(0),
+         "Verbosity level of MMG remesher. For debugging, set a value greater than 4.\n")
+        ("mesh.mmg_hmax_factor", po::value<double>(&p.mesh.mmg_hmax_factor)->default_value(2.0),
+         "Factor multiplied to param.mesh.resolution to set the maximum element size\n")
+         ("mesh.mmg_hmin_factor", po::value<double>(&p.mesh.mmg_hmin_factor)->default_value(0.2),
+         "Factor multiplied to param.mesh.resolution to set the minimum element size\n")
+         ("mesh.mmg_hausd_factor", po::value<double>(&p.mesh.mmg_hausd_factor)->default_value(0.01),
+         "Factor multiplied to param.mesh.resolution to set the Hausdorff distance between original and remeshed surfaces.\n")
         ;
 
     cfg.add_options()

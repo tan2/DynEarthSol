@@ -242,7 +242,10 @@ void MarkerSet::set_surface_marker(const Variables& var, const int mattype, arra
         }
 
 #ifdef THREED
-        double b[3][2];
+        std::cout << "3D deposition of sediment processes is not ready yet.";
+        exit(168);
+
+/*        double b[3][2];
         const double *coord0[NODES_PER_ELEM];
 
         for (size_t j=0; j<3;j++) {
@@ -251,6 +254,8 @@ void MarkerSet::set_surface_marker(const Variables& var, const int mattype, arra
             coord0[j] = b[j];
         }
         compute_area(coord0,base);
+*/
+
 #else
         base = fabs((*var.coord)[n[0]][0] - (*var.coord)[n[1]][0]);
 #endif
