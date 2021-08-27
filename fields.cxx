@@ -42,6 +42,7 @@ void allocate_variables(const Param &param, Variables& var)
     }
 
     var.ntmp= new double_vec(n);
+    var.dpressure= new double_vec(e);
 
     var.force = new array_t(n, 0);
 
@@ -84,6 +85,8 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.ntmp;
     var.ntmp = new double_vec(n);
+    delete var.dpressure;
+    var.dpressure = new double_vec(e);
 
     delete var.force;
     var.force = new array_t(n, 0);

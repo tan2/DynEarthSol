@@ -368,7 +368,7 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
-    double_vec *stressyy;
+    double_vec *stressyy, *dpressure;
     double_vec *ntmp;
 
     // For surface processes

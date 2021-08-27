@@ -267,6 +267,63 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
 }
 
 
+void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress)
+{
+    /* dp_nd is the pressure change, weighted by the element volume,
+     * lumped onto the nodes.
+     */
+    const double_vec& volume = *var.volume;
+    const double_vec& volume_n = *var.volume_n;
+    std::fill_n(dp_nd.begin(), var.nnode, 0);
+
+    class ElemFunc_NMD_stress : public ElemFunc
+    {
+    private:
+        const Variables &var;
+        const double_vec &volume;
+        double_vec &dp_nd;
+    public:
+        ElemFunc_NMD_stress(const Variables &var, const double_vec &volume, double_vec &dp_nd) :
+            var(var), volume(volume), dp_nd(dp_nd) {};
+        void operator()(int e)
+        {
+            const int *conn = (*var.connectivity)[e];
+            double dp = (*var.dpressure)[e];
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                int n = conn[i];
+                dp_nd[n] += dp * volume[e];
+            }
+        }
+    } elemf(var, volume, dp_nd);
+
+    loop_all_elem(var.egroups, elemf);
+
+    #pragma omp parallel for default(none)      \
+        shared(var, dp_nd, volume_n)
+    for (int n=0; n<var.nnode; ++n)
+         dp_nd[n] /= volume_n[n];
+
+
+    /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
+     */
+    #pragma omp parallel for default(none)      \
+        shared(var, dp_nd, stress)
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = (*var.connectivity)[e];
+        double dp = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            int n = conn[i];
+            dp += dp_nd[n];
+        }
+        double dp_el = dp / NODES_PER_ELEM;
+
+    	double* s = stress[e];
+	double dp_orig = (*var.dpressure)[e];
+	for (int i=0; i<NDIMS; ++i) s[i] += ( - dp_orig + dp_el ) / NDIMS;
+    }
+}
+
+
 double compute_dt(const Param& param, const Variables& var)
 {
 #ifdef USE_NPROF
@@ -338,7 +395,6 @@ double compute_dt(const Param& param, const Variables& var)
         0.5 * minl / std::sqrt(var.mat->bulkm(0) / var.mat->rho(0));
     double dt = std::min(std::min(dt_elastic, dt_maxwell),
                          std::min(dt_advection, dt_diffusion)) * param.control.dt_fraction;
-
     if (param.debug.dt) {
         std::cout << "step #" << var.steps << "  dt: " << dt_maxwell << " " << dt_diffusion
                   << " " << dt_advection << " " << dt_elastic << " sec\n";

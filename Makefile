@@ -10,6 +10,9 @@
 ## ndims = 3: 3D code; 2: 2D code
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openmp = 1: enable OpenMP
+## useadapt = 1: use libadaptivity for mesh optimization during remeshing
+## adaptive_time_step = 1: use adaptive time stepping technique
+## use_R_S = 1: use Rate - State friction law
 
 ndims = 2
 opt = 2
@@ -21,6 +24,29 @@ UNAME_S := $(shell uname -s)
 
 ## Select C++ compiler
 CXX = g++
+useadapt = 1
+adaptive_time_step = 1
+use_R_S = 1
+
+ifeq ($(ndims), 2)
+	useadapt = 0   # libadaptivity is 3d only
+endif
+
+ifneq ($(adaptive_time_step), 1)
+	use_R_S = 0   # Rate - State friction law only works with adaptive time stepping technique
+endif
+
+## Select C++ compiler
+ifeq ($(useadapt), 1)
+	CXX = mpicxx # g++-mp-4.7
+	CXX_BACKEND = g++
+
+	# path to vtk header files, if not in standard system location
+	VTK_INCLUDE = /usr/include/vtk-5.10
+
+	# path of vtk library files, if not in standard system location
+	VTK_LIBS = /usr/lib/vtk-5.10
+endif
 
 ifeq ($(nprof), 1)
 	CXX = pgc++
@@ -81,7 +107,9 @@ ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
 	endif
 
 	ifeq ($(useadapt), 1)
-		CXXFLAGS += -I$(VTK_INCLUDE)
+		ifdef VTK_INCLUDE
+			CXXFLAGS += -I$(VTK_INCLUDE)
+		endif
 	endif
 
 else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tested with v14
@@ -104,7 +132,9 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 	endif
 
 	ifeq ($(useadapt), 1)
-		CXXFLAGS += -I$(VTK_INCLUDE)
+		ifdef VTK_INCLUDE
+			CXXFLAGS += -I$(VTK_INCLUDE)
+		endif
 	endif
 
 	ifeq ($(nprof), 1)
@@ -183,6 +213,13 @@ ifeq ($(ndims), 3)
 	M_INCS += $(TET_INCS)
 	M_OBJS += $(TET_OBJS)
 	CXXFLAGS += -DTHREED
+endif
+
+ifeq ($(adaptive_time_step), 1)
+	CXXFLAGS += -DATS
+ifeq ($(use_R_S), 1)
+	CXXFLAGS += -DRS
+endif
 endif
 
 C3X3_DIR = 3x3-C
