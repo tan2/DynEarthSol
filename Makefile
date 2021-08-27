@@ -13,6 +13,7 @@
 ## useadapt = 1: use libadaptivity for mesh optimization during remeshing
 ## adaptive_time_step = 1: use adaptive time stepping technique
 ## use_R_S = 1: use Rate - State friction law
+## useexo = 1: import a exodusII mesh (e.g., created with Trelis)
 
 ndims = 2
 opt = 2
@@ -27,34 +28,42 @@ CXX = g++
 useadapt = 1
 adaptive_time_step = 1
 use_R_S = 1
+useexo = 0
 
 ifeq ($(ndims), 2)
-	useadapt = 0   # libadaptivity is 3d only
+	useadapt = 0  # libadaptivity is 3d only
+	useexo = 0    # for now, can import only 3d exo mesh
 endif
 
 ifneq ($(adaptive_time_step), 1)
 	use_R_S = 0   # Rate - State friction law only works with adaptive time stepping technique
 endif
 
-## Select C++ compiler
+## Select C++ compiler and set paths to necessary libraries
 ifeq ($(useadapt), 1)
 	CXX = mpicxx # g++-mp-4.7
 	CXX_BACKEND = g++
 
 	# path to vtk header files, if not in standard system location
-	VTK_INCLUDE = /usr/include/vtk-5.10
+	VTK_INCLUDE = /opt/local/include/vtk-8.1
 
 	# path of vtk library files, if not in standard system location
-	VTK_LIBS = /usr/lib/vtk-5.10
-endif
+	VTK_LIBS = /opt/local/lib
 
+	# flag to link with fortran binding of MPI library
+	#LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
+	LIB_MPIFORTRAN = -lfmpich # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
+else
+	CXX = g++
+	CXX_BACKEND = ${CXX}
+endif
 ifeq ($(nprof), 1)
 	CXX = pgc++
 endif
 #CXX = g++-5
 
-## Boost location and library name
-BOOST_ROOT_DIR = ${HOME}/lib/boost_1_62_0
+## path to Boost's base directory, if not in standard system location
+BOOST_ROOT_DIR = ${HOME}/opt/boost_1_69_0
 
 ## nvToolsExt location
 NVTOOLSEXT_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/include
@@ -84,8 +93,22 @@ ifdef BOOST_ROOT_DIR
 	endif
 endif
 
-ifneq (, $(findstring g++, $(CXX))) # if using any version of g++
-	CXXFLAGS = -g -std=c++0x # -Wuninitialized -Fsanitize=address
+ifeq ($(useexo), 1)
+	# path to exodus header files
+	EXO_INCLUDE = ${HOME}/opt/seacas/include
+
+	# path of exodus library files, if not in standard system location
+	EXO_LIB_DIR = ${HOME}/opt/seacas/lib
+
+	EXO_CXXFLAGS = -I$(EXO_INCLUDE) -DUSEEXODUS
+	EXO_LDFLAGS = -L$(EXO_LIB_DIR) -lexodus
+	ifneq ($(OSNAME), Darwin)  # Apple's ld doesn't support -rpath
+		EXO_LDFLAGS += -Wl,-rpath=$(EXO_LIB_DIR)
+	endif
+endif
+
+ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
+	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
 
 	ifeq ($(opt), 1)
@@ -148,12 +171,9 @@ all:
 	@false
 endif
 
-## Is git in the path?
-HAS_GIT := $(shell git --version 2>/dev/null)
-ifneq ($(HAS_GIT),)
-        ## Is this a git repository?
-        IS_REPO := $(shell git rev-parse --s-inside-work-tree 2>/dev/null)
-endif
+## Is this a git repository?
+HAS_GIT := $(shell git rev-parse --is-inside-work-tree 2> /dev/null)
+#$(info $$HAS_GIT is [${HAS_GIT}])
 ##
 
 SRCS =	\
@@ -222,6 +242,11 @@ ifeq ($(use_R_S), 1)
 endif
 endif
 
+ifeq ($(useexo), 1)
+	CXXFLAGS += $(EXO_CXXFLAGS)
+	LDFLAGS += $(EXO_LDFLAGS)
+endif
+
 C3X3_DIR = 3x3-C
 C3X3_LIBNAME = 3x3
 
@@ -237,31 +262,40 @@ all: $(EXE) take-snapshot
 
 ifeq ($(useadapt), 1)
 
-$(LIBADAPTIVITY_DIR)/lflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
-	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
+	$(LIBADAPTIVITY_DIR)/lflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
+		@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
 
-$(LIBADAPTIVITY_DIR)/cppflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
-	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
+	$(LIBADAPTIVITY_DIR)/cppflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
+		@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
 
-$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
-	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk
+	$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
+		@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk exec_prefix=`pwd`
 
-$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
-	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
+	$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
+		@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
 
--include $(LIBADAPTIVITY_DIR)/lflags.mk
--include $(LIBADAPTIVITY_DIR)/cppflags.mk
-LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
-CXXFLAGS += $(CPPFLAGS)
+	-include $(LIBADAPTIVITY_DIR)/lflags.mk
+	-include $(LIBADAPTIVITY_DIR)/cppflags.mk
+	LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
+	CXXFLAGS += $(CPPFLAGS)
 
-$(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a $(OBJS)
-		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
-			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
-			$(LIBADAPTIVITY_LIBS) \
-			-o $@
-ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
-		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
-endif
+	$(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a $(OBJS)
+			$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
+				-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
+				$(LIBADAPTIVITY_LIBS) \
+				-o $@
+#ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
+#		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+##ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
+##		install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
+##endif
+#endif
+
+	ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
+			install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
+	ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
+			install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
+	endif
 endif
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
 	$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
@@ -275,27 +309,26 @@ take-snapshot:
 	@echo '  '  CXX=$(CXX) opt=$(opt) openmp=$(openmp) >> snapshot.diff
 	@echo '  '  PATH=$(PATH) >> snapshot.diff
 	@echo '  '  LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) >> snapshot.diff
-ifneq ($(HAS_GIT),)
-ifneq ($(IS_REPO),)
+ifneq ($(HAS_GIT), "true")
+	@echo >> snapshot.diff
+	@echo >> snapshot.diff
 	@echo '==== Summary of the code ====' >> snapshot.diff
 	@git show -s >> snapshot.diff
 	@echo >> snapshot.diff
 	@echo >> snapshot.diff
 	@git status >> snapshot.diff
 	@echo >> snapshot.diff
+	@git status >> snapshot.diff
+	@echo >> snapshot.diff
 	@echo '== Code modification (not checked-in) ==' >> snapshot.diff
 	@echo >> snapshot.diff
-	@git diff >> snapshot.diff
+	@git diff HEAD >> snapshot.diff
 	@echo >> snapshot.diff
-	@echo '== Code modification (checked-in but not in "origin") ==' >> snapshot.diff
+	@echo '== Code modification (not published) ==' >> snapshot.diff
 	@echo >> snapshot.diff
-	@git log --patch -- origin..HEAD >> snapshot.diff
+	@git log --patch -r origin/master.. >> snapshot.diff
 else
-	@echo "Warning: Not a git repository. Cannot take code snapshot." | tee -a snapshot.diff
-	@echo "Warning: Use 'git clone' to copy the code!" | tee -a snapshot.diff
-endif
-else
-	@echo "'git' is not in path, cannot take code snapshot." >> snapshot.diff
+	@echo Either \'git\' is not in path or not a repository. Cannot take code snapshot. >> snapshot.diff
 endif
 
 $(OBJS): %.$(ndims)d.o : %.cxx $(INCS)
