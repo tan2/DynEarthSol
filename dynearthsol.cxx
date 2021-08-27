@@ -277,7 +277,7 @@ void isostasy_adjustment(const Param &param, Variables &var)
     for (int i=0; i<iso_steps; i++) {
         update_strain_rate(var, *var.strain_rate);
 
-        compute_dvoldt(param, var, *var.ntmp, *var.tmp_result);
+        compute_dvoldt(var, *var.ntmp, *var.tmp_result);
 
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
 
@@ -379,7 +379,7 @@ int main(int argc, const char* argv[])
         }
         update_strain_rate(var, *var.strain_rate);
 
-        compute_dvoldt(param, var, *var.ntmp, *var.tmp_result);
+        compute_dvoldt(var, *var.ntmp, *var.tmp_result);
 
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
 

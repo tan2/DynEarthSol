@@ -173,7 +173,7 @@ void update_temperature(const Param &param, const Variables &var,
         elemf(e);
 */
 
-    #pragma omp parallel for default(none) shared(var,param,temperature,tdot,tmp_result)
+    #pragma omp parallel for default(none) shared(var,temperature,tmp_result)//, param, tdot)
     for (int e=0;e<var.nelem;e++) {
         // diffusion matrix
         double D[NODES_PER_ELEM][NODES_PER_ELEM];
@@ -203,29 +203,29 @@ void update_temperature(const Param &param, const Variables &var,
             double diffusion = 0;
             for (int j=0; j<NODES_PER_ELEM; ++j)
                 diffusion += D[i][j] * temperature[conn[j]];
-            if (param.debug.has_two_layers_for) {
+//            if (param.debug.has_two_layers_for) {
                 tmp_t[i] = diffusion * kv;
-            } else {
-                #pragma omp atomic update
-                tdot[conn[i]] += diffusion * kv;
-            }
+//            } else {
+//                #pragma omp atomic update
+//                tdot[conn[i]] += diffusion * kv;
+//            }
         }
     }
 
-    if (param.debug.has_two_layers_for) {
-        #pragma omp parallel for default(none) shared(var,tdot,tmp_result)
-        for (int n=0;n<var.nnode;n++) {
-            for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-                const int *conn = (*var.connectivity)[*e];
-                for (int i=0;i<NODES_PER_ELEM;i++) {
-                    if (n == conn[i]) {
-                        tdot[n] += tmp_result[*e][ i ];
-                        break;
-                    }
+//    if (param.debug.has_two_layers_for) {
+    #pragma omp parallel for default(none) shared(var,tdot,tmp_result)
+    for (int n=0;n<var.nnode;n++) {
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            const int *conn = (*var.connectivity)[*e];
+            for (int i=0;i<NODES_PER_ELEM;i++) {
+                if (n == conn[i]) {
+                    tdot[n] += tmp_result[*e][ i ];
+                    break;
                 }
             }
         }
     }
+//    }
 
 //    loop_all_elem(var.egroups, elemf);
 
@@ -446,7 +446,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     for (int e=0;e<var.nelem;e++)
         elemf(e);
 */
-    #pragma omp parallel for default(none) shared(var,param,force,tmp_result)
+    #pragma omp parallel for default(none) shared(var,param,tmp_result)//, force)
     for (int e=0;e<var.nelem;e++) {
         const int *conn = (*var.connectivity)[e];
         const double *shpdx = (*var.shpdx)[e];
@@ -463,52 +463,52 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
             buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
-            double *f = force[conn[i]];
+//            double *f = force[conn[i]];
 
-            if (param.debug.has_two_layers_for) {
+//            if (param.debug.has_two_layers_for) {
 #ifdef THREED
-                tmp_f[i] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-                tmp_f[i+NODES_PER_ELEM] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-                tmp_f[i+NODES_PER_ELEM*2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+            tmp_f[i] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+            tmp_f[i+NODES_PER_ELEM] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+            tmp_f[i+NODES_PER_ELEM*2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
 #else
-                tmp_f[i] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-                tmp_f[i+NODES_PER_ELEM] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+            tmp_f[i] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+            tmp_f[i+NODES_PER_ELEM] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
 #endif
-            } else {
-#ifdef THREED
-                #pragma omp atomic update
-                f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-                #pragma omp atomic update
-                f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-                #pragma omp atomic update
-                f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
-#else
-                #pragma omp atomic update
-                f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-                #pragma omp atomic update
-                f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
-#endif
-            }
+//            } else {
+//#ifdef THREED
+//                #pragma omp atomic update
+//                f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+//                #pragma omp atomic update
+//                f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+//                #pragma omp atomic update
+//                f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+//#else
+//                #pragma omp atomic update
+//                f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+//                #pragma omp atomic update
+//                f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+//#endif
+//            }
         }
     }
 
-    if (param.debug.has_two_layers_for) {
-        #pragma omp parallel for default(none) shared(var,force,tmp_result)
-        for (int n=0;n<var.nnode;n++) {
-            double *f = force[n];
-            for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-                double *tmp_f = tmp_result[*e];
-                const int *conn = (*var.connectivity)[*e];
-                for (int i=0;i<NODES_PER_ELEM;i++) {
-                    if (n == conn[i]) {
-                        for (int j=0;j<NDIMS;j++)
-                            f[j] -= tmp_f[ i + NODES_PER_ELEM*j ];
-                        break;
-                    }
+//    if (param.debug.has_two_layers_for) {
+    #pragma omp parallel for default(none) shared(var,force,tmp_result)
+    for (int n=0;n<var.nnode;n++) {
+        double *f = force[n];
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            double *tmp_f = tmp_result[*e];
+            const int *conn = (*var.connectivity)[*e];
+            for (int i=0;i<NODES_PER_ELEM;i++) {
+                if (n == conn[i]) {
+                    for (int j=0;j<NDIMS;j++)
+                        f[j] -= tmp_f[ i + NODES_PER_ELEM*j ];
+                    break;
                 }
             }
         }
     }
+//    }
 
 //    loop_all_elem(var.egroups, elemf);
 

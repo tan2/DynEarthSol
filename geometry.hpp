@@ -6,7 +6,7 @@ void compute_volume_sg(const double **coord, double &volume);
 void compute_volume(const array_t &coord, const conn_t &connectivity,
                     double_vec &volume);
 
-void compute_dvoldt(const Param& param, const Variables &var, double_vec &dvoldt, elem_cache &tmp_result);
+void compute_dvoldt(const Variables &var, double_vec &dvoldt, elem_cache &tmp_result);
 
 void compute_edvoldt(const Variables &var, double_vec &dvoldt,
                      double_vec &edvoldt);

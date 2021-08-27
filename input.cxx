@@ -526,8 +526,8 @@ static void declare_parameters(po::options_description &cfg,
     cfg.add_options()
         ("debug.dt", po::value<bool>(&p.debug.dt)->default_value(false),
          "Print all dt criteria")
-        ("debug.has_two_layers_for", po::value<bool>(&p.debug.has_two_layers_for)->default_value(true),
-         "Use two layers of for elem to avoid race condition.")
+//        ("debug.has_two_layers_for", po::value<bool>(&p.debug.has_two_layers_for)->default_value(true),
+//         "Use two layers of for elem to avoid race condition.")
         ;
 }
 

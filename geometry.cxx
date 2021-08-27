@@ -137,7 +137,7 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 }
 
 
-void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt, elem_cache &tmp_result)
+void compute_dvoldt(const Variables &var, double_vec &dvoldt, elem_cache &tmp_result)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -186,7 +186,7 @@ void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt
         elemf(e);
 */
 
-    #pragma omp parallel for default(none) shared(var,param,volume,dvoldt,tmp_result)
+    #pragma omp parallel for default(none) shared(var, volume, tmp_result)//, param, dvoldt)
     for (int e=0;e<var.nelem;e++) {
         const int *conn = (*var.connectivity)[e];
         const double* strain_rate = (*var.strain_rate)[e];
@@ -194,32 +194,32 @@ void compute_dvoldt(const Param &param ,const Variables &var, double_vec &dvoldt
         // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
         double *tmp_d = tmp_result[e];
-        if (param.debug.has_two_layers_for) {
-            for (int i=0; i<NODES_PER_ELEM; ++i)
-                tmp_d[i] = dj * volume[e];
-        } else {
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                int n = conn[i];
-                #pragma omp atomic update
-                dvoldt[n] += dj * volume[e];
-            }
-        }
+//        if (param.debug.has_two_layers_for) {
+        for (int i=0; i<NODES_PER_ELEM; ++i)
+            tmp_d[i] = dj * volume[e];
+//        } else {
+//            for (int i=0; i<NODES_PER_ELEM; ++i) {
+//                int n = conn[i];
+//                #pragma omp atomic update
+//                dvoldt[n] += dj * volume[e];
+//            }
+//        }
     }
 
-    if (param.debug.has_two_layers_for) {
-        #pragma omp parallel for default(none) shared(var,dvoldt,tmp_result)
-        for (int n=0;n<var.nnode;n++) {
-            for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-                const int *conn = (*var.connectivity)[*e];
-                for (int i=0;i<NODES_PER_ELEM;i++) {
-                    if (n == conn[i]) {
-                        dvoldt[n] += tmp_result[*e][ i ];
-                        break;
-                    }
+//    if (param.debug.has_two_layers_for) {
+    #pragma omp parallel for default(none) shared(var,dvoldt,tmp_result)
+    for (int n=0;n<var.nnode;n++) {
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            const int *conn = (*var.connectivity)[*e];
+            for (int i=0;i<NODES_PER_ELEM;i++) {
+                if (n == conn[i]) {
+                    dvoldt[n] += tmp_result[*e][ i ];
+                    break;
                 }
             }
         }
     }
+//    }
 
 //    loop_all_elem(var.egroups, elemf);
 
@@ -429,7 +429,7 @@ void compute_mass(const Param &param,
         elemf(e);
 */
 
-    #pragma omp parallel for default(none) shared(var, param, volume_n, mass, tmass, tmp_result)
+    #pragma omp parallel for default(none) shared(var, param, tmp_result)//, volume_n, mass, tmass)
     for (int e=0;e<var.nelem;e++) {
         double rho = (param.control.is_quasi_static) ?
             (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
@@ -440,42 +440,41 @@ void compute_mass(const Param &param,
 
         double *tmp_v = tmp_result[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
-            if (param.debug.has_two_layers_for) {
-                tmp_v[i] = (*var.volume)[e];
-                tmp_v[i+NODES_PER_ELEM] = m;
-                if (param.control.has_thermal_diffusion) {
-                    tmp_v[i+NODES_PER_ELEM*2] = tm;
-                }
-            } else {
-                #pragma omp atomic update
-                volume_n[conn[i]] += (*var.volume)[e];
-                #pragma omp atomic update
-                mass[conn[i]] += m;
-                if (param.control.has_thermal_diffusion) {
-                    #pragma omp atomic update
-                    tmass[conn[i]] += tm;
-                }
-            }
+//            if (param.debug.has_two_layers_for) {
+            tmp_v[i] = (*var.volume)[e];
+            tmp_v[i+NODES_PER_ELEM] = m;
+            if (param.control.has_thermal_diffusion)
+                tmp_v[i+NODES_PER_ELEM*2] = tm;
+//            } else {
+//                #pragma omp atomic update
+//                volume_n[conn[i]] += (*var.volume)[e];
+//                #pragma omp atomic update
+//                mass[conn[i]] += m;
+//                if (param.control.has_thermal_diffusion) {
+//                    #pragma omp atomic update
+//                    tmass[conn[i]] += tm;
+//                }
+//            }
         }
     }
 
-    if (param.debug.has_two_layers_for) {
-        #pragma omp parallel for default(none) shared(param,var,volume_n,mass,tmass,tmp_result)
-        for (int n=0;n<var.nnode;n++) {
-            for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-                const int *conn = (*var.connectivity)[*e];
-                for (int i=0;i<NODES_PER_ELEM;i++) {
-                    if (n == conn[i]) {
-                        volume_n[n] += tmp_result[*e][ i ];
-                        mass[n] += tmp_result[*e][ i + NODES_PER_ELEM ];
-                        if (param.control.has_thermal_diffusion)
-                            tmass[n] += tmp_result[*e][ i + NODES_PER_ELEM*2 ];
-                        break;
-                    }
+//    if (param.debug.has_two_layers_for) {
+    #pragma omp parallel for default(none) shared(param,var,volume_n,mass,tmass,tmp_result)
+    for (int n=0;n<var.nnode;n++) {
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            const int *conn = (*var.connectivity)[*e];
+            for (int i=0;i<NODES_PER_ELEM;i++) {
+                if (n == conn[i]) {
+                    volume_n[n] += tmp_result[*e][ i ];
+                    mass[n] += tmp_result[*e][ i + NODES_PER_ELEM ];
+                    if (param.control.has_thermal_diffusion)
+                        tmass[n] += tmp_result[*e][ i + NODES_PER_ELEM*2 ];
+                    break;
                 }
             }
         }
     }
+//    }
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
