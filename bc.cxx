@@ -864,13 +864,17 @@ namespace {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
             double conv =  surfinfo.surf_diff * var.dt * total_slope[n] / total_dx[n];
+#ifdef THREED
+            dh[i] -= conv;
+#else
             if ( coord[n][1] >  surfinfo.base_level && conv > 0.) {
                 dh[i] -= surfinfo.diff_ratio_terrig * conv;
             } else if ( coord[n][1] < surfinfo.base_level && conv < 0. ) {
                 dh[i] -= surfinfo.diff_ratio_marine * conv;
-            } else{
+            } else {
                 dh[i] -= conv;
             }
+#endif
         }
     }
 
@@ -1498,14 +1502,21 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         break;
     case 102:
         simple_diffusion(var, dh);
+#ifdef THREED
+        std::cout << "3D deposition of sediment processes is not ready yet.";
+        exit(168);
+#else
         if (var.steps != 0)
             simple_deposition(param, var, dh, src_locs, src_abj);
+#endif
         break;
     default:
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
         std::exit(1);
     }
-
+#ifdef THREED
+    // todo
+#else
     // go through all surface nodes and abject all surface node by dh
     for (int i=0; i<ntop; i++) {
         // get global index of node
@@ -1527,6 +1538,11 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             (*surfinfo.edhacc)[eg][ind] += dh[i];
         }
     }
+#endif
+
+#ifdef THREED
+
+#else
     if (var.steps != 0) {
         if ( var.steps % param.mesh.quality_check_step_interval == 0) {
             // correct surface marker.
@@ -1536,8 +1552,12 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             markersets[0]->set_surface_marker(var, param.mat.mattype_sed, *surfinfo.edhacc, elemmarkers, src_locs, src_abj);
         }
     }
-
+#endif
     if ( param.mat.phase_change_option == 2) {
+#ifdef THREED
+        std::cout << "3D simple_igneous processes is not ready yet.";
+        exit(168);
+#else
         double_vec tmp(2,0.);
 
         simple_igneous(param,var, dh_oc, has_partial_melting);
@@ -1566,9 +1586,12 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                 markersets[0]->set_surface_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers, tmp, tmp);
             }
         }
-
+#endif
     }
 
+#ifdef THREED
+    // todo
+#else
     if (!(var.steps % param.mesh.quality_check_step_interval &&  var.steps != 0))
         // correct the plastic strain of urface element for preventing surface landslide.
         surface_plstrain_diffusion(param,var,plstrain);
@@ -1592,6 +1615,8 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                         << std::fixed << std::setprecision(3) << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
         }
     }
+#endif
+
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif

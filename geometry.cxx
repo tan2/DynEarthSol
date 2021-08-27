@@ -723,8 +723,8 @@ void compute_shape_fn(const Variables &var, const int_vec &egroups,
             shpdz[e][1] = iv * (d0[0] - d2[0]);
             shpdz[e][2] = iv * (d1[0] - d0[0]);
         }
-    }
 #endif
+    }
 
 
 //    loop_all_elem(egroups, elemf);
