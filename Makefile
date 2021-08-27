@@ -188,10 +188,12 @@ all:
 	@false
 endif
 
-## Is this a git repository?
-HAS_GIT := $(shell git rev-parse --is-inside-work-tree 2> /dev/null)
-#$(info $$HAS_GIT is [${HAS_GIT}])
-##
+## Is git in the path?
+HAS_GIT := $(shell git --version 2>/dev/null)
+ifneq ($(HAS_GIT),)
+        ## Is this a git repository?
+        IS_REPO := $(shell git rev-parse --s-inside-work-tree 2>/dev/null)
+endif
 
 SRCS =	\
 	barycentric-fn.cxx \
@@ -323,11 +325,14 @@ take-snapshot:
 	@# snapshot of the code for building the executable
 	@echo Flags used to compile the code: > snapshot.diff
 	@echo '  '  CXX=$(CXX) opt=$(opt) openmp=$(openmp) >> snapshot.diff
+	@echo '  '  CXXFLAGS=$(CXXFLAGS) >> snapshot.diff
+	@echo '  '  LDFLAGS=$(LDFLAGS) >> snapshot.diff
 	@echo '  '  PATH=$(PATH) >> snapshot.diff
 	@echo '  '  LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) >> snapshot.diff
-ifneq ($(HAS_GIT), "true")
 	@echo >> snapshot.diff
 	@echo >> snapshot.diff
+ifneq ($(HAS_GIT),)
+ifneq ($(IS_REPO),)
 	@echo '==== Summary of the code ====' >> snapshot.diff
 	@git show -s >> snapshot.diff
 	@echo >> snapshot.diff
@@ -337,13 +342,17 @@ ifneq ($(HAS_GIT), "true")
 	@echo >> snapshot.diff
 	@echo '== Code modification (not checked-in) ==' >> snapshot.diff
 	@echo >> snapshot.diff
-	@git diff HEAD >> snapshot.diff
+	@git diff >> snapshot.diff
 	@echo >> snapshot.diff
-	@echo '== Code modification (not published) ==' >> snapshot.diff
+	@echo '== Code modification (checked-in but not in "origin") ==' >> snapshot.diff
 	@echo >> snapshot.diff
-	@git log --patch -r origin/master.. >> snapshot.diff
+	@git log --patch -- origin..HEAD >> snapshot.diff
 else
-	@echo Either \'git\' is not in path or not a repository. Cannot take code snapshot. >> snapshot.diff
+	@echo "Warning: Not a git repository. Cannot take code snapshot." | tee -a snapshot.diff
+	@echo "Warning: Use 'git clone' to copy the code!" | tee -a snapshot.diff
+endif
+else
+	@echo "'git' is not in path, cannot take code snapshot." >> snapshot.diff
 endif
 
 $(OBJS): %.$(ndims)d.o : %.cxx $(INCS)
