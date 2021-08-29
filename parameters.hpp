@@ -370,7 +370,6 @@ struct Variables {
     int_vec2D *marker_in_elem;
 
     int_vec2D *support;
-    int_vec egroups;
 
     double_vec *volume, *volume_old, *volume_n, *volume_sp;
     double_vec *mass, *tmass;

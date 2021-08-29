@@ -15,14 +15,11 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_
 
 double compute_dt(const Param& param, const Variables& var);
 
-void compute_mass(const Param &param,
-                  const int_vec &egroups, const Variables &var,
+void compute_mass(const Param &param, const Variables &var,
                   double max_vbc_val, double_vec &volume_n,
                   double_vec &mass, double_vec &tmass, elem_cache &tmp_result);
 
-void compute_shape_fn(const Variables &var,
-                      const int_vec &egroups,
-                      shapefn &shpdx, shapefn &shpdy, shapefn &shpdz);
+void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shapefn &shpdz);
 
 double elem_quality(const array_t &coord, const conn_t &connectivity,
                     const double_vec &volume, int e);

@@ -1205,32 +1205,6 @@ void compute_metric_field(const Variables &var, const conn_t &connectivity, cons
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(metric.begin(), var.nnode, 0);
-/*
-    class ElemFunc_metric : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        const double_vec &volume;
-        const conn_t &connectivity;
-        const double resolution;
-        double_vec &metric;
-    public:
-        ElemFunc_metric(const Variables &var, const double_vec &volume, const conn_t &connectivity, const double resolution, double_vec &metric) :
-            var(var), volume(volume), connectivity(connectivity), resolution(resolution), metric(metric) {};
-        void operator()(int e)
-        {
-            const int *conn = connectivity[e];
-            double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);
-            // resolution/(1.0+(*var.plstrain)[e]);
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                int n = conn[i];
-                metric[n] += plstrain * volume[e];
-            }
-        }
-    } elemf(var, volume, connectivity, resolution, metric);
-
-    loop_all_elem(var.egroups, elemf);
-*/
 
     #pragma omp parallel for default(none) shared(var,volume,connectivity,tmp_result)
     for (int e=0;e<var.nelem;e++) {
@@ -1238,9 +1212,7 @@ void compute_metric_field(const Variables &var, const conn_t &connectivity, cons
             double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);
             // resolution/(1.0+(*var.plstrain)[e]);
             for (int i=0; i<NODES_PER_ELEM; ++i) {
-//                int n = conn[i];
                 tmp_result[e][i] = plstrain * volume[e];
-//                metric[n] += plstrain * volume[e];
             }
     }
 
@@ -2147,15 +2119,12 @@ void remesh(const Param &param, Variables &var, int bad_quality)
      * delete var.support;
      * create_support(var);
      */
-//    create_elem_groups(var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     // TODO: using edvoldt and volume to get volume_old
     std::copy(var.volume->begin(), var.volume->end(), var.volume_old->begin());
-    compute_mass(param, var.egroups, var,
-                 var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
-    compute_shape_fn(var, var.egroups,
-                     *var.shpdx, *var.shpdy, *var.shpdz);
+    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
     if (param.mesh.remeshing_option==1 ||
         param.mesh.remeshing_option==2 ||

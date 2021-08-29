@@ -148,43 +148,6 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, elem_cache &tmp_re
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dvoldt.begin(), var.nnode, 0);
-/*
-    class ElemFunc_dvoldt : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        const double_vec &volume;
-        double_vec &dvoldt;
-        elem_cache &tmp_result;
-        bool has_two_layers_for;
-    public:
-        ElemFunc_dvoldt(const Variables &var, const double_vec &volume, double_vec &dvoldt, elem_cache &tmp_result, bool has_two_layers_for) :
-            var(var), volume(volume), dvoldt(dvoldt), tmp_result(tmp_result), has_two_layers_for(has_two_layers_for) {};
-        void operator()(int e)
-        {
-            const int *conn = (*var.connectivity)[e];
-            const double* strain_rate = (*var.strain_rate)[e];
-            // TODO: try another definition:
-            // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
-            double dj = trace(strain_rate);
-            double *tmp_d = tmp_result[e];
-            if (has_two_layers_for) {
-                for (int i=0; i<NODES_PER_ELEM; ++i)
-                    tmp_d[i] = dj * volume[e];
-            } else {
-                for (int i=0; i<NODES_PER_ELEM; ++i) {
-                    int n = conn[i];
-                    #pragma omp atomic update
-                    dvoldt[n] += dj * volume[e];
-                }
-            }
-        }
-    } elemf(var, volume, dvoldt, tmp_result, param.debug.has_two_layers_for);
-
-    #pragma omp parallel for default(none) shared(var,elemf)
-    for (int e=0;e<var.nelem;e++)
-        elemf(e);
-*/
 
     #pragma omp parallel for default(none) shared(var, volume, tmp_result)//, param, dvoldt)
     for (int e=0;e<var.nelem;e++) {
@@ -194,19 +157,10 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, elem_cache &tmp_re
         // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
         double *tmp_d = tmp_result[e];
-//        if (param.debug.has_two_layers_for) {
         for (int i=0; i<NODES_PER_ELEM; ++i)
             tmp_d[i] = dj * volume[e];
-//        } else {
-//            for (int i=0; i<NODES_PER_ELEM; ++i) {
-//                int n = conn[i];
-//                #pragma omp atomic update
-//                dvoldt[n] += dj * volume[e];
-//            }
-//        }
     }
 
-//    if (param.debug.has_two_layers_for) {
     #pragma omp parallel for default(none) shared(var,dvoldt,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
@@ -219,10 +173,6 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, elem_cache &tmp_re
             }
         }
     }
-//    }
-
-//    loop_all_elem(var.egroups, elemf);
-
 
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, volume_n)
@@ -275,29 +225,6 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dp_nd.begin(), var.nnode, 0);
-/*
-    class ElemFunc_NMD_stress : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        const double_vec &volume;
-        double_vec &dp_nd;
-    public:
-        ElemFunc_NMD_stress(const Variables &var, const double_vec &volume, double_vec &dp_nd) :
-            var(var), volume(volume), dp_nd(dp_nd) {};
-        void operator()(int e)
-        {
-            const int *conn = (*var.connectivity)[e];
-            double dp = (*var.dpressure)[e];
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                int n = conn[i];
-                dp_nd[n] += dp * volume[e];
-            }
-        }
-    } elemf(var, volume, dp_nd);
-
-    loop_all_elem(var.egroups, elemf);
-*/
 
     #pragma omp parallel for default(none) shared(var,volume,tmp_result)
     for (int e=0;e<var.nelem;e++) {
@@ -435,8 +362,7 @@ double compute_dt(const Param& param, const Variables& var)
 }
 
 
-void compute_mass(const Param &param,
-                  const int_vec &egroups, const Variables &var,
+void compute_mass(const Param &param, const Variables &var,
                   double max_vbc_val, double_vec &volume_n,
                   double_vec &mass, double_vec &tmass, elem_cache &tmp_result)
 {
@@ -449,67 +375,8 @@ void compute_mass(const Param &param,
     tmass.assign(tmass.size(), 0);
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
-/*
-    class ElemFunc_mass : public ElemFunc
-    {
-    private:
-        const MatProps &mat;
-        const conn_t &connectivity;
-        const double_vec &volume;
-        double_vec &volume_n;
-        double_vec &mass;
-        double_vec &tmass;
-        elem_cache &tmp_result;
-        double pseudo_speed;
-        bool is_quasi_static;
-        bool has_thermal_diffusion;
-        bool has_two_layers_for;
-    public:
-        ElemFunc_mass(const MatProps &mat, const conn_t &connectivity, const double_vec &volume,
-                      double pseudo_speed, bool is_quasi_static, bool has_thermal_diffusion, bool has_two_layers_for,
-                      double_vec &volume_n, double_vec &mass, double_vec &tmass, elem_cache &tmp_result) :
-            mat(mat), connectivity(connectivity), volume(volume),
-            volume_n(volume_n), mass(mass), tmass(tmass), tmp_result(tmp_result),
-            pseudo_speed(pseudo_speed), is_quasi_static(is_quasi_static),
-            has_thermal_diffusion(has_thermal_diffusion), has_two_layers_for(has_two_layers_for) {};
-        void operator()(int e)
-        {
-            double rho = (is_quasi_static) ?
-                mat.bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
-                mat.rho(e);                                     // true density for dynamic sim
-            double m = rho * volume[e] / NODES_PER_ELEM;
-            double tm = mat.rho(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
-            const int *conn = connectivity[e];
 
-            double *tmp_v = tmp_result[e];
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                if (has_two_layers_for) {
-                    tmp_v[i] = volume[e];
-                    tmp_v[i+NODES_PER_ELEM] = m;
-                    if (has_thermal_diffusion) {
-                        tmp_v[i+NODES_PER_ELEM*2] = tm;
-                    }
-                } else {
-                    #pragma omp atomic update
-                    volume_n[conn[i]] += volume[e];
-                    #pragma omp atomic update
-                    mass[conn[i]] += m;
-                    if (has_thermal_diffusion) {
-                        #pragma omp atomic update
-                        tmass[conn[i]] += tm;
-                    }
-                }
-            }
-        }
-    } elemf(*var.mat, *var.connectivity, *var.volume, pseudo_speed, param.control.is_quasi_static,
-            param.control.has_thermal_diffusion, param.debug.has_two_layers_for, volume_n, mass, tmass, tmp_result);
-
-    #pragma omp parallel for default(none) shared(var,elemf)
-    for (int e=0;e<var.nelem;e++)
-        elemf(e);
-*/
-
-    #pragma omp parallel for default(none) shared(var, param, tmp_result)//, volume_n, mass, tmass)
+    #pragma omp parallel for default(none) shared(var, param, tmp_result)
     for (int e=0;e<var.nelem;e++) {
         double rho = (param.control.is_quasi_static) ?
             (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
@@ -520,25 +387,13 @@ void compute_mass(const Param &param,
 
         double *tmp_v = tmp_result[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
-//            if (param.debug.has_two_layers_for) {
             tmp_v[i] = (*var.volume)[e];
             tmp_v[i+NODES_PER_ELEM] = m;
             if (param.control.has_thermal_diffusion)
                 tmp_v[i+NODES_PER_ELEM*2] = tm;
-//            } else {
-//                #pragma omp atomic update
-//                volume_n[conn[i]] += (*var.volume)[e];
-//                #pragma omp atomic update
-//                mass[conn[i]] += m;
-//                if (param.control.has_thermal_diffusion) {
-//                    #pragma omp atomic update
-//                    tmass[conn[i]] += tm;
-//                }
-//            }
         }
     }
 
-//    if (param.debug.has_two_layers_for) {
     #pragma omp parallel for default(none) shared(param,var,volume_n,mass,tmass,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
@@ -554,108 +409,17 @@ void compute_mass(const Param &param,
             }
         }
     }
-//    }
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
-
-//    loop_all_elem(egroups, elemf);
 }
 
 
-void compute_shape_fn(const Variables &var, const int_vec &egroups,
-                      shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
+void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-/*
-    class ElemFunc_shape_fn : public ElemFunc
-    {
-    private:
-        const array_t &coord;
-        const conn_t &connectivity;
-        const double_vec &volume;
-        shapefn &shpdx, &shpdy, &shpdz;
-    public:
-        ElemFunc_shape_fn(const array_t &coord, const conn_t &connectivity, const double_vec &volume,
-                          shapefn &shpdx, shapefn &shpdy, shapefn &shpdz) :
-            coord(coord), connectivity(connectivity), volume(volume),
-            shpdx(shpdx), shpdy(shpdy), shpdz(shpdz) {};
-        void operator()(int e)
-        {
-
-            int n0 = connectivity[e][0];
-            int n1 = connectivity[e][1];
-            int n2 = connectivity[e][2];
-
-            const double *d0 = coord[n0];
-            const double *d1 = coord[n1];
-            const double *d2 = coord[n2];
-
-#ifdef THREED
-            {
-                int n3 = connectivity[e][3];
-                const double *d3 = coord[n3];
-
-                double iv = 1 / (6 * volume[e]);
-
-                double x01 = d0[0] - d1[0];
-                double x02 = d0[0] - d2[0];
-                double x03 = d0[0] - d3[0];
-                double x12 = d1[0] - d2[0];
-                double x13 = d1[0] - d3[0];
-                double x23 = d2[0] - d3[0];
-
-                double y01 = d0[1] - d1[1];
-                double y02 = d0[1] - d2[1];
-                double y03 = d0[1] - d3[1];
-                double y12 = d1[1] - d2[1];
-                double y13 = d1[1] - d3[1];
-                double y23 = d2[1] - d3[1];
-
-                double z01 = d0[2] - d1[2];
-                double z02 = d0[2] - d2[2];
-                double z03 = d0[2] - d3[2];
-                double z12 = d1[2] - d2[2];
-                double z13 = d1[2] - d3[2];
-                double z23 = d2[2] - d3[2];
-
-                shpdx[e][0] = iv * (y13*z12 - y12*z13);
-                shpdx[e][1] = iv * (y02*z23 - y23*z02);
-                shpdx[e][2] = iv * (y13*z03 - y03*z13);
-                shpdx[e][3] = iv * (y01*z02 - y02*z01);
-
-                shpdy[e][0] = iv * (z13*x12 - z12*x13);
-                shpdy[e][1] = iv * (z02*x23 - z23*x02);
-                shpdy[e][2] = iv * (z13*x03 - z03*x13);
-                shpdy[e][3] = iv * (z01*x02 - z02*x01);
-
-                shpdz[e][0] = iv * (x13*y12 - x12*y13);
-                shpdz[e][1] = iv * (x02*y23 - x23*y02);
-                shpdz[e][2] = iv * (x13*y03 - x03*y13);
-                shpdz[e][3] = iv * (x01*y02 - x02*y01);
-            }
-#else
-            {
-                double iv = 1 / (2 * volume[e]);
-
-                shpdx[e][0] = iv * (d1[1] - d2[1]);
-                shpdx[e][1] = iv * (d2[1] - d0[1]);
-                shpdx[e][2] = iv * (d0[1] - d1[1]);
-
-                shpdz[e][0] = iv * (d2[0] - d1[0]);
-                shpdz[e][1] = iv * (d0[0] - d2[0]);
-                shpdz[e][2] = iv * (d1[0] - d0[0]);
-            }
-#endif
-        }
-    } elemf(*var.coord, *var.connectivity, *var.volume, shpdx, shpdy, shpdz);
-
-    #pragma omp parallel for default(none) shared(var,elemf)
-    for (int e=0;e<var.nelem;e++)
-        elemf(e);
-*/
 
     #pragma omp parallel for default(none) shared(var, shpdx, shpdy, shpdz)
     for (int e=0;e<var.nelem;e++) {
@@ -726,8 +490,6 @@ void compute_shape_fn(const Variables &var, const int_vec &egroups,
 #endif
     }
 
-
-//    loop_all_elem(egroups, elemf);
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif

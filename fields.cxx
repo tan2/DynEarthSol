@@ -117,62 +117,6 @@ void update_temperature(const Param &param, const Variables &var,
     nvtxRangePushA(__FUNCTION__);
 #endif
     tdot.assign(var.nnode, 0);
-/*
-    class ElemFunc_temperature : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        const double_vec &temperature;
-        double_vec &tdot;
-        elem_cache &tmp_result;
-        bool has_two_layers_for;
-    public:
-        ElemFunc_temperature(const Variables &var, const double_vec &temperature, double_vec &tdot, elem_cache &tmp_result, bool has_two_layers_for) :
-            var(var), temperature(temperature), tdot(tdot), tmp_result(tmp_result), has_two_layers_for(has_two_layers_for) {};
-        void operator()(int e)
-        {
-            // diffusion matrix
-            double D[NODES_PER_ELEM][NODES_PER_ELEM];
-
-            const int *conn = (*var.connectivity)[e];
-            double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volume
-            const double *shpdx = (*var.shpdx)[e];
-#ifdef THREED
-            const double *shpdy = (*var.shpdy)[e];
-#endif
-            const double *shpdz = (*var.shpdz)[e];
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                for (int j=0; j<NODES_PER_ELEM; ++j) {
-#ifdef THREED
-                    D[i][j] = (shpdx[i] * shpdx[j] +
-                               shpdy[i] * shpdy[j] +
-                               shpdz[i] * shpdz[j]);
-#else
-                    D[i][j] = (shpdx[i] * shpdx[j] +
-                               shpdz[i] * shpdz[j]);
-#endif
-                }
-            }
-            double *tmp_t = tmp_result[e];
-
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                double diffusion = 0;
-                for (int j=0; j<NODES_PER_ELEM; ++j)
-                    diffusion += D[i][j] * temperature[conn[j]];
-                if (has_two_layers_for) {
-                    tmp_t[i] = diffusion * kv;
-                } else {
-                    #pragma omp atomic update
-                    tdot[conn[i]] += diffusion * kv;
-                }
-            }
-        }
-    } elemf(var, temperature, tdot, tmp_result, param.debug.has_two_layers_for);
-
-    #pragma omp parallel for default(none) shared(var,elemf)
-    for (int e=0;e<var.nelem;e++)
-        elemf(e);
-*/
 
     #pragma omp parallel for default(none) shared(var,temperature,tmp_result)//, param, tdot)
     for (int e=0;e<var.nelem;e++) {
@@ -204,16 +148,10 @@ void update_temperature(const Param &param, const Variables &var,
             double diffusion = 0;
             for (int j=0; j<NODES_PER_ELEM; ++j)
                 diffusion += D[i][j] * temperature[conn[j]];
-//            if (param.debug.has_two_layers_for) {
                 tmp_t[i] = diffusion * kv;
-//            } else {
-//                #pragma omp atomic update
-//                tdot[conn[i]] += diffusion * kv;
-//            }
         }
     }
 
-//    if (param.debug.has_two_layers_for) {
     #pragma omp parallel for default(none) shared(var,tdot,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
@@ -226,9 +164,6 @@ void update_temperature(const Param &param, const Variables &var,
             }
         }
     }
-//    }
-
-//    loop_all_elem(var.egroups, elemf);
 
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
@@ -384,69 +319,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     nvtxRangePushA(__FUNCTION__);
 #endif
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
-/*
-    class ElemFunc_force : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        array_t &force;
-        elem_cache &tmp_result;
-        const double gravity;
-        bool has_two_layers_for;
-    public:
-        ElemFunc_force(const Variables &var, array_t &force, elem_cache &tmp_result, double gravity, bool has_two_layers_for) :
-            var(var), force(force), tmp_result(tmp_result), gravity(gravity), has_two_layers_for(has_two_layers_for) {};
-        void operator()(int e)
-        {
-            const int *conn = (*var.connectivity)[e];
-            const double *shpdx = (*var.shpdx)[e];
-#ifdef THREED
-            const double *shpdy = (*var.shpdy)[e];
-#endif
-            const double *shpdz = (*var.shpdz)[e];
-            double *s = (*var.stress)[e];
-            double vol = (*var.volume)[e];
-            double *tmp_f = tmp_result[e];
 
-            double buoy = 0;
-            if (gravity != 0)
-                buoy = var.mat->rho(e) * gravity / NODES_PER_ELEM;
-
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                double *f = force[conn[i]];
-
-                if (has_two_layers_for) {
-#ifdef THREED
-                    tmp_f[i] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-                    tmp_f[i+NODES_PER_ELEM] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-                    tmp_f[i+NODES_PER_ELEM*2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
-#else
-                    tmp_f[i] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-                    tmp_f[i+NODES_PER_ELEM] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
-#endif
-                } else {
-#ifdef THREED
-                    #pragma omp atomic update
-                    f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-                    #pragma omp atomic update
-                    f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-                    #pragma omp atomic update
-                    f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
-#else
-                    #pragma omp atomic update
-                    f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-                    #pragma omp atomic update
-                    f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
-#endif
-                }
-            }
-        }
-    } elemf(var, force, tmp_result, param.control.gravity, param.debug.has_two_layers_for);
-
-    #pragma omp parallel for default(none) shared(var,elemf)
-    for (int e=0;e<var.nelem;e++)
-        elemf(e);
-*/
     #pragma omp parallel for default(none) shared(var,param,tmp_result)//, force)
     for (int e=0;e<var.nelem;e++) {
         const int *conn = (*var.connectivity)[e];
@@ -464,9 +337,6 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
             buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
-//            double *f = force[conn[i]];
-
-//            if (param.debug.has_two_layers_for) {
 #ifdef THREED
             tmp_f[i] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
             tmp_f[i+NODES_PER_ELEM] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
@@ -475,25 +345,9 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
             tmp_f[i] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
             tmp_f[i+NODES_PER_ELEM] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
 #endif
-//            } else {
-//#ifdef THREED
-//                #pragma omp atomic update
-//                f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-//                #pragma omp atomic update
-//                f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-//                #pragma omp atomic update
-//                f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
-//#else
-//                #pragma omp atomic update
-//                f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-//                #pragma omp atomic update
-//                f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
-//#endif
-//            }
         }
     }
 
-//    if (param.debug.has_two_layers_for) {
     #pragma omp parallel for default(none) shared(var,force,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         double *f = force[n];
@@ -509,9 +363,6 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
             }
         }
     }
-//    }
-
-//    loop_all_elem(var.egroups, elemf);
 
     apply_stress_bcs(param, var, force);
 
