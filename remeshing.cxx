@@ -1088,13 +1088,16 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     }
 
     // refine surface element where volume is too large
+#ifdef THREED
+    // todo
+#else
     if (param.mesh.meshing_sediment) {
         double *nqcoord = new double[(old_nnode + var.surfinfo.top_nodes->size() * 2 ) * NDIMS];
         std::memcpy(nqcoord, qcoord, sizeof(double) * old_nnode * NDIMS);
         qcoord = nqcoord;
         refine_surface_elem(param, var, old_coord, old_connectivity, old_volume, old_nnode, qcoord);
     }
-
+#endif
     int new_nnode, new_nelem, new_nseg;
     double *pcoord, *pregattr;
     int *pconnectivity, *psegment, *psegflag;

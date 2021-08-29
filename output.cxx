@@ -90,7 +90,6 @@ void Output::write(const Variables& var, bool is_averaged)
         dt = (var.time - time0) / average_interval;
         inv_dt = 1.0 / (var.time - time0);
     }
-
     write_info(var, dt);
 
     char filename[256];
@@ -195,11 +194,10 @@ void Output::write(const Variables& var, bool is_averaged)
     }
 
     bin.close();
-
     std::cout << "  Output # " << frame
-                << ", step = " << var.steps
-                << ", time = " << var.time / YEAR2SEC << " yr"
-                << ", dt = " << dt / YEAR2SEC << " yr.\n";
+              << ", step = " << var.steps
+              << ", time = " << var.time / YEAR2SEC << " yr"
+              << ", dt = " << dt / YEAR2SEC << " yr.\n";
 
     frame ++;
 

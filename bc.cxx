@@ -199,7 +199,10 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
     // 5: normal component fixed at 0, shear component (not z) fixed, only in 3D
 
     const BC &bc = param.bc;
+#ifdef THREED
+    // vel period is not ready for 3D
 
+#else
     // find period
     int_vec nperiod_time(2,0);
     int_vec nperiod_ratio(2,0);
@@ -329,12 +332,17 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
     }
     BOUNDX0_width = BOUNDX0_max - BOUNDX0_min;
     //printf("%f\t%f\n",BOUNDX1_max, BOUNDX1_min);
-
+#endif
 
     // diverging x-boundary
+#ifdef THREED
+    #pragma omp parallel for default(none) \
+        shared(bc, var, vel)
+#else
     #pragma omp parallel for default(none) \
         shared(bc, var, vel,BOUNDX0_max,BOUNDX0_min,BOUNDX0_width,BOUNDX0_ratio_width, \
                vbc_applied_x0, vbc_applied_x1)
+#endif
     for (int i=0; i<var.nnode; ++i) {
 
         // fast path: skip nodes not on boundary
@@ -342,8 +350,12 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 
         uint flag = (*var.bcflag)[i];
         double *v = vel[i];
+
+#ifdef THREED
+#else
         const double *x = (*var.coord)[i];
         double ratio, rr, dvr;
+#endif
         //
         // X
         //
@@ -352,7 +364,9 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
             case 0:
                 break;
             case 1:
-                //v[0] = vel_applied_x0;
+#ifdef THREED
+                v[0] = bc.vbc_val_x0;
+#else
                 ratio = -1.* (x[1] - BOUNDX0_max) / BOUNDX0_width;
                 if (ratio <  bc.vbc_val_division_x0_min) {
                     v[0] =  bc.vbc_val_x0_ratio0 * vbc_applied_x0;
@@ -367,6 +381,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                         v[0] = ((rr * dvr) + bc.vbc_val_x0_ratio0) * vbc_applied_x0;
                     }
                 }
+#endif
                 break;
             case 2:
                 v[1] = 0;
@@ -375,7 +390,9 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #endif
                 break;
             case 3:
-//                v[0] = bc.vbc_val_x0;
+#ifdef THREED
+                v[0] = bc.vbc_val_x0;
+#else
                 ratio = -1.* (x[1] - BOUNDX0_max) / BOUNDX0_width;
                 if (ratio <  bc.vbc_val_division_x0_min) {
                     v[0] =  bc.vbc_val_x0_ratio0 * vbc_applied_x0;
@@ -390,6 +407,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                         v[0] = ((rr * dvr) + bc.vbc_val_x0_ratio0) * vbc_applied_x0;
                     }
                 }
+#endif
                 v[1] = 0;
 #ifdef THREED
                 v[2] = 0;
@@ -417,7 +435,11 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
             case 0:
                 break;
             case 1:
+#ifdef THREED
+                v[0] = bc.vbc_val_x1;
+#else
                 v[0] = vbc_applied_x1;
+#endif
                 break;
             case 2:
                 v[1] = 0;
@@ -426,7 +448,11 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #endif
                 break;
             case 3:
+#ifdef THREED
+                v[0] = bc.vbc_val_x1;
+#else
                 v[0] = vbc_applied_x1;
+#endif
                 v[1] = 0;
 #ifdef THREED
                 v[2] = 0;

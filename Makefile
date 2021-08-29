@@ -1,4 +1,4 @@
-#-*- Makefile -*-
+# -*- Makefile -*-
 #
 # Makefile for DynEarthSol3D
 #
@@ -52,21 +52,23 @@ else
 	CXX = g++
 	CXX_BACKEND = ${CXX}
 endif
+
 ifeq ($(nprof), 1)
 	CXX = pgc++
+	## nvToolsExt location
+	NVTOOLSEXT_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/include
+	NVTOOLSEXT_LIB = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/lib64
 endif
-#CXX = g++-5
 
 ## path to Boost's base directory, if not in standard system location
 BOOST_ROOT_DIR = ${HOME}/opt/boost_1_69_0
 
-## nvToolsExt location
-NVTOOLSEXT_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/include
-NVTOOLSEXT_LIB = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/lib64
 ########################################################################
 ## Select compiler and linker flags
 ## (Usually you won't need to modify anything below)
 ########################################################################
+
+OSNAME := $(shell uname -s)
 
 BOOST_LDFLAGS = -lboost_program_options
 ifdef BOOST_ROOT_DIR
@@ -75,8 +77,7 @@ ifdef BOOST_ROOT_DIR
 	ifeq (, $(has_stage_dir))
 		# no stage dir, BOOST_ROOT_DIR is the installation directory
 		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)/include
-		BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Wl,-rpath,$(BOOST_ROOT_DIR)/lib
-		#BOOST_LDFLAGS += -L$(BOOST_ROOT_DIR)/lib -Xlinker -rpath -Xlinker$(BOOST_ROOT_DIR)/lib
+		BOOST_LIB_DIR = $(BOOST_ROOT_DIR)/lib
 	else
 		# with stage dir, BOOST_ROOT_DIR is the build directory
 		BOOST_CXXFLAGS = -I$(BOOST_ROOT_DIR)
@@ -132,14 +133,11 @@ ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 	else ifeq ($(opt), 3) # experimental, use at your own risk :)
 		CXXFLAGS += -march=native -O3 -ffast-math -funroll-loops
 	else # debugging flags
-		CXXFLAGS += -O0 -Wall -Wno-unused-variable -Wno-unused-function -Wno-unknown-pragmas -fbounds-check #-ftrapv
+		CXXFLAGS += -O0 -Wall -Wno-unused-variable -Wno-unused-function -Wno-unknown-pragmas -fbounds-check -ftrapv
 	endif
 
 	ifeq ($(openmp), 1)
 		CXXFLAGS += -fopenmp -DUSE_OMP
-		ifeq ($(opt), 0)
-			CXXFLAGS += -pthread
-		endif
 		LDFLAGS += -fopenmp
 	endif
 
@@ -292,6 +290,16 @@ ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
 
+ifeq ($(useadapt), 1)
+	LIBADAPTIVITY_DIR = ./libadaptivity
+	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
+	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
+	LIBADAPTIVITY_LIBNAME = adaptivity
+	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -DADAPT -DHAVE_VTK=1 \
+		-I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
+		-I$(LIBADAPTIVITY_DIR)/load_balance/include
+endif
+
 ## Action
 
 .PHONY: all clean take-snapshot
@@ -363,7 +371,6 @@ ifneq ($(IS_REPO),)
 	@echo '==== Summary of the code ====' >> snapshot.diff
 	@git show -s >> snapshot.diff
 	@echo >> snapshot.diff
-	@git status >> snapshot.diff
 	@echo >> snapshot.diff
 	@git status >> snapshot.diff
 	@echo >> snapshot.diff
@@ -404,16 +411,18 @@ $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
 $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 	@+$(MAKE) -C $(ANN_DIR) linux-g++
 
-deepclean:
+deepclean: cleanadapt
+	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
+	@+$(MAKE) -C $(C3X3_DIR) clean
+	
+cleanall: clean
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
 	@+$(MAKE) -C $(C3X3_DIR) clean
 	@+$(MAKE) -C $(ANN_DIR) realclean
 
 clean:
-	@rm -f $(OBJS) $(EXE) *.o
+	@rm -f $(OBJS) $(EXE)
 
-clean-data:
-	@rm -rf result.save.* result.chkpt.* result.info
-
-run:
-	dynearthsol$(ndims)d ./curiosity.cfg
+cleanadapt:
+	@rm -f $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
+	@+$(MAKE) -C $(LIBADAPTIVITY_DIR) clean

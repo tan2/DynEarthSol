@@ -203,7 +203,6 @@ void restart(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     bin_chkpt.read_array(*var.volume_old, "volume_old");
-
     compute_mass(param, var.egroups, var,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
 
@@ -278,22 +277,17 @@ void isostasy_adjustment(const Param &param, Variables &var)
 
     for (int i=0; i<iso_steps; i++) {
         update_strain_rate(var, *var.strain_rate);
-
         compute_dvoldt(var, *var.ntmp, *var.tmp_result);
-
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-
         update_stress(param ,var, *var.stress, *var.stressyy, *var.dpressure, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
-
         update_force(param, var, *var.force, *var.tmp_result);
-
         update_velocity(var, *var.vel);
 
         // do not apply vbc to allow free boundary
 
         // displacment is vertical only
-//        #pragma omp parallel for default(none)          \
+        #pragma omp parallel for default(none)          \
             shared(var, param)
         for (int i=0; i<var.nnode; ++i) {
             for (int j=0; j<NDIMS-1; ++j) {
@@ -345,7 +339,6 @@ int main(int argc, const char* argv[])
                   (param.sim.is_restarting) ? param.sim.restarting_from_frame : 0);
 
     if (! param.sim.is_restarting) {
-
         init(param, var);
 
         if (param.ic.isostasy_adjustment_time_in_yr > 0) {
@@ -374,15 +367,11 @@ int main(int argc, const char* argv[])
         var.steps ++;
         var.time += var.dt;
 
-        if (param.control.has_thermal_diffusion) {
-
+        if (param.control.has_thermal_diffusion)
             update_temperature(param, var, *var.temperature, *var.ntmp, *var.tmp_result);
 
-        }
         update_strain_rate(var, *var.strain_rate);
-
         compute_dvoldt(var, *var.ntmp, *var.tmp_result);
-
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
         update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
@@ -392,9 +381,7 @@ int main(int argc, const char* argv[])
 
         update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);
-
         apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
-
         update_mesh(param, var);
 
         // elastic stress/strain are objective (frame-indifferent)

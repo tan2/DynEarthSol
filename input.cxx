@@ -215,8 +215,8 @@ static void declare_parameters(po::options_description &cfg,
         ("control.ref_pressure_option", po::value<int>(&p.control.ref_pressure_option)->default_value(0),
          "How to define reference pressure?\n"
          "0: using density of the 0-th element to compute lithostatic pressure.\n"
-         "1: computing rerence pressure from the PREM model.\n"
-         "2: computing rerence pressure from the PREM model, modified for continent.\n")
+         "1: computing reference pressure from the PREM model.\n"
+         "2: computing reference pressure from the PREM model, modified for continent.\n")
         ("control.surface_pressure_correction", po::value<bool>(&p.control.surface_pressure_correction)->default_value(false),
          "Correct the pressure of surface elements"
          "which has positive stress 1st invariant"
@@ -498,7 +498,6 @@ static void declare_parameters(po::options_description &cfg,
          "Max. value of thermal diffusivity (in m^2/s)")
         ("mat.convert_rate_oceanic_crust", po::value<double>(&p.mat.convert_rate_oceanic_crust)->default_value(1.e-13),
          "Converting rate from melting to oceanic crust. For formation of middle ocean ridge in bc.cxx")
-
 
         // these parameters need to parsed later
         ("mat.rho0", po::value<std::string>()->default_value("[3210]"),

@@ -109,6 +109,7 @@ void MarkerSet::random_eta( double *eta )
     }
 }
 
+
 void MarkerSet::append_marker( const double *eta, int el, int mt , double ti, double z, double distance, double slope)
 {
 #ifdef USE_NPROF
