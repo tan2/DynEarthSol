@@ -270,8 +270,13 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     case 1:
         // damping when force and velocity are parallel
         // acclerating when force and velocity are anti-parallel
+#ifdef LLVM
+        #pragma omp parallel for default(none)          \
+            shared(var, param, ff, v, small_vel)
+#else
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
+#endif
         for (int i=0; i<var.nnode*NDIMS; ++i) {
             if (std::fabs(v[i]) > small_vel) {
                 ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
