@@ -293,7 +293,7 @@ double compute_dt(const Param& param, const Variables& var)
     double dt_diffusion = std::numeric_limits<double>::max();
     double minl = std::numeric_limits<double>::max();
 
-//    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion) default(none) shared(param,var, nelem, connectivity, coord, volume)
+    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion) default(none) shared(param,var, connectivity, coord, volume)
     for (int e=0; e<nelem; ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
@@ -331,7 +331,7 @@ double compute_dt(const Param& param, const Variables& var)
         if (param.control.has_thermal_diffusion)
             dt_diffusion = std::min(dt_diffusion,
                                     0.5 * minh * minh / var.mat->therm_diff_max);
-	    minl = std::min(minl, minh);
+        minl = std::min(minl, minh);
     }
 
     double max_vbc_val;
