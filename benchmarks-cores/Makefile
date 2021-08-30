@@ -4,12 +4,13 @@ CASE := test-tiny.cfg
 #CASE := test-big.cfg
 #CASE := test-topo.cfg
 FRAME := 4
-EXE := ../dynearthsol2d
 OMP := 1
 TFLAG = #-v
 DEBUG := 0
 NSYS := 0
 VTK := 0
+NDIMS := 2
+EXE := ../dynearthsol$(NDIMS)d
 FUNC := compute_mass
 ifeq ($(DEBUG), 1)
 	DEBUGFLAG = valgrind --tool=helgrind --log-file=valgrind-out.txt -v
