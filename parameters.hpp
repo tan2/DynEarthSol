@@ -75,6 +75,7 @@ struct Mesh {
     std::string poly_filename;
     std::string exo_filename;
 
+    bool is_using_NMD_stress;
     bool is_discarding_internal_segments;
     int remeshing_option;
 
@@ -375,7 +376,7 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
-    double_vec *stressyy;//, *dpressure;
+    double_vec *stressyy, *dpressure;
     double_vec *ntmp;
 
     // For surface processes

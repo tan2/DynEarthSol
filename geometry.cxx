@@ -216,7 +216,7 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
     // std::cout << "\n";
 }
 
-/*
+
 void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_cache &tmp_result)
 {
     // dp_nd is the pressure change, weighted by the element volume,
@@ -273,7 +273,7 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_
 	for (int i=0; i<NDIMS; ++i) s[i] += ( - dp_orig + dp_el ) / NDIMS;
     }
 }
-*/
+
 
 double compute_dt(const Param& param, const Variables& var)
 {
