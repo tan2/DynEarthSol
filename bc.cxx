@@ -905,7 +905,8 @@ namespace {
     }
 
 
-    void custom_surface_processes(const Variables& var, array_t& coord) {
+    void custom_surface_processes(const Variables& var, array_t& coord)
+    {
         const int top_bdry = iboundz1;
         const int_vec& top_nodes = var.bnodes[top_bdry];
         const std::size_t ntop = top_nodes.size();
@@ -1527,11 +1528,11 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         custom_surface_processes(var, coord);
         break;
     case 102:
-        simple_diffusion(var, dh);
 #ifdef THREED
         std::cout << "3D deposition of sediment processes is not ready yet.";
         exit(168);
 #else
+        simple_diffusion(var, dh);
         if (var.steps != 0)
             simple_deposition(param, var, dh, src_locs, src_abj);
 #endif
