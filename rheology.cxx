@@ -520,9 +520,15 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 #endif
     const int rheol_type = var.mat->rheol_type;
 
+#ifdef LLVM
+    #pragma omp parallel for default(none)                           \
+        shared(var, stress, stressyy, dpressure, strain, plstrain, delta_plstrain, \
+               strain_rate, std::cerr, rheol_type)
+#else
     #pragma omp parallel for default(none)                           \
         shared(var, stress, stressyy, dpressure, strain, plstrain, delta_plstrain, \
                strain_rate, std::cerr)
+#endif
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
         double* s = stress[e];

@@ -122,7 +122,22 @@ ifeq ($(usemmg), 1)
 endif
 
 
-ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
+ifneq (, $(findstring clang++, $(CXX)))
+	CXXFLAGS = -v -DLLVM
+	LDFLAGS = -v
+
+	ifeq ($(opt), 1)
+		CXXFLAGS += -O1
+	else ifeq ($(opt), 2)
+		CXXFLAGS += -O2
+	endif
+ 
+	ifeq ($(openmp), 1)
+		CXXFLAGS += -fopenmp -DUSE_OMP
+		LDFLAGS += -fopenmp -L/usr/local/lib
+	endif
+
+else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
 
@@ -172,7 +187,7 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 		endif
 	endif
 
-else ifneq (, $(findstring pgc++, $(CXX))) # if using any version of g++
+else ifneq (, $(findstring pgc++, $(CXX)))
 	CXXFLAGS = -march=core2
 	LDFLAGS = 
 

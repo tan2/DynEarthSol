@@ -1206,7 +1206,11 @@ void compute_metric_field(const Variables &var, const conn_t &connectivity, cons
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(metric.begin(), var.nnode, 0);
 
+#ifdef LLVM
+    #pragma omp parallel for default(none) shared(resolution,var,volume,connectivity,tmp_result)
+#else
     #pragma omp parallel for default(none) shared(var,volume,connectivity,tmp_result)
+#endif
     for (int e=0;e<var.nelem;e++) {
             const int *conn = connectivity[e];
             double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);

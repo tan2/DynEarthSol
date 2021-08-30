@@ -293,7 +293,11 @@ double compute_dt(const Param& param, const Variables& var)
     double dt_diffusion = std::numeric_limits<double>::max();
     double minl = std::numeric_limits<double>::max();
 
+#ifdef LLVM
+    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion) default(none) shared(param, var, nelem, connectivity, coord, volume)
+#else
     #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion) default(none) shared(param,var, connectivity, coord, volume)
+#endif
     for (int e=0; e<nelem; ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
@@ -376,7 +380,11 @@ void compute_mass(const Param &param, const Variables &var,
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
 
+#ifdef LLVM
+    #pragma omp parallel for default(none) shared(var, param, pseudo_speed, tmp_result)
+#else
     #pragma omp parallel for default(none) shared(var, param, tmp_result)
+#endif
     for (int e=0;e<var.nelem;e++) {
         double rho = (param.control.is_quasi_static) ?
             (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
