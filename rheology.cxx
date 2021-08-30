@@ -676,3 +676,169 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
     nvtxRangePop();
 #endif
 }
+
+
+void update_stress(const Param& param, const Variables& var, tensor_t& stress,
+                   double_vec& stressyy,
+                   tensor_t& strain, double_vec& plstrain,
+                   double_vec& delta_plstrain, tensor_t& strain_rate)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+    const int rheol_type = var.mat->rheol_type;
+
+    #pragma omp parallel for default(none)                           \
+        shared(var, stress, stressyy, strain, plstrain, delta_plstrain, \
+               strain_rate, std::cerr)
+    for (int e=0; e<var.nelem; ++e) {
+        // stress, strain and strain_rate of this element
+        double* s = stress[e];
+        double& syy = stressyy[e];
+        double* es = strain[e];
+        double* edot = strain_rate[e];
+
+        // anti-mesh locking correction on strain rate
+        if(1){
+            double div = trace(edot);
+            //double div2 = ((*var.volume)[e] / (*var.volume_old)[e] - 1) / var.dt;
+            for (int i=0; i<NDIMS; ++i) {
+                edot[i] += ((*var.edvoldt)[e] - div) / NDIMS;  // XXX: should NDIMS -> 3 in plane strain?
+            }
+        }
+
+        // update strain with strain rate
+        for (int i=0; i<NSTR; ++i) {
+            es[i] += edot[i] * var.dt;
+        }
+
+        // modified strain increment
+        double de[NSTR];
+        for (int i=0; i<NSTR; ++i) {
+            de[i] = edot[i] * var.dt;
+        }
+
+        switch (rheol_type) {
+        case MatProps::rh_elastic:
+            {
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                elastic(bulkm, shearm, de, s);
+            }
+            break;
+        case MatProps::rh_viscous:
+            {
+                double bulkm = var.mat->bulkm(e);
+                double viscosity = var.mat->visc(e);
+                double total_dv = trace(es);
+                viscous(bulkm, viscosity, total_dv, edot, s);
+            }
+            break;
+        case MatProps::rh_maxwell:
+            {
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                double viscosity = var.mat->visc(e);
+                double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
+                maxwell(bulkm, shearm, viscosity, var.dt, dv, de, s);
+            }
+            break;
+        case MatProps::rh_ep:
+            {
+                double depls = 0;
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                double amc, anphi, anpsi, hardn, ten_max;
+                var.mat->plastic_props(e, plstrain[e],
+                                       amc, anphi, anpsi, hardn, ten_max);
+                int failure_mode;
+                if (var.mat->is_plane_strain) {
+                    elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                     de, depls, s, syy, failure_mode);
+                }
+                else {
+                    elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                   de, depls, s, failure_mode);
+                }
+                plstrain[e] += depls;
+                delta_plstrain[e] = depls;
+            }
+            break;
+        case MatProps::rh_evp:
+            {
+                double depls = 0;
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                double viscosity = var.mat->visc(e);
+                double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
+                // stress due to maxwell rheology
+                double sv[NSTR];
+                for (int i=0; i<NSTR; ++i) sv[i] = s[i];
+                maxwell(bulkm, shearm, viscosity, var.dt, dv, de, sv);
+                double svII = second_invariant2(sv);
+
+                double amc, anphi, anpsi, hardn, ten_max;
+                var.mat->plastic_props(e, plstrain[e],
+                                       amc, anphi, anpsi, hardn, ten_max);
+                // stress due to elasto-plastic rheology
+                double sp[NSTR], spyy;
+                for (int i=0; i<NSTR; ++i) sp[i] = s[i];
+                int failure_mode;
+                if (var.mat->is_plane_strain) {
+                    spyy = syy;
+                    elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                     de, depls, sp, spyy, failure_mode);
+                }
+                else {
+                    elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
+                                   de, depls, sp, failure_mode);
+                }
+                double spII = second_invariant2(sp);
+
+                // use the smaller as the final stress
+                if (svII < spII)
+                    for (int i=0; i<NSTR; ++i) s[i] = sv[i];
+                else {
+                    for (int i=0; i<NSTR; ++i) s[i] = sp[i];
+                    plstrain[e] += depls;
+                    delta_plstrain[e] = depls;
+                    syy = spyy;
+                }
+            }
+            break;
+        default:
+            std::cerr << "Error: unknown rheology type: " << rheol_type << "\n";
+            std::exit(1);
+            break;
+        }
+        // std::cerr << "stress " << e << ": ";
+        // print(std::cerr, s, NSTR);
+        // std::cerr << '\n';
+    }
+
+    // correct stress 1st invariant of surface elements
+    if (param.control.surface_pressure_correction) {
+#ifdef USE_NPROF
+        nvtxRangePushA("surface_pressure_correction");
+#endif
+
+        #pragma omp parallel for default(none) shared(var, stress)
+        for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
+            double* s = stress[*e];
+            double first_inv = 0.;
+            for (int j=0;j<NDIMS;j++) first_inv += s[j];
+
+            if (first_inv > 0.) {
+                first_inv = first_inv / NDIMS;
+                for (int j=0;j<NDIMS;j++)
+                    s[j] -= first_inv;
+            }
+        }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+    }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+}

@@ -216,12 +216,12 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
     // std::cout << "\n";
 }
 
-
+/*
 void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_cache &tmp_result)
 {
-    /* dp_nd is the pressure change, weighted by the element volume,
-     * lumped onto the nodes.
-     */
+    // dp_nd is the pressure change, weighted by the element volume,
+    // lumped onto the nodes.
+    //
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dp_nd.begin(), var.nnode, 0);
@@ -255,8 +255,8 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_
          dp_nd[n] /= volume_n[n];
 
 
-    /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
-     */
+    // dp_el is the averaged (i.e. smoothed) dp_nd on the element.
+     //
     #pragma omp parallel for default(none)      \
         shared(var, dp_nd, stress)
     for (int e=0; e<var.nelem; ++e) {
@@ -273,7 +273,7 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_
 	for (int i=0; i<NDIMS; ++i) s[i] += ( - dp_orig + dp_el ) / NDIMS;
     }
 }
-
+*/
 
 double compute_dt(const Param& param, const Variables& var)
 {
