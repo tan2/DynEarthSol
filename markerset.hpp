@@ -29,8 +29,8 @@ public:
     }
 
     static void random_eta( double* ); // class method
-    void create_marker_in_elem(Variables& var);
-    void update_marker_in_elem(Variables& var);
+//    void create_marker_in_elem(Variables& var);
+//    void update_marker_in_elem(Variables& var);
     void create_melt_markers(const int mat, int_vec& melt_markers);
     void correct_surface_marker(const Variables& var, array_t& coord0s, Barycentric_transformation &bary);
     void set_surface_marker(const Variables& var, const int mattype_sed, array_t& edhacc, int_vec2D& elemmarkers, double_vec& src_locs, double_vec& src_abj);

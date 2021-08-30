@@ -6,7 +6,6 @@
 #include "parameters.hpp"
 #include "bc.hpp"
 #include "matprops.hpp"
-//#include "utils.hpp"
 #include "fields.hpp"
 
 
@@ -25,7 +24,7 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.edvoldt = new double_vec(e);
 
-    var.marker_in_elem = new int_vec2D(e);
+//    var.marker_in_elem = new int_vec2D(e);
 
     {
         // these fields are reallocated during remeshing interpolation
@@ -322,6 +321,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
 
     #pragma omp parallel for default(none) shared(var,param,tmp_result)//, force)
     for (int e=0;e<var.nelem;e++) {
+
         const int *conn = (*var.connectivity)[e];
         const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED

@@ -40,6 +40,7 @@ void init_var(const Param& param, Variables& var)
 
     if (param.control.characteristic_speed == 0)
         var.max_vbc_val = find_max_vbc(param.bc, *var.vbc_period_ratio_x);
+        // todo max_vbc_val change with boundary period.
     else
         var.max_vbc_val = param.control.characteristic_speed;
 
@@ -85,7 +86,7 @@ void init(const Param& param, Variables& var)
     create_markers(param, var);
 
     allocate_variables(param, var);
-    var.markersets[0]->create_marker_in_elem(var);
+//    var.markersets[0]->create_marker_in_elem(var);
 //    var.markersets[0]->create_melt_markers(param.mat.mattype_partial_melting_mantle,var.melt_markers);
 
     create_top_elems(var);
@@ -102,6 +103,7 @@ void init(const Param& param, Variables& var)
 
     create_boundary_normals(var, var.bnormals, var.edge_vectors);
     apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
+
     // temperature should be init'd before stress and strain
     initial_temperature(param, var, *var.temperature);
     initial_stress_state(param, var, *var.stress, *var.stressyy, *var.strain, var.compensation_pressure);
@@ -191,7 +193,7 @@ void restart(const Param& param, Variables& var)
     allocate_variables(param, var);
 
     create_top_elems(var);
-    var.markersets[0]->create_marker_in_elem(var);
+//    var.markersets[0]->create_marker_in_elem(var);
 //    var.markersets[0]->create_melt_markers(param.mat.mattype_partial_melting_mantle,var.melt_markers);
     create_surface_info(param,var,var.surfinfo);
 
@@ -205,7 +207,6 @@ void restart(const Param& param, Variables& var)
 
     create_boundary_normals(var, var.bnormals, var.edge_vectors);
     apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
-
     // Initializing field variables
     {
         bin_save.read_array(*var.vel, "velocity");

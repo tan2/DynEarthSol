@@ -367,7 +367,7 @@ struct Variables {
     std::map<std::pair<int,int>, double*> edge_vectors;
 
     int_vec *top_elems;
-    int_vec2D *marker_in_elem;
+//    int_vec2D *marker_in_elem;
 
     int_vec2D *support;
 

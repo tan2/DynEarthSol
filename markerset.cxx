@@ -151,6 +151,7 @@ void MarkerSet::append_marker( const double *eta, int el, int mt , double ti, do
 #endif
 }
 
+/*
 void MarkerSet::create_marker_in_elem(Variables& var)
 {
 
@@ -198,6 +199,7 @@ void MarkerSet::update_marker_in_elem(Variables& var)
     nvtxRangePop();
 #endif
 }
+*/
 
 void MarkerSet::create_melt_markers(const int mat, int_vec& melt_markers)
 {
@@ -380,7 +382,7 @@ void MarkerSet::set_surface_marker(const Variables& var, const int mattype, arra
                     for (int j=0; j<NDIMS; j++)
                         std::cout << j << " " << eta0[j] << " ";
                     std::cout << "\n";
-                }   
+                }
             }
         }
     }
