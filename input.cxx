@@ -60,8 +60,8 @@ static void declare_parameters(po::options_description &cfg,
          "Output immediately before and after remeshing?")
         ("sim.is_outputting_averaged_fields", po::value<bool>(&p.sim.is_outputting_averaged_fields)->default_value(true),
          "Output time-averaged (smoothed) field variables or not. These fields are: velocity, strain rate, and stress.\n"
-         "0: output instantaneous fields. The velocity and strain-rate might oscillate temporally.\n"
-         "1: output field variables averaged over mesh.quality_check_step_interval time steps.\n")
+         "false: output instantaneous fields. The velocity and strain-rate might oscillate temporally.\n"
+         "true: output field variables averaged over mesh.quality_check_step_interval time steps.\n")
         ;
 
     cfg.add_options()
@@ -670,6 +670,12 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
             std::cerr << "Must provide sim.restarting_from_frame when restarting.\n";
             std::exit(1);
         }
+    }
+
+    if (p.sim.is_outputting_averaged_fields == true)
+        if (p.sim.output_step_interval%p.mesh.quality_check_step_interval !=0) {
+            std::cerr << "sim.output_step_interval must be a multiple of mesh.quality_check_step_interval!.\n";
+            std::exit(1);
     }
 
     //

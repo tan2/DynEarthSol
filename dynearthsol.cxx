@@ -421,7 +421,7 @@ int main(int argc, const char* argv[])
             if (next_regular_frame % param.sim.checkpoint_frame_interval == 0)
                 output.write_checkpoint(param, var);
 
-            output.write(var);
+            output.write(var,param.sim.is_outputting_averaged_fields);
 
             next_regular_frame ++;
         }
