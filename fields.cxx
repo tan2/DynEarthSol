@@ -339,8 +339,8 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
             tmp_f[i] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-            tmp_f[i+NODES_PER_ELEM] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-            tmp_f[i+NODES_PER_ELEM*2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+            tmp_f[i+NODES_PER_ELEM] = (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+            tmp_f[i+NODES_PER_ELEM*2] = (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
 #else
             tmp_f[i] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
             tmp_f[i+NODES_PER_ELEM] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
