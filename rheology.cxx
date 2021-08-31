@@ -516,7 +516,7 @@ void update_stress(const Variables& var, tensor_t& stress,
 
     #pragma omp parallel for default(none)                           \
         shared(var, stress, stressyy, dpressure, strain, plstrain, delta_plstrain, \
-               strain_rate, std::cerr)
+               strain_rate, rheol_type, std::cerr)
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
         double* s = stress[e];
