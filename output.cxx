@@ -76,11 +76,11 @@ void Output::write_info(const Variables& var, double dt)
 }
 
 
-void Output::write(const Variables& var, bool is_averaged)
+void Output::write(const Variables& var, bool disable_averaging)
 {
     double dt = var.dt;
     double inv_dt = 1 / var.dt;
-    if (average_interval && is_averaged) {
+    if (!disable_averaging && is_averaged) {
         dt = (var.time - time0) / average_interval;
         inv_dt = 1.0 / (var.time - time0);
     }
@@ -94,7 +94,7 @@ void Output::write(const Variables& var, bool is_averaged)
     bin.write_array(*var.connectivity, "connectivity", var.connectivity->size());
 
     bin.write_array(*var.vel, "velocity", var.vel->size());
-    if (average_interval && is_averaged) {
+    if (!disable_averaging && is_averaged) {
         // average_velocity = displacement / delta_t
         double *c0 = coord0.data();
         const double *c = var.coord->data();
@@ -111,7 +111,7 @@ void Output::write(const Variables& var, bool is_averaged)
     // Strain rate and plastic strain rate do not need to be checkpointed,
     // so we don't have to distinguish averged/non-averaged variants.
     double_vec *delta_plstrain = var.delta_plstrain;
-    if (average_interval && is_averaged) {
+    if (!disable_averaging && is_averaged) {
         // average_strain_rate = delta_strain / delta_t
         delta_plstrain = &delta_plstrain_avg;
     }
@@ -121,7 +121,7 @@ void Output::write(const Variables& var, bool is_averaged)
     bin.write_array(*delta_plstrain, "plastic strain-rate", delta_plstrain->size());
 
     tensor_t *strain_rate = var.strain_rate;
-    if (average_interval && is_averaged) {
+    if (!disable_averaging && is_averaged) {
         // average_strain_rate = delta_strain / delta_t
         strain_rate = &strain0;
         double *s0 = strain0.data();
@@ -135,7 +135,7 @@ void Output::write(const Variables& var, bool is_averaged)
     bin.write_array(*var.strain, "strain", var.strain->size());
     bin.write_array(*var.stress, "stress", var.stress->size());
 
-    if (average_interval && is_averaged) {
+    if (!disable_averaging && is_averaged) {
         double *s = stress_avg.data();
         double tmp = 1.0 / (average_interval + 1);
         for (int i=0; i<stress_avg.num_elements(); ++i) {

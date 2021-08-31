@@ -314,7 +314,7 @@ int main(int argc, const char* argv[])
     }
 
     var.dt = compute_dt(param, var);
-    output.write(var, false);
+    output.write(var, true);
 
     double starting_time = var.time; // var.time & var.steps might be set in restart()
     double starting_step = var.steps;
@@ -392,13 +392,13 @@ int main(int argc, const char* argv[])
             if (quality_is_bad) {
 
                 if (param.sim.has_output_during_remeshing) {
-                    output.write(var, false);
+                    output.write(var, true);
                 }
 
                 remesh(param, var, quality_is_bad);
 
                 if (param.sim.has_output_during_remeshing) {
-                    output.write(var, false);
+                    output.write(var, true);
                 }
             }
         }
