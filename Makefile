@@ -53,7 +53,7 @@ else
 endif
 
 ## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR = ${HOME}/opt/boost_1_69_0
+BOOST_ROOT_DIR =
 
 ########################################################################
 ## Select compiler and linker flags
