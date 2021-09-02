@@ -76,10 +76,10 @@ void Output::write_info(const Variables& var, double dt)
 }
 
 
-void Output::write(const Variables& var, bool disable_averaging)
+void Output::_write(const Variables& var, bool disable_averaging)
 {
     double dt = var.dt;
-    double inv_dt = 1 / var.dt;
+    double inv_dt = 0; // only used when is_averaged
     if (!disable_averaging && is_averaged) {
         dt = (var.time - time0) / average_interval;
         inv_dt = 1.0 / (var.time - time0);
@@ -205,6 +205,18 @@ void Output::write(const Variables& var, bool disable_averaging)
                 }
             }
     }
+}
+
+
+void Output::write(const Variables& var)
+{
+    _write(var);
+}
+
+
+void Output::write_exact(const Variables& var)
+{
+    _write(var, true);
 }
 
 

@@ -303,7 +303,7 @@ int main(int argc, const char* argv[])
         init(param, var);
 
         if (param.ic.isostasy_adjustment_time_in_yr > 0) {
-            // output.write(var, false);
+            // output.write_exact(var);
             isostasy_adjustment(param, var);
         }
         if (param.sim.has_initial_checkpoint)
@@ -314,7 +314,7 @@ int main(int argc, const char* argv[])
     }
 
     var.dt = compute_dt(param, var);
-    output.write(var, true);
+    output.write_exact(var);
 
     double starting_time = var.time; // var.time & var.steps might be set in restart()
     double starting_step = var.steps;
@@ -392,13 +392,13 @@ int main(int argc, const char* argv[])
             if (quality_is_bad) {
 
                 if (param.sim.has_output_during_remeshing) {
-                    output.write(var, true);
+                    output.write_exact(var);
                 }
 
                 remesh(param, var, quality_is_bad);
 
                 if (param.sim.has_output_during_remeshing) {
-                    output.write(var, true);
+                    output.write_exact(var);
                 }
             }
         }
