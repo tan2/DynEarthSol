@@ -18,3 +18,5 @@ libadaptivity/CMakeFiles
 orig-*
 .vscode
 valgrind*
+triangle/triangle
+tetgen/tetgen
