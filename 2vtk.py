@@ -431,12 +431,12 @@ def vtk_dataarray(f, data, data_name=None, data_comps=None):
     if output_in_binary:
         header = np.zeros(4, dtype=np.int32)
         header[0] = 1
-        a = data.tostring()
+        a = data.tobytes()
         header[1] = len(a)
         header[2] = len(a)
         b = zlib.compress(a)
         header[3] = len(b)
-        f.write(base64.standard_b64encode(header.tostring()).decode('ascii'))
+        f.write(base64.standard_b64encode(header.tobytes()).decode('ascii'))
         f.write(base64.standard_b64encode(b).decode('ascii'))
     else:
         data.tofile(f, sep=' ')
