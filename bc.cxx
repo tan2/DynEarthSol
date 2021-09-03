@@ -1433,11 +1433,13 @@ namespace {
 }
 
 
-void surface_plstrain_diffusion(const Param &param, const Variables& var, double_vec& plstrain)
+void surface_plstrain_diffusion(const Param &param, \
+    const Variables& var, double_vec& plstrain)
 {
     double half_life = 1.e2 * YEAR2SEC;
     double lambha = 0.69314718056 / half_life; // ln2
-    #pragma omp parallel for default(none) shared(param, var, plstrain, lambha)
+    #pragma omp parallel for default(none)      \
+        shared(param, var, plstrain, lambha)
     for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
         // Find the most abundant marker mattype in this element
         int_vec &a = (*var.elemmarkers)[*e];
@@ -1447,8 +1449,9 @@ void surface_plstrain_diffusion(const Param &param, const Variables& var, double
     }
 }
 
-void correct_surface_element(const Variables& var, const double_vec& dhacc, MarkerSet& ms, \
-                              tensor_t& stress, tensor_t& strain, tensor_t& strain_rate, double_vec& plstrain)
+void correct_surface_element(const Variables& var, \
+    const double_vec& dhacc, MarkerSet& ms, tensor_t& stress, \
+    tensor_t& strain, tensor_t& strain_rate, double_vec& plstrain)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -1459,9 +1462,13 @@ void correct_surface_element(const Variables& var, const double_vec& dhacc, Mark
     double_vec new_volumes(ntop_elem,0.);
 
 #ifdef LLVM
-    #pragma omp parallel for default(none) shared(ntop_elem,var,dhacc,stress,strain,strain_rate,plstrain,coord0s, new_volumes)
+    #pragma omp parallel for default(none)      \
+        shared(ntop_elem, var, dhacc, stress,   \
+        strain, strain_rate, plstrain, coord0s, new_volumes)
 #else
-    #pragma omp parallel for default(none) shared(var,dhacc,stress,strain,strain_rate,plstrain,coord0s, new_volumes)
+    #pragma omp parallel for default(none)      \
+        shared(var, dhacc, stress, strain,      \
+        strain_rate, plstrain, coord0s, new_volumes)
 #endif
     for (size_t i=0;i<ntop_elem;i++) {
         const double *coord1[NODES_PER_ELEM];

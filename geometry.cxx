@@ -150,7 +150,8 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, elem_cache &tmp_re
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dvoldt.begin(), var.nnode, 0);
 
-    #pragma omp parallel for default(none) shared(var, volume, tmp_result)//, param, dvoldt)
+    #pragma omp parallel for default(none)      \
+        shared(var, volume, tmp_result)
     for (int e=0;e<var.nelem;e++) {
         const int *conn = (*var.connectivity)[e];
         const double* strain_rate = (*var.strain_rate)[e];
@@ -162,7 +163,8 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, elem_cache &tmp_re
             tmp_d[i] = dj * volume[e];
     }
 
-    #pragma omp parallel for default(none) shared(var,dvoldt,tmp_result)
+    #pragma omp parallel for default(none)      \
+        shared(var,dvoldt,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
@@ -252,7 +254,8 @@ namespace {
 }
 
 
-void NMD_stress(const Param& param, const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_cache &tmp_result)
+void NMD_stress(const Param& param, const Variables &var,
+    double_vec &dp_nd, tensor_t& stress, elem_cache &tmp_result)
 {
     // dp_nd is the pressure change, weighted by the element volume,
     // lumped onto the nodes.
@@ -261,7 +264,7 @@ void NMD_stress(const Param& param, const Variables &var, double_vec &dp_nd, ten
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dp_nd.begin(), var.nnode, 0);
 
-    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
+//    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
 /*
     // weight with inverse distance
     if(false) {
@@ -294,7 +297,8 @@ void NMD_stress(const Param& param, const Variables &var, double_vec &dp_nd, ten
     // weight with volumn
     } else {
         */
-    #pragma omp parallel for default(none) shared(var,volume,tmp_result)
+    #pragma omp parallel for default(none)      \
+        shared(var,volume,tmp_result)
     for (int e=0;e<var.nelem;e++) {
         const int *conn = (*var.connectivity)[e];
         double dp = (*var.dpressure)[e];
@@ -303,7 +307,8 @@ void NMD_stress(const Param& param, const Variables &var, double_vec &dp_nd, ten
         }
     }
 
-    #pragma omp parallel for default(none) shared(var,dp_nd,volume_n,tmp_result)
+    #pragma omp parallel for default(none)      \
+        shared(var,dp_nd,volume_n,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
@@ -324,7 +329,8 @@ void NMD_stress(const Param& param, const Variables &var, double_vec &dp_nd, ten
     case MatProps::rh_viscous:
     case MatProps::rh_maxwell:
     case MatProps::rh_evp:
-        mixed_factor = new Visc_factor(*var.viscosity, param.control.mixed_stress_reference_viscosity);
+        mixed_factor = new Visc_factor(*var.viscosity,
+            param.control.mixed_stress_reference_viscosity);
         break;
     default:
         mixed_factor = new Const_factor();
@@ -334,7 +340,7 @@ void NMD_stress(const Param& param, const Variables &var, double_vec &dp_nd, ten
     /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
      */
     #pragma omp parallel for default(none)      \
-        shared(param, var, dp_nd, stress, centroid, mixed_factor)
+        shared(param, var, dp_nd, stress, mixed_factor)
     for (int e=0; e<var.nelem; ++e) {
 
         double factor = mixed_factor->contains(e);
@@ -357,8 +363,8 @@ void NMD_stress(const Param& param, const Variables &var, double_vec &dp_nd, ten
     }
 
     delete mixed_factor;
-    delete [] centroid[0];
-    delete [] centroid;
+//    delete [] centroid[0];
+//    delete [] centroid;
 }
 
 
@@ -381,9 +387,11 @@ double compute_dt(const Param& param, const Variables& var)
     double minl = std::numeric_limits<double>::max();
 
 #ifdef LLVM
-    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion) default(none) shared(param, var, nelem, connectivity, coord, volume)
+    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion)    \
+        default(none) shared(param, var, nelem, connectivity, coord, volume)
 #else
-    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion) default(none) shared(param,var, connectivity, coord, volume)
+    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion)    \
+        default(none) shared(param,var, connectivity, coord, volume)
 #endif
     for (int e=0; e<nelem; ++e) {
         int n0 = connectivity[e][0];
@@ -468,9 +476,11 @@ void compute_mass(const Param &param, const Variables &var,
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
 
 #ifdef LLVM
-    #pragma omp parallel for default(none) shared(var, param, pseudo_speed, tmp_result)
+    #pragma omp parallel for default(none)      \
+        shared(var, param, pseudo_speed, tmp_result)
 #else
-    #pragma omp parallel for default(none) shared(var, param, tmp_result)
+    #pragma omp parallel for default(none)      \
+        shared(var, param, tmp_result)
 #endif
     for (int e=0;e<var.nelem;e++) {
         double rho = (param.control.is_quasi_static) ?
@@ -489,7 +499,8 @@ void compute_mass(const Param &param, const Variables &var,
         }
     }
 
-    #pragma omp parallel for default(none) shared(param,var,volume_n,mass,tmass,tmp_result)
+    #pragma omp parallel for default(none)      \
+        shared(param,var,volume_n,mass,tmass,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
@@ -516,7 +527,8 @@ void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shap
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    #pragma omp parallel for default(none) shared(var, shpdx, shpdy, shpdz)
+    #pragma omp parallel for default(none)      \
+        shared(var, shpdx, shpdy, shpdz)
     for (int e=0;e<var.nelem;e++) {
 
         int n0 = (*var.connectivity)[e][0];

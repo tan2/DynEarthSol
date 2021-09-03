@@ -123,7 +123,8 @@ void update_temperature(const Param &param, const Variables &var,
 #endif
     tdot.assign(var.nnode, 0);
 
-    #pragma omp parallel for default(none) shared(var,temperature,tmp_result)//, param, tdot)
+    #pragma omp parallel for default(none)      \
+        shared(var,temperature,tmp_result)
     for (int e=0;e<var.nelem;e++) {
         // diffusion matrix
         double D[NODES_PER_ELEM][NODES_PER_ELEM];
@@ -157,7 +158,8 @@ void update_temperature(const Param &param, const Variables &var,
         }
     }
 
-    #pragma omp parallel for default(none) shared(var,tdot,tmp_result)
+    #pragma omp parallel for default(none)      \
+        shared(var,tdot,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
@@ -194,7 +196,7 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 #endif
     double *v[NODES_PER_ELEM];
 
-    #pragma omp parallel for default(none) \
+    #pragma omp parallel for default(none)      \
         shared(var, strain_rate) private(v)
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
@@ -330,7 +332,8 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
 #endif
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
 
-    #pragma omp parallel for default(none) shared(var,param,tmp_result)//, force)
+    #pragma omp parallel for default(none)      \
+        shared(var,param,tmp_result)
     for (int e=0;e<var.nelem;e++) {
 
         const int *conn = (*var.connectivity)[e];
@@ -359,7 +362,8 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
         }
     }
 
-    #pragma omp parallel for default(none) shared(var,force,tmp_result)
+    #pragma omp parallel for default(none)      \
+        shared(var,force,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         double *f = force[n];
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
