@@ -16,7 +16,6 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.volume = new double_vec(e);
     var.volume_old = new double_vec(e);
-    var.volume_sp = new double_vec(e);
     var.volume_n = new double_vec(n);
 
     var.mass = new double_vec(n);
@@ -39,10 +38,10 @@ void allocate_variables(const Param &param, Variables& var)
     }
 
     var.ntmp = new double_vec(n);
-    if (param.control.is_using_mixed_stress) {
+    if (param.control.is_using_mixed_stress)
         var.dpressure = new double_vec(e);
-        var.viscosity = new double_vec(e,param.mat.visc_max);
-    }
+
+    var.viscosity = new double_vec(e,param.mat.visc_max);
 
     var.force = new array_t(n, 0);
 
@@ -65,11 +64,9 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.volume;
     delete var.volume_old;
-    delete var.volume_sp;
     delete var.volume_n;
     var.volume = new double_vec(e);
     var.volume_old = new double_vec(e);
-    var.volume_sp = new double_vec(e);
     var.volume_n = new double_vec(n);
 
     delete var.mass;
@@ -88,9 +85,9 @@ void reallocate_variables(const Param& param, Variables& var)
     if (param.control.is_using_mixed_stress) {
         delete var.dpressure;
         var.dpressure = new double_vec(e);
-        delete var.viscosity;
-        var.viscosity = new double_vec(e,param.mat.visc_max);
     }
+    delete var.viscosity;
+    var.viscosity = new double_vec(e,param.mat.visc_max);
     delete var.force;
     var.force = new array_t(n, 0);
 

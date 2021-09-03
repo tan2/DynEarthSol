@@ -1481,7 +1481,7 @@ void correct_surface_element(const Variables& var, \
 
         for (int j=0; j<NODES_PER_ELEM;j++)
             coord1[j] = (*var.coord)[tnodes[j]];
-        compute_volume_sg(coord1, new_volumes[i]);
+        compute_volume(coord1, new_volumes[i]);
 
         // restore the reference node locations before deposition/erosion 
         c00[0] = (*var.coord)[tnodes[0]][0];

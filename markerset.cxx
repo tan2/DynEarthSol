@@ -475,7 +475,7 @@ void MarkerSet::remap_marker(const Variables &var, const double *m_coord, \
             for (int j=0; j<NODES_PER_ELEM; j++)
                 coord[j] = (*var.coord)[(*var.connectivity)[*ee][j]];
 
-            compute_volume_sg(coord,volume);
+            compute_volume(coord,volume);
             Barycentric_transformation bary(coord,volume);
             bary.transform(m_coord,0,eta);
 

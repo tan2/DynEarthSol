@@ -87,7 +87,7 @@ static double triangle_area(const double *a,
 #endif
 }
 
-void compute_volume_sg(const double **coord, double &volume)
+void compute_volume(const double **coord, double &volume)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);

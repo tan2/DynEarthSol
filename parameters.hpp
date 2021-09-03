@@ -373,7 +373,7 @@ struct Variables {
 
     int_vec2D *support;
 
-    double_vec *volume, *volume_old, *volume_n, *volume_sp;
+    double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
