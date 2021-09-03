@@ -14,6 +14,7 @@
 #include "utils.hpp"
 #include "geometry.hpp"
 #include "bc.hpp"
+#include "mesh.hpp"
 
 
 /* Given two points, returns the distance^2 */
@@ -216,8 +217,42 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
     // std::cout << "\n";
 }
 
+namespace {
+    class Factor
+    {
+    public:
+        virtual ~Factor() {};
+        virtual double contains(const int e) const = 0;
+    };
 
-void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_cache &tmp_result)
+    class Const_factor : public Factor
+    {
+    public:
+        double contains(const int e) const {return 1.;}
+    };
+
+    class Visc_factor : public Factor
+    {
+    private:
+        const double ref_visc;
+        const double_vec &viscosity;
+
+    public:
+        Visc_factor(const double_vec &viscosity_, const double ref_visc_) :
+            viscosity(viscosity_), ref_visc(ref_visc_)
+        {}
+        double contains(const int e) const
+        {
+            if (viscosity[e] < ref_visc)
+                return ( 0. );
+            else
+                return std::min(viscosity[e] / (ref_visc * 10.), 1.);
+        }
+    };
+}
+
+
+void NMD_stress(const Param& param, const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_cache &tmp_result)
 {
     // dp_nd is the pressure change, weighted by the element volume,
     // lumped onto the nodes.
@@ -226,16 +261,49 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dp_nd.begin(), var.nnode, 0);
 
+    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
+/*
+    // weight with inverse distance
+    if(false) {
+        #pragma omp parallel for default(none) shared(var,centroid,tmp_result)
+        for (int e=0;e<var.nelem;e++) {
+            const int *conn = (*var.connectivity)[e];
+            for (int i=0; i<NODES_PER_ELEM; ++i) {
+                const double *d = (*var.coord)[conn[i]];
+                tmp_result[e][i] = 1. / sqrt( dist2(d, centroid[e])  );
+                tmp_result[e][i + NODES_PER_ELEM] = tmp_result[e][i] * (*var.dpressure)[e];
+            }
+        }
+
+        #pragma omp parallel for default(none) shared(var,dp_nd,tmp_result)
+        for (int n=0;n<var.nnode;n++) {
+            double dist_inv_sum = 0.;
+            for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+                const int *conn = (*var.connectivity)[*e];
+                for (int i=0;i<NODES_PER_ELEM;i++) {
+                    if (n == conn[i]) {
+                        dist_inv_sum += tmp_result[*e][ i ];
+                        dp_nd[n] += tmp_result[*e][i + NODES_PER_ELEM];
+                        break;
+                    }
+                }
+            }
+            dp_nd[n] /= dist_inv_sum;
+        }
+
+    // weight with volumn
+    } else {
+        */
     #pragma omp parallel for default(none) shared(var,volume,tmp_result)
     for (int e=0;e<var.nelem;e++) {
         const int *conn = (*var.connectivity)[e];
         double dp = (*var.dpressure)[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
-              tmp_result[e][i] = dp * volume[e];
+            tmp_result[e][i] = dp * volume[e];
         }
     }
 
-    #pragma omp parallel for default(none) shared(var,dp_nd,tmp_result)
+    #pragma omp parallel for default(none) shared(var,dp_nd,volume_n,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
@@ -246,20 +314,33 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_
                 }
             }
         }
+        dp_nd[n] /= volume_n[n];
+    }
+//    }
+
+    Factor *mixed_factor;
+
+    switch (param.mat.rheol_type) {
+    case MatProps::rh_viscous:
+    case MatProps::rh_maxwell:
+    case MatProps::rh_evp:
+        mixed_factor = new Visc_factor(*var.viscosity, param.control.mixed_stress_reference_viscosity);
+        break;
+    default:
+        mixed_factor = new Const_factor();
     }
 
 
+    /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
+     */
     #pragma omp parallel for default(none)      \
-        shared(var, dp_nd, volume_n)
-    for (int n=0; n<var.nnode; ++n)
-         dp_nd[n] /= volume_n[n];
-
-
-    // dp_el is the averaged (i.e. smoothed) dp_nd on the element.
-     //
-    #pragma omp parallel for default(none)      \
-        shared(var, dp_nd, stress)
+        shared(param, var, dp_nd, stress, centroid, mixed_factor)
     for (int e=0; e<var.nelem; ++e) {
+
+        double factor = mixed_factor->contains(e);
+        if (factor == 0.)
+                continue;
+
         const int *conn = (*var.connectivity)[e];
         double dp = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
@@ -269,9 +350,15 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress, elem_
         double dp_el = dp / NODES_PER_ELEM;
 
     	double* s = stress[e];
-	double dp_orig = (*var.dpressure)[e];
-	for (int i=0; i<NDIMS; ++i) s[i] += ( - dp_orig + dp_el ) / NDIMS;
+	    double dp_orig = (*var.dpressure)[e];
+        double ddp = ( - dp_orig + dp_el ) / NDIMS * factor;
+	    for (int i=0; i<NDIMS; ++i)
+            s[i] += ddp;
     }
+
+    delete mixed_factor;
+    delete [] centroid[0];
+    delete [] centroid;
 }
 
 

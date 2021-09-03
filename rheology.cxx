@@ -511,7 +511,7 @@ static void elasto_plastic2d(double bulkm, double shearm,
 
 
 void update_stress(const Param& param, const Variables& var, tensor_t& stress,
-                   double_vec& stressyy, double_vec& dpressure,
+                   double_vec& stressyy, double_vec& dpressure, double_vec& viscosity,
                    tensor_t& strain, double_vec& plstrain,
                    double_vec& delta_plstrain, tensor_t& strain_rate)
 {
@@ -522,11 +522,11 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 
 #ifdef LLVM
     #pragma omp parallel for default(none)                           \
-        shared(param, var, stress, stressyy, dpressure, strain, plstrain, delta_plstrain, \
+        shared(param, var, stress, stressyy, dpressure, viscosity, strain, plstrain, delta_plstrain, \
                strain_rate, std::cerr, rheol_type)
 #else
     #pragma omp parallel for default(none)                           \
-        shared(param, var, stress, stressyy, dpressure, strain, plstrain, delta_plstrain, \
+        shared(param, var, stress, stressyy, dpressure, viscosity, strain, plstrain, delta_plstrain, \
                strain_rate, std::cerr)
 #endif
     for (int e=0; e<var.nelem; ++e) {
@@ -557,6 +557,8 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
             de[i] = edot[i] * var.dt;
         }
 
+//        double viscosity;
+
         switch (rheol_type) {
         case MatProps::rh_elastic:
             {
@@ -568,18 +570,18 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
         case MatProps::rh_viscous:
             {
                 double bulkm = var.mat->bulkm(e);
-                double viscosity = var.mat->visc(e);
+                viscosity[e] = var.mat->visc(e);
                 double total_dv = trace(es);
-                viscous(bulkm, viscosity, total_dv, edot, s);
+                viscous(bulkm, viscosity[e], total_dv, edot, s);
             }
             break;
         case MatProps::rh_maxwell:
             {
                 double bulkm = var.mat->bulkm(e);
                 double shearm = var.mat->shearm(e);
-                double viscosity = var.mat->visc(e);
+                viscosity[e] = var.mat->visc(e);
                 double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
-                maxwell(bulkm, shearm, viscosity, var.dt, dv, de, s);
+                maxwell(bulkm, shearm, viscosity[e], var.dt, dv, de, s);
             }
             break;
         case MatProps::rh_ep:
@@ -608,12 +610,12 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                 double depls = 0;
                 double bulkm = var.mat->bulkm(e);
                 double shearm = var.mat->shearm(e);
-                double viscosity = var.mat->visc(e);
+                viscosity[e] = var.mat->visc(e);
                 double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
                 // stress due to maxwell rheology
                 double sv[NSTR];
                 for (int i=0; i<NSTR; ++i) sv[i] = s[i];
-                maxwell(bulkm, shearm, viscosity, var.dt, dv, de, sv);
+                maxwell(bulkm, shearm, viscosity[e], var.dt, dv, de, sv);
                 double svII = second_invariant2(sv);
 
                 double amc, anphi, anpsi, hardn, ten_max;
@@ -650,13 +652,13 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
             std::exit(1);
             break;
         }
-    if (param.mesh.is_using_NMD_stress)
+    if (param.control.is_using_mixed_stress)
     	dpressure[e] = trace(s) - old_s;
         // std::cerr << "stress " << e << ": ";
         // print(std::cerr, s, NSTR);
         // std::cerr << '\n';
     }
-
+/*
     // correct stress 1st invariant of surface elements
     if (param.control.surface_pressure_correction) {
 #ifdef USE_NPROF
@@ -679,6 +681,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
     nvtxRangePop();
 #endif
     }
+*/
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif

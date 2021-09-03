@@ -112,18 +112,18 @@
 # nregions
   21
 # k  xk    zk      mattype  size
-  0   20.e3   -5.e3 3        1.e1  # ratio to the area of regular setting
-  1   20.e3  -20.e3 3        1.e1
+  0   20.e3   -5.e3 3        1.e0  # ratio to the area of regular setting
+  1   20.e3  -20.e3 3        5.e0
   2   20.e3  -30.e3 2        2.e1
   3   20.e3  -50.e3 1        1.e2
   4   20.e3  -80.e3 0        1.e3
-  5  100.e3   -5.e3 3        1.e1   # middle # surface
-  6  100.e3  -20.e3 3        1.e1   # middle
-  7  100.e3  -30.e3 2        1.e1   # middle
+  5  100.e3   -5.e3 3        2.e-1   # middle # surface
+  6  100.e3  -20.e3 3        1.e0   # middle
+  7  100.e3  -30.e3 2        5.e0   # middle
   8  100.e3  -50.e3 1        1.e1   # middle
   9  100.e3  -80.e3 0        1.e3   # middle
- 10  170.e3   -5.e3 3        1.e1
- 11  170.e3  -20.e3 3        1.e1
+ 10  170.e3   -5.e3 3        1.e0
+ 11  170.e3  -20.e3 3        5.e0
  12  170.e3  -30.e3 2        2.e1
  13  170.e3  -50.e3 1        1.e2
  14  170.e3  -80.e3 0        1.e3

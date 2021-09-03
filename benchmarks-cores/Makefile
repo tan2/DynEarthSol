@@ -5,7 +5,7 @@ CASE := test-tiny.cfg
 #CASE := test-topo.cfg
 FRAME := 4
 OMP := 1
-TFLAG = #-v
+TFLAG = # time -v
 DEBUG := 0
 NSYS := 0
 VTK := 0
@@ -25,7 +25,7 @@ endif
 
 
 # Use single cpu for omp to avoid round-off errors
-RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP} time ${TFLAG} ${DEBUGFLAG} ${EXE} ${CASE}
+RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP} ${TFLAG} ${DEBUGFLAG} ${EXE} ${CASE}
 
 ORIG = orig-${CASE}
 CURR = ~/data/jobs/${CASE}

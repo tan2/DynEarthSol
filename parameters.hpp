@@ -75,7 +75,6 @@ struct Mesh {
     std::string poly_filename;
     std::string exo_filename;
 
-    bool is_using_NMD_stress;
     bool is_discarding_internal_segments;
     int remeshing_option;
 
@@ -96,7 +95,9 @@ struct Control {
     double damping_factor;
     int damping_option;
     int ref_pressure_option;
-    bool surface_pressure_correction;
+//    bool surface_pressure_correction;
+    bool is_using_mixed_stress;
+    double mixed_stress_reference_viscosity;
 
     int surface_process_option;
     double surface_diffusivity;
@@ -376,7 +377,7 @@ struct Variables {
     double_vec *mass, *tmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
-    double_vec *stressyy, *dpressure;
+    double_vec *stressyy, *dpressure, *viscosity;
     double_vec *ntmp;
 
     // For surface processes

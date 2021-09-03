@@ -145,8 +145,6 @@ static void declare_parameters(po::options_description &cfg,
          "10: no modification on any boundary, except small boundary segments might get merged.\n"
          "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments might get merged.\n")
 
-        ("mesh.is_using_NMD_stress", po::value<bool>(&p.mesh.is_using_NMD_stress)->default_value(true),
-         "If Nodal Mixed Discretization For Stress")
         ("mesh.is_discarding_internal_segments", po::value<bool>(&p.mesh.is_discarding_internal_segments)->default_value(true),
          "Discarding internal segments after initial mesh is created? "
          "Using it when remeshing process can modify segments (e.g. remeshing_option=11).")
@@ -219,10 +217,14 @@ static void declare_parameters(po::options_description &cfg,
          "0: using density of the 0-th element to compute lithostatic pressure.\n"
          "1: computing reference pressure from the PREM model.\n"
          "2: computing reference pressure from the PREM model, modified for continent.\n")
-        ("control.surface_pressure_correction", po::value<bool>(&p.control.surface_pressure_correction)->default_value(false),
-         "Correct the pressure of surface elements"
-         "which has positive stress 1st invariant"
-         "and force the 1st invariant to zero.")
+//        ("control.surface_pressure_correction", po::value<bool>(&p.control.surface_pressure_correction)->default_value(false),
+//         "Correct the pressure of surface elements"
+//         "which has positive stress 1st invariant"
+//         "and force the 1st invariant to zero.")
+        ("control.is_using_mixed_stress", po::value<bool>(&p.control.is_using_mixed_stress)->default_value(true),
+         "If use Nodal Mixed Discretization For Stress")
+        ("control.mixed_stress_reference_viscosity", po::value<double>(&p.control.mixed_stress_reference_viscosity)->default_value(1.e19),
+         "The reference viscosity for appling mixed stress.")
 
         ("control.surface_process_option", po::value<int>(&p.control.surface_process_option)->default_value(0),
          "What kind of surface processes? 0: no surface processes. "

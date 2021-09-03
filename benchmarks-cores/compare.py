@@ -52,6 +52,8 @@ def read_data(des, frame):
     stuff.srI = first_invariant(strain_rate)
     stuff.srII = second_invariant(strain_rate)
 
+    stuff.visc = des.read_field(frame, 'viscosity')
+
     marker_data = des.read_markers(frame, markersetname)
     field = marker_data[markersetname + '.coord']
     stuff.m_x = field[:,0]
@@ -119,6 +121,9 @@ def compare(old, new):
 
     max, sigma = reldiff(old.srII, new.srII)
     inc += show_msg('S. rate II',max,sigma)
+
+    max, sigma = reldiff(old.visc, new.visc)
+    inc += show_msg('Viscosity',max,sigma)
 
     max, sigma = reldiff(old.m_x, new.m_x)
     inc += show_msg('Marker X',max,sigma)

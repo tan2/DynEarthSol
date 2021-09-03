@@ -272,10 +272,8 @@ void isostasy_adjustment(const Param &param, Variables &var)
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp, *var.tmp_result);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        update_stress(param ,var, *var.stress, *var.stressyy, *var.dpressure, *var.strain,
+        update_stress(param ,var, *var.stress, *var.stressyy, *var.dpressure, *var.viscosity, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
-//        update_stress(param ,var, *var.stress, *var.stressyy, *var.strain,
-//                      *var.plstrain, *var.delta_plstrain, *var.strain_rate);
         update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);
 
@@ -369,12 +367,12 @@ int main(int argc, const char* argv[])
         compute_dvoldt(var, *var.ntmp, *var.tmp_result);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
 
-        update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure, *var.strain,
+        update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure, *var.viscosity, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
 
 	// Nodal Mixed Discretization For Stress
-        if (param.mesh.is_using_NMD_stress)
-            NMD_stress(var, *var.ntmp, *var.stress, *var.tmp_result);
+        if (param.control.is_using_mixed_stress)
+            NMD_stress(param, var, *var.ntmp, *var.stress, *var.tmp_result);
 
         update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);

@@ -39,8 +39,10 @@ void allocate_variables(const Param &param, Variables& var)
     }
 
     var.ntmp = new double_vec(n);
-    if (param.mesh.is_using_NMD_stress)
+    if (param.control.is_using_mixed_stress) {
         var.dpressure = new double_vec(e);
+        var.viscosity = new double_vec(e,param.mat.visc_max);
+    }
 
     var.force = new array_t(n, 0);
 
@@ -83,9 +85,11 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.ntmp;
     var.ntmp = new double_vec(n);
-    if (param.mesh.is_using_NMD_stress) {
+    if (param.control.is_using_mixed_stress) {
         delete var.dpressure;
         var.dpressure = new double_vec(e);
+        delete var.viscosity;
+        var.viscosity = new double_vec(e,param.mat.visc_max);
     }
     delete var.force;
     var.force = new array_t(n, 0);
