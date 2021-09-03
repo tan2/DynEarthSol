@@ -133,7 +133,7 @@ ifneq (, $(findstring clang++, $(CXX)))
 	endif
  
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP
+		CXXFLAGS += -fopenmp -DUSE_OMP -L/usr/local/lib
 		LDFLAGS += -fopenmp -L/usr/local/lib
 	endif
 
