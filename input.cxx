@@ -60,8 +60,8 @@ static void declare_parameters(po::options_description &cfg,
          "Output immediately before and after remeshing?")
         ("sim.is_outputting_averaged_fields", po::value<bool>(&p.sim.is_outputting_averaged_fields)->default_value(true),
          "Output time-averaged (smoothed) field variables or not. These fields are: velocity, strain rate, and stress.\n"
-         "false: output instantaneous fields. The velocity and strain-rate might oscillate temporally.\n"
-         "true: output field variables averaged over mesh.quality_check_step_interval time steps.\n")
+         "no: output instantaneous fields. The velocity and strain-rate might oscillate temporally.\n"
+         "yes: output field variables averaged over mesh.quality_check_step_interval time steps.\n")
         ;
 
     cfg.add_options()
