@@ -1215,29 +1215,30 @@ void compute_metric_field(const Variables &var, const conn_t &connectivity, cons
             const int *conn = connectivity[e];
             double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);
             // resolution/(1.0+(*var.plstrain)[e]);
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                tmp_result[e][i] = plstrain * volume[e];
-            }
+//            for (int i=0; i<NODES_PER_ELEM; ++i) {
+            tmp_result[e][0] = plstrain * volume[e];
+//            }
     }
 
-    #pragma omp parallel for default(none) shared(var,metric,tmp_result)
+    #pragma omp parallel for default(none) shared(var,metric,tmp_result,volume_n)
     for (int n=0;n<var.nnode;n++) {
-        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-            const int *conn = (*var.connectivity)[*e];
-            for (int i=0;i<NODES_PER_ELEM;i++) {
-                if (n == conn[i]) {
-                    metric[n] += tmp_result[*e][ i ];
-                    break;
-                }
-            }
-        }
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
+//            const int *conn = (*var.connectivity)[*e];
+//            for (int i=0;i<NODES_PER_ELEM;i++) {
+//                if (n == conn[i]) {
+                    metric[n] += tmp_result[*e][ 0 ];
+//                    break;
+//                }
+//            }
+//        }
+        metric[n] /= volume_n[n];
     }
 
 
-    #pragma omp parallel for default(none)      \
+//    #pragma omp parallel for default(none)      \
         shared(var, metric, volume_n)
-    for (int n=0; n<var.nnode; ++n)
-         metric[n] /= volume_n[n];
+//    for (int n=0; n<var.nnode; ++n)
+//         metric[n] /= volume_n[n];
 }
 
 #ifdef USEMMG

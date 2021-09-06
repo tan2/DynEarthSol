@@ -151,12 +151,12 @@ void update_temperature(const Param &param, const Variables &var,
             double diffusion = 0;
             for (int j=0; j<NODES_PER_ELEM; ++j)
                 diffusion += D[i][j] * temperature[conn[j]];
-                tmp_t[i] = diffusion * kv;
+            tmp_t[i] = diffusion * kv;
         }
     }
 
     #pragma omp parallel for default(none)      \
-        shared(var,tdot,tmp_result)
+        shared(param,var,tdot,tmp_result,temperature)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
@@ -167,19 +167,26 @@ void update_temperature(const Param &param, const Variables &var,
                 }
             }
         }
-    }
-
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
-    #pragma omp parallel for default(none)      \
-        shared(var, param, tdot, temperature)
-    for (int n=0; n<var.nnode; ++n) {
         if ((*var.bcflag)[n] & BOUNDZ1)
             temperature[n] = param.bc.surface_temperature;
         else
             temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
     }
+
+    // Combining temperature update and bc in the same loop for efficiency,
+    // since only the top boundary has Dirichlet bc, and all the other boundaries
+    // have no heat flux bc.
+//    #pragma omp parallel for default(none)      \
+        shared(var, param, tdot, temperature)
+//    for (int n=0; n<var.nnode; ++n) {
+//        if ((*var.bcflag)[n] & BOUNDZ1)
+//            temperature[n] = param.bc.surface_temperature;
+//        else
+//            temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
+//    }
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif

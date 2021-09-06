@@ -158,29 +158,30 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, elem_cache &tmp_re
         // TODO: try another definition:
         // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
-        double *tmp_d = tmp_result[e];
-        for (int i=0; i<NODES_PER_ELEM; ++i)
-            tmp_d[i] = dj * volume[e];
+//        double *tmp_d = tmp_result[e];
+//        for (int i=0; i<NODES_PER_ELEM; ++i)
+        tmp_result[e][0] = dj * volume[e];
     }
 
     #pragma omp parallel for default(none)      \
-        shared(var,dvoldt,tmp_result)
+        shared(var,dvoldt,tmp_result,volume_n)
     for (int n=0;n<var.nnode;n++) {
-        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-            const int *conn = (*var.connectivity)[*e];
-            for (int i=0;i<NODES_PER_ELEM;i++) {
-                if (n == conn[i]) {
-                    dvoldt[n] += tmp_result[*e][ i ];
-                    break;
-                }
-            }
-        }
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
+//            const int *conn = (*var.connectivity)[*e];
+//            for (int i=0;i<NODES_PER_ELEM;i++) {
+//                if (n == conn[i]) {
+            dvoldt[n] += tmp_result[*e][ 0 ];
+//                    break;
+//                }
+//            }
+//        }
+        dvoldt[n] /= volume_n[n];
     }
 
-    #pragma omp parallel for default(none)      \
-        shared(var, dvoldt, volume_n)
-    for (int n=0; n<var.nnode; ++n)
-         dvoldt[n] /= volume_n[n];
+//    #pragma omp parallel for default(none)      \
+//        shared(var, dvoldt, volume_n)
+//    for (int n=0; n<var.nnode; ++n)
+//         dvoldt[n] /= volume_n[n];
 
     // std::cout << "dvoldt:\n";
     // print(std::cout, dvoldt);
@@ -302,23 +303,23 @@ void NMD_stress(const Param& param, const Variables &var,
     for (int e=0;e<var.nelem;e++) {
         const int *conn = (*var.connectivity)[e];
         double dp = (*var.dpressure)[e];
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            tmp_result[e][i] = dp * volume[e];
-        }
+//        for (int i=0; i<NODES_PER_ELEM; ++i) {
+        tmp_result[e][0] = dp * volume[e];
+//        }
     }
 
     #pragma omp parallel for default(none)      \
         shared(var,dp_nd,volume_n,tmp_result)
     for (int n=0;n<var.nnode;n++) {
-        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-            const int *conn = (*var.connectivity)[*e];
-            for (int i=0;i<NODES_PER_ELEM;i++) {
-                if (n == conn[i]) {
-                    dp_nd[n] += tmp_result[*e][ i ];
-                    break;
-                }
-            }
-        }
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
+//            const int *conn = (*var.connectivity)[*e];
+//            for (int i=0;i<NODES_PER_ELEM;i++) {
+//                if (n == conn[i]) {
+            dp_nd[n] += tmp_result[*e][ 0 ];
+//                    break;
+//                }
+//            }
+//        }
         dp_nd[n] /= volume_n[n];
     }
 //    }
@@ -488,31 +489,32 @@ void compute_mass(const Param &param, const Variables &var,
             (*var.mat).rho(e);                                     // true density for dynamic sim
         double m = rho * (*var.volume)[e] / NODES_PER_ELEM;
         double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (*var.volume)[e] / NODES_PER_ELEM;
-        const int *conn = (*var.connectivity)[e];
+//        const int *conn = (*var.connectivity)[e];
 
         double *tmp_v = tmp_result[e];
-        for (int i=0; i<NODES_PER_ELEM; ++i) {
-            tmp_v[i] = (*var.volume)[e];
-            tmp_v[i+NODES_PER_ELEM] = m;
-            if (param.control.has_thermal_diffusion)
-                tmp_v[i+NODES_PER_ELEM*2] = tm;
-        }
+//        for (int i=0; i<NODES_PER_ELEM; ++i) {
+        tmp_v[0] = (*var.volume)[e];
+        tmp_v[1] = m;
+        if (param.control.has_thermal_diffusion)
+            tmp_v[2] = tm;
+//        }
     }
 
     #pragma omp parallel for default(none)      \
         shared(param,var,volume_n,mass,tmass,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-            const int *conn = (*var.connectivity)[*e];
-            for (int i=0;i<NODES_PER_ELEM;i++) {
-                if (n == conn[i]) {
-                    volume_n[n] += tmp_result[*e][ i ];
-                    mass[n] += tmp_result[*e][ i + NODES_PER_ELEM ];
-                    if (param.control.has_thermal_diffusion)
-                        tmass[n] += tmp_result[*e][ i + NODES_PER_ELEM*2 ];
-                    break;
-                }
-            }
+//            const int *conn = (*var.connectivity)[*e];
+//            for (int i=0;i<NODES_PER_ELEM;i++) {
+//                if (n == conn[i]) {
+            double *tmp_v = tmp_result[*e];
+            volume_n[n] += tmp_v[ 0 ];
+            mass[n] += tmp_v[ 1 ];
+            if (param.control.has_thermal_diffusion)
+                tmass[n] += tmp_v[ 2 ];
+//                    break;
+//                }
+//            }
         }
     }
 #ifdef USE_NPROF
