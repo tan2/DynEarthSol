@@ -283,14 +283,14 @@ void isostasy_adjustment(const Param &param, Variables &var)
         // displacment is vertical only
         #pragma omp parallel for default(none)          \
             shared(var, param)
-        for (int i=0; i<var.nnode; ++i) {
-            for (int j=0; j<NDIMS-1; ++j) {
-                (*var.vel)[i][j] = 0;
+        for (int j=0; j<var.nnode; ++j) {
+            for (int k=0; k<NDIMS-1; ++k) {
+                (*var.vel)[j][k] = 0;
             }
             if (param.bc.has_winkler_foundation == false &&
-                (*var.bcflag)[i] & BOUNDZ0) {
+                (*var.bcflag)[j] & BOUNDZ0) {
                 // holding bottom surface fixed
-                (*var.vel)[i][NDIMS-1] = 0;
+                (*var.vel)[j][NDIMS-1] = 0;
             }
         }
 
