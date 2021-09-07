@@ -239,7 +239,7 @@ void isostasy_adjustment(const Param &param, Variables &var)
     var.dt = compute_dt(param, var);
     int iso_steps = param.ic.isostasy_adjustment_time_in_yr*YEAR2SEC / var.dt;
 
-    for (int i=0; i<iso_steps; i++) {
+    for (int n=0; n<iso_steps; n++) {
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
