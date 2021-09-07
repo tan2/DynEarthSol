@@ -55,10 +55,11 @@ endif
 
 ifeq ($(nprof), 1)
 	CXX = pgc++
-	## nvToolsExt location
-	NVTOOLSEXT_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/include
-	NVTOOLSEXT_LIB = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda/lib64
 endif
+
+## path to cuda's base directory
+CUDA_DIR =
+#CUDA_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda
 
 ## path to Boost's base directory, if not in standard system location
 BOOST_ROOT_DIR =
@@ -194,9 +195,9 @@ else ifneq (, $(findstring pgc++, $(CXX)))
 	ifeq ($(opt), 1)
 		CXXFLAGS += -O1
 	else ifeq ($(opt), 2)
-		CXXFLAGS += -O2
+		CXXFLAGS += -O2 -silent
 	else ifeq ($(opt), 3)
-		CXXFLAGS += -O3 -fast
+		CXXFLAGS += -O3 -fast -silent
 	endif
  
 	ifeq ($(openmp), 1)
@@ -205,8 +206,8 @@ else ifneq (, $(findstring pgc++, $(CXX)))
 	endif
 
 	ifeq ($(nprof), 1)
-			CXXFLAGS += -Minfo=mp -I$(NVTOOLSEXT_DIR) -DUSE_NPROF
-			LDFLAGS += -L$(NVTOOLSEXT_LIB) -Wl,-rpath,$(NVTOOLSEXT_LIB) -lnvToolsExt
+			CXXFLAGS += -Minfo=mp -I$(CUDA_DIR)/include -DUSE_NPROF
+			LDFLAGS += -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
 	endif
 else
 # the only way to display the error message in Makefile ...

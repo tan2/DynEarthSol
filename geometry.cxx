@@ -258,6 +258,9 @@ namespace {
 void NMD_stress(const Param& param, const Variables &var,
     double_vec &dp_nd, tensor_t& stress, elem_cache &tmp_result)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     // dp_nd is the pressure change, weighted by the element volume,
     // lumped onto the nodes.
     //
@@ -366,6 +369,9 @@ void NMD_stress(const Param& param, const Variables &var,
     delete mixed_factor;
 //    delete [] centroid[0];
 //    delete [] centroid;
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 

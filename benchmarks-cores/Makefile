@@ -4,7 +4,7 @@ CASE := test-tiny.cfg
 #CASE := test-big.cfg
 #CASE := test-topo.cfg
 FRAME := 4
-OMP := 1
+OMP := 4
 TFLAG = # time -v
 DEBUG := 0
 NSYS := 0
@@ -12,12 +12,15 @@ VTK := 0
 NDIMS := 2
 EXE := ../dynearthsol$(NDIMS)d
 FUNC := compute_mass
+
+GITID = $(shell git rev-parse HEAD | cut -c1-7)
+
 ifeq ($(DEBUG), 1)
 	DEBUGFLAG = valgrind --tool=helgrind --log-file=valgrind-out.txt -v
 endif
 ifeq ($(NSYS), 1)
-	DEBUGFLAG = nsys profile --output=benchmark.${CASE}
-	NSYSSUM = nsys stats  benchmark.${CASE}.qdrep
+	DEBUGFLAG = nsys profile --trace=cuda,nvtx,osrt,openmp --output=benchmark.${GITID}.${CASE}
+	NSYSSUM = nsys stats -o benchmark.${GITID}.${CASE}.csv benchmark.${GITID}.${CASE}.qdrep 
 endif
 ifeq ($(VTK), 1)
 	VTKFLAG = ${MAKE} vtk
@@ -46,7 +49,8 @@ cmp:
 	${RUN_TEST}
 	${VTKFLAG}
 	python3 compare.py ${ORIG} ${FRAME}
-	${NSYSSUM}
+	cp benchmark.info benchmark.${GITID}.${CASE}.info
+	${NSYSSUM} > /dev/null
 #	gprof ../dynearthsol2d gmon.out > benchmark.gp
 #	@echo "  %   cumulative   self                self     total"
 #	@echo " time   seconds   seconds    calls    ms/call  ms/call  name"
