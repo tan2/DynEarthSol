@@ -53,7 +53,9 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.mat = new MatProps(param, var);
 
-    var.tmp_result = new elem_cache(e, 0);
+    var.tmp_result = new std::vector<double_vec>(NODES_PER_ELEM*3);
+    for (int i =0;i<NODES_PER_ELEM*3;i++)
+        (*var.tmp_result)[i].resize(e);
 }
 
 
@@ -106,14 +108,14 @@ void reallocate_variables(const Param& param, Variables& var)
     delete var.mat;
     var.mat = new MatProps(param, var);
 
-    delete var.tmp_result;
-    var.tmp_result = new elem_cache(e, 0);
+    for (int i =0;i<NODES_PER_ELEM*3;i++)
+        (*var.tmp_result)[i].resize(e);
 
 }
 
 
 void update_temperature(const Param &param, const Variables &var,
-                        double_vec &temperature, double_vec &tdot, elem_cache &tmp_result)
+                        double_vec &temperature, double_vec &tdot, double_vec2D &tmp_result)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -145,24 +147,23 @@ void update_temperature(const Param &param, const Variables &var,
 #endif
             }
         }
-        double *tmp_t = tmp_result[e];
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             double diffusion = 0;
             for (int j=0; j<NODES_PER_ELEM; ++j)
                 diffusion += D[i][j] * temperature[conn[j]];
-            tmp_t[i] = diffusion * kv;
+            tmp_result[i][e] = diffusion * kv;
         }
     }
 
     #pragma omp parallel for default(none)      \
-        shared(param,var,tdot,tmp_result,temperature)
+        shared(param,var,tdot,temperature,tmp_result)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
-                    tdot[n] += tmp_result[*e][ i ];
+                    tdot[n] += tmp_result[i][*e];
                     break;
                 }
             }
@@ -329,7 +330,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
 }
 
 
-void update_force(const Param& param, const Variables& var, array_t& force, elem_cache& tmp_result)
+void update_force(const Param& param, const Variables& var, array_t& force, double_vec2D& tmp_result)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -348,7 +349,6 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
         const double *shpdz = (*var.shpdz)[e];
         double *s = (*var.stress)[e];
         double vol = (*var.volume)[e];
-        double *tmp_f = tmp_result[e];
 
         double buoy = 0;
         if (param.control.gravity != 0)
@@ -356,12 +356,12 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
-            tmp_f[i] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-            tmp_f[i+NODES_PER_ELEM] = (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-            tmp_f[i+NODES_PER_ELEM*2] = (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+            tmp_result[i][e] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+            tmp_result[i+NODES_PER_ELEM][e] = (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+            tmp_result[i+NODES_PER_ELEM*2][e] = (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
 #else
-            tmp_f[i] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-            tmp_f[i+NODES_PER_ELEM] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+            tmp_result[i][e] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+            tmp_result[i+NODES_PER_ELEM][e] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
 #endif
         }
     }
@@ -371,12 +371,11 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     for (int n=0;n<var.nnode;n++) {
         double *f = force[n];
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-            double *tmp_f = tmp_result[*e];
             const int *conn = (*var.connectivity)[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
                     for (int j=0;j<NDIMS;j++)
-                        f[j] -= tmp_f[ i + NODES_PER_ELEM*j ];
+                        f[j] -= tmp_result[i+NODES_PER_ELEM*j][*e];
                     break;
                 }
             }

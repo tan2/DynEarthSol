@@ -387,7 +387,7 @@ struct Variables {
     array_t *vel, *force, *coord0;
     tensor_t *strain_rate, *strain, *stress;
     shapefn *shpdx, *shpdy, *shpdz;
-    elem_cache *tmp_result;
+    double_vec2D *tmp_result;
 
     MatProps *mat;
 
