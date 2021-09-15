@@ -19,8 +19,8 @@ ifeq ($(DEBUG), 1)
 	DEBUGFLAG = valgrind --tool=helgrind --log-file=valgrind-out.txt -v
 endif
 ifeq ($(NSYS), 1)
-	DEBUGFLAG = nsys profile --trace=cuda,nvtx,osrt,openmp --output=benchmark.${GITID}.${CASE}
-	NSYSSUM = nsys stats -o benchmark.${GITID}.${CASE}.csv benchmark.${GITID}.${CASE}.qdrep 
+	DEBUGFLAG = nsys profile --trace=cuda,nvtx,osrt,openmp --output=benchmark.${GITID}.${CASE}.${OMP}
+	NSYSSUM = nsys stats -o benchmark.${GITID}.${CASE}.${OMP}.csv benchmark.${GITID}.${CASE}.${OMP}.qdrep 
 endif
 ifeq ($(VTK), 1)
 	VTKFLAG = ${MAKE} vtk
@@ -47,10 +47,10 @@ set:
 
 cmp:
 	${RUN_TEST}
+	${NSYSSUM} > /dev/null
 	${VTKFLAG}
 	python3 compare.py ${ORIG} ${FRAME}
-	cp benchmark.info benchmark.${GITID}.${CASE}.info
-	${NSYSSUM} > /dev/null
+	cp benchmark.info benchmark.${GITID}.${CASE}.${OMP}.info
 #	gprof ../dynearthsol2d gmon.out > benchmark.gp
 #	@echo "  %   cumulative   self                self     total"
 #	@echo " time   seconds   seconds    calls    ms/call  ms/call  name"

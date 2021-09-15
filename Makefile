@@ -141,6 +141,7 @@ ifneq (, $(findstring clang++, $(CXX)))
 else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
+	TETGENFLAG = -Wno-unused-but-set-variable -Wno-int-to-pointer-cast
 
 	ifeq ($(opt), 1)
 		CXXFLAGS += -O1
@@ -191,6 +192,7 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 else ifneq (, $(findstring pgc++, $(CXX)))
 	CXXFLAGS = -march=core2
 	LDFLAGS = 
+	TETGENFLAGS = 
 
 	ifeq ($(opt), 1)
 		CXXFLAGS += -O1
@@ -422,10 +424,10 @@ tetgen/predicates.o: tetgen/predicates.cxx $(TET_INCS)
 	$(CXX) $(CXXFLAGS) -DTETLIBRARY -O0 -c $< -o $@
 
 tetgen/tetgen.o: tetgen/tetgen.cxx $(TET_INCS)
-	$(CXX) $(CXXFLAGS) -DNDEBUG -DTETLIBRARY -Wno-unused-but-set-variable -Wno-int-to-pointer-cast -c $< -o $@
+	$(CXX) $(CXXFLAGS) -DNDEBUG -DTETLIBRARY $(TETGENFLAG) -c $< -o $@
 
 tetgen/tetgen: tetgen/predicates.cxx tetgen/tetgen.cxx
-	$(CXX) $(CXXFLAGS) -O0 -DNDEBUG -Wno-unused-but-set-variable -Wno-int-to-pointer-cast tetgen/predicates.cxx tetgen/tetgen.cxx -o $@
+	$(CXX) $(CXXFLAGS) -O0 -DNDEBUG $(TETGENFLAG) tetgen/predicates.cxx tetgen/tetgen.cxx -o $@
 
 $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
 	@+$(MAKE) -C $(C3X3_DIR)
