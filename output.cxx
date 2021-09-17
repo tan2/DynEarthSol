@@ -162,14 +162,13 @@ void Output::_write(const Variables& var, bool disable_averaging)
         tmp[e] = elem_quality(*var.coord, *var.connectivity, *var.volume, e);
     }
     bin.write_array(tmp, "mesh quality", tmp.size());
-/*
+
     #pragma omp parallel for default(none) shared(var, tmp)
     for (int e=0; e<var.nelem; ++e) {
         tmp[e] = var.mat->visc(e);
     }
     bin.write_array(tmp, "viscosity", tmp.size());
-*/
-    bin.write_array(*var.viscosity, "viscosity", var.viscosity->size());
+
     // bin.write_array(*var.mass, "mass", var.mass->size());
     // bin.write_array(*var.tmass, "tmass", var.tmass->size());
     // bin.write_array(*var.volume_n, "volume_n", var.volume_n->size());

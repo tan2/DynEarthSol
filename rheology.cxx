@@ -535,7 +535,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
         double& syy = stressyy[e];
         double* es = strain[e];
         double* edot = strain_rate[e];
-	double old_s = trace(s);
+    	double old_s = trace(s);
 
         // anti-mesh locking correction on strain rate
         if(1){
@@ -556,8 +556,6 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
         for (int i=0; i<NSTR; ++i) {
             de[i] = edot[i] * var.dt;
         }
-
-//        double viscosity;
 
         switch (rheol_type) {
         case MatProps::rh_elastic:
@@ -652,36 +650,12 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
             std::exit(1);
             break;
         }
-    if (param.control.is_using_mixed_stress)
-    	dpressure[e] = trace(s) - old_s;
+        if (param.control.is_using_mixed_stress)
+            dpressure[e] = trace(s) - old_s;
         // std::cerr << "stress " << e << ": ";
         // print(std::cerr, s, NSTR);
         // std::cerr << '\n';
     }
-/*
-    // correct stress 1st invariant of surface elements
-    if (param.control.surface_pressure_correction) {
-#ifdef USE_NPROF
-        nvtxRangePushA("surface_pressure_correction");
-#endif
-
-        #pragma omp parallel for default(none) shared(var, stress)
-        for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
-            double* s = stress[*e];
-            double first_inv = 0.;
-            for (int j=0;j<NDIMS;j++) first_inv += s[j];
-
-            if (first_inv > 0.) {
-                first_inv = first_inv / NDIMS;
-                for (int j=0;j<NDIMS;j++)
-                    s[j] -= first_inv;
-            }
-        }
-#ifdef USE_NPROF
-    nvtxRangePop();
-#endif
-    }
-*/
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif

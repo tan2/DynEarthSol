@@ -29,6 +29,7 @@ endif
 
 # Use single cpu for omp to avoid round-off errors
 RUN_TEST = rm -f benchmark.*; OMP_NUM_THREADS=${OMP} ${TFLAG} ${DEBUGFLAG} ${EXE} ${CASE}
+RESTART_TEST = OMP_NUM_THREADS=${OMP} ${TFLAG} ${DEBUGFLAG} ${EXE} ${CASE}
 
 ORIG = orig-${CASE}
 CURR = ~/data/jobs/${CASE}
@@ -51,11 +52,13 @@ cmp:
 	${VTKFLAG}
 	python3 compare.py ${ORIG} ${FRAME}
 	cp benchmark.info benchmark.${GITID}.${CASE}.${OMP}.info
-#	gprof ../dynearthsol2d gmon.out > benchmark.gp
-#	@echo "  %   cumulative   self                self     total"
-#	@echo " time   seconds   seconds    calls    ms/call  ms/call  name"
-#	@head benchmark.gp -n100 | egrep "compute_mass|update_force|update_temperature|compute_dvoldt" | sed "s/(/ /g" | awk '{printf "%.2f\t %.2f\t   %.2f\t     %5d\t%.2f\t%.2f\t%s\n", $$1,$$2,$$3,$$4,$$5,$$6,$$7}'
-#	head benchmark.gp | egrep update_force
+
+restart:
+	${RESTART_TEST}
+	${NSYSSUM} > /dev/null
+	${VTKFLAG}
+	python3 compare.py ${ORIG} ${FRAME}
+	cp benchmark.info benchmark.${GITID}.${CASE}.${OMP}.info
 
 store:
 	rm -rf ${ORIG}
