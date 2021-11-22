@@ -49,7 +49,7 @@ ifeq ($(useadapt), 1)
 	#LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
 	LIB_MPIFORTRAN = -lfmpich # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
 else
-	CXX = g++
+	CXX = nvc++
 	CXX_BACKEND = ${CXX}
 endif
 
@@ -188,7 +188,26 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 			CXXFLAGS += -I$(VTK_INCLUDE)
 		endif
 	endif
+else ifneq (, $(findstring nvc++, $(CXX)))
+	CXXFLAGS = 
+	LDFLAGS = 
+	TETGENFLAGS = 
 
+	ifeq ($(opt), 1)
+		CXXFLAGS += -O1
+	else ifeq ($(opt), 2)
+		CXXFLAGS += -O2
+	endif
+
+	ifeq ($(openacc), 1)
+		CXXFLAGS +=
+		LDFLAGS +=
+	endif
+
+	ifeq ($(nprof), 1)
+			CXXFLAGS += -Minfo=mp -I$(CUDA_DIR)/include -DUSE_NPROF
+			LDFLAGS += -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
+	endif
 else ifneq (, $(findstring pgc++, $(CXX)))
 	CXXFLAGS = -march=core2
 	LDFLAGS = 
