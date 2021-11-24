@@ -20,7 +20,7 @@ ifeq ($(DEBUG), 1)
 endif
 ifeq ($(NSYS), 1)
 	DEBUGFLAG = nsys profile --trace=cuda,nvtx,osrt,openmp --output=benchmark.${GITID}.${CASE}.${OMP}
-	NSYSSUM = nsys stats -o benchmark.${GITID}.${CASE}.${OMP}.csv benchmark.${GITID}.${CASE}.${OMP}.qdrep 
+#	NSYSSUM = nsys stats -o benchmark.${GITID}.${CASE}.${OMP}.csv benchmark.${GITID}.${CASE}.${OMP}.qdrep 
 endif
 ifeq ($(VTK), 1)
 	VTKFLAG = ${MAKE} vtk
