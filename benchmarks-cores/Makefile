@@ -9,7 +9,7 @@ TFLAG = # time -v
 DEBUG := 0
 NSYS := 0
 VTK := 0
-NDIMS := 2
+NDIMS := 3
 EXE := ../dynearthsol$(NDIMS)d
 FUNC := compute_mass
 

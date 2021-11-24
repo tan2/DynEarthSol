@@ -58,7 +58,7 @@ ifeq ($(nprof), 1)
 endif
 
 ## path to cuda's base directory
-CUDA_DIR =
+CUDA_DIR = $(CUDA_HOME)
 #CUDA_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda
 
 ## path to Boost's base directory, if not in standard system location
@@ -189,8 +189,8 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 		endif
 	endif
 else ifneq (, $(findstring nvc++, $(CXX)))
-	CXXFLAGS = 
-	LDFLAGS = 
+	CXXFLAGS = -Minfo=mp -I$(CUDA_DIR)/include -DUSE_NPROF
+	LDFLAGS = -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
 	TETGENFLAGS = 
 
 	ifeq ($(opt), 1)
