@@ -24,3 +24,4 @@ orig-*
 valgrind*
 triangle/triangle
 tetgen/tetgen
+core.*

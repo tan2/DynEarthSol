@@ -1,10 +1,10 @@
 
-CASE := test-tiny.cfg
+CASE := test-3d-tiny.cfg
 #CASE := test-tiny-long.cfg
 #CASE := test-big.cfg
 #CASE := test-topo.cfg
 FRAME := 4
-OMP := 4
+OMP := 1
 TFLAG = # time -v
 DEBUG := 0
 NSYS := 0
