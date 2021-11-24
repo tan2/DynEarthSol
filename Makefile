@@ -191,7 +191,7 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 		endif
 	endif
 else ifneq (, $(findstring nvc++, $(CXX)))
-	CXXFLAGS = -Minfo=mp,accel -I$(CUDA_DIR)/include -DUSE_NPROF
+	CXXFLAGS = -mno-fma -Minfo=mp,accel -I$(CUDA_DIR)/include -DUSE_NPROF
 	LDFLAGS = -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
 	TETGENFLAGS = 
 
@@ -202,7 +202,7 @@ else ifneq (, $(findstring nvc++, $(CXX)))
 	endif
 
 	ifeq ($(openacc), 1)
-		CXXFLAGS += -acc=gpu -gpu=managed -Mcuda
+		CXXFLAGS += -acc=gpu -gpu=managed,nofma -Mcuda
 		LDFLAGS += -acc=gpu -gpu=managed -Mcuda
 	endif
 
