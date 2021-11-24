@@ -9,6 +9,7 @@
 ##
 ## ndims = 3: 3D code; 2: 2D code
 ## opt = 1 ~ 3: optimized build; others: debugging build
+## openacc = 1: enable OpenACC
 ## openmp = 1: enable OpenMP
 ## useadapt = 1: use libadaptivity for mesh optimization during remeshing
 ## adaptive_time_step = 1: use adaptive time stepping technique
@@ -17,7 +18,8 @@
 
 ndims = 3
 opt = 2
-openmp = 1
+openacc = 1
+openmp = 0
 nprof = 0
 useadapt = 0
 usemmg = 0
@@ -189,7 +191,7 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 		endif
 	endif
 else ifneq (, $(findstring nvc++, $(CXX)))
-	CXXFLAGS = -Minfo=mp -I$(CUDA_DIR)/include -DUSE_NPROF
+	CXXFLAGS = -Minfo=mp,accel -I$(CUDA_DIR)/include -DUSE_NPROF
 	LDFLAGS = -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
 	TETGENFLAGS = 
 
@@ -200,13 +202,13 @@ else ifneq (, $(findstring nvc++, $(CXX)))
 	endif
 
 	ifeq ($(openacc), 1)
-		CXXFLAGS +=
-		LDFLAGS +=
+		CXXFLAGS += -acc=gpu -gpu=managed -Mcuda
+		LDFLAGS += -acc=gpu -gpu=managed -Mcuda
 	endif
 
 	ifeq ($(nprof), 1)
-			CXXFLAGS += -Minfo=mp -I$(CUDA_DIR)/include -DUSE_NPROF
-			LDFLAGS += -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
+		CXXFLAGS += -Minfo=mp -I$(CUDA_DIR)/include -DUSE_NPROF
+		LDFLAGS += -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
 	endif
 else ifneq (, $(findstring pgc++, $(CXX)))
 	CXXFLAGS = -march=core2
