@@ -81,9 +81,9 @@ void Output::write_info(const Variables& var, double dt)
 
 void Output::_write(const Variables& var, bool disable_averaging)
 {
-//#ifdef USE_NPROF
-//    nvtxRangePushA(__FUNCTION__);
-//#endif
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     double dt = var.dt;
     double inv_dt = 0; // only used when is_averaged
     if (!disable_averaging && is_averaged) {
@@ -216,6 +216,9 @@ void Output::_write(const Variables& var, bool disable_averaging)
                 }
             }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
