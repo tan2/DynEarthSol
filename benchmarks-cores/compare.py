@@ -179,7 +179,7 @@ try:
     if inc == 0:
         print('  Status: Normal round-off error~')
     else:
-        print('  Status: !!!!!!!!!! Race condition !!!!!!!!!!')
+        print('  Status: !!!!!!!!!! SOMETHING WRONG !!!!!!!!!!')
     print('  ---')
 
 
