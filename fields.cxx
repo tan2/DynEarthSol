@@ -201,16 +201,29 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 #endif
     double *v[NODES_PER_ELEM];
 
-    #pragma omp parallel for default(none)      \
-        shared(var, strain_rate) private(v)
-    for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var.connectivity)[e];
-        const double *shpdx = (*var.shpdx)[e];
-        const double *shpdz = (*var.shpdz)[e];
-        double *s = (*var.strain_rate)[e];
+    //#pragma omp parallel for default(none)      \
+    //    shared(var, strain_rate) private(v)
+
+    // extract all variables
+    const int nelem=var.nelem;
+    const conn_t *conn0=var.connectivity;
+    const shapefn *shpdx0=var.shpdx;
+    const shapefn *shpdz0=var.shpdz; 
+    const shapefn *shpdy0=var.shpdy;
+
+    array_t *vel=var.vel;
+    tensor_t *strain_rate0=var.strain_rate;
+
+    #pragma acc parallel loop
+    for (int e=0; e<nelem; ++e) {
+
+        const int *conn = (*conn0)[e];
+        const double *shpdx = (*shpdx0)[e];
+        const double *shpdz = (*shpdz0)[e];
+        double *s = (*strain_rate0)[e];
 
         for (int i=0; i<NODES_PER_ELEM; ++i)
-            v[i] = (*var.vel)[conn[i]];
+            v[i] = (*vel)[conn[i]];
 
         // XX component
         int n = 0;
@@ -218,8 +231,10 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
         for (int i=0; i<NODES_PER_ELEM; ++i)
             s[n] += v[i][0] * shpdx[i];
 
+
+
 #ifdef THREED
-        const double *shpdy = (*var.shpdy)[e];
+        const double *shpdy = (*shpdy0)[e];
         // YY component
         n = 1;
         s[n] = 0;
@@ -263,6 +278,7 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
             s[n] += 0.5 * (v[i][1] * shpdz[i] + v[i][2] * shpdy[i]);
 #endif
     }
+
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
@@ -422,10 +438,14 @@ void update_coordinate(const Variables& var, array_t& coord)
     double* x = var.coord->data();
     const double* v = var.vel->data();
 
-    #pragma omp parallel for default(none) \
-        shared(var, x, v)
-    for (int i=0; i<var.nnode*NDIMS; ++i) {
-        x[i] += v[i] * var.dt;
+    //#pragma omp parallel for default(none) \
+    //    shared(var, x, v)
+    // for gpu parallelization dt and bound need to be sent to 
+    const int bound=var.nnode*NDIMS;
+    const double dt=var.dt; 
+    #pragma acc parallel loop
+    for (int i=0; i<bound; ++i) {
+        x[i] += v[i] * dt;
     }
 #ifdef USE_NPROF
     nvtxRangePop();
@@ -436,7 +456,7 @@ void update_coordinate(const Variables& var, array_t& coord)
 namespace {
 
 #ifdef THREED
-
+    #pragma acc routine seq 
     void jaumann_rate_3d(double *s, double dt, double w3, double w4, double w5)
     {
         double s_inc[NSTR];
@@ -454,7 +474,7 @@ namespace {
     }
 
 #else
-
+    #pragma acc routine seq
     void jaumann_rate_2d(double *s, double dt, double w2)
     {
         double s_inc[NSTR];
@@ -494,22 +514,36 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
     // sj[4] = dt * ( s0 * w4 - s2 * w4 + s3 * w5 - s5 * w3)
     // sj[5] = dt * ( s1 * w5 - s2 * w5 + s3 * w4 + s4 * w3)
 
-    #pragma omp parallel for default(none) \
+    //#pragma omp parallel for default(none) \
         shared(var, stress, strain)
-    for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var.connectivity)[e];
+
+    const int nelem=var.nelem;
+    const double dt=var.dt;
+
+    const shapefn *shpdx0=var.shpdx;
+    const shapefn *shpdz0=var.shpdz;
+    const conn_t *connectivity=var.connectivity;
+    const array_t *vel=var.vel;
+    
 
 #ifdef THREED
-
+    const shapefn *shpdy0=var.shpdy;
+    
+    
+#endif
+    const double *v[NODES_PER_ELEM];
+    #pragma acc parallel loop private(v)
+    for (int e=0; e<nelem; ++e) {
+        const int *conn = (*connectivity)[e];
+#ifdef THREED        
         double w3, w4, w5;
         {
-            const double *shpdx = (*var.shpdx)[e];
-            const double *shpdy = (*var.shpdy)[e];
-            const double *shpdz = (*var.shpdz)[e];
-
-            double *v[NODES_PER_ELEM];
+            const double *shpdx = (*shpdx0)[e];
+            const double *shpdy = (*shpdy0)[e];
+            const double *shpdz = (*shpdz0)[e];
+            
             for (int i=0; i<NODES_PER_ELEM; ++i)
-                v[i] = (*var.vel)[conn[i]];
+                v[i] = (*vel)[conn[i]];
 
             w3 = 0;
             for (int i=0; i<NODES_PER_ELEM; ++i)
@@ -524,27 +558,27 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
                 w5 += 0.5 * (v[i][1] * shpdz[i] - v[i][NDIMS-1] * shpdy[i]);
         }
 
-        jaumann_rate_3d(stress[e], var.dt, w3, w4, w5);
-        jaumann_rate_3d(strain[e], var.dt, w3, w4, w5);
+        jaumann_rate_3d(stress[e], dt, w3, w4, w5);
+        jaumann_rate_3d(strain[e], dt, w3, w4, w5);
 
 #else
 
         double w2;
         {
-            const double *shpdx = (*var.shpdx)[e];
-            const double *shpdz = (*var.shpdz)[e];
+            const double *shpdx = (*shpdx)[e];
+            const double *shpdz = (*shpdz)[e];
 
             double *v[NODES_PER_ELEM];
             for (int i=0; i<NODES_PER_ELEM; ++i)
-                v[i] = (*var.vel)[conn[i]];
+                v[i] = (*vel)[conn[i]];
 
             w2 = 0;
             for (int i=0; i<NODES_PER_ELEM; ++i)
                 w2 += 0.5 * (v[i][NDIMS-1] * shpdx[i] - v[i][0] * shpdz[i]);
         }
 
-        jaumann_rate_2d(stress[e], var.dt, w2);
-        jaumann_rate_2d(strain[e], var.dt, w2);
+        jaumann_rate_2d(stress[e], dt, w2);
+        jaumann_rate_2d(strain[e], dt, w2);
 
 #endif
     }
