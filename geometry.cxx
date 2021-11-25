@@ -115,6 +115,7 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 #endif
     #pragma omp parallel for default(none)      \
         shared(coord, connectivity, volume)
+//    #pragma acc parallel loop //add private(volume) will have Makefile cmp error
     for (std::size_t e=0; e<volume.size(); ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
@@ -152,20 +153,31 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
 
     #pragma omp parallel for default(none)      \
         shared(var, volume, tmp_result)
-    for (int e=0;e<var.nelem;e++) {
-        const int *conn = (*var.connectivity)[e];
-        const double* strain_rate = (*var.strain_rate)[e];
+    const int nelem = var.nelem;
+    const conn_t *connectivity = var.connectivity;
+    const tensor_t *srate= var.strain_rate;
+//    #pragma acc parallel loop private(tmp_result) // will have pointer problem
+    for (int e=0;e<nelem;e++) {
+        const int *conn = (*connectivity)[e];
+        const double *strain_rate= (*srate)[e];
         // TODO: try another definition:
         // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
         tmp_result[e] = dj * volume[e];
     }
 
+    double dvol;  //add
     #pragma omp parallel for default(none)      \
         shared(var,dvoldt,tmp_result,volume_n)
-    for (int n=0;n<var.nnode;n++) {
-        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
-            dvoldt[n] += tmp_result[*e];
+    const int nnode = var.nnode;
+    const int_vec2D *support = var.support;
+  #pragma acc parallel loop private(dvol) //add
+    for (int n=0;n<nnode;n++) {
+	dvol = 0;    //add
+	#pragma acc loop reduction(+:dvol) //add
+        for( auto e = (*support)[n].begin(); e < (*support)[n].end(); ++e)
+	    dvol += tmp_result[*e];
+            dvoldt[n] =dvol;
         dvoldt[n] /= volume_n[n];
     }
 
