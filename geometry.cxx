@@ -153,33 +153,34 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(dvoldt.begin(), var.nnode, 0);
 
+    const int var_nelem = var.nelem;
+    const conn_t *var_connectivity = var.connectivity;
+    const tensor_t *var_strain_rate= var.strain_rate;
+
     #pragma omp parallel for default(none)      \
         shared(var, volume, tmp_result)
-    const int nelem = var.nelem;
-    const conn_t *connectivity = var.connectivity;
-    const tensor_t *srate= var.strain_rate;
-//    #pragma acc parallel loop private(tmp_result) // will have pointer problem
-    for (int e=0;e<nelem;e++) {
-        const int *conn = (*connectivity)[e];
-        const double *strain_rate= (*srate)[e];
+    #pragma acc parallel loop
+    for (int e=0;e<var_nelem;e++) {
+        const int *conn = (*var_connectivity)[e];
+        const double *strain_rate= (*var_strain_rate)[e];
         // TODO: try another definition:
         // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
         tmp_result[e] = dj * volume[e];
     }
 
-    double dvol;  //add
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
+
     #pragma omp parallel for default(none)      \
         shared(var,dvoldt,tmp_result,volume_n)
-    const int nnode = var.nnode;
-    const int_vec2D *support = var.support;
-  #pragma acc parallel loop private(dvol) //add
-    for (int n=0;n<nnode;n++) {
-	dvol = 0;    //add
-	#pragma acc loop reduction(+:dvol) //add
-        for( auto e = (*support)[n].begin(); e < (*support)[n].end(); ++e)
-	    dvol += tmp_result[*e];
-            dvoldt[n] =dvol;
+    #pragma acc parallel loop
+    for (int n=0;n<var_nnode;n++) {
+        double dvol = 0;
+        #pragma acc loop reduction(+:dvol)
+        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
+	        dvol += tmp_result[*e];
+        dvoldt[n] = dvol;
         dvoldt[n] /= volume_n[n];
     }
 

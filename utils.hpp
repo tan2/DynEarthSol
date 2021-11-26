@@ -55,7 +55,7 @@ void print(std::ostream& os, const Array& A)
   os << "]";
 }
 
-
+#pragma acc routine seq
 static double trace(const double* s)
 {
 #ifdef THREED
