@@ -94,6 +94,7 @@ void compute_volume(const double **coord, double &volume)
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
+#pragma acc kernels    
     const double *a = coord[0];
     const double *b = coord[1];
     const double *c = coord[2];
@@ -176,11 +177,8 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
         shared(var,dvoldt,tmp_result,volume_n)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
-        double dvol = 0;
-        #pragma acc loop reduction(+:dvol)
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
-	        dvol += tmp_result[*e];
-        dvoldt[n] = dvol;
+	    dvoldt[n] += tmp_result[*e];
         dvoldt[n] /= volume_n[n];
     }
 
