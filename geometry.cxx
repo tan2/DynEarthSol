@@ -31,6 +31,7 @@ double dist2(const double* a, const double* b)
 
 /* Given four 3D points, returns the (signed) volume of the enclosed
    tetrahedron */
+#pragma acc routine seq
 static double tetrahedron_volume(const double *d0,
                                  const double *d1,
                                  const double *d2,
@@ -55,6 +56,7 @@ static double tetrahedron_volume(const double *d0,
 
 
 /* Given two points, returns the area of the enclosed triangle */
+#pragma acc routine seq
 static double triangle_area(const double *a,
                             const double *b,
                             const double *c)
@@ -115,7 +117,7 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 #endif
     #pragma omp parallel for default(none)      \
         shared(coord, connectivity, volume)
-//    #pragma acc parallel loop //add private(volume) will have Makefile cmp error
+    #pragma acc parallel loop 
     for (std::size_t e=0; e<volume.size(); ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
