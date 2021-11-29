@@ -58,9 +58,9 @@ void normal_vector_of_facet(int f, const int *conn, const array_t &coord,
 }
 
 
-bool is_on_boundary(const Variables &var, int node)
+bool is_on_boundary(const uint *bcf, int node)
 {
-    uint flag = (*var.bcflag)[node];
+    uint flag = bcf[node];
     return flag & BOUND_ANY;
 }
 
@@ -311,7 +311,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
     double BOUNDX0_ratio_width = bc.vbc_val_division_x0_max - bc.vbc_val_division_x0_min;
     bool if_init = false;
     for (int i=0; i<var.nnode; ++i) {
-        if (! is_on_boundary(var, i)) continue;
+        if (! is_on_boundary(*var.bcflag, i)) continue;
 
         uint flag = (*var.bcflag)[i];
         if (flag & BOUNDX0) {
@@ -335,50 +335,87 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #endif
 
     // diverging x-boundary
+    const int nn = var.nnode;
+    const uint *bcf = var.bcflag->data();
+    const double *cor = var.coord->data();
+    double bn[nbdrytypes][NDIMS];
+            for (int i=0; i<nbdrytypes; ++i) {
+                    for (int j=0; j<NDIMS; ++j) {
+                        bn[i][j] = var.bnormals[i][j];
+                    }
+            }
+    const int *vbct = var.vbc_types;
+    const double *vbcv = var.vbc_values;
+    const std::map<std::pair<int,int>, double*>  *edgevec = &(var.edge_vectors);
+
+
+    int bc_x0 = bc.vbc_x0;
+    int bc_x1 = bc.vbc_x1;
+    int bc_y0 = bc.vbc_y0;
+    int bc_y1 = bc.vbc_y1;
+    int bc_z0 = bc.vbc_z0;
+    int bc_z1 = bc.vbc_z1;
+
+    double bc_vx0 = bc.vbc_val_x0;
+    double bc_vx1 = bc.vbc_val_x1;
+    double bc_vy0 = bc.vbc_val_y0;
+    double bc_vy1 = bc.vbc_val_y1;
+    double bc_vz0 = bc.vbc_val_z0;
+    double bc_vz1 = bc.vbc_val_z1;
+
+    double bc_vx0min = bc.vbc_val_division_x0_min;
+    double bc_vx0max = bc.vbc_val_division_x0_max;
+
+    double bc_vx0r0 = bc.vbc_val_x0_ratio0;
+    double bc_vx0r1 = bc.vbc_val_x0_ratio1;
+    double bc_vx0r2 = bc.vbc_val_x0_ratio2;
+
 #ifdef THREED
     #pragma omp parallel for default(none) \
         shared(bc, var, vel)
+    #pragma acc parallel loop
 #else
     #pragma omp parallel for default(none) \
         shared(bc, var, vel,BOUNDX0_max,BOUNDX0_min,BOUNDX0_width,BOUNDX0_ratio_width, \
                vbc_applied_x0, vbc_applied_x1)
+    #pragma acc parallel loop
 #endif
-    for (int i=0; i<var.nnode; ++i) {
+    for (int i=0; i<nn; ++i) {
 
         // fast path: skip nodes not on boundary
-        if (! is_on_boundary(var, i)) continue;
+        if (! is_on_boundary(bcf, i)) continue;
 
-        uint flag = (*var.bcflag)[i];
+        uint flag = bcf[i];
         double *v = vel[i];
 
 #ifdef THREED
 #else
-        const double *x = (*var.coord)[i];
+        const double *x = cor[i];
         double ratio, rr, dvr;
 #endif
         //
         // X
         //
         if (flag & BOUNDX0) {
-            switch (bc.vbc_x0) {
+            switch (bc_x0) {
             case 0:
                 break;
             case 1:
 #ifdef THREED
-                v[0] = bc.vbc_val_x0;
+                v[0] = bc_vx0;
 #else
                 ratio = -1.* (x[1] - BOUNDX0_max) / BOUNDX0_width;
-                if (ratio <  bc.vbc_val_division_x0_min) {
-                    v[0] =  bc.vbc_val_x0_ratio0 * vbc_applied_x0;
-                } else if (ratio >  bc.vbc_val_division_x0_max) {
-                    v[0] =  bc.vbc_val_x0_ratio2 * vbc_applied_x0;
+                if (ratio <  bc_vx0min) {
+                    v[0] =  bc_vx0r0 * vbc_applied_x0;
+                } else if (ratio >  bc_vx0max) {
+                    v[0] =  bc_vx0r2bc_vx0r2 * vbc_applied_x0;
                 } else {
-                    if (bc.vbc_val_x0_ratio1 >= 0.) {
-                        v[0] =  bc.vbc_val_x0_ratio1 * vbc_applied_x0;
+                    if (bc_vx0r1 >= 0.) {
+                        v[0] =  bc_vx0r1 * vbc_applied_x0;
                     } else {
-                        rr = (ratio-bc.vbc_val_division_x0_min) / (BOUNDX0_ratio_width);
-                        dvr = bc.vbc_val_x0_ratio2 - bc.vbc_val_x0_ratio0;
-                        v[0] = ((rr * dvr) + bc.vbc_val_x0_ratio0) * vbc_applied_x0;
+                        rr = (ratio-bc_vx0min) / (BOUNDX0_ratio_width);
+                        dvr = bc_vx0r2 - bc_vx0r0;
+                        v[0] = ((rr * dvr) + bc_vx0r0) * vbc_applied_x0;
                     }
                 }
 #endif
@@ -391,20 +428,20 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                 break;
             case 3:
 #ifdef THREED
-                v[0] = bc.vbc_val_x0;
+                v[0] = bc_vx0;
 #else
                 ratio = -1.* (x[1] - BOUNDX0_max) / BOUNDX0_width;
-                if (ratio <  bc.vbc_val_division_x0_min) {
-                    v[0] =  bc.vbc_val_x0_ratio0 * vbc_applied_x0;
-                } else if (ratio >  bc.vbc_val_division_x0_max) {
-                    v[0] =  bc.vbc_val_x0_ratio2 * vbc_applied_x0;
+                if (ratio <  bc_vx0min) {
+                    v[0] =  bc_vx0r0 * vbc_applied_x0;
+                } else if (ratio >  bc_vx0max) {
+                    v[0] =  bc_vx0r2 * vbc_applied_x0;
                 } else {
-                    if (bc.vbc_val_x0_ratio1 >= 0.) {
-                        v[0] =  bc.vbc_val_x0_ratio1 * vbc_applied_x0;
+                    if (bc_vx0r1 >= 0.) {
+                        v[0] =  bc_vx0r1 * vbc_applied_x0;
                     } else {
-                        rr = (ratio-bc.vbc_val_division_x0_min) / (BOUNDX0_ratio_width);
-                        dvr = bc.vbc_val_x0_ratio2 - bc.vbc_val_x0_ratio0;
-                        v[0] = ((rr * dvr) + bc.vbc_val_x0_ratio0) * vbc_applied_x0;
+                        rr = (ratio-bc_vx0min) / (BOUNDX0_ratio_width);
+                        dvr = bc_vx0r2 - bc_vx0r0;
+                        v[0] = ((rr * dvr) + bc_vx0r0) * vbc_applied_x0;
                     }
                 }
 #endif
@@ -415,28 +452,28 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                 break;
 #ifdef THREED
             case 4:
-                v[1] = bc.vbc_val_x0;
+                v[1] = bc_vx0;
                 v[2] = 0;
                 break;
             case 5:
                 v[0] = 0;
-                v[1] = bc.vbc_val_x0;
+                v[1] = bc_vx0;
                 v[2] = 0;
                 break;
             case 7:
-                v[0] = bc.vbc_val_x0;
+                v[0] = bc_vx0;
                 v[1] = 0;
                 break;
 #endif
             }
         }
         if (flag & BOUNDX1) {
-            switch (bc.vbc_x1) {
+            switch (bc_x1) {
             case 0:
                 break;
             case 1:
 #ifdef THREED
-                v[0] = bc.vbc_val_x1;
+                v[0] = bc_vx1;
 #else
                 v[0] = vbc_applied_x1;
 #endif
@@ -449,7 +486,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                 break;
             case 3:
 #ifdef THREED
-                v[0] = bc.vbc_val_x1;
+                v[0] = bc_vx1;
 #else
                 v[0] = vbc_applied_x1;
 #endif
@@ -460,16 +497,16 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                 break;
 #ifdef THREED
             case 4:
-                v[1] = bc.vbc_val_x1;
+                v[1] = bc_vx1;
                 v[2] = 0;
                 break;
             case 5:
                 v[0] = 0;
-                v[1] = bc.vbc_val_x1;
+                v[1] = bc_vx1;
                 v[2] = 0;
                 break;
             case 7:
-                v[0] = bc.vbc_val_x1;
+                v[0] = bc_vx1;
                 v[1] = 0;
                 break;
 #endif
@@ -480,11 +517,11 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
         // Y
         //
         if (flag & BOUNDY0) {
-            switch (bc.vbc_y0) {
+            switch (bc_y0) {
             case 0:
                 break;
             case 1:
-                v[1] = bc.vbc_val_y0;
+                v[1] = bc_vy0;
                 break;
             case 2:
                 v[0] = 0;
@@ -492,52 +529,52 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                 break;
             case 3:
                 v[0] = 0;
-                v[1] = bc.vbc_val_y0;
+                v[1] = bc_vy0;
                 v[2] = 0;
                 break;
             case 4:
-                v[0] = bc.vbc_val_y0;
+                v[0] = bc_vy0;
                 v[2] = 0;
                 break;
             case 5:
-                v[0] = bc.vbc_val_y0;
+                v[0] = bc_vy0;
                 v[1] = 0;
                 v[2] = 0;
                 break;
             case 7:
                 v[0] = 0;
-                v[1] = bc.vbc_val_y0;
+                v[1] = bc_vy0;
                 break;
             }
         }
         if (flag & BOUNDY1) {
-            switch (bc.vbc_y1) {
+            switch (bc_y1) {
             case 0:
                 break;
             case 1:
-                v[1] = bc.vbc_val_y1;
+                v[1] = bc_vy1;
                 break;
             case 2:
                 v[0] = 0;
                 v[2] = 0;
                 break;
             case 3:
-                v[0] = bc.vbc_val_y1;
+                v[0] = bc_vy1;
                 v[1] = 0;
                 v[2] = 0;
                 break;
             case 4:
-                v[0] = bc.vbc_val_y1;
+                v[0] = bc_vy1;
                 v[2] = 0;
                 break;
             case 5:
-                v[0] = bc.vbc_val_y1;
+                v[0] = bc_vy1;
                 v[1] = 0;
                 v[2] = 0;
                 break;
             case 7:
                 v[0] = 0;
-                v[1] = bc.vbc_val_y1;
+                v[1] = bc_vy1;
                 break;
             }
         }
@@ -548,33 +585,33 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
         //
         for (int ib=iboundn0; ib<=iboundn3; ib++) {
             const double eps = 1e-15;
-            const double *n = var.bnormals[ib]; // unit normal vector
+            const double *n = bn[ib]; // unit normal vector
 
             if (flag & (1 << ib)) {
                 double fac = 0;
-                switch (var.vbc_types[ib]) {
+                switch (vbct[ib]) {
                 case 1:
                     if (flag == (1U << ib)) {  // ordinary boundary
                         double vn = 0;
                         for (int d=0; d<NDIMS; d++)
                             vn += v[d] * n[d];  // normal velocity
 
-                        for (int d=0; d<NDIMS; d++)
-                            v[d] += (var.vbc_values[ib] - vn) * n[d];  // setting normal velocity
+			for (int d=0; d<NDIMS; d++)
+                            v[d] += (vbcv[ib] - vn) * n[d];  // setting normal velocity
                     }
                     else {  // intersection with another boundary
                         for (int ic=iboundx0; ic<ib; ic++) {
                             if (flag & (1 << ic)) {
-                                if (var.vbc_types[ic] == 0) {
+                                if (vbct[ic] == 0) {
                                     double vn = 0;
                                     for (int d=0; d<NDIMS; d++)
                                         vn += v[d] * n[d];  // normal velocity
 
-                                    for (int d=0; d<NDIMS; d++)
-                                        v[d] += (var.vbc_values[ib] - vn) * n[d];  // setting normal velocity
+				    for (int d=0; d<NDIMS; d++)
+                                        v[d] += (vbcv[ib] - vn) * n[d];  // setting normal velocity
                                 }
-                                else if (var.vbc_types[ic] == 1) {
-                                    auto edge = var.edge_vectors.at(std::make_pair(ic, ib));
+                                else if (vbct[ic] == 1) {
+                                    auto edge = edgevec->at(std::make_pair(ic, ib));
                                     double ve = 0;
                                     for (int d=0; d<NDIMS; d++)
                                         ve += v[d] * edge[d];
@@ -588,7 +625,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                     break;
                 case 3:
                     for (int d=0; d<NDIMS; d++)
-                        v[d] = var.vbc_values[ib] * n[d];  // v must be normal to n
+                        v[d] = vbcv[ib] * n[d];  // v must be normal to n
                     break;
                 case 11:
                     fac = 1 / std::sqrt(1 - n[NDIMS-1]*n[NDIMS-1]);  // factor for horizontal normal unit vector
@@ -597,22 +634,22 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                         for (int d=0; d<NDIMS-1; d++)
                             vn += v[d] * n[d];  // normal velocity
 
-                        for (int d=0; d<NDIMS-1; d++)
-                            v[d] += (var.vbc_values[ib] * fac - vn) * n[d];  // setting normal velocity
+			for (int d=0; d<NDIMS-1; d++)
+                            v[d] += (vbcv[ib] * fac - vn) * n[d];  // setting normal velocity
                     }
                     else {  // intersection with another boundary
                         for (int ic=iboundx0; ic<ib; ic++) {
                             if (flag & (1 << ic)) {
-                                if (var.vbc_types[ic] == 0) {
+                                if (vbct[ic] == 0) {
                                     double vn = 0;
                                     for (int d=0; d<NDIMS-1; d++)
                                         vn += v[d] * n[d];  // normal velocity
 
-                                    for (int d=0; d<NDIMS-1; d++)
-                                        v[d] += (var.vbc_values[ib] * fac - vn) * n[d];  // setting normal velocity
+				    for (int d=0; d<NDIMS-1; d++)
+                                        v[d] += (vbcv[ib] * fac - vn) * n[d];  // setting normal velocity
                                 }
-                                else if (var.vbc_types[ic] == 1) {
-                                    auto edge = var.edge_vectors.at(std::make_pair(ic, ib));
+                                else if (vbct[ic] == 1) {
+                                    auto edge = edgevec->at(std::make_pair(ic, ib));
                                     double ve = 0;
                                     for (int d=0; d<NDIMS; d++)
                                         ve += v[d] * edge[d];
@@ -627,7 +664,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                 case 13:
                     fac = 1 / std::sqrt(1 - n[NDIMS-1]*n[NDIMS-1]);  // factor for horizontal normal unit vector
                     for (int d=0; d<NDIMS-1; d++)
-                        v[d] = var.vbc_values[ib] * fac * n[d];
+                        v[d] = vbcv[ib] * fac * n[d];
                     v[NDIMS-1] = 0;
                     break;
                 }
@@ -639,14 +676,14 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
         //
 
         // fast path: vz is usually free in the models
-        if (bc.vbc_z0==0 && bc.vbc_z1==0) continue;
+        if (bc_z0==0 && bc_z1==0) continue;
 
         if (flag & BOUNDZ0) {
-            switch (bc.vbc_z0) {
+            switch (bc_z0) {
             case 0:
                 break;
             case 1:
-                v[NDIMS-1] = bc.vbc_val_z0;
+                v[NDIMS-1] = bc_vz0;
                 break;
             case 2:
                 v[0] = 0;
@@ -659,16 +696,16 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #ifdef THREED
                 v[1] = 0;
 #endif
-                v[NDIMS-1] = bc.vbc_val_z0;
+                v[NDIMS-1] = bc_vz0;
                 break;
             }
         }
         if (flag & BOUNDZ1) {
-            switch (bc.vbc_z1) {
+            switch (bc_z1) {
             case 0:
                 break;
             case 1:
-                v[NDIMS-1] = bc.vbc_val_z1;
+                v[NDIMS-1] = bc_vz1;
                 break;
             case 2:
                 v[0] = 0;
@@ -681,7 +718,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #ifdef THREED
                 v[1] = 0;
 #endif
-                v[NDIMS-1] = bc.vbc_val_z1;
+                v[NDIMS-1] = bc_vz1;
                 break;
             }
         }
