@@ -200,10 +200,15 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
     /* edvoldt is the averaged (i.e. smoothed) dvoldt on the element.
      * It is used in update_stress() to prevent mesh locking.
      */
+
+    const int var_nelem = var.nelem;
+    const conn_t *var_connectivity = var.connectivity;
+
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, edvoldt)
-    for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var.connectivity)[e];
+    #pragma acc kernels
+    for (int e=0; e<var_nelem; ++e) {
+        const int *conn = (*var_connectivity)[e];
         double dj = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
@@ -300,18 +305,27 @@ void NMD_stress(const Param& param, const Variables &var,
     // weight with volumn
     } else {
         */
+    const int var_nelem = var.nelem;
+    const conn_t *var_connectivity = var.connectivity;
+    const double_vec *var_dpressure = var.dpressure;
+
     #pragma omp parallel for default(none)      \
         shared(var,volume,tmp_result)
-    for (int e=0;e<var.nelem;e++) {
-        const int *conn = (*var.connectivity)[e];
-        double dp = (*var.dpressure)[e];
+    #pragma acc kernels
+    for (int e=0;e<var_nelem;e++) {
+        const int *conn = (*var_connectivity)[e];
+        double dp = (*var_dpressure)[e];
         tmp_result[e] = dp * volume[e];
     }
 
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
+
     #pragma omp parallel for default(none)      \
         shared(var,dp_nd,volume_n,tmp_result)
-    for (int n=0;n<var.nnode;n++) {
-        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
+    #pragma acc kernels
+    for (int n=0;n<var_nnode;n++) {
+        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
             dp_nd[n] += tmp_result[*e];
         dp_nd[n] /= volume_n[n];
     }
@@ -335,13 +349,14 @@ void NMD_stress(const Param& param, const Variables &var,
      */
     #pragma omp parallel for default(none)      \
         shared(param, var, dp_nd, stress, mixed_factor)
-    for (int e=0; e<var.nelem; ++e) {
+    #pragma acc kernels
+    for (int e=0; e<var_nelem; ++e) {
 
         double factor = mixed_factor->contains(e);
         if (factor == 0.)
                 continue;
 
-        const int *conn = (*var.connectivity)[e];
+        const int *conn = (*var_connectivity)[e];
         double dp = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
@@ -350,7 +365,7 @@ void NMD_stress(const Param& param, const Variables &var,
         double dp_el = dp / NODES_PER_ELEM;
 
     	double* s = stress[e];
-	    double dp_orig = (*var.dpressure)[e];
+	    double dp_orig = (*var_dpressure)[e];
         double ddp = ( - dp_orig + dp_el ) / NDIMS * factor;
 	    for (int i=0; i<NDIMS; ++i)
             s[i] += ddp;
