@@ -156,11 +156,20 @@ void update_temperature(const Param &param, const Variables &var,
         }
     }
 
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
+    const conn_t *var_connectivity = var.connectivity;
+    const uint_vec *var_bcflag = var.bcflag;
+    const double surface_temperature = param.bc.surface_temperature;
+    const double_vec *var_tmass = var.tmass;
+    const double var_dt = var.dt;
+
     #pragma omp parallel for default(none)      \
         shared(param,var,tdot,temperature,tmp_result)
-    for (int n=0;n<var.nnode;n++) {
-        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-            const int *conn = (*var.connectivity)[*e];
+    #pragma acc parallel loop
+    for (int n=0;n<var_nnode;n++) {
+        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
+            const int *conn = (*var_connectivity)[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
                     tdot[n] += tmp_result[i][*e];
@@ -171,10 +180,10 @@ void update_temperature(const Param &param, const Variables &var,
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
-        if ((*var.bcflag)[n] & BOUNDZ1)
-            temperature[n] = param.bc.surface_temperature;
+        if ((*var_bcflag)[n] & BOUNDZ1)
+            temperature[n] = surface_temperature;
         else
-            temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
+            temperature[n] -= tdot[n] * var_dt / (*var_tmass)[n];
     }
 
     // Combining temperature update and bc in the same loop for efficiency,
@@ -375,12 +384,17 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
         }
     }
 
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
+    const conn_t *var_connectivity = var.connectivity;
+
     #pragma omp parallel for default(none)      \
         shared(var,force,tmp_result)
-    for (int n=0;n<var.nnode;n++) {
+    #pragma acc kernels
+    for (int n=0;n<var_nnode;n++) {
         double *f = force[n];
-        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-            const int *conn = (*var.connectivity)[*e];
+        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
+            const int *conn = (*var_connectivity)[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
                     for (int j=0;j<NDIMS;j++)
