@@ -289,10 +289,16 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 
 static void apply_damping(const Param& param, const Variables& var, array_t& force)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     // flatten 2d arrays to simplify indexing
     double* ff = force.data();
     const double* v = var.vel->data();
     const double small_vel = 1e-13;
+
+    const int bound = var.nnode*NDIMS;
+    const double damping_factor = param.control.damping_factor;
 
     switch (param.control.damping_option) {
     case 0:
@@ -308,9 +314,10 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
 #endif
-        for (int i=0; i<var.nnode*NDIMS; ++i) {
+        #pragma acc kernels
+        for (int i=0; i<bound; ++i) {
             if (std::fabs(v[i]) > small_vel) {
-                ff[i] -= param.control.damping_factor * std::copysign(ff[i], v[i]);
+                ff[i] -= damping_factor * std::copysign(ff[i], v[i]);
             }
         }
         break;
@@ -318,8 +325,9 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         // damping prop. to force
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
-        for (int i=0; i<var.nnode*NDIMS; ++i) {
-            ff[i] -= param.control.damping_factor * ff[i];
+        #pragma acc kernels
+        for (int i=0; i<bound; ++i) {
+            ff[i] -= damping_factor * ff[i];
         }
         break;
     case 3:
@@ -327,14 +335,15 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         // weakly acclerating when force and velocity are anti-parallel
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
-        for (int i=0; i<var.nnode*NDIMS; ++i) {
+        #pragma acc kernels
+        for (int i=0; i<bound; ++i) {
             if ((ff[i]<0) == (v[i]<0)) {
                 // strong damping
-                ff[i] -= param.control.damping_factor * ff[i], v[i];
+                ff[i] -= damping_factor * ff[i], v[i];
             }
             else {
                 // weak acceleration
-                ff[i] += (1 - param.control.damping_factor) * ff[i];
+                ff[i] += (1 - damping_factor) * ff[i];
             }
         }
         break;
@@ -345,6 +354,9 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         std::cerr << "Error: unknown damping_option: " << param.control.damping_option << '\n';
         std::exit(1);
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -425,11 +437,16 @@ void update_velocity(const Variables& var, array_t& vel)
     // flatten 2d arrays to simplify indexing
     const double* f = var.force->data();
     double* v = vel.data();
+
+    const int var_nnode = var.nnode;
+    const double var_dt = var.dt;
+
     #pragma omp parallel for default(none) \
         shared(var, m, f, v)
-    for (int i=0; i<var.nnode*NDIMS; ++i) {
+    #pragma acc kernels
+    for (int i=0; i<var_nnode*NDIMS; ++i) {
         int n = i / NDIMS;
-        v[i] += var.dt * f[i] / m[n];
+        v[i] += var_dt * f[i] / m[n];
     }
 #ifdef USE_NPROF
     nvtxRangePop();
