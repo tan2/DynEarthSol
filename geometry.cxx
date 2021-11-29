@@ -505,14 +505,18 @@ void compute_mass(const Param &param, const Variables &var,
         if (param.control.has_thermal_diffusion)
             tmp_result[2][e] = tm;
     }
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
+    const bool has_thermal_diffusion = param.control.has_thermal_diffusion;
 
     #pragma omp parallel for default(none)      \
         shared(param,var,volume_n,mass,tmass,tmp_result)
-    for (int n=0;n<var.nnode;n++) {
-        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+    #pragma acc kernels
+    for (int n=0;n<var_nnode;n++) {
+        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
             volume_n[n] += tmp_result[0][*e];
             mass[n] += tmp_result[1][*e];
-            if (param.control.has_thermal_diffusion)
+            if (has_thermal_diffusion)
                 tmass[n] += tmp_result[2][*e];
         }
     }
@@ -528,24 +532,30 @@ void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shap
     nvtxRangePushA(__FUNCTION__);
 #endif
 
+    const int var_nelem = var.nelem;
+    const conn_t *var_connectivity = var.connectivity;
+    const array_t *var_coord = var.coord;
+    const double_vec *var_volume = var.volume;
+
     #pragma omp parallel for default(none)      \
         shared(var, shpdx, shpdy, shpdz)
-    for (int e=0;e<var.nelem;e++) {
+    #pragma acc kernels
+    for (int e=0;e<var_nelem;e++) {
 
-        int n0 = (*var.connectivity)[e][0];
-        int n1 = (*var.connectivity)[e][1];
-        int n2 = (*var.connectivity)[e][2];
+        int n0 = (*var_connectivity)[e][0];
+        int n1 = (*var_connectivity)[e][1];
+        int n2 = (*var_connectivity)[e][2];
 
-        const double *d0 = (*var.coord)[n0];
-        const double *d1 = (*var.coord)[n1];
-        const double *d2 = (*var.coord)[n2];
+        const double *d0 = (*var_coord)[n0];
+        const double *d1 = (*var_coord)[n1];
+        const double *d2 = (*var_coord)[n2];
 
 #ifdef THREED
         {
-            int n3 = (*var.connectivity)[e][3];
-            const double *d3 = (*var.coord)[n3];
+            int n3 = (*var_connectivity)[e][3];
+            const double *d3 = (*var_coord)[n3];
 
-            double iv = 1 / (6 * (*var.volume)[e]);
+            double iv = 1 / (6 * (*var_volume)[e]);
 
             double x01 = d0[0] - d1[0];
             double x02 = d0[0] - d2[0];
@@ -585,7 +595,7 @@ void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shap
         }
 #else
         {
-            double iv = 1 / (2 * (*var.volume)[e]);
+            double iv = 1 / (2 * (*var_volume)[e]);
 
             shpdx[e][0] = iv * (d1[1] - d2[1]);
             shpdx[e][1] = iv * (d2[1] - d0[1]);
