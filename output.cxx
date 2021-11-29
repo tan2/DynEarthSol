@@ -279,6 +279,9 @@ void Output::average_fields(Variables& var)
 
 void Output::write_checkpoint(const Param& param, const Variables& var)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     char filename[256];
     std::snprintf(filename, 255, "%s.chkpt.%06d", modelname.c_str(), frame);
     BinaryOutput bin(filename);
@@ -299,5 +302,8 @@ void Output::write_checkpoint(const Param& param, const Variables& var)
 
     for (auto ms=var.markersets.begin(); ms!=var.markersets.end(); ++ms)
         (*ms)->write_chkpt_file(bin);
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
