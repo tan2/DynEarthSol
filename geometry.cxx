@@ -149,13 +149,15 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
     /* dvoldt is the volumetric strain rate, weighted by the element volume,
      * lumped onto the nodes.
      */
-    const double_vec& volume = *var.volume;
-    const double_vec& volume_n = *var.volume_n;
 //    std::fill_n(dvoldt.begin(), var.nnode, 0);
 
     const int var_nelem = var.nelem;
     const conn_t *var_connectivity = var.connectivity;
     const tensor_t *var_strain_rate= var.strain_rate;
+    const double_vec *var_volume = var.volume;
+    const double_vec *var_volume_n = var.volume_n;
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
 
     #pragma omp parallel for default(none)      \
         shared(var, volume, tmp_result)
@@ -166,11 +168,8 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
         // TODO: try another definition:
         // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
-        tmp_result[e] = dj * volume[e];
+        tmp_result[e] = dj * (*var_volume)[e];
     }
-
-    const int var_nnode = var.nnode;
-    const int_vec2D *var_support = var.support;
 
     #pragma omp parallel for default(none)      \
         shared(var,dvoldt,tmp_result,volume_n)
@@ -179,7 +178,7 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
         dvoldt[n] = 0.;
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
 	        dvoldt[n] += tmp_result[*e];
-        dvoldt[n] /= volume_n[n];
+        dvoldt[n] /= (*var_volume_n)[n];
     }
 
     // std::cout << "dvoldt:\n";
@@ -268,8 +267,6 @@ void NMD_stress(const Param& param, const Variables &var,
     // dp_nd is the pressure change, weighted by the element volume,
     // lumped onto the nodes.
     //
-    const double_vec& volume = *var.volume;
-    const double_vec& volume_n = *var.volume_n;
     std::fill_n(dp_nd.begin(), var.nnode, 0);
 
 //    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
@@ -308,6 +305,10 @@ void NMD_stress(const Param& param, const Variables &var,
     const int var_nelem = var.nelem;
     const conn_t *var_connectivity = var.connectivity;
     const double_vec *var_dpressure = var.dpressure;
+    const double_vec *var_volume = var.volume;
+    const double_vec *var_volume_n = var.volume_n;
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
 
     #pragma omp parallel for default(none)      \
         shared(var,volume,tmp_result)
@@ -315,11 +316,8 @@ void NMD_stress(const Param& param, const Variables &var,
     for (int e=0;e<var_nelem;e++) {
         const int *conn = (*var_connectivity)[e];
         double dp = (*var_dpressure)[e];
-        tmp_result[e] = dp * volume[e];
+        tmp_result[e] = dp * (*var_volume)[e];
     }
-
-    const int var_nnode = var.nnode;
-    const int_vec2D *var_support = var.support;
 
     #pragma omp parallel for default(none)      \
         shared(var,dp_nd,volume_n,tmp_result)
@@ -327,7 +325,7 @@ void NMD_stress(const Param& param, const Variables &var,
     for (int n=0;n<var_nnode;n++) {
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
             dp_nd[n] += tmp_result[*e];
-        dp_nd[n] /= volume_n[n];
+        dp_nd[n] /= (*var_volume_n)[n];
     }
 //    }
 
@@ -491,11 +489,9 @@ void compute_mass(const Param &param, const Variables &var,
     const bool has_thermal_diffusion = param.control.has_thermal_diffusion;
     const int var_nelem = var.nelem;
     const double_vec *var_volume = var.volume;
-    MatProps *var_mat = var.mat;
-
-#ifdef USE_NPROF
-    nvtxRangePushA("ACC 1");
-#endif
+    const MatProps *var_mat = var.mat;
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
 
 #ifdef LLVM
     #pragma omp parallel for default(none)      \
@@ -516,16 +512,6 @@ void compute_mass(const Param &param, const Variables &var,
         if (has_thermal_diffusion)
             tmp_result[2][e] = tm;
     }
-#ifdef USE_NPROF
-    nvtxRangePop();
-#endif
-
-    const int var_nnode = var.nnode;
-    const int_vec2D *var_support = var.support;
-
-#ifdef USE_NPROF
-    nvtxRangePushA("ACC 2");
-#endif
 
     #pragma omp parallel for default(none)      \
         shared(param,var,volume_n,mass,tmass,tmp_result)
@@ -538,9 +524,6 @@ void compute_mass(const Param &param, const Variables &var,
                 tmass[n] += tmp_result[2][*e];
         }
     }
-#ifdef USE_NPROF
-    nvtxRangePop();
-#endif
 
 #ifdef USE_NPROF
     nvtxRangePop();
