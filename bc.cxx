@@ -57,10 +57,10 @@ void normal_vector_of_facet(int f, const int *conn, const array_t &coord,
 
 }
 
-
-bool is_on_boundary(const uint *bcf, int node)
+#pragma acc routine seq
+bool is_on_boundary(const uint_vec &bcflag, int node)
 {
-    uint flag = bcf[node];
+    uint flag = bcflag[node];
     return flag & BOUND_ANY;
 }
 
@@ -335,12 +335,12 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #endif
 
     // diverging x-boundary
-    const int nn = var.nnode;
-    const uint *bcf = var.bcflag->data();
-    const double *cor = var.coord->data();
+    const int var_nnode = var.nnode;
+    const uint_vec *var_bcflag = var.bcflag;
+    const array_t *var_coord = var.coord;
     const array_t *var_bnormals = var.bnormals;
-    const int *vbct = var.vbc_types;
-    const double *vbcv = var.vbc_values;
+    const int *var_vbc_types = var.vbc_types;
+    const double *var_vbc_values = var.vbc_values;
     const std::map<std::pair<int,int>, double*>  *edgevec = &(var.edge_vectors);
 
 
@@ -375,17 +375,17 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                vbc_applied_x0, vbc_applied_x1)
     #pragma acc parallel loop
 #endif
-    for (int i=0; i<nn; ++i) {
+    for (int i=0; i<var_nnode; ++i) {
 
         // fast path: skip nodes not on boundary
-        if (! is_on_boundary(bcf, i)) continue;
+        if (! is_on_boundary(*var_bcflag, i)) continue;
 
-        uint flag = bcf[i];
+        uint flag = (*var_bcflag)[i];
         double *v = vel[i];
 
 #ifdef THREED
 #else
-        const double *x = cor[i];
+        const double *x = (*var_coord)[i];
         double ratio, rr, dvr;
 #endif
         //
@@ -403,7 +403,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                 if (ratio <  bc_vx0min) {
                     v[0] =  bc_vx0r0 * vbc_applied_x0;
                 } else if (ratio >  bc_vx0max) {
-                    v[0] =  bc_vx0r2bc_vx0r2 * vbc_applied_x0;
+                    v[0] =  bc_vx0r2 * vbc_applied_x0;
                 } else {
                     if (bc_vx0r1 >= 0.) {
                         v[0] =  bc_vx0r1 * vbc_applied_x0;
@@ -584,7 +584,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 
             if (flag & (1 << ib)) {
                 double fac = 0;
-                switch (vbct[ib]) {
+                switch (var_vbc_types[ib]) {
                 case 1:
                     if (flag == (1U << ib)) {  // ordinary boundary
                         double vn = 0;
@@ -592,20 +592,20 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                             vn += v[d] * n[d];  // normal velocity
 
 			for (int d=0; d<NDIMS; d++)
-                            v[d] += (vbcv[ib] - vn) * n[d];  // setting normal velocity
+                            v[d] += (var_vbc_values[ib] - vn) * n[d];  // setting normal velocity
                     }
                     else {  // intersection with another boundary
                         for (int ic=iboundx0; ic<ib; ic++) {
                             if (flag & (1 << ic)) {
-                                if (vbct[ic] == 0) {
+                                if (var_vbc_types[ic] == 0) {
                                     double vn = 0;
                                     for (int d=0; d<NDIMS; d++)
                                         vn += v[d] * n[d];  // normal velocity
 
 				    for (int d=0; d<NDIMS; d++)
-                                        v[d] += (vbcv[ib] - vn) * n[d];  // setting normal velocity
+                                        v[d] += (var_vbc_values[ib] - vn) * n[d];  // setting normal velocity
                                 }
-                                else if (vbct[ic] == 1) {
+                                else if (var_vbc_types[ic] == 1) {
                                     auto edge = edgevec->at(std::make_pair(ic, ib));
                                     double ve = 0;
                                     for (int d=0; d<NDIMS; d++)
@@ -620,7 +620,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                     break;
                 case 3:
                     for (int d=0; d<NDIMS; d++)
-                        v[d] = vbcv[ib] * n[d];  // v must be normal to n
+                        v[d] = var_vbc_values[ib] * n[d];  // v must be normal to n
                     break;
                 case 11:
                     fac = 1 / std::sqrt(1 - n[NDIMS-1]*n[NDIMS-1]);  // factor for horizontal normal unit vector
@@ -630,20 +630,20 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                             vn += v[d] * n[d];  // normal velocity
 
 			for (int d=0; d<NDIMS-1; d++)
-                            v[d] += (vbcv[ib] * fac - vn) * n[d];  // setting normal velocity
+                            v[d] += (var_vbc_values[ib] * fac - vn) * n[d];  // setting normal velocity
                     }
                     else {  // intersection with another boundary
                         for (int ic=iboundx0; ic<ib; ic++) {
                             if (flag & (1 << ic)) {
-                                if (vbct[ic] == 0) {
+                                if (var_vbc_types[ic] == 0) {
                                     double vn = 0;
                                     for (int d=0; d<NDIMS-1; d++)
                                         vn += v[d] * n[d];  // normal velocity
 
 				    for (int d=0; d<NDIMS-1; d++)
-                                        v[d] += (vbcv[ib] * fac - vn) * n[d];  // setting normal velocity
+                                        v[d] += (var_vbc_values[ib] * fac - vn) * n[d];  // setting normal velocity
                                 }
-                                else if (vbct[ic] == 1) {
+                                else if (var_vbc_types[ic] == 1) {
                                     auto edge = edgevec->at(std::make_pair(ic, ib));
                                     double ve = 0;
                                     for (int d=0; d<NDIMS; d++)
@@ -659,7 +659,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                 case 13:
                     fac = 1 / std::sqrt(1 - n[NDIMS-1]*n[NDIMS-1]);  // factor for horizontal normal unit vector
                     for (int d=0; d<NDIMS-1; d++)
-                        v[d] = vbcv[ib] * fac * n[d];
+                        v[d] = var_vbc_values[ib] * fac * n[d];
                     v[NDIMS-1] = 0;
                     break;
                 }
