@@ -99,6 +99,7 @@ namespace {
         return pressure;
     }
 
+    using VectorBase = double_vec;
 
     double arithmetic_mean(const VectorBase &s, const int_vec &n)
     {
@@ -127,7 +128,7 @@ namespace {
         return m / result;
     }
 
-
+/*
     class Vector : public VectorBase {
     private:
         const double_vec &a;
@@ -168,11 +169,11 @@ namespace {
             return 1;
         }
     };
-
+*/
 
 }
 
-
+/*
 VectorBase* VectorBase::create(const double_vec &a, int len)
 {
     if (static_cast<int>(a.size()) == len)
@@ -185,7 +186,7 @@ VectorBase* VectorBase::create(const double_vec &a, int len)
     std::exit(12);
     return NULL;
 }
-
+*/
 
 double ref_pressure(const Param& param, double z)
 {
@@ -217,30 +218,30 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   strain_rate(*var.strain_rate),
   elemmarkers(*var.elemmarkers)
 {
-    rho0 = VectorBase::create(p.mat.rho0, nmat);
-    alpha = VectorBase::create(p.mat.alpha, nmat);
-    bulk_modulus = VectorBase::create(p.mat.bulk_modulus, nmat);
-    shear_modulus = VectorBase::create(p.mat.shear_modulus, nmat);
-    visc_exponent = VectorBase::create(p.mat.visc_exponent, nmat);
-    visc_coefficient = VectorBase::create(p.mat.visc_coefficient, nmat);
-    visc_activation_energy = VectorBase::create(p.mat.visc_activation_energy, nmat);
-    heat_capacity = VectorBase::create(p.mat.heat_capacity, nmat);
-    therm_cond = VectorBase::create(p.mat.therm_cond, nmat);
-    pls0 = VectorBase::create(p.mat.pls0, nmat);
-    pls1 = VectorBase::create(p.mat.pls1, nmat);
-    cohesion0 = VectorBase::create(p.mat.cohesion0, nmat);
-    cohesion1 = VectorBase::create(p.mat.cohesion1, nmat);
-    friction_angle0 = VectorBase::create(p.mat.friction_angle0, nmat);
-    friction_angle1 = VectorBase::create(p.mat.friction_angle1, nmat);
-    dilation_angle0 = VectorBase::create(p.mat.dilation_angle0, nmat);
-    dilation_angle1 = VectorBase::create(p.mat.dilation_angle1, nmat);
+    rho0 = p.mat.rho0;
+    alpha = p.mat.alpha;
+    bulk_modulus = &p.mat.bulk_modulus;
+    shear_modulus = &p.mat.shear_modulus;
+    visc_exponent = &p.mat.visc_exponent;
+    visc_coefficient = &p.mat.visc_coefficient;
+    visc_activation_energy = &p.mat.visc_activation_energy;
+    heat_capacity = &p.mat.heat_capacity;
+    therm_cond = &p.mat.therm_cond;
+    pls0 = &p.mat.pls0;
+    pls1 = &p.mat.pls1;
+    cohesion0 = &p.mat.cohesion0;
+    cohesion1 = &p.mat.cohesion1;
+    friction_angle0 = &p.mat.friction_angle0;
+    friction_angle1 = &p.mat.friction_angle1;
+    dilation_angle0 = &p.mat.dilation_angle0;
+    dilation_angle1 = &p.mat.dilation_angle1;
 }
 
 
 MatProps::~MatProps()
 {
-    delete rho0;
-    delete alpha;
+//    delete rho0;
+//    delete alpha;
     delete bulk_modulus;
     delete shear_modulus;
     delete visc_exponent;
@@ -256,6 +257,10 @@ MatProps::~MatProps()
     delete friction_angle1;
     delete dilation_angle0;
     delete dilation_angle1;
+
+    #pragma acc exit data delete(rho0,alpha,bulk_modulus,shear_modulus,visc_exponent)
+    #pragma acc exit data delete(visc_coefficient,visc_activation_energy,heat_capacity,therm_cond,pls0)
+    #pragma acc exit data delete(pls1,cohesion0,friction_angle0,friction_angle1,dilation_angle0,dilation_angle1)
 }
 
 
@@ -370,7 +375,7 @@ void MatProps::plastic_props(int e, double pls,
     ten_max = (phi == 0)? tension_max : std::min(tension_max, cohesion/std::tan(phi*DEG2RAD));
 }
 
-
+#pragma acc routine seq
 double MatProps::rho(int e) const
 {
     const double celsius0 = 273;
@@ -388,8 +393,7 @@ double MatProps::rho(int e) const
     int n = 0;
     for (int m=0; m<nmat; m++) {
         // TODO: compressibility
-        result += (*rho0)[m] * (1 - (*alpha)[m] * TinCelsius) * elemmarkers[e][m];
-        n += elemmarkers[e][m];
+        result += rho0[m] * (1 - alpha[m] * TinCelsius) * elemmarkers[e][m];        n += elemmarkers[e][m];
     }
     return result / n;
 }

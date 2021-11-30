@@ -383,7 +383,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
 #endif
 }
 
-
+/*
 #pragma acc routine seq
 static double rho(const conn_t &var_connectivity, \
     const double_vec &var_temperature, const int_vec2D &var_elemmarkers, \
@@ -409,7 +409,7 @@ static double rho(const conn_t &var_connectivity, \
     }
     return result / n;
 }
-
+*/
 
 void update_force(const Param& param, const Variables& var, array_t& force, double_vec2D& tmp_result)
 {
@@ -456,9 +456,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
 
         double buoy = 0;
         if (gravity != 0)
-            buoy = rho(*var_connectivity, *var_temperature, \
-                *var_elemmarkers,*rho0,*alpha,nmat,e) * \ 
-                gravity / NODES_PER_ELEM;
+            buoy = var_mat->rho(e) * gravity / NODES_PER_ELEM;
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED

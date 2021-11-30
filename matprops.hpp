@@ -5,6 +5,7 @@
 
 double ref_pressure(const Param& param, double z);
 
+/*
 class VectorBase
 {
 public:
@@ -14,7 +15,9 @@ public:
     virtual double operator[] (std::size_t) const = 0;
     virtual std::size_t size() const = 0;
 };
+*/
 
+using VectorBase = double_vec;
 
 class MatProps
 {
@@ -29,6 +32,7 @@ public:
     double shearm(int e) const;
     double visc(int e) const;
 
+    #pragma acc routine seq
     double rho(int e) const;
     double cp(int e) const;
     double k(int e) const;
@@ -62,7 +66,7 @@ private:
     const tensor_t &strain_rate;
     const int_vec2D &elemmarkers;
 
-    const VectorBase *rho0, *alpha;
+    VectorBase rho0, alpha;
     const VectorBase *bulk_modulus, *shear_modulus;
     const VectorBase *visc_exponent, *visc_coefficient, *visc_activation_energy;
     const VectorBase *heat_capacity, *therm_cond;
@@ -71,6 +75,7 @@ private:
     const VectorBase *friction_angle0, *friction_angle1;
     const VectorBase *dilation_angle0, *dilation_angle1;
 
+//    #pragma acc routine seq
     void plastic_weakening(int e, double pls,
                            double &cohesion, double &friction_angle,
                            double &dilation_angle, double &hardening) const;
