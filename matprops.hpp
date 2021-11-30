@@ -28,13 +28,16 @@ public:
     const int rheol_type;
     const int nmat;
 
+    #pragma acc routine seq
     double bulkm(int e) const;
     double shearm(int e) const;
     double visc(int e) const;
 
     #pragma acc routine seq
     double rho(int e) const;
+    #pragma acc routine seq
     double cp(int e) const;
+    #pragma acc routine seq
     double k(int e) const;
 
     void plastic_props(int e, double pls,
@@ -67,9 +70,10 @@ private:
     const int_vec2D &elemmarkers;
 
     VectorBase rho0, alpha;
-    const VectorBase *bulk_modulus, *shear_modulus;
+    VectorBase bulk_modulus;
+    const VectorBase *shear_modulus;
     const VectorBase *visc_exponent, *visc_coefficient, *visc_activation_energy;
-    const VectorBase *heat_capacity, *therm_cond;
+    VectorBase heat_capacity, therm_cond;
     const VectorBase *pls0, *pls1;
     const VectorBase *cohesion0, *cohesion1;
     const VectorBase *friction_angle0, *friction_angle1;

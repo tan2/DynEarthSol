@@ -220,13 +220,13 @@ MatProps::MatProps(const Param& p, const Variables& var) :
 {
     rho0 = p.mat.rho0;
     alpha = p.mat.alpha;
-    bulk_modulus = &p.mat.bulk_modulus;
+    bulk_modulus = p.mat.bulk_modulus;
     shear_modulus = &p.mat.shear_modulus;
     visc_exponent = &p.mat.visc_exponent;
     visc_coefficient = &p.mat.visc_coefficient;
     visc_activation_energy = &p.mat.visc_activation_energy;
-    heat_capacity = &p.mat.heat_capacity;
-    therm_cond = &p.mat.therm_cond;
+    heat_capacity = p.mat.heat_capacity;
+    therm_cond = p.mat.therm_cond;
     pls0 = &p.mat.pls0;
     pls1 = &p.mat.pls1;
     cohesion0 = &p.mat.cohesion0;
@@ -242,13 +242,13 @@ MatProps::~MatProps()
 {
 //    delete rho0;
 //    delete alpha;
-    delete bulk_modulus;
+//    delete bulk_modulus;
     delete shear_modulus;
     delete visc_exponent;
     delete visc_coefficient;
     delete visc_activation_energy;
-    delete heat_capacity;
-    delete therm_cond;
+//    delete heat_capacity;
+//    delete therm_cond;
     delete pls0;
     delete pls1;
     delete cohesion0;
@@ -264,9 +264,10 @@ MatProps::~MatProps()
 }
 
 
+#pragma acc routine seq
 double MatProps::bulkm(int e) const
 {
-    return harmonic_mean(*bulk_modulus, elemmarkers[e]);
+    return harmonic_mean(bulk_modulus, elemmarkers[e]);
 }
 
 
@@ -399,15 +400,17 @@ double MatProps::rho(int e) const
 }
 
 
+#pragma acc routine seq
 double MatProps::cp(int e) const
 {
-    return arithmetic_mean(*heat_capacity, elemmarkers[e]);
+    return arithmetic_mean(heat_capacity, elemmarkers[e]);
 }
 
 
+#pragma acc routine seq
 double MatProps::k(int e) const
 {
-    return arithmetic_mean(*therm_cond, elemmarkers[e]);
+    return arithmetic_mean(therm_cond, elemmarkers[e]);
 }
 
 

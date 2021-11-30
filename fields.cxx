@@ -136,7 +136,7 @@ void update_temperature(const Param &param, const Variables &var,
 
     #pragma omp parallel for default(none)      \
         shared(var,temperature,tmp_result)
-//    #pragma acc kernels
+    #pragma acc kernels
     for (int e=0;e<var_nelem;e++) {
         // diffusion matrix
         double D[NODES_PER_ELEM][NODES_PER_ELEM];

@@ -487,6 +487,16 @@ void compute_mass(const Param &param, const Variables &var,
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
 
+    const bool is_quasi_static = param.control.is_quasi_static;
+    const bool has_thermal_diffusion = param.control.has_thermal_diffusion;
+    const int var_nelem = var.nelem;
+    const double_vec *var_volume = var.volume;
+    MatProps *var_mat = var.mat;
+
+#ifdef USE_NPROF
+    nvtxRangePushA("ACC 1");
+#endif
+
 #ifdef LLVM
     #pragma omp parallel for default(none)      \
         shared(var, param, pseudo_speed, tmp_result)
@@ -494,20 +504,28 @@ void compute_mass(const Param &param, const Variables &var,
     #pragma omp parallel for default(none)      \
         shared(var, param, tmp_result)
 #endif
-    for (int e=0;e<var.nelem;e++) {
-        double rho = (param.control.is_quasi_static) ?
-            (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
-            (*var.mat).rho(e);                                     // true density for dynamic sim
-        double m = rho * (*var.volume)[e] / NODES_PER_ELEM;
-        double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (*var.volume)[e] / NODES_PER_ELEM;
-        tmp_result[0][e] = (*var.volume)[e];
+    #pragma acc kernels
+    for (int e=0;e<var_nelem;e++) {
+        double rho = (is_quasi_static) ?
+            (*var_mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
+            (*var_mat).rho(e);                                     // true density for dynamic sim
+        double m = rho * (*var_volume)[e] / NODES_PER_ELEM;
+        double tm = (*var_mat).rho(e) * (*var_mat).cp(e) * (*var_volume)[e] / NODES_PER_ELEM;
+        tmp_result[0][e] = (*var_volume)[e];
         tmp_result[1][e] = m;
-        if (param.control.has_thermal_diffusion)
+        if (has_thermal_diffusion)
             tmp_result[2][e] = tm;
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+
     const int var_nnode = var.nnode;
     const int_vec2D *var_support = var.support;
-    const bool has_thermal_diffusion = param.control.has_thermal_diffusion;
+
+#ifdef USE_NPROF
+    nvtxRangePushA("ACC 2");
+#endif
 
     #pragma omp parallel for default(none)      \
         shared(param,var,volume_n,mass,tmass,tmp_result)
@@ -520,6 +538,10 @@ void compute_mass(const Param &param, const Variables &var,
                 tmass[n] += tmp_result[2][*e];
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
