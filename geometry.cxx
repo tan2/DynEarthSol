@@ -94,7 +94,6 @@ void compute_volume(const double **coord, double &volume)
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-#pragma acc kernels    
     const double *a = coord[0];
     const double *b = coord[1];
     const double *c = coord[2];
@@ -207,7 +206,7 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
 
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, edvoldt)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int e=0; e<var_nelem; ++e) {
         const int *conn = (*var_connectivity)[e];
         double dj = 0;
@@ -312,7 +311,7 @@ void NMD_stress(const Param& param, const Variables &var,
 
     #pragma omp parallel for default(none)      \
         shared(var,volume,tmp_result)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         const int *conn = (*var_connectivity)[e];
         double dp = (*var_dpressure)[e];
@@ -324,7 +323,7 @@ void NMD_stress(const Param& param, const Variables &var,
 
     #pragma omp parallel for default(none)      \
         shared(var,dp_nd,volume_n,tmp_result)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
             dp_nd[n] += tmp_result[*e];
@@ -350,7 +349,7 @@ void NMD_stress(const Param& param, const Variables &var,
      */
     #pragma omp parallel for default(none)      \
         shared(param, var, dp_nd, stress, mixed_factor)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int e=0; e<var_nelem; ++e) {
 
         double factor = mixed_factor->contains(e);
@@ -505,7 +504,7 @@ void compute_mass(const Param &param, const Variables &var,
     #pragma omp parallel for default(none)      \
         shared(var, param, tmp_result)
 #endif
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         double rho = (is_quasi_static) ?
             (*var_mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
@@ -530,7 +529,7 @@ void compute_mass(const Param &param, const Variables &var,
 
     #pragma omp parallel for default(none)      \
         shared(param,var,volume_n,mass,tmass,tmp_result)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
             volume_n[n] += tmp_result[0][*e];
@@ -562,7 +561,7 @@ void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shap
 
     #pragma omp parallel for default(none)      \
         shared(var, shpdx, shpdy, shpdz)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
 
         int n0 = (*var_connectivity)[e][0];

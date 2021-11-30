@@ -136,7 +136,7 @@ void update_temperature(const Param &param, const Variables &var,
 
     #pragma omp parallel for default(none)      \
         shared(var,temperature,tmp_result)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         // diffusion matrix
         double D[NODES_PER_ELEM][NODES_PER_ELEM];
@@ -338,7 +338,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
 #endif
-        #pragma acc kernels
+        #pragma acc parallel loop
         for (int i=0; i<bound; ++i) {
             if (std::fabs(v[i]) > small_vel) {
                 ff[i] -= damping_factor * std::copysign(ff[i], v[i]);
@@ -349,7 +349,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         // damping prop. to force
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
-        #pragma acc kernels
+        #pragma acc parallel loop
         for (int i=0; i<bound; ++i) {
             ff[i] -= damping_factor * ff[i];
         }
@@ -359,7 +359,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         // weakly acclerating when force and velocity are anti-parallel
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
-        #pragma acc kernels
+        #pragma acc parallel loop
         for (int i=0; i<bound; ++i) {
             if ((ff[i]<0) == (v[i]<0)) {
                 // strong damping
@@ -442,7 +442,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
 
     #pragma omp parallel for default(none)      \
         shared(var,param,tmp_result)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
 
         const int *conn = (*var_connectivity)[e];
@@ -483,7 +483,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
 
     #pragma omp parallel for default(none)      \
         shared(var,force,tmp_result)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         double *f = force[n];
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
@@ -527,7 +527,7 @@ void update_velocity(const Variables& var, array_t& vel)
 
     #pragma omp parallel for default(none) \
         shared(var, m, f, v)
-    #pragma acc kernels
+    #pragma acc parallel loop
     for (int i=0; i<var_nnode*NDIMS; ++i) {
         int n = i / NDIMS;
         v[i] += var_dt * f[i] / m[n];
