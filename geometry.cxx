@@ -152,7 +152,7 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
      */
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
-    std::fill_n(dvoldt.begin(), var.nnode, 0);
+//    std::fill_n(dvoldt.begin(), var.nnode, 0);
 
     const int var_nelem = var.nelem;
     const conn_t *var_connectivity = var.connectivity;
@@ -177,8 +177,9 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
         shared(var,dvoldt,tmp_result,volume_n)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
+        dvoldt[n] = 0.;
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
-	    dvoldt[n] += tmp_result[*e];
+	        dvoldt[n] += tmp_result[*e];
         dvoldt[n] /= volume_n[n];
     }
 
