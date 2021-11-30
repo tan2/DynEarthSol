@@ -726,6 +726,9 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 
 void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     // TODO: add general stress (Neumann) bcs
 
     if (param.control.gravity == 0) return;
@@ -796,6 +799,9 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             force[n][NDIMS-1] -= param.bc.elastic_foundation_constant * ((*var.coord)[n][NDIMS-1] - (*var.coord0)[n][NDIMS-1]);
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -803,6 +809,9 @@ namespace {
 
     void simple_diffusion(const Variables& var, double_vec& dh)
     {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
         /* Diffusing surface topography to simulate the effect of erosion and
          * sedimentation.
          */
@@ -934,6 +943,9 @@ namespace {
             }
 #endif
         }
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
     }
 
 
@@ -964,6 +976,9 @@ namespace {
 
     void get_surface_info(const Variables& var, \
         double_vec& top_base, double_vec& top_depth) {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
 
         const array_t& coord = *var.coord;
         const SurfaceInfo& surfinfo = var.surfinfo;
@@ -983,6 +998,9 @@ namespace {
             top_depth[i] = surfinfo.base_level - coord[top_nodes[i]][1];
             top_base[i] *= 0.5;
         }
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
     }
 
     void out_basin_info(const int_vec& if_land) {
@@ -1008,6 +1026,9 @@ namespace {
     void get_basin_info(const Variables& var, double_vec& top_depth, \
         std::vector<bool>& if_source, int_vec& if_land,\
         int_vec& starts, int_vec& ends, double_vec& dhacc_tmp, double_vec& dx) {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
 
         const array_t& coord = *var.coord;
         const SurfaceInfo& surfinfo = var.surfinfo;
@@ -1127,11 +1148,15 @@ namespace {
 
         if (abs(starts[1]-int(ntop)/2) >= int(ntop)/2)
             if_source[1] = false;
-
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
     }
 
     void simple_deposition(const Param& param,const Variables& var, double_vec& dh, double_vec& src_locs, double_vec& src_abj) {
-
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
 #ifdef THREED
         // not ready for 3D
         std::cout << "3D deposition of sediment processes is not ready yet.";
@@ -1358,9 +1383,15 @@ namespace {
         for (std::size_t i=0; i<ntop; i++)
             // if below the base level
             if (top_depth[i] > 0.) dh[i] += ddh;
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
     }
 
     void simple_igneous(const Param& param,const Variables& var, double_vec& dh_oc, bool& has_partial_melting) {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
 #ifdef THREED
         // not ready for 3D
         std::cout << "3D deposition of igneous processes is not ready yet.";
@@ -1461,6 +1492,9 @@ namespace {
                         printf("%d x: %f dh_oc: %f (mm/yr) depth: %f\n",i, coord[top_nodes[i]][0],coef, melting_depth[i]);
                     }
             }
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
     }
 }
 
@@ -1468,6 +1502,9 @@ namespace {
 void surface_plstrain_diffusion(const Param &param, \
     const Variables& var, double_vec& plstrain)
 {
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
     double half_life = 1.e2 * YEAR2SEC;
     double lambha = 0.69314718056 / half_life; // ln2
     #pragma omp parallel for default(none)      \
@@ -1479,6 +1516,9 @@ void surface_plstrain_diffusion(const Param &param, \
         if (mat != param.mat.mattype_oceanic_crust)
             plstrain[*e] -= plstrain[*e] * lambha * var.dt;
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 void correct_surface_element(const Variables& var, \
