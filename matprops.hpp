@@ -30,7 +30,9 @@ public:
 
     #pragma acc routine seq
     double bulkm(int e) const;
+    #pragma acc routine seq
     double shearm(int e) const;
+    #pragma acc routine seq
     double visc(int e) const;
 
     #pragma acc routine seq
@@ -40,6 +42,7 @@ public:
     #pragma acc routine seq
     double k(int e) const;
 
+    #pragma acc routine seq
     void plastic_props(int e, double pls,
                        double& amc, double& anphi, double& anpsi,
                        double& hardn, double& ten_max) const;
@@ -70,16 +73,15 @@ private:
     const int_vec2D &elemmarkers;
 
     VectorBase rho0, alpha;
-    VectorBase bulk_modulus;
-    const VectorBase *shear_modulus;
-    const VectorBase *visc_exponent, *visc_coefficient, *visc_activation_energy;
+    VectorBase bulk_modulus, shear_modulus;
+    VectorBase visc_exponent, visc_coefficient, visc_activation_energy;
     VectorBase heat_capacity, therm_cond;
-    const VectorBase *pls0, *pls1;
-    const VectorBase *cohesion0, *cohesion1;
-    const VectorBase *friction_angle0, *friction_angle1;
-    const VectorBase *dilation_angle0, *dilation_angle1;
+    VectorBase pls0, pls1;
+    VectorBase cohesion0, cohesion1;
+    VectorBase friction_angle0, friction_angle1;
+    VectorBase dilation_angle0, dilation_angle1;
 
-//    #pragma acc routine seq
+    #pragma acc routine seq
     void plastic_weakening(int e, double pls,
                            double &cohesion, double &friction_angle,
                            double &dilation_angle, double &hardening) const;

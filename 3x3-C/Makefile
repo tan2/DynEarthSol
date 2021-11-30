@@ -1,7 +1,9 @@
+CUDA_DIR = $(CUDA_HOME)
+
 # C compiler
 # ----------
-CC            = g++
-CFLAGS        = -Wall -O3 -ffast-math #-funsafe-loop-optimizations
+CC            = nvc++
+CFLAGS        = -Wall -O3 -mno-fma -Minfo=mp,accel -I$(CUDA_DIR)/include -acc=gpu -gpu=managed,nofma -Mcuda #-ffast-math #-funsafe-loop-optimizations
 
 # Archiver
 AR            = ar
