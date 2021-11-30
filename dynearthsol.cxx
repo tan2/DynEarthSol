@@ -36,6 +36,7 @@ void init_var(const Param& param, Variables& var)
     var.time = 0;
     var.steps = 0;
 
+    var.bnormals = new array_t(nbdrytypes);
     var.vbc_period_ratio_x = new double_vec(2,1.);
 
     if (param.control.characteristic_speed == 0)
@@ -101,7 +102,7 @@ void init(const Param& param, Variables& var)
     compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
-    create_boundary_normals(var, var.bnormals, var.edge_vectors);
+    create_boundary_normals(var, *var.bnormals, var.edge_vectors);
     apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
 
     // temperature should be init'd before stress and strain
@@ -205,7 +206,7 @@ void restart(const Param& param, Variables& var)
 
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
-    create_boundary_normals(var, var.bnormals, var.edge_vectors);
+    create_boundary_normals(var, *var.bnormals, var.edge_vectors);
     apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
     // Initializing field variables
     {

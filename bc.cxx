@@ -93,7 +93,7 @@ double find_max_vbc(const BC &bc, const double_vec &vbc_period_ratio_x)
 }
 
 
-void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][NDIMS],
+void create_boundary_normals(const Variables &var, array_t &bnormals,
                              std::map<std::pair<int,int>, double*>  &edge_vectors)
 {
     /* This subroutine finds the outward normal unit vectors of boundaries.
@@ -163,16 +163,16 @@ void create_boundary_normals(const Variables &var, double bnormals[nbdrytypes][N
                                             // whole-application lifetime, no need to delete manually
 #ifdef THREED
             // quick path: both walls are vertical
-            if (std::abs(var.bnormals[i][NDIMS-1]) < eps &&
-                std::abs(var.bnormals[j][NDIMS-1]) < eps) {
+            if (std::abs((*var.bnormals)[i][NDIMS-1]) < eps &&
+                std::abs((*var.bnormals)[j][NDIMS-1]) < eps) {
                 s[0] = s[1] = 0;
                 s[NDIMS-1] = 1;
             }
             else {
                 // cross product of 2 normal vectors
-                s[0] = var.bnormals[i][1]*var.bnormals[j][2] - var.bnormals[i][2]*var.bnormals[j][1];
-                s[1] = var.bnormals[i][2]*var.bnormals[j][0] - var.bnormals[i][0]*var.bnormals[j][2];
-                s[2] = var.bnormals[i][0]*var.bnormals[j][1] - var.bnormals[i][1]*var.bnormals[j][0];
+                s[0] = (*var.bnormals)[i][1]*(*var.bnormals)[j][2] - (*var.bnormals)[i][2]*(*var.bnormals)[j][1];
+                s[1] = (*var.bnormals)[i][2]*(*var.bnormals)[j][0] - (*var.bnormals)[i][0]*(*var.bnormals)[j][2];
+                s[2] = (*var.bnormals)[i][0]*(*var.bnormals)[j][1] - (*var.bnormals)[i][1]*(*var.bnormals)[j][0];
             }
 #else
             // 2D
@@ -338,12 +338,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
     const int nn = var.nnode;
     const uint *bcf = var.bcflag->data();
     const double *cor = var.coord->data();
-    double bn[nbdrytypes][NDIMS];
-            for (int i=0; i<nbdrytypes; ++i) {
-                    for (int j=0; j<NDIMS; ++j) {
-                        bn[i][j] = var.bnormals[i][j];
-                    }
-            }
+    const array_t *var_bnormals = var.bnormals;
     const int *vbct = var.vbc_types;
     const double *vbcv = var.vbc_values;
     const std::map<std::pair<int,int>, double*>  *edgevec = &(var.edge_vectors);
@@ -585,7 +580,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
         //
         for (int ib=iboundn0; ib<=iboundn3; ib++) {
             const double eps = 1e-15;
-            const double *n = bn[ib]; // unit normal vector
+            const double *n = (*var_bnormals)[ib]; // unit normal vector
 
             if (flag & (1 << ib)) {
                 double fac = 0;

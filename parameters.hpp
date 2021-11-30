@@ -363,7 +363,7 @@ struct Variables {
     uint_vec *bcflag;
     int_vec bnodes[nbdrytypes];
     std::vector< std::pair<int,int> > bfacets[nbdrytypes];
-    double bnormals[nbdrytypes][NDIMS];
+    array_t *bnormals;
     int vbc_types[nbdrytypes];
     double vbc_values[nbdrytypes];
     std::map<std::pair<int,int>, double*> edge_vectors;

@@ -621,7 +621,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
                                     const int_vec (&bnodes)[nbdrytypes],
                                     const int_vec (&bdry_polygons)[nbdrytypes],
                                     const int_vec (&bdrynode_deleting)[nbdrytypes],
-                                    const double (&bnormals)[nbdrytypes][NDIMS],
+                                    const array_t &bnormals,
                                     int &npoints,
                                     int &nseg, double *points,
                                     int *segment, int *segflag,
@@ -851,7 +851,7 @@ void delete_points_and_merge_facets(const int_vec &points_to_delete,
 void delete_points_on_boundary(int_vec &points_to_delete,
                                const int_vec (&bnodes)[nbdrytypes],
                                const int_vec (&bdry_polygons)[nbdrytypes],
-                               const double (&bnormals)[nbdrytypes][NDIMS],
+                               const array_t &bnormals,
                                int &npoints,
                                int &nseg, double *points,
                                int *segment, int *segflag,
@@ -1081,7 +1081,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     case 10:
     case 11:
         // deleting points, some of them might be on the boundary
-        delete_points_on_boundary(points_to_delete, old_bnodes, bdry_polygons, var.bnormals,
+        delete_points_on_boundary(points_to_delete, old_bnodes, bdry_polygons, *var.bnormals,
                                   old_nnode, old_nseg,
                                   qcoord, qsegment, qsegflag, old_bcflag, min_dist);
         break;
