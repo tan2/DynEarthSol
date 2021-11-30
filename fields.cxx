@@ -384,6 +384,33 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
 }
 
 
+#pragma acc routine seq
+static double rho(const conn_t &var_connectivity, \
+    const double_vec &var_temperature, const int_vec2D &var_elemmarkers, \
+    const double_vec &rho0, const double_vec &alpha, int nmat,  int e)
+{
+    const double celsius0 = 273;
+
+    // average temperature of this element
+    double T = 0;
+    const int *conn = var_connectivity[e];
+    for (int i=0; i<NODES_PER_ELEM; ++i) {
+        T += var_temperature[conn[i]];
+    }
+    T /= NODES_PER_ELEM;
+
+    double TinCelsius = T - celsius0;
+    double result = 0;
+    int n = 0;
+    for (int m=0; m<nmat; m++) {
+        // TODO: compressibility
+        result += rho0[m] * (1 - alpha[m] * TinCelsius) * var_elemmarkers[e][m];
+        n += var_elemmarkers[e][m];
+    }
+    return result / n;
+}
+
+
 void update_force(const Param& param, const Variables& var, array_t& force, double_vec2D& tmp_result)
 {
 #ifdef USE_NPROF
@@ -394,6 +421,8 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
 
     const int var_nelem = var.nelem;
     const conn_t *var_connectivity = var.connectivity;
+    const double_vec *var_temperature = var.temperature;
+    const int_vec2D *var_elemmarkers = var.elemmarkers;
     const shapefn *var_shpdx = var.shpdx;
 #ifdef THREED
     const shapefn *var_shpdy = var.shpdy;
@@ -403,6 +432,9 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
     double_vec *var_volume = var.volume;
     const MatProps *var_mat = var.mat;
     const double gravity = param.control.gravity;
+    const int nmat = param.mat.nmat;
+    const double_vec *rho0 = &param.mat.rho0;
+    const double_vec *alpha = &param.mat.alpha;
 
 #ifdef USE_NPROF
     nvtxRangePushA("ACC 1");
@@ -410,7 +442,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
 
     #pragma omp parallel for default(none)      \
         shared(var,param,tmp_result)
-//    #pragma acc kernels
+    #pragma acc kernels
     for (int e=0;e<var_nelem;e++) {
 
         const int *conn = (*var_connectivity)[e];
@@ -424,7 +456,9 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
 
         double buoy = 0;
         if (gravity != 0)
-            buoy = var_mat->rho(e) * gravity / NODES_PER_ELEM;
+            buoy = rho(*var_connectivity, *var_temperature, \
+                *var_elemmarkers,*rho0,*alpha,nmat,e) * \ 
+                gravity / NODES_PER_ELEM;
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
