@@ -122,19 +122,32 @@ void update_temperature(const Param &param, const Variables &var,
 #endif
     tdot.assign(var.nnode, 0);
 
+    const int var_nelem=var.nelem;
+    const conn_t *var_connectivity=var.connectivity;
+    const shapefn *var_shpdx=var.shpdx;
+    const shapefn *var_shpdz=var.shpdz; 
+    const shapefn *var_shpdy=var.shpdy;
+    double_vec *var_volume = var.volume;
+    MatProps *var_mat = var.mat;
+
+#ifdef USE_NPROF
+    nvtxRangePushA("ACC 1");
+#endif
+
     #pragma omp parallel for default(none)      \
         shared(var,temperature,tmp_result)
-    for (int e=0;e<var.nelem;e++) {
+//    #pragma acc kernels
+    for (int e=0;e<var_nelem;e++) {
         // diffusion matrix
         double D[NODES_PER_ELEM][NODES_PER_ELEM];
 
-        const int *conn = (*var.connectivity)[e];
-        double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volume
-        const double *shpdx = (*var.shpdx)[e];
+        const int *conn = (*var_connectivity)[e];
+        double kv = var_mat->k(e) *  (*var_volume)[e]; // thermal conductivity * volume
+        const double *shpdx = (*var_shpdx)[e];
 #ifdef THREED
-        const double *shpdy = (*var.shpdy)[e];
+        const double *shpdy = (*var_shpdy)[e];
 #endif
-        const double *shpdz = (*var.shpdz)[e];
+        const double *shpdz = (*var_shpdz)[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             for (int j=0; j<NODES_PER_ELEM; ++j) {
 #ifdef THREED
@@ -156,13 +169,20 @@ void update_temperature(const Param &param, const Variables &var,
         }
     }
 
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+
     const int var_nnode = var.nnode;
     const int_vec2D *var_support = var.support;
-    const conn_t *var_connectivity = var.connectivity;
     const uint_vec *var_bcflag = var.bcflag;
     const double surface_temperature = param.bc.surface_temperature;
     const double_vec *var_tmass = var.tmass;
     const double var_dt = var.dt;
+
+#ifdef USE_NPROF
+    nvtxRangePushA("ACC 2");
+#endif
 
     #pragma omp parallel for default(none)      \
         shared(param,var,tdot,temperature,tmp_result)
@@ -185,6 +205,10 @@ void update_temperature(const Param &param, const Variables &var,
         else
             temperature[n] -= tdot[n] * var_dt / (*var_tmass)[n];
     }
+
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
@@ -367,22 +391,40 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
 #endif
     std::fill_n(force.data(), var.nnode*NDIMS, 0);
 
+
+    const int var_nelem = var.nelem;
+    const conn_t *var_connectivity = var.connectivity;
+    const shapefn *var_shpdx = var.shpdx;
+#ifdef THREED
+    const shapefn *var_shpdy = var.shpdy;
+#endif
+    const shapefn *var_shpdz = var.shpdz;
+    tensor_t *var_stress = var.stress;
+    double_vec *var_volume = var.volume;
+    const MatProps *var_mat = var.mat;
+    const double gravity = param.control.gravity;
+
+#ifdef USE_NPROF
+    nvtxRangePushA("ACC 1");
+#endif
+
     #pragma omp parallel for default(none)      \
         shared(var,param,tmp_result)
-    for (int e=0;e<var.nelem;e++) {
+//    #pragma acc kernels
+    for (int e=0;e<var_nelem;e++) {
 
-        const int *conn = (*var.connectivity)[e];
-        const double *shpdx = (*var.shpdx)[e];
+        const int *conn = (*var_connectivity)[e];
+        const double *shpdx = (*var_shpdx)[e];
 #ifdef THREED
-        const double *shpdy = (*var.shpdy)[e];
+        const double *shpdy = (*var_shpdy)[e];
 #endif
-        const double *shpdz = (*var.shpdz)[e];
-        double *s = (*var.stress)[e];
-        double vol = (*var.volume)[e];
+        const double *shpdz = (*var_shpdz)[e];
+        double *s = (*var_stress)[e];
+        double vol = (*var_volume)[e];
 
         double buoy = 0;
-        if (param.control.gravity != 0)
-            buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+        if (gravity != 0)
+            buoy = var_mat->rho(e) * gravity / NODES_PER_ELEM;
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
@@ -396,9 +438,16 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
         }
     }
 
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+
     const int var_nnode = var.nnode;
     const int_vec2D *var_support = var.support;
-    const conn_t *var_connectivity = var.connectivity;
+
+#ifdef USE_NPROF
+    nvtxRangePushA("ACC 2");
+#endif
 
     #pragma omp parallel for default(none)      \
         shared(var,force,tmp_result)
@@ -416,6 +465,9 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
             }
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 
     apply_stress_bcs(param, var, force);
 
