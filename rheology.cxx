@@ -519,7 +519,8 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    const int rheol_type = var.mat->rheol_type;
+//    const int rheol_type = var.mat->rheol_type;
+    const int rheol_type = param.mat.rheol_type;
 
     const int var_nelem = var.nelem;
     const double_vec *var_edvoldt = var.edvoldt;
