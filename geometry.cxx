@@ -390,7 +390,13 @@ double compute_dt(const Param& param, const Variables& var)
     const int nelem = var.nelem;
     const conn_t& connectivity = *var.connectivity;
     const array_t& coord = *var.coord;
-    const double_vec& volume = *var.volume;
+    const double_vec& volume = *var.volume;    
+
+    const MatProps *var_mat = var.mat;
+    const double var_mat_visc_min= var.mat->visc_min;
+    const double var_mat_therm_diff_max = var.mat->therm_diff_max; 
+    bool has_thermal_diffusion= param.control.has_thermal_diffusion;
+
 
     double dt_maxwell = std::numeric_limits<double>::max();
     double dt_diffusion = std::numeric_limits<double>::max();
@@ -399,9 +405,11 @@ double compute_dt(const Param& param, const Variables& var)
 #ifdef LLVM
     #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion)    \
         default(none) shared(param, var, nelem, connectivity, coord, volume)
+    #pragma acc parallel loop reduction(min:minl,dt_maxwell,dt_diffusion)
 #else
     #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion)    \
         default(none) shared(param,var, connectivity, coord, volume)
+    #pragma acc parallel loop reduction(min:minl, dt_maxwell, dt_diffusion)
 #endif
     for (int e=0; e<nelem; ++e) {
         int n0 = connectivity[e][0];
@@ -436,10 +444,10 @@ double compute_dt(const Param& param, const Variables& var)
         }
 #endif
         dt_maxwell = std::min(dt_maxwell,
-                              0.5 * var.mat->visc_min / (1e-40 + var.mat->shearm(e)));
-        if (param.control.has_thermal_diffusion)
+                              0.5 * var_mat_visc_min / (1e-40 + var_mat->shearm(e)));
+        if (has_thermal_diffusion)
             dt_diffusion = std::min(dt_diffusion,
-                                    0.5 * minh * minh / var.mat->therm_diff_max);
+                                    0.5 * minh * minh / var_mat_therm_diff_max);
         minl = std::min(minl, minh);
     }
 
