@@ -1625,6 +1625,12 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         std::exit(1);
     }
 #ifdef THREED
+/*
+    for (std::size_t i=0; i<ntop; ++i) {
+        int n = (*surfinfo.top_nodes)[i];
+        coord[n][NDIMS-1] += dh[i];
+    }
+*/
     // todo
 #else
     // go through all surface nodes and abject all surface node by dh
