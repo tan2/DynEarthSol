@@ -267,7 +267,7 @@ void NMD_stress(const Param& param, const Variables &var,
     // dp_nd is the pressure change, weighted by the element volume,
     // lumped onto the nodes.
     //
-    std::fill_n(dp_nd.begin(), var.nnode, 0);
+    // std::fill_n(dp_nd.begin(), var.nnode, 0);
 
 //    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
 /*
@@ -323,6 +323,7 @@ void NMD_stress(const Param& param, const Variables &var,
         shared(var,dp_nd,volume_n,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
+        dp_nd[n]=0;
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
             dp_nd[n] += tmp_result[*e];
         dp_nd[n] /= (*var_volume_n)[n];
