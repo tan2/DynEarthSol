@@ -18,6 +18,7 @@
 
 namespace {
 
+//#pragma acc routine seq
 void normal_vector_of_facet(int f, const int *conn, const array_t &coord,
                             double *normal, double &zcenter)
 {
@@ -746,35 +747,49 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
         const auto& bdry = var.bfacets[i];
         const auto& coord = *var.coord;
+
+        const int bound = static_cast<int>(bdry.size());
+        const conn_t *var_connectivity = var.connectivity;
+        const array_t *var_coord = var.coord;
+        const double var_compensation_pressure = var.compensation_pressure;
+        const MatProps *var_mat = var.mat;
+        const bool has_winkler_foundation = param.bc.has_winkler_foundation;
+        const double winkler_delta_rho = param.bc.winkler_delta_rho;
+        const double gravity = param.control.gravity;
+        const double zlength = param.mesh.zlength;
+        const double has_water_loading = param.bc.has_water_loading;
+        const double surf_base_level = param.control.surf_base_level;
+
         // loops over all bdry facets
-        for (int n=0; n<static_cast<int>(bdry.size()); ++n) {
+//        #pragma acc parallel loop
+        for (int n=0; n<bound; ++n) {
             // this facet belongs to element e
             int e = bdry[n].first;
             // this facet is the f-th facet of e
             int f = bdry[n].second;
-            const int *conn = (*var.connectivity)[e];
+            const int *conn = (*var_connectivity)[e];
 
             // the outward-normal vector
             double normal[NDIMS];
             // the z-coordinate of the facet center
             double zcenter;
 
-            normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
+            normal_vector_of_facet(f, conn, *var_coord, normal, zcenter);
 
             double p;
-            if (i==iboundz0 && param.bc.has_winkler_foundation) {
+            if (i==iboundz0 && has_winkler_foundation) {
                 // Winkler foundation for the bottom boundary
-                p = var.compensation_pressure -
-                    (var.mat->rho(e) + param.bc.winkler_delta_rho) *
-                    param.control.gravity * (zcenter + param.mesh.zlength);
+                p = var_compensation_pressure -
+                    (var_mat->rho(e) + winkler_delta_rho) *
+                    gravity * (zcenter + zlength);
             }
-            else if (i==iboundz1 && param.bc.has_water_loading) {
+            else if (i==iboundz1 && has_water_loading) {
                 // hydrostatic water loading for the surface boundary
                 p = 0;
-                if (zcenter < param.control.surf_base_level) {
+                if (zcenter < surf_base_level) {
                     // below sea level
                     const double sea_water_density = 1030;
-                    p = sea_water_density * param.control.gravity * (param.control.surf_base_level - zcenter);
+                    p = sea_water_density * gravity * (surf_base_level - zcenter);
                 }
             }
             else {
