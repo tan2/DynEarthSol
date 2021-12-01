@@ -9,12 +9,12 @@
 
 namespace {
 
-//    #pragma acc routine seq
+    #pragma acc routine seq
     double get_prem_pressure(double depth)
     {
         // reference pressure profile from isotropic PREM model
         const int nlayers = 46;
-        const static double
+        const double
             ref_depth[] = { 0e3,    3e3,    15e3,   24.4e3, 40e3,
                             60e3,   80e3,   115e3,  150e3,  185e3,
                             220e3,  265e3,  310e3,  355e3,  400e3,
@@ -27,7 +27,7 @@ namespace {
                             2891e3 };
 
         // pressure in PREM table is given in kilobar, converted to 10^8 Pa
-        const static double
+        const double
             ref_pressure[] = { 0e8,      0.3e8,    3.3e8,    6.0e8,    11.2e8,
                                17.8e8,   24.5e8,   36.1e8,   47.8e8,   59.4e8,
                                71.1e8,   86.4e8,   102.0e8,  117.7e8,  133.5e8,
@@ -55,13 +55,13 @@ namespace {
     }
 
 
-//    #pragma acc routine seq
+    #pragma acc routine seq
     double get_prem_pressure_modified(double depth)
     {
         // reference pressure profile from isotropic PREM model, modified for
         // average continental crust (density 2800 kg/m^3, thickness 24.4 km)
         const int nlayers = 46;
-        const static double
+        const double
             ref_depth[] = { 0e3,    3e3,    15e3,   24.4e3, 40e3,
                             60e3,   80e3,   115e3,  150e3,  185e3,
                             220e3,  265e3,  310e3,  355e3,  400e3,
@@ -74,7 +74,7 @@ namespace {
                             2891e3 };
 
         // pressure in PREM table is given in kilobar, converted to 10^8 Pa
-        const static double
+        const double
             ref_pressure[] = { 0e8,      0.82e8,    4.1e8,    6.7e8,    11.2e8,
                                17.8e8,   24.5e8,   36.1e8,   47.8e8,   59.4e8,
                                71.1e8,   86.4e8,   102.0e8,  117.7e8,  133.5e8,

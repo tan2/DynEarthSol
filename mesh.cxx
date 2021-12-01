@@ -1629,6 +1629,7 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
     int_vec top_nodes(ntop,0);
     double_vec top_x(ntop,0.);
 
+    surfinfo.ntop = ntop;
     for (size_t i=0;i<ntop;i++)
         top_x[i] = (*var.coord)[top_tmp[i]][0];
 
@@ -1748,6 +1749,7 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
         top_nodes[i] = top_tmp[top_ind[i]];
     surfinfo.top_nodes =  new int_vec(top_nodes.begin(),top_nodes.end());
 
+    surfinfo.ntop = ntop;
     surfinfo.dh_max = 0;
     surfinfo.base_level = param.control.surf_base_level;
     surfinfo.surf_diff = param.control.surface_diffusivity;
