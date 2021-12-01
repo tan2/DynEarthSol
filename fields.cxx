@@ -301,12 +301,11 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     nvtxRangePushA(__FUNCTION__);
 #endif
     // flatten 2d arrays to simplify indexing
-    double* ff = force.data();
-    const double* v = var.vel->data();
     const double small_vel = 1e-13;
-
-    const int bound = var.nnode*NDIMS;
     const double damping_factor = param.control.damping_factor;
+
+    const int var_nnode = var.nnode;
+    const array_t *var_vel = var.vel;
 
     switch (param.control.damping_option) {
     case 0:
@@ -323,10 +322,11 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
             shared(var, param, ff, v)
 #endif
         #pragma acc parallel loop
-        for (int i=0; i<bound; ++i) {
-            if (std::fabs(v[i]) > small_vel) {
-                ff[i] -= damping_factor * std::copysign(ff[i], v[i]);
-            }
+        for (int i=0; i<var_nnode; ++i) {
+            for (int j=0;j<NDIMS;j++)
+                if (std::fabs((*var_vel)[i][j]) > small_vel) {
+                    force[i][j] -= damping_factor * std::copysign(force[i][j], (*var_vel)[i][j]);
+                }
         }
         break;
     case 2:
@@ -334,8 +334,9 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
         #pragma acc parallel loop
-        for (int i=0; i<bound; ++i) {
-            ff[i] -= damping_factor * ff[i];
+        for (int i=0; i<var_nnode; ++i) {
+            for (int j=0;j<NDIMS;j++)
+                force[i][j] -= damping_factor * force[i][j];
         }
         break;
     case 3:
@@ -344,14 +345,16 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         #pragma omp parallel for default(none)          \
             shared(var, param, ff, v)
         #pragma acc parallel loop
-        for (int i=0; i<bound; ++i) {
-            if ((ff[i]<0) == (v[i]<0)) {
-                // strong damping
-                ff[i] -= damping_factor * ff[i], v[i];
-            }
-            else {
-                // weak acceleration
-                ff[i] += (1 - damping_factor) * ff[i];
+        for (int i=0; i<var_nnode; ++i) {
+            for (int j=0;j<NDIMS;j++) {
+                if ((force[i][j]<0) == ((*var_vel)[i][j]<0)) {
+                    // strong damping
+                    force[i][j] -= damping_factor * force[i][j], (*var_vel)[i][j];
+                }
+                else {
+                    // weak acceleration
+                    force[i][j] += (1 - damping_factor) * force[i][j];
+                }
             }
         }
         break;
