@@ -400,7 +400,6 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    std::fill_n(force.data(), var.nnode*NDIMS, 0);
 
     const int var_nelem = var.nelem;
     const conn_t *var_connectivity = var.connectivity;
@@ -454,6 +453,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
         shared(var,force,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
+        std::fill_n(force[n],NDIMS,0); 
         double *f = force[n];
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
             const int *conn = (*var_connectivity)[*e];
