@@ -1624,10 +1624,10 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    int ntop = surfinfo.top_nodes->size();
-    double_vec dh(ntop,0.), dh_oc(ntop,0.), src_locs(2,0.), src_abj(2,0.);
     const int slow_updates_interval = 10;
     bool has_partial_melting = false;
+    const int ntop = var.surfinfo.ntop;
+    double_vec dh(ntop,0.), dh_oc(ntop,0.), src_locs(2,0.), src_abj(2,0.);
     
     switch (param.control.surface_process_option) {
     case 0:
