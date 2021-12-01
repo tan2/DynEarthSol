@@ -120,7 +120,7 @@ void update_temperature(const Param &param, const Variables &var,
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    tdot.assign(var.nnode, 0);
+    
 
     const int var_nelem=var.nelem;
     const conn_t *var_connectivity=var.connectivity;
@@ -171,11 +171,11 @@ void update_temperature(const Param &param, const Variables &var,
         }
     }
 
-
     #pragma omp parallel for default(none)      \
         shared(param,var,tdot,temperature,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
+        tdot[n]=0;
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
             const int *conn = (*var_connectivity)[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
