@@ -343,7 +343,6 @@ void NMD_stress(const Param& param, const Variables &var,
         mixed_factor = new Const_factor();
     }
 
-
     /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
      */
     #pragma omp parallel for default(none)      \
