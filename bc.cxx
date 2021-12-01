@@ -844,20 +844,24 @@ namespace {
         double_vec total_dx(var.nnode, 0);
         double_vec total_slope(var.nnode, 0);
 
+        const conn_t *var_connectivity = var.connectivity;
+        const size_t tsize = top.size();
+
         // loops over all top facets
 #ifdef THREED
-        for (std::size_t i=0; i<top.size(); ++i) {
+        #pragma acc parallel loop
+        for (std::size_t i=0; i<tsize; ++i) {
             // this facet belongs to element e
             int e = top[i].first;
             // this facet is the f-th facet of e
             int f = top[i].second;
 
-            const int *conn = (*var.connectivity)[e];
-            int n0 = (*var.connectivity)[e][NODE_OF_FACET[f][0]];
-            int n1 = (*var.connectivity)[e][NODE_OF_FACET[f][1]];
+            const int *conn = (*var_connectivity)[e];
+            int n0 = (*var_connectivity)[e][NODE_OF_FACET[f][0]];
+            int n1 = (*var_connectivity)[e][NODE_OF_FACET[f][1]];
 
 //#ifdef THREED
-            int n2 = (*var.connectivity)[e][NODE_OF_FACET[f][2]];
+            int n2 = (*var_connectivity)[e][NODE_OF_FACET[f][2]];
 
             double projected_area;
             {
@@ -892,8 +896,11 @@ namespace {
                 projected_area = 0.5 * normal[2];
             }
 
+//            #pragma acc atomic update TODO
             total_dx[n0] += projected_area;
+//            #pragma acc atomic update TODO
             total_dx[n1] += projected_area;
+//            #pragma acc atomic update TODO
             total_dx[n2] += projected_area;
 
             double shp2dx[NODES_PER_FACET], shp2dy[NODES_PER_FACET];
@@ -919,6 +926,7 @@ namespace {
                 for (int k=0; k<NODES_PER_FACET; k++)
                     slope += D[j][k] * coord[n[k]][2];
 
+//                #pragma acc atomic update TODO
                 total_slope[n[j]] += slope * projected_area;
             }
 
@@ -944,10 +952,14 @@ namespace {
 #endif
         }
 
+        const double var_dt = var.dt;
+#ifdef THREED
+        #pragma acc parallel loop
+#endif
         for (std::size_t i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
-            double conv =  surfinfo.surf_diff * var.dt * total_slope[n] / total_dx[n];
+            double conv =  surfinfo.surf_diff * var_dt * total_slope[n] / total_dx[n];
 #ifdef THREED
             dh[i] -= conv;
 #else
