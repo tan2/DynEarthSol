@@ -509,18 +509,23 @@ void update_coordinate(const Variables& var, array_t& coord)
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    double* x = var.coord->data();
-    const double* v = var.vel->data();
+    // double* x = var.coord->data();
+    // const double* v = var.vel->data();
+    array_t *var_coord=var.coord;
+    const array_t *var_vel=var.vel;
 
     // for gpu parallelization dt and bound need to be sent to 
-    const int bound=var.nnode*NDIMS;
+    const int var_nnode=var.nnode;
     const double var_dt=var.dt;
 
     #pragma omp parallel for default(none) \
         shared(var, x, v)
-    #pragma acc parallel loop
-    for (int i=0; i<bound; ++i) {
-        x[i] += v[i] * var_dt;
+    #pragma acc parallel loop 
+    for (int i=0; i<var_nnode; ++i) {
+        for (int j=0 ; j<NDIMS; ++j){
+            (*var_coord)[i][j] += (*var_vel)[i][j] * var_dt;
+        }
+        
     }
 #ifdef USE_NPROF
     nvtxRangePop();
