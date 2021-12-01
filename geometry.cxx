@@ -226,40 +226,6 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
     // std::cout << "\n";
 }
 
-namespace {
-    class Factor
-    {
-    public:
-        virtual ~Factor() {};
-        virtual double contains(const int e) const = 0;
-    };
-
-    class Const_factor : public Factor
-    {
-    public:
-        double contains(const int e) const {return 1.;}
-    };
-
-    class Visc_factor : public Factor
-    {
-    private:
-        const double ref_visc;
-        const double_vec &viscosity;
-
-    public:
-        Visc_factor(const double_vec &viscosity_, const double ref_visc_) :
-            viscosity(viscosity_), ref_visc(ref_visc_)
-        {}
-        double contains(const int e) const
-        {
-            if (viscosity[e] < ref_visc)
-                return ( 0. );
-            else
-                return std::min(viscosity[e] / (ref_visc * 10.), 1.);
-        }
-    };
-}
-
 
 void NMD_stress(const Param& param, const Variables &var,
     double_vec &dp_nd, tensor_t& stress, double_vec &tmp_result)
@@ -269,8 +235,6 @@ void NMD_stress(const Param& param, const Variables &var,
 #endif
     // dp_nd is the pressure change, weighted by the element volume,
     // lumped onto the nodes.
-    //
-    // std::fill_n(dp_nd.begin(), var.nnode, 0);
 
 //    double **centroid = elem_center(*var.coord, *var.connectivity); // centroid of elements
 /*
@@ -326,26 +290,17 @@ void NMD_stress(const Param& param, const Variables &var,
         shared(var,dp_nd,volume_n,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
-        dp_nd[n]=0;
+        dp_nd[n] = 0;
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
             dp_nd[n] += tmp_result[*e];
         dp_nd[n] /= (*var_volume_n)[n];
     }
 //    }
 
-    Factor *mixed_factor;
 
-    switch (param.mat.rheol_type) {
-    case MatProps::rh_viscous:
-    case MatProps::rh_maxwell:
-    case MatProps::rh_evp:
-        mixed_factor = new Visc_factor(*var.viscosity,
-            param.control.mixed_stress_reference_viscosity);
-        break;
-    default:
-        mixed_factor = new Const_factor();
-    }
-
+    const int rheol_type = param.mat.rheol_type;
+    const double_vec& viscosity = *var.viscosity;
+    const double ref_visc = param.control.mixed_stress_reference_viscosity;
 
     /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
      */
@@ -354,9 +309,19 @@ void NMD_stress(const Param& param, const Variables &var,
     #pragma acc parallel loop
     for (int e=0; e<var_nelem; ++e) {
 
-        double factor = mixed_factor->contains(e);
-        if (factor == 0.)
-                continue;
+        double factor;
+        switch (rheol_type) {
+        case MatProps::rh_viscous:
+        case MatProps::rh_maxwell:
+        case MatProps::rh_evp:
+            if (viscosity[e] < ref_visc)
+                factor = 0.;
+            else
+                factor = std::min(viscosity[e] / (ref_visc * 10.), 1.);
+            break;
+        default:
+            factor = 1;
+        }
 
         const int *conn = (*var_connectivity)[e];
         double dp = 0;
@@ -373,7 +338,6 @@ void NMD_stress(const Param& param, const Variables &var,
             s[i] += ddp;
     }
 
-    delete mixed_factor;
 //    delete [] centroid[0];
 //    delete [] centroid;
 #ifdef USE_NPROF
