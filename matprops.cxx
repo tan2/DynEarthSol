@@ -9,6 +9,7 @@
 
 namespace {
 
+//    #pragma acc routine seq
     double get_prem_pressure(double depth)
     {
         // reference pressure profile from isotropic PREM model
@@ -54,6 +55,7 @@ namespace {
     }
 
 
+//    #pragma acc routine seq
     double get_prem_pressure_modified(double depth)
     {
         // reference pressure profile from isotropic PREM model, modified for
