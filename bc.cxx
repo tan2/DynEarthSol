@@ -799,9 +799,9 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
             // lithostatc support - Archimed force (normal to the surface)
             for (int j=0; j<NODES_PER_FACET; ++j) {
-                int n = conn[NODE_OF_FACET[f][j]];
+                int nn = conn[NODE_OF_FACET[f][j]];
                 for (int d=0; d<NDIMS; ++d) {
-                    force[n][d] -= p * normal[d] / NODES_PER_FACET;
+                    force[nn][d] -= p * normal[d] / NODES_PER_FACET;
                 }
             }
         }
