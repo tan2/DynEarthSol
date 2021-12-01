@@ -486,21 +486,18 @@ void update_velocity(const Variables& var, array_t& vel)
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    const double* m = &(*var.mass)[0];
-    // flatten 2d arrays to simplify indexing
-    const double* f = var.force->data();
-    double* v = vel.data();
-
     const int var_nnode = var.nnode;
     const double var_dt = var.dt;
+    const array_t *var_force = var.force;
+    const double_vec *var_mass = var.mass;
 
     #pragma omp parallel for default(none) \
         shared(var, m, f, v)
     #pragma acc parallel loop
-    for (int i=0; i<var_nnode*NDIMS; ++i) {
-        int n = i / NDIMS;
-        v[i] += var_dt * f[i] / m[n];
-    }
+    for (int i=0; i<var_nnode; ++i)
+        for (int j=0;j<NDIMS;j++)
+            vel[i][j] += var_dt * (*var_force)[i][j] / (*var_mass)[i];
+
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
