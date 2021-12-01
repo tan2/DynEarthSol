@@ -827,20 +827,24 @@ namespace {
         double_vec total_dx(var.nnode, 0);
         double_vec total_slope(var.nnode, 0);
 
+        const size_t tsize = top.size();
+        const conn_t *var_connectivity = var.connectivity;
+
         // loops over all top facets
 #ifdef THREED
-        for (std::size_t i=0; i<top.size(); ++i) {
+        #pragma acc kernels
+        for (std::size_t i=0; i<tsize; ++i) {
             // this facet belongs to element e
             int e = top[i].first;
             // this facet is the f-th facet of e
             int f = top[i].second;
 
-            const int *conn = (*var.connectivity)[e];
-            int n0 = (*var.connectivity)[e][NODE_OF_FACET[f][0]];
-            int n1 = (*var.connectivity)[e][NODE_OF_FACET[f][1]];
+            const int *conn = (*var_connectivity)[e];
+            int n0 = (*var_connectivity)[e][NODE_OF_FACET[f][0]];
+            int n1 = (*var_connectivity)[e][NODE_OF_FACET[f][1]];
 
 //#ifdef THREED
-            int n2 = (*var.connectivity)[e][NODE_OF_FACET[f][2]];
+            int n2 = (*var_connectivity)[e][NODE_OF_FACET[f][2]];
 
             double projected_area;
             {
