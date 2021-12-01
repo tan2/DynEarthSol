@@ -115,10 +115,13 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
+
+    const int bound = volume.size();
+
     #pragma omp parallel for default(none)      \
         shared(coord, connectivity, volume)
     #pragma acc parallel loop 
-    for (std::size_t e=0; e<volume.size(); ++e) {
+    for (std::size_t e=0; e<bound; ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
         int n2 = connectivity[e][2];
