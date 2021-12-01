@@ -520,7 +520,7 @@ void update_coordinate(const Variables& var, array_t& coord)
 
     #pragma omp parallel for default(none) \
         shared(var, x, v)
-    #pragma acc parallel loop 
+    #pragma acc parallel loop collapse(2) 
     for (int i=0; i<var_nnode; ++i) {
         for (int j=0 ; j<NDIMS; ++j){
             (*var_coord)[i][j] += (*var_vel)[i][j] * var_dt;
