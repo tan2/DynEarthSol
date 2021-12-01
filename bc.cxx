@@ -761,7 +761,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
         const double surf_base_level = param.control.surf_base_level;
 
         // loops over all bdry facets
-//        #pragma acc parallel loop
+        #pragma acc parallel loop
         for (int n=0; n<bound; ++n) {
             // this facet belongs to element e
             int e = bdry[n].first;
@@ -800,8 +800,10 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             // lithostatc support - Archimed force (normal to the surface)
             for (int j=0; j<NODES_PER_FACET; ++j) {
                 int nn = conn[NODE_OF_FACET[f][j]];
+                double *f = force[nn];
                 for (int d=0; d<NDIMS; ++d) {
-                    force[nn][d] -= p * normal[d] / NODES_PER_FACET;
+                    #pragma acc atomic update
+                    f[d] -= p * normal[d] / NODES_PER_FACET;
                 }
             }
         }

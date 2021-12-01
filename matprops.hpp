@@ -3,7 +3,7 @@
 
 #include "parameters.hpp"
 
-//#pragma acc routine seq
+#pragma acc routine seq
 double ref_pressure(const Param& param, double z);
 
 /*
