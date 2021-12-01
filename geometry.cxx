@@ -487,9 +487,9 @@ void compute_mass(const Param &param, const Variables &var,
     nvtxRangePushA(__FUNCTION__);
 #endif
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
-    volume_n.assign(volume_n.size(), 0);
-    mass.assign(mass.size(), 0);
-    tmass.assign(tmass.size(), 0);
+    // volume_n.assign(volume_n.size(), 0);
+    // mass.assign(mass.size(), 0);
+    // tmass.assign(tmass.size(), 0);
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
 
@@ -525,6 +525,9 @@ void compute_mass(const Param &param, const Variables &var,
         shared(param,var,volume_n,mass,tmass,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
+        volume_n[n]=0;
+        mass[n]=0;
+        tmass[n]=0;
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
             volume_n[n] += tmp_result[0][*e];
             mass[n] += tmp_result[1][*e];
