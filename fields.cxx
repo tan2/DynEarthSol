@@ -115,7 +115,7 @@ void reallocate_variables(const Param& param, Variables& var)
 
 
 void update_temperature(const Param &param, const Variables &var,
-                        double_vec &temperature, double_vec &tdot)
+                        double_vec &temperature, double_vec &tdot, double_vec2D &tmp_result)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -136,17 +136,11 @@ void update_temperature(const Param &param, const Variables &var,
     const double_vec *var_tmass = var.tmass;
     const double var_dt = var.dt;
 
-    double_vec2D *var_tmp_result=var.tmp_result;
-
-#ifdef USE_NPROF
-    nvtxRangePushA("loop1");
-#endif
     #pragma omp parallel for default(none)      \
         shared(var,temperature,tmp_result)
     #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         // diffusion matrix
-        double D[NODES_PER_ELEM][NODES_PER_ELEM];
 
         const int *conn = (*var_connectivity)[e];
         double kv = var_mat->k(e) *  (*var_volume)[e]; // thermal conductivity * volume
@@ -155,35 +149,22 @@ void update_temperature(const Param &param, const Variables &var,
         const double *shpdy = (*var_shpdy)[e];
 #endif
         const double *shpdz = (*var_shpdz)[e];
-        double diffusion[NODES_PER_ELEM]= {0};
-
-        #pragma acc loop private(diffusion)
         for (int i=0; i<NODES_PER_ELEM; ++i) {
+            double diffusion = 0.;
             for (int j=0; j<NODES_PER_ELEM; ++j) {
-#ifdef THREED   
-                D[i][j] = (shpdx[i] * shpdx[j] +
-                            shpdy[i] * shpdy[j] +
-                            shpdz[i] * shpdz[j]);
+#ifdef THREED
+                diffusion += (shpdx[i] * shpdx[j] + \
+                            shpdy[i] * shpdy[j] + \
+                            shpdz[i] * shpdz[j]) * temperature[conn[j]];
 #else
-                D[i][j] = (shpdx[i] * shpdx[j] +
-                            shpdz[i] * shpdz[j]);
-#endif 
-                diffusion[i] += D[i][j]*temperature[conn[j]]*kv;   
-               (*var_tmp_result)[i][e]=diffusion[i]; 
+                diffusion += (shpdx[i] * shpdx[j] + \
+                            shpdz[i] * shpdz[j]) * temperature[conn[j]];
+#endif
             }
-            // 
+            tmp_result[i][e] = diffusion * kv;
         }
-        // for(int i=0;i<NODES_PER_ELEM;++i){
-        //     (*var_tmp_result)[i][e] = diffusion[i];
-        // }
     }
 
-#ifdef USE_NPROF
-nvtxRangePop();
-#endif
-#ifdef USE_NPROF
-    nvtxRangePushA("loop2");
-#endif
     #pragma omp parallel for default(none)      \
         shared(param,var,tdot,temperature,tmp_result)
     #pragma acc parallel loop
@@ -193,11 +174,10 @@ nvtxRangePop();
             const int *conn = (*var_connectivity)[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
-                    tdot[n] += (*var_tmp_result)[i][*e];
+                    tdot[n] += tmp_result[i][*e];
                     break;
                 }
             }
-
         }
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
@@ -207,9 +187,7 @@ nvtxRangePop();
         else
             temperature[n] -= tdot[n] * var_dt / (*var_tmass)[n];
     }
-#ifdef USE_NPROF
-nvtxRangePop();
-#endif
+
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.

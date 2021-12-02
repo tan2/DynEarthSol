@@ -4,7 +4,7 @@
 void allocate_variables(const Param &param, Variables& var);
 void reallocate_variables(const Param &param, Variables& var);
 void update_temperature(const Param &param, const Variables &var,
-    double_vec &temperature, double_vec &tdot);
+    double_vec &temperature, double_vec &tdot, double_vec2D &tmp_result);
 void update_strain_rate(const Variables& var, tensor_t& strain_rate);
 void update_force(const Param& param, const Variables& var, array_t& force,
     double_vec2D& tmp_result);
