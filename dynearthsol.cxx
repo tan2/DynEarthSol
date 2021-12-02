@@ -276,7 +276,7 @@ void isostasy_adjustment(const Param &param, Variables &var)
         update_stress(param ,var, *var.stress, *var.stressyy, *var.dpressure,
             *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
             *var.strain_rate);
-        update_force(param, var, *var.force, *var.tmp_result);
+        update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
 
         // do not apply vbc to allow free boundary
@@ -363,7 +363,7 @@ int main(int argc, const char* argv[])
         var.time += var.dt;
 
         if (param.control.has_thermal_diffusion)
-            update_temperature(param, var, *var.temperature, *var.ntmp, *var.tmp_result);
+            update_temperature(param, var, *var.temperature, *var.ntmp);
 
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp, (*var.tmp_result)[0]);
@@ -377,7 +377,7 @@ int main(int argc, const char* argv[])
         if (param.control.is_using_mixed_stress)
             NMD_stress(param, var, *var.ntmp, *var.stress, (*var.tmp_result)[0]);
 
-        update_force(param, var, *var.force, *var.tmp_result);
+        update_force(param, var, *var.force);
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
         update_mesh(param, var);

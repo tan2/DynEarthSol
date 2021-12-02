@@ -2130,7 +2130,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         // the following variables need to be re-computed only when we are
         // outputing right after remeshing
         update_strain_rate(var, *var.strain_rate);
-        update_force(param, var, *var.force, *var.tmp_result);
+        update_force(param, var, *var.force);
     }
 
     std::cout << "  Remeshing finished.\n";
