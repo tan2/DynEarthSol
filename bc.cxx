@@ -846,6 +846,7 @@ namespace {
 
         const conn_t *var_connectivity = var.connectivity;
         const size_t tsize = top.size();
+        double *dptr = total_dx.data();
 
         // loops over all top facets
 #ifdef THREED
@@ -896,12 +897,12 @@ namespace {
                 projected_area = 0.5 * normal[2];
             }
 
-//            #pragma acc atomic update TODO
-            total_dx[n0] += projected_area;
-//            #pragma acc atomic update TODO
-            total_dx[n1] += projected_area;
-//            #pragma acc atomic update TODO
-            total_dx[n2] += projected_area;
+            #pragma acc atomic update
+            dptr[n0] += projected_area;
+            #pragma acc atomic update
+            dptr[n1] += projected_area;
+            #pragma acc atomic update
+            dptr[n2] += projected_area;
 
             double shp2dx[NODES_PER_FACET], shp2dy[NODES_PER_FACET];
             double iv = 1 / (2 * projected_area);
