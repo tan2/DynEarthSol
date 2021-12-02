@@ -414,7 +414,7 @@ static double rho(const conn_t &var_connectivity, \
 }
 */
 
-void update_force(const Param& param, const Variables& var, array_t& force)
+void update_force(const Param& param, const Variables& var, array_t& force, double_vec2D& tmp_result)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -438,7 +438,6 @@ void update_force(const Param& param, const Variables& var, array_t& force)
     const double_vec *alpha = &param.mat.alpha;
     const int var_nnode = var.nnode;
     const int_vec2D *var_support = var.support;
-    double_vec2D *var_tmp_result=var.tmp_result;
 
     #pragma omp parallel for default(none)      \
         shared(var,param,tmp_result)
@@ -459,12 +458,12 @@ void update_force(const Param& param, const Variables& var, array_t& force)
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
-            (*var_tmp_result)[i][e] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-            (*var_tmp_result)[i+NODES_PER_ELEM][e] = (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-            (*var_tmp_result)[i+NODES_PER_ELEM*2][e] = (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+            tmp_result[i][e] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+            tmp_result[i+NODES_PER_ELEM][e] = (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+            tmp_result[i+NODES_PER_ELEM*2][e] = (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
 #else
-            (*var_tmp_result)[i][e] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-            (*var_tmp_result)[i+NODES_PER_ELEM][e] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+            tmp_result[i][e] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+            tmp_result[i+NODES_PER_ELEM][e] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
 #endif
         }
     }
@@ -480,7 +479,7 @@ void update_force(const Param& param, const Variables& var, array_t& force)
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
                     for (int j=0;j<NDIMS;j++)
-                        f[j] -= (*var_tmp_result)[i+NODES_PER_ELEM*j][*e];
+                        f[j] -= tmp_result[i+NODES_PER_ELEM*j][*e];
                     break;
                 }
             }
