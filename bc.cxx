@@ -845,11 +845,12 @@ namespace {
         double_vec total_slope(var.nnode, 0);
 
         const conn_t *var_connectivity = var.connectivity;
-        const size_t tsize = top.size();
-        double *dptr = total_dx.data();
+        double *dptr_dx = total_dx.data();
+        double *dptr_slope = total_slope.data();
 
         // loops over all top facets
 #ifdef THREED
+        const size_t tsize = top.size();
         #pragma acc parallel loop
         for (std::size_t i=0; i<tsize; ++i) {
             // this facet belongs to element e
@@ -898,11 +899,11 @@ namespace {
             }
 
             #pragma acc atomic update
-            dptr[n0] += projected_area;
+            dptr_dx[n0] += projected_area;
             #pragma acc atomic update
-            dptr[n1] += projected_area;
+            dptr_dx[n1] += projected_area;
             #pragma acc atomic update
-            dptr[n2] += projected_area;
+            dptr_dx[n2] += projected_area;
 
             double shp2dx[NODES_PER_FACET], shp2dy[NODES_PER_FACET];
             double iv = 1 / (2 * projected_area);
@@ -927,8 +928,8 @@ namespace {
                 for (int k=0; k<NODES_PER_FACET; k++)
                     slope += D[j][k] * coord[n[k]][2];
 
-//                #pragma acc atomic update TODO
-                total_slope[n[j]] += slope * projected_area;
+                #pragma acc atomic update
+                dptr_slope[n[j]] += slope * projected_area;
             }
 
             // std::cout << i << ' ' << n0 << ' ' << n1 << ' ' << n2 << "  "
@@ -937,17 +938,23 @@ namespace {
             /* The 1D diffusion operation is implemented ad hoc, not using FEM
              * formulation (e.g. computing shape function derivation on the edges).
              */
-        for (std::size_t i=0; i<ntop-1;i++) {
+        const size_t tsize = ntop-1;
+        #pragma acc parallel loop
+        for (std::size_t i=0; i<tsize;i++) {
             int n0 = top_nodes[i];
             int n1 = top_nodes[i+1];
 
             double dx = std::fabs(coord[n1][0] - coord[n0][0]);
-            total_dx[n0] += dx;
-            total_dx[n1] += dx;
+            #pragma acc atomic update
+            dptr_dx[n0] += dx;
+            #pragma acc atomic update
+            dptr_dx[n1] += dx;
 
             double slope = (coord[n1][1] - coord[n0][1]) / dx;
-            total_slope[n0] -= slope;
-            total_slope[n1] += slope;
+            #pragma acc atomic update
+            dptr_slope[n0] -= slope;
+            #pragma acc atomic update
+            dptr_slope[n1] += slope;
 
             // std::cout << i << ' ' << n0 << ' ' << n1 << "  " << dx << "  " << slope << '\n';
 #endif
@@ -964,7 +971,7 @@ namespace {
         for (std::size_t i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
-            double conv =  surf_diff * var_dt * total_slope[n] / total_dx[n];
+            double conv =  surf_diff * var_dt * dptr_slope[n] / dptr_dx[n];
 #ifdef THREED
             dh[i] -= conv;
 #else
@@ -1659,12 +1666,12 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         std::exit(1);
     }
 #ifdef THREED
-/*
+    const int_vec *top_nodes = surfinfo.top_nodes;
+    #pragma acc parallel loop
     for (std::size_t i=0; i<ntop; ++i) {
-        int n = (*surfinfo.top_nodes)[i];
+        int n = (*top_nodes)[i];
         coord[n][NDIMS-1] += dh[i];
     }
-*/
     // todo
 #else
     // go through all surface nodes and abject all surface node by dh
