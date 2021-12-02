@@ -428,7 +428,7 @@ double compute_dt(const Param& param, const Variables& var)
     double dt_advection = 0.5 * minl / max_vbc_val;
     double dt_elastic = (param.control.is_quasi_static) ?
         0.5 * minl / (max_vbc_val * param.control.inertial_scaling) :
-        0.5 * minl / std::sqrt(var.mat->bulkm(0) / var.mat->rho(0));
+        0.5 * minl / std::sqrt(param.mat.bulk_modulus[0] / param.mat.rho0[0]);
     double dt = std::min(std::min(dt_elastic, dt_maxwell),
                          std::min(dt_advection, dt_diffusion)) * param.control.dt_fraction;
     if (param.debug.dt) {
