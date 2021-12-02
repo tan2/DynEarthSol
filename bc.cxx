@@ -954,20 +954,24 @@ namespace {
         }
 
         const double var_dt = var.dt;
+        const double surf_diff = surfinfo.surf_diff;
+        const double base_level = surfinfo.base_level;
+        const double diff_ratio_terrig = surfinfo.diff_ratio_terrig;
+        const double diff_ratio_marine = surfinfo.diff_ratio_marine;
 #ifdef THREED
         #pragma acc parallel loop
 #endif
         for (std::size_t i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
-            double conv =  surfinfo.surf_diff * var_dt * total_slope[n] / total_dx[n];
+            double conv =  surf_diff * var_dt * total_slope[n] / total_dx[n];
 #ifdef THREED
             dh[i] -= conv;
 #else
-            if ( coord[n][1] >  surfinfo.base_level && conv > 0.) {
-                dh[i] -= surfinfo.diff_ratio_terrig * conv;
-            } else if ( coord[n][1] < surfinfo.base_level && conv < 0. ) {
-                dh[i] -= surfinfo.diff_ratio_marine * conv;
+            if ( coord[n][1] >  base_level && conv > 0.) {
+                dh[i] -= diff_ratio_terrig * conv;
+            } else if ( coord[n][1] < base_level && conv < 0. ) {
+                dh[i] -= diff_ratio_marine * conv;
             } else {
                 dh[i] -= conv;
             }
