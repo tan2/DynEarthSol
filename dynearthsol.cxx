@@ -38,6 +38,8 @@ void init_var(const Param& param, Variables& var)
 
     for (int i=0;i<nbdrytypes;++i)
         var.bfacets[i] = new std::vector< std::pair<int,int> >;
+    for (int i=0;i<nbdrytypes;++i)
+        var.bnodes[i] = new int_vec;
     var.bnormals = new array_t(nbdrytypes);
     var.vbc_period_ratio_x = new double_vec(2,1.);
 

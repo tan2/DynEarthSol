@@ -368,7 +368,7 @@ struct Variables {
 
 
     uint_vec *bcflag;
-    int_vec bnodes[nbdrytypes];
+    int_vec *bnodes[nbdrytypes];
     std::vector< std::pair<int,int> > *bfacets[nbdrytypes];
     array_t *bnormals;
     int vbc_types[nbdrytypes];

@@ -1565,7 +1565,7 @@ void create_boundary_nodes(Variables& var)
         for (int j=0; j<nbdrytypes; ++j) {
             if (f & (1<<j)) {
                 // this node belongs to a boundary
-                (var.bnodes[j]).push_back(i);
+                (var.bnodes[j])->push_back(i);
             }
         }
     }
@@ -1580,7 +1580,7 @@ void create_boundary_nodes(Variables& var)
 void create_top_elems(Variables& var)
 {
     const int top_bdry = iboundz1;
-    const int_vec& top_tmp = var.bnodes[top_bdry];
+    const int_vec& top_tmp = *var.bnodes[top_bdry];
     const std::size_t ntop = top_tmp.size();
     int_vec top_ind(ntop,0);
     int_vec top_nodes(ntop,0);
@@ -1621,10 +1621,10 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
 {
 
     const size_t etop = var.bfacets[iboundz1]->size();
-    const size_t ntop = var.bnodes[iboundz1].size();
+    const size_t ntop = var.bnodes[iboundz1]->size();
 
     const int top_bdry = iboundz1;
-    const int_vec& top_tmp = var.bnodes[top_bdry];
+    const int_vec& top_tmp = *var.bnodes[top_bdry];
     int_vec top_ind(ntop,0);
     int_vec top_nodes(ntop,0);
     double_vec top_x(ntop,0.);
@@ -1736,10 +1736,10 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
 {
 
     const size_t etop = var.bfacets[iboundz1]->size();
-    const size_t ntop = var.bnodes[iboundz1].size();
+    const size_t ntop = var.bnodes[iboundz1]->size();
 
     const int top_bdry = iboundz1;
-    const int_vec& top_tmp = var.bnodes[top_bdry];
+    const int_vec& top_tmp = *var.bnodes[top_bdry];
     int_vec top_ind(ntop,0);
     int_vec top_nodes(ntop,0);
 

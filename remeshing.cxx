@@ -277,7 +277,7 @@ void assemble_bdry_polygons(const Variables &var, const array_t &old_coord,
     const int edgenodes[edges_per_facet][nodes_per_edge] = { {1, 2}, {2, 0}, {0, 1} };
 
     for (int ibound=0; ibound<nbdrytypes; ibound++) {
-        if (var.bnodes[ibound].size() == 0) continue;  // skip empty boundary
+        if (var.bnodes[ibound]->size() == 0) continue;  // skip empty boundary
 
         //
         // Collecting edges on each boundary.
@@ -1009,7 +1009,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     uint_vec old_bcflag(*var.bcflag);
     int_vec old_bnodes[nbdrytypes];
     for (int i=0; i<nbdrytypes; ++i) {
-        old_bnodes[i] = var.bnodes[i];  // copying whole vector
+        old_bnodes[i] = *(var.bnodes[i]);  // copying whole vector
     }
 
     bool (*excl_func)(uint) = NULL; // function pointer indicating which point cannot be deleted
@@ -1268,7 +1268,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     uint_vec old_bcflag(*var.bcflag);
     int_vec old_bnodes[nbdrytypes];
     for (int i=0; i<nbdrytypes; ++i) {
-        old_bnodes[i] = var.bnodes[i];
+        old_bnodes[i] = *(var.bnodes[i]);
     }
 
     int_vec points_to_delete;
@@ -1513,7 +1513,7 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
     uint_vec old_bcflag(*var.bcflag);
     int_vec old_bnodes[nbdrytypes];
     for (int i=0; i<nbdrytypes; ++i) {
-        old_bnodes[i] = var.bnodes[i];
+        old_bnodes[i] = *(var.bnodes[i]);
     }
 
     int_vec points_to_delete;
@@ -1753,7 +1753,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     uint_vec old_bcflag(*var.bcflag);
     int_vec old_bnodes[nbdrytypes];
     for (int i=0; i<nbdrytypes; ++i) {
-        old_bnodes[i] = var.bnodes[i];
+        old_bnodes[i] = *(var.bnodes[i]);
     }
 
     int_vec points_to_delete;
@@ -2094,7 +2094,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     // updating other arrays
     create_boundary_flags(var);
     for (int i=0; i<nbdrytypes; ++i) {
-        var.bnodes[i].clear();
+        var.bnodes[i]->clear();
         var.bfacets[i]->clear();
     }
     create_boundary_nodes(var);
@@ -2120,7 +2120,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         param.mesh.remeshing_option==2 ||
         param.mesh.remeshing_option==11) {
         /* Reset coord0 of the bottom nodes */
-        for (auto i=var.bnodes[iboundz0].begin(); i<var.bnodes[iboundz0].end(); ++i) {
+        for (auto i=var.bnodes[iboundz0]->begin(); i<var.bnodes[iboundz0]->end(); ++i) {
             int n = *i;
             (*var.coord0)[n][NDIMS-1] = -param.mesh.zlength;
         }
