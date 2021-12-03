@@ -1620,7 +1620,7 @@ void create_top_elems(Variables& var)
 void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
 {
 
-    const size_t etop = var.bfacets[iboundz1].size();
+    const size_t etop = var.bfacets[iboundz1]->size();
     const size_t ntop = var.bnodes[iboundz1].size();
 
     const int top_bdry = iboundz1;
@@ -1681,7 +1681,7 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
 
 
     for (size_t i=0; i<etop; i++) {
-        auto j = var.bfacets[iboundz1][i];
+        auto j = (*(var.bfacets[iboundz1]))[i];
         int e = j.first;
         int f = j.second;
 
@@ -1735,7 +1735,7 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
 void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& surfinfo)
 {
 
-    const size_t etop = var.bfacets[iboundz1].size();
+    const size_t etop = var.bfacets[iboundz1]->size();
     const size_t ntop = var.bnodes[iboundz1].size();
 
     const int top_bdry = iboundz1;
@@ -1795,7 +1795,7 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.total_slope = new double_vec(var.nnode,0.);
 
     for (size_t i=0; i<etop; i++) {
-        auto j = var.bfacets[iboundz1][i];
+        auto j = (*(var.bfacets[iboundz1]))[i];
         int e = j.first;
         int f = j.second;
 
@@ -1920,7 +1920,7 @@ void create_boundary_facets(Variables& var)
                 if (af == bf) {
                     for (int k=0; k<nbdrytypes; ++k) {
                         if (flag == (1U << k)) {
-                            var.bfacets[k].push_back(std::make_pair(e,f));
+                            var.bfacets[k]->push_back(std::make_pair(e,f));
                             goto found_facet; // break out of nested loops
                         }
                     }

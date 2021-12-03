@@ -284,8 +284,8 @@ void assemble_bdry_polygons(const Variables &var, const array_t &old_coord,
         //
 
         std::unordered_map<edge_t, int, hash1, equal_to1> edges;
-        for (std::size_t i=0; i<var.bfacets[ibound].size(); i++) {
-            const auto &facet = var.bfacets[ibound][i];
+        for (std::size_t i=0; i<var.bfacets[ibound]->size(); i++) {
+            const auto &facet = (*(var.bfacets[ibound]))[i];
             int e = facet.first;
             int f = facet.second;
             const int *conn = old_connectivity[e];
@@ -2095,7 +2095,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     create_boundary_flags(var);
     for (int i=0; i<nbdrytypes; ++i) {
         var.bnodes[i].clear();
-        var.bfacets[i].clear();
+        var.bfacets[i]->clear();
     }
     create_boundary_nodes(var);
     create_boundary_facets(var);

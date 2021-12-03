@@ -111,9 +111,9 @@ void create_boundary_normals(const Variables &var, array_t &bnormals,
 
     for (int i=0; i<nbdrytypes; i++) {
         double normal[NDIMS] = {0};
-        if (var.bfacets[i].size() == 0) continue;
+        if (var.bfacets[i]->size() == 0) continue;
 
-        for (auto j=var.bfacets[i].begin(); j<var.bfacets[i].end(); ++j) {
+        for (auto j=var.bfacets[i]->begin(); j<var.bfacets[i]->end(); ++j) {
             int e = j->first;
             int f = j->second;
             double tmp;
@@ -128,7 +128,7 @@ void create_boundary_normals(const Variables &var, array_t &bnormals,
             for(int d=0; d<NDIMS; d++)
                 normal[d] = normal[d] / len;
 
-            if (j == var.bfacets[i].begin()) {
+            if (j == var.bfacets[i]->begin()) {
                 for(int d=0; d<NDIMS; d++)
                     bnormals[i][d] = normal[d];
 
@@ -155,11 +155,11 @@ void create_boundary_normals(const Variables &var, array_t &bnormals,
     }
 
     for (int i=0; i<nbdrytypes; i++) {
-        if (var.bfacets[i].size() == 0) continue;
+        if (var.bfacets[i]->size() == 0) continue;
 
         const double eps = 1e-15;
         for (int j=i+1; j<nbdrytypes; j++) {
-            if (var.bfacets[j].size() == 0) continue;
+            if (var.bfacets[j]->size() == 0) continue;
             double *s = new double[NDIMS];  // intersection of two boundaries
                                             // whole-application lifetime, no need to delete manually
 #ifdef THREED
@@ -745,7 +745,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
         if (i==iboundz0 && !param.bc.has_winkler_foundation) continue;
         if (i==iboundz1 && !param.bc.has_water_loading) continue;
 
-        const auto& bdry = var.bfacets[i];
+        const auto& bdry = *(var.bfacets[i]);
         const auto& coord = *var.coord;
 
         const int bound = static_cast<int>(bdry.size());
@@ -838,7 +838,7 @@ namespace {
         const int_vec& top_nodes = *surfinfo.top_nodes;
 
         const int top_bdry = iboundz1;
-        const auto& top = var.bfacets[top_bdry];
+        const auto& top = *(var.bfacets[top_bdry]);
 
         const int var_nnode = var.nnode;
         const int ntop = top_nodes.size();
