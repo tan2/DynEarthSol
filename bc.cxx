@@ -841,10 +841,16 @@ namespace {
         const auto& top = *(var.bfacets[top_bdry]);
 
         const int var_nnode = var.nnode;
-        const int ntop = top_nodes.size();
+        const int ntop = surfinfo.ntop;
 
         const conn_t *var_connectivity = var.connectivity;
+#ifdef USE_NPROF
+        nvtxRangePushA("prepare variable total_dx");
+#endif
         double *total_dx = var.surfinfo.total_dx->data();
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
         double *total_slope = var.surfinfo.total_slope->data();
         double_vec& dh = *var.surfinfo.dh;
 
