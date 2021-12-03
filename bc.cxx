@@ -824,7 +824,7 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
 namespace {
 
-    void simple_diffusion(const Variables& var, double_vec& dh)
+    void simple_diffusion(const Variables& var)
     {
 #ifdef USE_NPROF
         nvtxRangePushA(__FUNCTION__);
@@ -840,13 +840,19 @@ namespace {
         const int top_bdry = iboundz1;
         const auto& top = var.bfacets[top_bdry];
 
-        const std::size_t ntop = top_nodes.size();
-        double_vec total_dx(var.nnode, 0);
-        double_vec total_slope(var.nnode, 0);
+        const int var_nnode = var.nnode;
+        const int ntop = top_nodes.size();
 
         const conn_t *var_connectivity = var.connectivity;
-        double *dptr_dx = total_dx.data();
-        double *dptr_slope = total_slope.data();
+        double *total_dx = var.surfinfo.total_dx->data();
+        double *total_slope = var.surfinfo.total_slope->data();
+        double_vec& dh = *var.surfinfo.dh;
+
+        #pragma acc parallel loop
+        for (int i=0;i<var_nnode;i++) {
+            total_dx[i] = 0.;
+            total_slope[i] = 0.;
+        }
 
         // loops over all top facets
 #ifdef THREED
@@ -899,11 +905,11 @@ namespace {
             }
 
             #pragma acc atomic update
-            dptr_dx[n0] += projected_area;
+            total_dx[n0] += projected_area;
             #pragma acc atomic update
-            dptr_dx[n1] += projected_area;
+            total_dx[n1] += projected_area;
             #pragma acc atomic update
-            dptr_dx[n2] += projected_area;
+            total_dx[n2] += projected_area;
 
             double shp2dx[NODES_PER_FACET], shp2dy[NODES_PER_FACET];
             double iv = 1 / (2 * projected_area);
@@ -929,7 +935,7 @@ namespace {
                     slope += D[j][k] * coord[n[k]][2];
 
                 #pragma acc atomic update
-                dptr_slope[n[j]] += slope * projected_area;
+                total_slope[n[j]] += slope * projected_area;
             }
 
             // std::cout << i << ' ' << n0 << ' ' << n1 << ' ' << n2 << "  "
@@ -946,15 +952,15 @@ namespace {
 
             double dx = std::fabs(coord[n1][0] - coord[n0][0]);
             #pragma acc atomic update
-            dptr_dx[n0] += dx;
+            total_dx[n0] += dx;
             #pragma acc atomic update
-            dptr_dx[n1] += dx;
+            total_dx[n1] += dx;
 
             double slope = (coord[n1][1] - coord[n0][1]) / dx;
             #pragma acc atomic update
-            dptr_slope[n0] -= slope;
+            total_slope[n0] -= slope;
             #pragma acc atomic update
-            dptr_slope[n1] += slope;
+            total_slope[n1] += slope;
 
             // std::cout << i << ' ' << n0 << ' ' << n1 << "  " << dx << "  " << slope << '\n';
 #endif
@@ -971,7 +977,7 @@ namespace {
         for (std::size_t i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
-            double conv =  surf_diff * var_dt * dptr_slope[n] / dptr_dx[n];
+            double conv =  surf_diff * var_dt * total_slope[n] / total_dx[n];
 #ifdef THREED
             dh[i] -= conv;
 #else
@@ -1194,7 +1200,7 @@ namespace {
 #endif
     }
 
-    void simple_deposition(const Param& param,const Variables& var, double_vec& dh, double_vec& src_locs, double_vec& src_abj) {
+    void simple_deposition(const Param& param,const Variables& var) {
 #ifdef USE_NPROF
         nvtxRangePushA(__FUNCTION__);
 #endif
@@ -1205,6 +1211,16 @@ namespace {
 //        std::cout << "Press enter to continue ...";
 //        std::cin.get();
 #endif
+        double_vec &dh = *var.surfinfo.dh;
+        double_vec &src_locs = *var.surfinfo.src_locs;
+        double_vec &src_abj = *var.surfinfo.src_abj;
+
+    #pragma acc serial
+    for (int i=0;i<2;i++) {
+        src_locs[i] = 0.;
+        src_abj[i] = 0.;
+    }
+
         const array_t& coord = *var.coord;
         const SurfaceInfo& surfinfo = var.surfinfo;
         const int_vec& top_nodes = *surfinfo.top_nodes;
@@ -1639,14 +1655,19 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
     const int slow_updates_interval = 10;
     bool has_partial_melting = false;
     const int ntop = var.surfinfo.ntop;
-    double_vec dh(ntop,0.), dh_oc(ntop,0.), src_locs(2,0.), src_abj(2,0.);
-    
+    double_vec &dh = *var.surfinfo.dh;
+    double_vec &dh_oc = *var.surfinfo.dh_oc;
+
+    #pragma acc parallel loop
+    for (int i=0;i<ntop;i++)
+        dh[i] = 0.;
+
     switch (param.control.surface_process_option) {
     case 0:
         // no surface process
         break;
     case 1:
-        simple_diffusion(var, dh);
+        simple_diffusion(var);
         break;
     case 101:
         custom_surface_processes(var, coord);
@@ -1656,9 +1677,9 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         std::cout << "3D deposition of sediment processes is not ready yet.";
         exit(168);
 #else
-        simple_diffusion(var, dh);
+        simple_diffusion(var);
         if (var.steps != 0)
-            simple_deposition(param, var, dh, src_locs, src_abj);
+            simple_deposition(param, var);
 #endif
         break;
     default:
@@ -1706,7 +1727,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             correct_surface_element(var, *surfinfo.dhacc, *markersets[0], stress, strain, strain_rate, plstrain);
             std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
             // set marker of sediment.
-            markersets[0]->set_surface_marker(var, param.mat.mattype_sed, *surfinfo.edhacc, elemmarkers, src_locs, src_abj);
+            markersets[0]->set_surface_marker(var, param.mat.mattype_sed, *surfinfo.edhacc, elemmarkers);
         }
     }
 #endif
@@ -1715,8 +1736,6 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         std::cout << "3D simple_igneous processes is not ready yet.";
         exit(168);
 #else
-        double_vec tmp(2,0.);
-
         simple_igneous(param,var, dh_oc, has_partial_melting);
 
         if ( has_partial_melting ) {
@@ -1740,7 +1759,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                 correct_surface_element(var, *surfinfo.dhacc_oc, *markersets[0], stress, strain, strain_rate, plstrain);
                 std::fill(surfinfo.dhacc_oc->begin(), surfinfo.dhacc_oc->end(), 0.);
                 // set marker of sediment.
-                markersets[0]->set_surface_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers, tmp, tmp);
+                markersets[0]->set_surface_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers);
             }
         }
 #endif

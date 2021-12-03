@@ -1650,6 +1650,8 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
     for (size_t i=0; i<ntop; i++)
         surfinfo.arctop_nodes[(*surfinfo.top_nodes)[i]] = i;
     
+    delete surfinfo.dh;
+    surfinfo.dh = new double_vec(ntop,0.);
     delete surfinfo.edhacc;
     surfinfo.edhacc = new array_t(var.nelem);
     delete surfinfo.edhacc_ind;
@@ -1665,10 +1667,18 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
     delete surfinfo.arcelem_and_nodes_num;
     surfinfo.arcelem_and_nodes_num = new int_map2D(etop);
 
+    delete surfinfo.dh_oc;
+    surfinfo.dh_oc = new double_vec(ntop,0.);
     delete surfinfo.edhacc_oc;
     surfinfo.edhacc_oc = new array_t(var.nelem);
     delete surfinfo.edhacc_ind_oc;
     surfinfo.edhacc_ind_oc = new segment_t(etop);
+
+    delete surfinfo.total_dx;
+    surfinfo.total_dx = new double_vec(var.nnode,0.);
+    delete surfinfo.total_slope;
+    surfinfo.total_slope = new double_vec(var.nnode,0.);
+
 
     for (size_t i=0; i<etop; i++) {
         auto j = var.bfacets[iboundz1][i];
@@ -1763,6 +1773,7 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.arctop_nodes.clear();
     for (size_t i=0; i<ntop; i++)
         surfinfo.arctop_nodes[(*surfinfo.top_nodes)[i]] = i;
+    surfinfo.dh = new double_vec(ntop,0.);
     surfinfo.dhacc = new double_vec(var.nnode,0);
     surfinfo.edhacc = new array_t(var.nelem,0);
     surfinfo.edhacc_ind = new segment_t(etop);
@@ -1772,10 +1783,16 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.node_and_nodes = new int_vec2D(ntop,int_vec());
     surfinfo.arcelem_and_nodes_num = new int_map2D(etop);
 
+    surfinfo.dh_oc = new double_vec(ntop,0.);
     surfinfo.dhacc_oc = new double_vec(var.nnode,0);
     surfinfo.edhacc_oc = new array_t(var.nelem);
     surfinfo.edhacc_ind_oc = new segment_t(etop);
 
+    surfinfo.src_locs = new double_vec(2,0.);
+    surfinfo.src_abj = new double_vec(2,0.);
+
+    surfinfo.total_dx = new double_vec(var.nnode,0.);
+    surfinfo.total_slope = new double_vec(var.nnode,0.);
 
     for (size_t i=0; i<etop; i++) {
         auto j = var.bfacets[iboundz1][i];

@@ -292,8 +292,15 @@ struct SurfaceInfo {
     double depo_universal;
     double ero_rate;
 
+    double_vec *dh;
+    double_vec *dh_oc;
     double dh_max;
     double dh_min;
+    double_vec *src_locs;
+    double_vec *src_abj;
+
+    double_vec *total_dx;
+    double_vec *total_slope;
 
     int_vec *top_nodes;
     int_vec *top_facet_elems;
