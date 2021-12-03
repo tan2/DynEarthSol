@@ -451,7 +451,7 @@ tetgen/tetgen: tetgen/predicates.cxx tetgen/tetgen.cxx
 	$(CXX) $(CXXFLAGS) -O0 -DNDEBUG $(TETGENFLAG) tetgen/predicates.cxx tetgen/tetgen.cxx -o $@
 
 $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
-	@+$(MAKE) -C $(C3X3_DIR)
+	@+$(MAKE) -C $(C3X3_DIR) openacc=$(openacc) CUDA_DIR=$(CUDA_DIR)
 
 $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 	@+$(MAKE) -C $(ANN_DIR) linux-g++
