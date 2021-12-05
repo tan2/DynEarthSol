@@ -5,6 +5,7 @@ double dist2(const double* a, const double* b);
 void compute_volume(const double **coord, double &volume);
 void compute_volume(const array_t &coord, const conn_t &connectivity,
                     double_vec &volume);
+void compute_volume(const Variables &var, double_vec &volume);
 
 void compute_dvoldt(const Variables &var, double_vec &dvoldt,
                     double_vec &tmp_result);

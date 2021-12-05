@@ -255,15 +255,18 @@ void update_mesh(const Param& param, Variables& var)
 #ifdef USE_NPROF
     nvtxRangePushA("swap vectors");
 #endif
-//    double_vec *tmp = var.volume;
-//    var.volume = var.volume_old;
-//    var.volume_old = tmp;
-    var.volume->swap(*var.volume_old);
+    #pragma serial
+    {
+        double_vec *tmp = var.volume;
+        var.volume = var.volume_old;
+        var.volume_old = tmp;
+    }
+//    var.volume->swap(*var.volume_old);
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
 
-    compute_volume(*var.coord, *var.connectivity, *var.volume);
+    compute_volume(var, *var.volume);
     compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 #ifdef USE_NPROF

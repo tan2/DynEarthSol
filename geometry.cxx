@@ -143,6 +143,42 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 #endif
 }
 
+void compute_volume(const Variables &var,
+                    double_vec &volume)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+
+    const int var_nelem = var.nelem;
+    const conn_t &connectivity = *var.connectivity;
+    const array_t &coord = *var.coord;
+
+
+    #pragma omp parallel for default(none)      \
+        shared(coord, connectivity, volume)
+    #pragma acc parallel loop 
+    for (std::size_t e=0; e<var_nelem; ++e) {
+        int n0 = connectivity[e][0];
+        int n1 = connectivity[e][1];
+        int n2 = connectivity[e][2];
+
+        const double *a = coord[n0];
+        const double *b = coord[n1];
+        const double *c = coord[n2];
+
+#ifdef THREED
+        int n3 = connectivity[e][3];
+        const double *d = coord[n3];
+        volume[e] = tetrahedron_volume(a, b, c, d);
+#else
+        volume[e] = triangle_area(a, b, c);
+#endif
+    }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+}
 
 void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_result)
 {
