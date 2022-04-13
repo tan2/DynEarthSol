@@ -922,8 +922,7 @@ void refine_surface_elem(const Param &param, const Variables &var,
 
     std::cout << "    Checking surface element volume.\n";
 
-//    #pragma omp parallel for default(none) \
-//        shared(param, var, old_coord, old_connectivity, old_volume, old_nnode, qcoord)
+//    #pragma omp parallel for default(none) shared(param, var, old_coord, old_connectivity, old_volume, old_nnode, qcoord)
 
     for (size_t i=0; i<(*var.surfinfo.top_facet_elems).size(); i++) {
         int e = (*var.surfinfo.top_facet_elems)[i];

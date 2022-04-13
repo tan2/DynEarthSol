@@ -537,7 +537,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 #else
     #pragma omp parallel for default(none)                           \
         shared(param, var, stress, stressyy, dpressure, viscosity, strain, plstrain, delta_plstrain, \
-               strain_rate, std::cerr)
+               strain_rate, std::cerr, var_edvoldt, var_mat, var_volume,var_volume_old)
 #endif
     #pragma acc parallel loop
     for (int e=0; e<var_nelem; ++e) {

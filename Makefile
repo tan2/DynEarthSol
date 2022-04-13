@@ -18,8 +18,8 @@
 
 ndims = 3
 opt = 2
-openacc = 1
-openmp = 0
+openacc = 0
+openmp = 1
 nprof = 0
 useadapt = 0
 usemmg = 0
@@ -51,20 +51,26 @@ ifeq ($(useadapt), 1)
 	#LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
 	LIB_MPIFORTRAN = -lfmpich # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
 else
-	CXX = nvc++
+	ifeq ($(openacc), 1)
+		CXX = nvc++
+	else
+		ifeq ($(nprof), 1)
+			CXX = pgc++
+		else
+			CXX = g++
+		endif
+	endif
 	CXX_BACKEND = ${CXX}
 endif
 
-ifeq ($(nprof), 1)
-	CXX = pgc++
-endif
 
 ## path to cuda's base directory
 CUDA_DIR = $(CUDA_HOME)
 #CUDA_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda
 
 ## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR =
+BOOST_ROOT_DIR = ${HOME}/opt/boost_1_62_0
+#BOOST_ROOT_DIR = ${HOME}/opt/boost_1_62_0
 
 ########################################################################
 ## Select compiler and linker flags

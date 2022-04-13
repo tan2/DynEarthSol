@@ -137,7 +137,8 @@ void update_temperature(const Param &param, const Variables &var,
     const double var_dt = var.dt;
 
     #pragma omp parallel for default(none)      \
-        shared(var,temperature,tmp_result)
+        shared(var,temperature,tmp_result,var_connectivity,var_shpdx,var_shpdz,var_shpdy, \
+                var_volume,var_mat,var_support,var_bcflag,var_tmass)
     #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         // diffusion matrix
@@ -166,7 +167,7 @@ void update_temperature(const Param &param, const Variables &var,
     }
 
     #pragma omp parallel for default(none)      \
-        shared(param,var,tdot,temperature,tmp_result)
+        shared(param,var,tdot,temperature,tmp_result,var_support,var_connectivity,var_bcflag,var_tmass)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         tdot[n]=0;
@@ -221,7 +222,7 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
     array_t *var_vel=var.vel;
 
     #pragma omp parallel for default(none)      \
-        shared(var, strain_rate) private(v)
+        shared(var, strain_rate,var_connectivity,var_shpdx,var_shpdz,var_vel) private(v)
     #pragma acc parallel loop private(v)
     for (int e=0; e<var_nelem; ++e) {
         const int *conn = (*var_connectivity)[e];
@@ -310,10 +311,10 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         // acclerating when force and velocity are anti-parallel
 #ifdef LLVM
         #pragma omp parallel for default(none)          \
-            shared(var, param, ff, v, small_vel)
+            shared(var, param, force, var_vel, small_vel)
 #else
         #pragma omp parallel for default(none)          \
-            shared(var, param, ff, v)
+            shared(var, param, force, var_vel)
 #endif
         #pragma acc parallel loop
         for (int i=0; i<var_nnode; ++i) {
@@ -326,7 +327,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     case 2:
         // damping prop. to force
         #pragma omp parallel for default(none)          \
-            shared(var, param, ff, v)
+            shared(var, param, force)
         #pragma acc parallel loop
         for (int i=0; i<var_nnode; ++i) {
             for (int j=0;j<NDIMS;j++)
@@ -337,7 +338,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         // damping when force and velocity are parallel
         // weakly acclerating when force and velocity are anti-parallel
         #pragma omp parallel for default(none)          \
-            shared(var, param, ff, v)
+            shared(var, param, force, var_vel)
         #pragma acc parallel loop
         for (int i=0; i<var_nnode; ++i) {
             for (int j=0;j<NDIMS;j++) {
@@ -417,8 +418,13 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
     const int var_nnode = var.nnode;
     const int_vec2D *var_support = var.support;
 
+#ifdef THREED
     #pragma omp parallel for default(none)      \
-        shared(var,param,tmp_result)
+        shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stres,var_volumes,var_mat)
+#else
+    #pragma omp parallel for default(none)      \
+        shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdz,var_stress,var_volume,var_mat)
+#endif
     #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         const int *conn = (*var_connectivity)[e];
@@ -447,7 +453,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, doub
     }
 
     #pragma omp parallel for default(none)      \
-        shared(var,force,tmp_result)
+        shared(var,force,tmp_result,var_support,var_connectivity)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         std::fill_n(force[n],NDIMS,0); 
@@ -486,7 +492,7 @@ void update_velocity(const Variables& var, array_t& vel)
     const double_vec *var_mass = var.mass;
 
     #pragma omp parallel for default(none) \
-        shared(var, m, f, v)
+        shared(var, vel, var_force, var_mass)
     #pragma acc parallel loop
     for (int i=0; i<var_nnode; ++i)
         for (int j=0;j<NDIMS;j++)
@@ -513,7 +519,7 @@ void update_coordinate(const Variables& var, array_t& coord)
     const double var_dt=var.dt;
 
     #pragma omp parallel for default(none) \
-        shared(var, x, v)
+        shared(var, var_coord, var_vel)
     #pragma acc parallel loop collapse(2) 
     for (int i=0; i<var_nnode; ++i) {
         for (int j=0 ; j<NDIMS; ++j){
@@ -599,8 +605,13 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
     const conn_t *var_connectivity=var.connectivity;
     array_t *var_vel=var.vel;
 
+#ifdef THREED
     #pragma omp parallel for default(none) \
-        shared(var, stress, strain)
+        shared(var, stress, strain, var_connectivity, var_shpdx,var_shpdy,var_shpdz,var_vel)
+#else
+    #pragma omp parallel for default(none) \
+        shared(var, stress, strain, var_connectivity, var_shpdx,var_shpdz,var_vel)
+#endif
     #pragma acc parallel loop
     for (int e=0; e<var_nelem; ++e) {
         const int *conn = (*var_connectivity)[e];

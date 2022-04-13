@@ -373,7 +373,9 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #else
     #pragma omp parallel for default(none) \
         shared(bc, var, vel,BOUNDX0_max,BOUNDX0_min,BOUNDX0_width,BOUNDX0_ratio_width, \
-               vbc_applied_x0, vbc_applied_x1)
+               vbc_applied_x0, vbc_applied_x1,var_bcflag,var_coord,var_bnormals,var_vbc_types, \
+               var_vbc_values,edgevec,bc_x0,bc_vx0min,bc_vx0r0, \
+               bc_vx0max,bc_vx0r2,bc_vx0r1,bc_x1,bc_z0,bc_z1,bc_vz0,bc_vz1)
     #pragma acc parallel loop
 #endif
     for (int i=0; i<var_nnode; ++i) {
@@ -980,7 +982,7 @@ namespace {
 #ifdef THREED
         #pragma acc parallel loop
 #endif
-        for (std::size_t i=0; i<ntop; ++i) {
+        for (int i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
             double conv =  surf_diff * var_dt * total_slope[n] / total_dx[n];
@@ -1353,7 +1355,15 @@ namespace {
                         if ( dh_tmp != dh_tmp ) {
                             std::cout << "\ndh_tmp is NaN.\n";
                             std::cout << std::fixed << std::scientific << dh_tmp << "\t" << (unit_vol - depo_vol);
-                            std::cout << "\t" << std::dec << dist << std::endl;
+                            std::cout << "\t dist: " << std::dec << dist << std::endl;
+                            std::cout << "\t j: " << j << std::endl;
+                            std::cout << "\t top_nodes[j]: " << top_nodes[j] << std::endl;
+                            std::cout << "\t coord[top_nodes[j]][0]: " << coord[top_nodes[j]][0] << std::endl;
+                            std::cout << "\t iside: "<< iside << std::endl;
+                            std::cout << "\t starts[iside]: " << starts[iside] << std::endl;
+                            std::cout << "\ttop_nodes[starts[iside]]: " << top_nodes[starts[iside]] << std::endl;
+                            std::cout << "\t coord[top_nodes[starts[iside]]][0]: " << coord[top_nodes[starts[iside]]][0] << std::endl;
+                            exit(168);
 //                            printf("\ndh_tmp is NaN.\n");
 //                            printf("\n%e\t%e\t%f\n",dh_tmp, (unit_vol - depo_vol), dist);
                         }
@@ -1413,7 +1423,7 @@ namespace {
                     }
         }
 
-        for (std::size_t i=0; i<ntop; i++)
+        for (size_t i=0; i<ntop; i++)
             dh[i] += dh_terrig[i];
 
         if ( var.steps%interval_report == 0 ) {
@@ -1501,7 +1511,7 @@ namespace {
                 }
 
                 // search top element node for melting marker
-                for (int j=1; j<ntop;j++) {
+                for (size_t j=1; j<ntop;j++) {
                     double dx0 = x[0] - coord[top_nodes[j-1]][0];
                     double dx1 = x[0] - coord[top_nodes[j]][0];
                     if (dx0*dx1 >= 0) continue;
@@ -1521,7 +1531,7 @@ namespace {
         if (melting_marker.size() == 0)
             return;
         // find the depth of melting top of node
-        for (int i=1;i<ntop-1;i++) {
+        for (size_t i=1;i<ntop-1;i++) {
             if (melting_depth_elem[i-1] < -100.e3 && melting_depth_elem[i] < -100.e3) continue;
             if (melting_depth_elem[i-1] < -100.e3)
                 melting_depth[i] = melting_depth_elem[i];
@@ -1532,27 +1542,27 @@ namespace {
         }
         // find the max depth of melting top
         double max_dp = 0.;
-        for (int i=0;i<ntop;i++)
+        for (size_t i=0;i<ntop;i++)
             max_dp = std::min(max_dp, melting_depth[i]);
         // normalizing the depth of melting
-        for (int i=0;i<ntop;i++) {
+        for (size_t i=0;i<ntop;i++) {
             if (melting_depth[i] == 0.)
                 melting_depth[i] = max_dp;
             melting_depth_elem[i] = melting_depth[i] / max_dp;
         }
         // smoothing the depth of melting
-        for (int i=1;i<ntop-1;i++)
+        for (size_t i=1;i<ntop-1;i++)
             melting_depth[i] = (melting_depth_elem[i-1] + melting_depth_elem[i] + melting_depth_elem[i+1])/3.;
         melting_depth[0] = melting_depth[1];
         melting_depth[ntop-1] = melting_depth[ntop-2];
-        for (int i=0;i<ntop;i++)
+        for (size_t i=0;i<ntop;i++)
             dh_oc[i] = dh_oc[i] / melting_depth[i];
         if (var.steps % param.mesh.quality_check_step_interval == 0)
             if (melting_marker.size() > 0) {
-                for (int i=0;i<ntop;i++)
+                for (size_t i=0;i<ntop;i++)
                     if (dh_oc[i] > 0) {
                         double coef = dh_oc[i]/ var.dt * 1000. * YEAR2SEC; // / param.mesh.quality_check_step_interval ;
-                        printf("%d x: %f dh_oc: %f (mm/yr) depth: %f\n",i, coord[top_nodes[i]][0],coef, melting_depth[i]);
+                        printf("%zu x: %f dh_oc: %f (mm/yr) depth: %f\n",i, coord[top_nodes[i]][0],coef, melting_depth[i]);
                     }
             }
 #ifdef USE_NPROF
