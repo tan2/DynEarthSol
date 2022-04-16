@@ -8,10 +8,10 @@ class Output
 private:
     const std::string &modelname;
     const double start_time;
+    const bool is_averaged;
     const int average_interval;
     const bool has_marker_output;
     int frame;
-    const bool is_averaged;
 
     // stuffs for averging fields
     double time0;
