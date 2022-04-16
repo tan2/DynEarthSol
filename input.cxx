@@ -303,11 +303,13 @@ static void declare_parameters(po::options_description &cfg,
         ("bc.vbc_val_division_x0_max", po::value<double>(&p.bc.vbc_val_division_x0_max)->default_value(1.),
          "Ratio of second rate change division from the top to the right boundary width (for option = 8)")
         ("bc.vbc_val_x0_ratio0", po::value<double>(&p.bc.vbc_val_x0_ratio0)->default_value(1.),
-         "Ratio of the velocity before the vbc_val_division_x1_min to vbc_val_x0 of the left boundary width (for option = 1 and 3)")
+         "Ratio of the velocity at the surface of the left boundary width (for option = 1 and 3)")
         ("bc.vbc_val_x0_ratio1", po::value<double>(&p.bc.vbc_val_x0_ratio1)->default_value(1.),
-         "Ratio of the velocity before the vbc_val_division_x1_max to vbc_val_x0 of the left boundary width (for option = 1 and 3)")
+         "Ratio of the velocity at the vbc_val_division_x0_min of the left boundary width (for option = 1 and 3)")
         ("bc.vbc_val_x0_ratio2", po::value<double>(&p.bc.vbc_val_x0_ratio2)->default_value(1.),
-         "Ratio of the velocity after the vbc_val_division_x1_max to vbc_val_x0 of the right boundary width (for option = 1 and 3)")
+         "Ratio of the velocity at the vbc_val_division_x1_max of the left boundary width (for option = 1 and 3)")
+        ("bc.vbc_val_x0_ratio3", po::value<double>(&p.bc.vbc_val_x0_ratio3)->default_value(1.),
+         "Ratio of the velocity at the bottom of the left boundary width (for option = 1 and 3)")
 
         ("bc.num_vbc_period_x0", po::value<int>(&p.bc.num_vbc_period_x0)->default_value(1),
          "Number of velocity period at x0")
@@ -329,11 +331,13 @@ static void declare_parameters(po::options_description &cfg,
         ("bc.vbc_val_division_x1_max", po::value<double>(&p.bc.vbc_val_division_x1_max)->default_value(1.),
          "Ratio of second rate change division from the top to the right boundary width (for option = 8)")
         ("bc.vbc_val_x1_ratio0", po::value<double>(&p.bc.vbc_val_x1_ratio0)->default_value(1.),
-         "Ratio of the velocity before the vbc_val_division_x1_min to vbc_val_x1 of the right boundary width (for option = 1 and 3)")
+         "Ratio of the velocity at the surface of the right boundary width (for option = 1 and 3)")
         ("bc.vbc_val_x1_ratio1", po::value<double>(&p.bc.vbc_val_x1_ratio1)->default_value(1.),
-         "Ratio of the velocity before the vbc_val_division_x1_max to vbc_val_x1 of the right boundary width (for option = 1 and 3)")
+         "Ratio of the velocity at the vbc_val_division_x0_min of the right boundary width (for option = 1 and 3)")
         ("bc.vbc_val_x1_ratio2", po::value<double>(&p.bc.vbc_val_x1_ratio2)->default_value(1.),
-         "Ratio of the velocity after the vbc_val_division_x1_max to vbc_val_x1 of the right boundary width (for option = 1 and 3)")
+         "Ratio of the velocity at the vbc_val_division_x1_max of the right boundary width (for option = 1 and 3)")
+        ("bc.vbc_val_x1_ratio3", po::value<double>(&p.bc.vbc_val_x1_ratio3)->default_value(1.),
+         "Ratio of the velocity at the bottom of the right boundary width (for option = 1 and 3)")
 
         ("bc.vbc_y0", po::value<int>(&p.bc.vbc_y0)->default_value(0),
          "Type of boundary condition for the southern side")

@@ -11,6 +11,7 @@
 #include "markerset.hpp"
 #include "barycentric-fn.hpp"
 #include "geometry.hpp"
+#include "utils.hpp"
 
 
 #include "bc.hpp"
@@ -186,7 +187,7 @@ void create_boundary_normals(const Variables &var, array_t &bnormals,
 }
 
 
-void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_vec &vbc_period_ratio_x)
+void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -204,123 +205,29 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
     // vel period is not ready for 3D
 
 #else
-    // find period
-    int_vec nperiod_time(2,0);
-    int_vec nperiod_ratio(2,0);
-    nperiod_time[0] = bc.vbc_period_x0_time_in_yr.size();
-    nperiod_time[1] = bc.vbc_period_x1_time_in_yr.size();
-    nperiod_ratio[0] = bc.vbc_period_x0_ratio.size();
-    nperiod_ratio[1] = bc.vbc_period_x1_ratio.size();
-    int max_true_iperiod = std::max(bc.vbc_period_x0_time_in_yr.size(), \
-                                    bc.vbc_period_x1_time_in_yr.size());
-    //double_vec2D vbc_period_time(2,double_vec(max_true_iperiod,0));
-    //double_vec **vbc_test[2];
-    //vbc_test[0] = bc.vbc_period_x0_time_in_yr;
-    //vbc_test[1] = bc.vbc_period_x1_time_in_yr;
 
-    //for (size_t i=0;i<bc.vbc_period_x0_time_in_yr.size();i++)
-    //  printf("%f",vbc_test[0][i]);
-
-    int_vec iperiod(2,-1);
-    int max_nperiod = std::max(bc.num_vbc_period_x0,bc.num_vbc_period_x1);
-    double_vec2D period_times(2,double_vec(max_nperiod,0.));
-    double_vec2D period_ratios(2,double_vec(max_nperiod,0.));
-    int izone;
-
-//    if ( var.steps%10000 == 0 )
-//        printf("Before: %f %f\n", vbc_period_ratio_x[0],vbc_period_ratio_x[1]);
-
-    // for x0
-    for (int i=0;i<bc.num_vbc_period_x0;i++) {
-        if (i < nperiod_time[0])
-            period_times[0][i] = bc.vbc_period_x0_time_in_yr[i];
-        else
-            period_times[0][i] = bc.vbc_period_x0_time_in_yr[nperiod_time[0] - 1];
-
-        if (i < nperiod_ratio[0])
-            period_ratios[0][i] = bc.vbc_period_x0_ratio[i];
-        else
-            period_ratios[0][i] = bc.vbc_period_x0_ratio[nperiod_ratio[0] - 1];
-    }
-
-    izone = bc.num_vbc_period_x0 - 1;
-    do {
-        if (var.time > period_times[0][izone] * YEAR2SEC)
-            iperiod[0] = izone + 1;
-        izone--;
-    } while (izone >= 0 && iperiod[0] == -1);
-
-    if (izone < 0 && iperiod[0] == -1)
-        iperiod[0] = 0;
-    else if (iperiod[0] == bc.num_vbc_period_x0)
-        iperiod[0]--;
-
-    if (period_ratios[0][iperiod[0]] >= 0.)
-        vbc_period_ratio_x[0] = period_ratios[0][iperiod[0]];
-    else {
-        double dt = period_times[0][iperiod[0]] - period_times[0][iperiod[0]-1];
-        double dt0 = var.time / YEAR2SEC - period_times[0][iperiod[0]-1];
-        double dr = period_ratios[0][iperiod[0]+1] - period_ratios[0][iperiod[0]-1];
-        vbc_period_ratio_x[0] = period_ratios[0][iperiod[0]-1] +  dr * dt0/dt;
-    }
-
-    double vbc_applied_x0 = bc.vbc_val_x0 * vbc_period_ratio_x[0];
-
-    // for x1
-    for (int i=0;i<bc.num_vbc_period_x1;i++) {
-        if (i < nperiod_time[1])
-            period_times[1][i] = bc.vbc_period_x1_time_in_yr[i];
-        else
-            period_times[1][i] = bc.vbc_period_x1_time_in_yr[nperiod_time[1] - 1];
-
-        if (i < nperiod_ratio[1])
-            period_ratios[1][i] = bc.vbc_period_x1_ratio[i];
-        else
-            period_ratios[1][i] = bc.vbc_period_x1_ratio[nperiod_ratio[1] - 1];
-    }
-
-    izone = bc.num_vbc_period_x1 - 1;
-    do {
-        if (var.time > period_times[1][izone] * YEAR2SEC)
-            iperiod[1] = izone + 1;
-        izone--;
-    } while (izone >= 0 && iperiod[1] == -1);
-
-    if (izone < 0 && iperiod[1] == -1)
-        iperiod[1] = 0;
-    else if (iperiod[1] == bc.num_vbc_period_x1)
-        iperiod[1]--;
-
-    if (period_ratios[1][iperiod[1]] >= 0.)
-        vbc_period_ratio_x[1] = period_ratios[1][iperiod[1]];
-    else {
-        double dt = period_times[1][iperiod[1]] - period_times[1][iperiod[1]-1];
-        double dt0 = var.time / YEAR2SEC - period_times[1][iperiod[1]-1];
-        double dr = period_ratios[1][iperiod[1]+1] - period_ratios[1][iperiod[1]-1];
-        vbc_period_ratio_x[1] = period_ratios[1][iperiod[1]-1] +  dr * dt0/dt;
-    }
-
-//    if ( var.steps%10000 == 0 )
-//      printf("After: %f %f\n", vbc_period_ratio_x[0],vbc_period_ratio_x[1]); 
-
-    double vbc_applied_x1 = bc.vbc_val_x1 * vbc_period_ratio_x[1];
+    // new way to find vbc_applied_x
+    double t_now = var.time / YEAR2SEC;
+    double vbc_applied_x0 = bc.vbc_val_x0 * interp1(bc.vbc_period_x0_time_in_yr,bc.vbc_period_x0_ratio, t_now);
+    double vbc_applied_x1 = bc.vbc_val_x1 * interp1(bc.vbc_period_x1_time_in_yr,bc.vbc_period_x1_ratio, t_now);
 
     // find max and min coordinate for BOUNDX0
     double BOUNDX0_max = 0.;
     double BOUNDX0_min = 0.;
-    double BOUNDX0_width;
-    double BOUNDX0_ratio_width = bc.vbc_val_division_x0_max - bc.vbc_val_division_x0_min;
-    bool if_init = false;
+    double BOUNDX1_max = 0.;
+    double BOUNDX1_min = 0.;
+    bool if_init0 = false;
+    bool if_init1 = false;
     for (int i=0; i<var.nnode; ++i) {
         if (! is_on_boundary(*var.bcflag, i)) continue;
 
         uint flag = (*var.bcflag)[i];
         if (flag & BOUNDX0) {
             const double *x = (*var.coord)[i];
-            if (!if_init) {
+            if (!if_init0) {
                BOUNDX0_max = x[1];
                BOUNDX0_min = x[1];
-               if_init = true;
+               if_init0 = true;
             } else {
                 if (x[1]>BOUNDX0_max) {
                     BOUNDX0_max = x[1];
@@ -329,10 +236,34 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
                     BOUNDX0_min = x[1];
                 }
             }
+        } else if (flag & BOUNDX1) {
+            const double *x = (*var.coord)[i];
+            if (!if_init1) {
+               BOUNDX1_max = x[1];
+               BOUNDX1_min = x[1];
+               if_init1 = true;
+            } else {
+                if (x[1]>BOUNDX1_max) {
+                    BOUNDX1_max = x[1];
+                }
+                if (x[1]<BOUNDX1_min) {
+                    BOUNDX1_min = x[1];
+                }
+            }            
         }
     }
-    BOUNDX0_width = BOUNDX0_max - BOUNDX0_min;
-    //printf("%f\t%f\n",BOUNDX1_max, BOUNDX1_min);
+    double BOUNDX0_width = BOUNDX0_max - BOUNDX0_min;
+    double BOUNDX1_width = BOUNDX1_max - BOUNDX1_min;
+
+    const double_vec& vbc_vertical_ratios_x0 = var.vbc_vertical_ratio_x0;
+    const double_vec& vbc_vertical_ratios_x1 = var.vbc_vertical_ratio_x1;
+
+    double_vec vbc_vertical_divisions_x0(4,0.);
+    double_vec vbc_vertical_divisions_x1(4,0.);
+    for (int i=0;i<4;i++) {
+        vbc_vertical_divisions_x0[i] = - (BOUNDX0_max - var.vbc_vertical_div_x0[i] * BOUNDX0_width);
+        vbc_vertical_divisions_x1[i] = - (BOUNDX0_max - var.vbc_vertical_div_x1[i] * BOUNDX0_width);
+    }
 #endif
 
     // diverging x-boundary
@@ -372,10 +303,11 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
     #pragma acc parallel loop
 #else
     #pragma omp parallel for default(none) \
-        shared(bc, var, vel,BOUNDX0_max,BOUNDX0_min,BOUNDX0_width,BOUNDX0_ratio_width, \
-               vbc_applied_x0, vbc_applied_x1,var_bcflag,var_coord,var_bnormals,var_vbc_types, \
-               var_vbc_values,edgevec,bc_x0,bc_vx0min,bc_vx0r0, \
-               bc_vx0max,bc_vx0r2,bc_vx0r1,bc_x1,bc_z0,bc_z1,bc_vz0,bc_vz1)
+        shared(bc, var, vel, vbc_vertical_ratios_x0, vbc_vertical_ratios_x1, \
+                vbc_vertical_divisions_x0, vbc_vertical_divisions_x1, \
+                vbc_applied_x0, vbc_applied_x1,var_bcflag,var_coord,var_bnormals,var_vbc_types, \
+                var_vbc_values,edgevec,bc_x0,bc_vx0min,bc_vx0r0, \
+                bc_vx0max,bc_vx0r2,bc_vx0r1,bc_x1,bc_z0,bc_z1,bc_vz0,bc_vz1)
     #pragma acc parallel loop
 #endif
     for (int i=0; i<var_nnode; ++i) {
@@ -402,20 +334,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #ifdef THREED
                 v[0] = bc_vx0;
 #else
-                ratio = -1.* (x[1] - BOUNDX0_max) / BOUNDX0_width;
-                if (ratio <  bc_vx0min) {
-                    v[0] =  bc_vx0r0 * vbc_applied_x0;
-                } else if (ratio >  bc_vx0max) {
-                    v[0] =  bc_vx0r2 * vbc_applied_x0;
-                } else {
-                    if (bc_vx0r1 >= 0.) {
-                        v[0] =  bc_vx0r1 * vbc_applied_x0;
-                    } else {
-                        rr = (ratio-bc_vx0min) / (BOUNDX0_ratio_width);
-                        dvr = bc_vx0r2 - bc_vx0r0;
-                        v[0] = ((rr * dvr) + bc_vx0r0) * vbc_applied_x0;
-                    }
-                }
+                v[0] = vbc_applied_x0 * interp1(vbc_vertical_divisions_x0, vbc_vertical_ratios_x0, -x[1]);
 #endif
                 break;
             case 2:
@@ -428,20 +347,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #ifdef THREED
                 v[0] = bc_vx0;
 #else
-                ratio = -1.* (x[1] - BOUNDX0_max) / BOUNDX0_width;
-                if (ratio <  bc_vx0min) {
-                    v[0] =  bc_vx0r0 * vbc_applied_x0;
-                } else if (ratio >  bc_vx0max) {
-                    v[0] =  bc_vx0r2 * vbc_applied_x0;
-                } else {
-                    if (bc_vx0r1 >= 0.) {
-                        v[0] =  bc_vx0r1 * vbc_applied_x0;
-                    } else {
-                        rr = (ratio-bc_vx0min) / (BOUNDX0_ratio_width);
-                        dvr = bc_vx0r2 - bc_vx0r0;
-                        v[0] = ((rr * dvr) + bc_vx0r0) * vbc_applied_x0;
-                    }
-                }
+                v[0] = vbc_applied_x0 * interp1(vbc_vertical_divisions_x0, vbc_vertical_ratios_x0,-x[1]);
 #endif
                 v[1] = 0;
 #ifdef THREED
@@ -473,7 +379,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #ifdef THREED
                 v[0] = bc_vx1;
 #else
-                v[0] = vbc_applied_x1;
+                v[0] = vbc_applied_x1 * interp1(vbc_vertical_divisions_x1, vbc_vertical_ratios_x1, -x[1]);
 #endif
                 break;
             case 2:
@@ -486,7 +392,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel, double_v
 #ifdef THREED
                 v[0] = bc_vx1;
 #else
-                v[0] = vbc_applied_x1;
+                v[0] = vbc_applied_x1 * interp1(vbc_vertical_divisions_x1, vbc_vertical_ratios_x1, -x[1]);
 #endif
                 v[1] = 0;
 #ifdef THREED

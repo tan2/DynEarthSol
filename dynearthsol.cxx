@@ -41,7 +41,6 @@ void init_var(const Param& param, Variables& var)
     for (int i=0;i<nbdrytypes;++i)
         var.bnodes[i] = new int_vec;
     var.bnormals = new array_t(nbdrytypes);
-    var.vbc_period_ratio_x = new double_vec(2,1.);
 
     if (param.control.characteristic_speed == 0)
         var.max_vbc_val = find_max_vbc(param.bc, *var.vbc_period_ratio_x);
@@ -72,6 +71,24 @@ void init_var(const Param& param, Variables& var)
     var.vbc_values[7] = param.bc.vbc_val_n1;
     var.vbc_values[8] = param.bc.vbc_val_n2;
     var.vbc_values[9] = param.bc.vbc_val_n3;
+
+    var.vbc_vertical_div_x0[0] = 0.;
+    var.vbc_vertical_div_x0[1] = param.bc.vbc_val_division_x0_min;
+    var.vbc_vertical_div_x0[2] = param.bc.vbc_val_division_x0_max;
+    var.vbc_vertical_div_x0[3] = 1.;
+    var.vbc_vertical_div_x1[0] = 0.;
+    var.vbc_vertical_div_x1[1] = param.bc.vbc_val_division_x1_min;
+    var.vbc_vertical_div_x1[2] = param.bc.vbc_val_division_x1_max;
+    var.vbc_vertical_div_x1[3] = 1.;
+
+    var.vbc_vertical_ratio_x0[0] = param.bc.vbc_val_x0_ratio0;
+    var.vbc_vertical_ratio_x0[1] = param.bc.vbc_val_x0_ratio1;
+    var.vbc_vertical_ratio_x0[2] = param.bc.vbc_val_x0_ratio2;
+    var.vbc_vertical_ratio_x0[3] = param.bc.vbc_val_x0_ratio3;
+    var.vbc_vertical_ratio_x1[0] = param.bc.vbc_val_x1_ratio0;
+    var.vbc_vertical_ratio_x1[1] = param.bc.vbc_val_x1_ratio1;
+    var.vbc_vertical_ratio_x1[2] = param.bc.vbc_val_x1_ratio2;
+    var.vbc_vertical_ratio_x1[3] = param.bc.vbc_val_x1_ratio3;
 }
 
 
@@ -107,7 +124,7 @@ void init(const Param& param, Variables& var)
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, *var.bnormals, var.edge_vectors);
-    apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
+    apply_vbcs(param, var, *var.vel);
 
     // temperature should be init'd before stress and strain
     initial_temperature(param, var, *var.temperature);
@@ -211,7 +228,7 @@ void restart(const Param& param, Variables& var)
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, *var.bnormals, var.edge_vectors);
-    apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
+    apply_vbcs(param, var, *var.vel);
     // Initializing field variables
     {
         bin_save.read_array(*var.vel, "velocity");
@@ -395,7 +412,7 @@ int main(int argc, const char* argv[])
 
         update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);
-        apply_vbcs(param, var, *var.vel, *var.vbc_period_ratio_x);
+        apply_vbcs(param, var, *var.vel);
         update_mesh(param, var);
 
         // elastic stress/strain are objective (frame-indifferent)

@@ -159,9 +159,11 @@ struct BC {
     double vbc_val_x0_ratio0;
     double vbc_val_x0_ratio1;
     double vbc_val_x0_ratio2;
+    double vbc_val_x0_ratio3;
     double vbc_val_x1_ratio0;
     double vbc_val_x1_ratio1;
     double vbc_val_x1_ratio2;
+    double vbc_val_x1_ratio3;
 
     int num_vbc_period_x0;
     int num_vbc_period_x1;
@@ -354,7 +356,6 @@ struct Variables {
     int nseg;
 
     double max_vbc_val;
-    double_vec *vbc_period_ratio_x;
     double compensation_pressure;
 
     // These 5 arrays are allocated by external library
@@ -374,6 +375,10 @@ struct Variables {
     int vbc_types[nbdrytypes];
     double vbc_values[nbdrytypes];
     std::map<std::pair<int,int>, double*> edge_vectors;
+    double_vec vbc_vertical_div_x0;
+    double_vec vbc_vertical_div_x1;
+    double_vec vbc_vertical_ratio_x0;
+    double_vec vbc_vertical_ratio_x1;
 
     int_vec *top_elems;
 //    int_vec2D *marker_in_elem;
@@ -408,6 +413,14 @@ struct Variables {
 
     double time_else, time_surf;
     clock_t tmp_else, tmp_surf;
+    Variables()
+    {
+        vbc_vertical_div_x0.resize(4);
+        vbc_vertical_div_x1.resize(4);
+        vbc_vertical_ratio_x0.resize(4);
+        vbc_vertical_ratio_x1.resize(4);
+    }
+
 };
 
 #endif

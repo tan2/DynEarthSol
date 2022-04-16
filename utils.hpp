@@ -1,9 +1,12 @@
 #ifndef DYNEARTHSOL3D_UTILS_HPP
 #define DYNEARTHSOL3D_UTILS_HPP
 
+#include "parameters.hpp"
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <cfloat>
+#include <math.h>
 
 static void print(std::ostream& os, const double& x)
 {
@@ -84,6 +87,39 @@ static double second_invariant(const double* t)
      * defined as: td = deviatoric(t); sqrt( td(i,j) * td(i,j) / 2)
      */
     return std::sqrt(second_invariant2(t));
+}
+
+
+static int findNearestNeighbourIndex( double x_new, const double_vec& x )
+{
+    /* find nearest neighbour index for interpolation
+     * x vector only can be ascending
+     */
+    double dist = DBL_MAX;
+    int idx = -1;
+    for (size_t i = 0; i < x.size(); ++i ) {
+        double newDist = x_new - x[i];
+        if ( newDist >= 0 && newDist <= dist ) {
+            dist = newDist;
+            idx = i;
+        }
+    }
+
+    return idx;
+}
+
+
+static double interp1(const double_vec& x, const double_vec& y, double x_new)
+{
+    int idx = findNearestNeighbourIndex( x_new, x);
+    double slope = 0;
+
+    if (idx < 0)
+        idx = 0;
+    else if ( idx < static_cast<int>(x.size()-1) )
+        slope = (y[idx+1] - y[idx]) / (x[idx+1] - x[idx]);
+
+    return slope * (x_new-x[idx]) + y[idx];
 }
 
 #endif
