@@ -970,6 +970,7 @@ namespace {
         const double ratio = double(chart_width) / data_num;
 
         int sum = 0;
+        std::cout << "\t";
         for (int i=0;i<data_num;i++) {
             double prec = i * ratio;
             if(prec > sum) {
@@ -984,7 +985,7 @@ namespace {
 //        printf(" (ntop: %d)\n",data_num);
     }
 
-    void get_basin_info(const Variables& var, double_vec& top_depth, \
+    void get_basin_info(const Param& param, const Variables& var, double_vec& top_depth, \
         std::vector<bool>& if_source, int_vec& if_land,\
         int_vec& starts, int_vec& ends, double_vec& dhacc_tmp, double_vec& dx) {
 #ifdef USE_NPROF
@@ -1091,7 +1092,7 @@ namespace {
         }
 
 
-        if ( var.steps%10000 == 0 ) {
+        if ( param.control.is_reporting_terrigenous_info && var.steps%10000 == 0 ) {
             if (starts0[0] != starts[0] || starts0[1] != starts[1]) {
                 printf("%d starts0: %d %d; starts: %d %d\n", \
                         var.steps,starts0[0],starts0[1],starts[0],starts[1]);
@@ -1148,8 +1149,8 @@ namespace {
         double_vec dhacc_tmp(ntop,0.);
         int interval_report = 10000;
 
-        if ( var.steps%interval_report == 0 )
-            std::cout << "** Sedimentation report: ";
+        if ( param.control.is_reporting_terrigenous_info && var.steps%interval_report == 0 )
+            std::cout << "\t** Sedimentation report: ";
         get_surface_info(var,top_base,top_depth);
 
 //******************************************************************
@@ -1182,7 +1183,7 @@ namespace {
         sign[0] = 1;
         sign[1] = -1;
 
-        get_basin_info(var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
+        get_basin_info(param,var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
 
         // recored possible source locations
         for (int i=0;i<2;i++) {
@@ -1218,7 +1219,7 @@ namespace {
                         if_slope_limited[iside] = false;
                         dx[0] = 0.;
                         dx[1] = 0.;
-                        get_basin_info(var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
+                        get_basin_info(param,var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
                         if (starts[iside] == ends[iside]) {
                             if_space_limited[iside] = true;
                             break;
@@ -1332,7 +1333,7 @@ namespace {
         for (size_t i=0; i<ntop; i++)
             dh[i] += dh_terrig[i];
 
-        if ( var.steps%interval_report == 0 ) {
+        if (param.control.is_reporting_terrigenous_info && var.steps%interval_report == 0 ) {
             if (!if_source[0] || (!if_source[0]) ) {
                 if (!if_source[0]) std::cout << "No source from 0. ";
                 if (!if_source[1]) std::cout << "No source from 1. ";
@@ -1342,14 +1343,14 @@ namespace {
                 if (if_source[i]) {
                     if (if_space_limited[i]) std::cout << "\n   Space limited at " << i;
                     if (if_slope_limited[i]) std::cout << "\n   Slope limited at " << i;
-                    std::cout << "\n    Side " << std::setw(1) << std::dec << i << ": Loc.: " << std::setw(8) << std::setprecision(2) << coord[top_nodes[starts[i]]][0]/1000.;
+                    std::cout << "\n\tSide " << std::setw(1) << std::dec << i << ": Loc.: " << std::setw(8) << std::setprecision(2) << coord[top_nodes[starts[i]]][0]/1000.;
                     std::cout << " km (" << std::setw(5) << std::dec << starts[i] << " - " << std::setw(5) << ends[i] << "). Sediment: ";
                     std::cout << std::setw(8) << std::setprecision(2) << sedi_vol[i] << " m^2 (max: " << max_sedi_vol << " Loop: ";
                     std::cout << std::setw(5) << std::dec << nsedi[i] << std::endl;
                 }
             }
             if (if_space_limited[0] || if_space_limited[1]) {
-                std::cout << "\n    Space of basin is not enough for sediment . Do next round.";
+                std::cout << "\tSpace of basin is not enough for sediment . Do next round.";
                 std::cout << std::setw(5) << std::dec << nsedi[0] << "/" << nsedi[1] << std::endl;
             }
         }
@@ -1694,7 +1695,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         // correct the plastic strain of urface element for preventing surface landslide.
         surface_plstrain_diffusion(param,var,plstrain);
 
-    if ( var.steps%10000 == 0 &&  var.steps != 0  ) {
+    if ( param.control.is_reporting_terrigenous_info && var.steps%10000 == 0 &&  var.steps != 0  ) {
         double max_dh = 0., min_dh = 0., max_dh_oc = 0.;
         for (int i=0;i<ntop;i++) {
             max_dh = std::max(max_dh, dh[i]);
@@ -1702,14 +1703,14 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             // std::cout << n << "  dh:  " << dh << '\n';
         }
 
-        std::cout << "   max erosion / sedimentation rate (mm/yr):  "
+        std::cout << "\tmax erosion / sedimentation rate (mm/yr):  "
                     << std::fixed << std::setprecision(3) << min_dh / var.dt * 1000. * YEAR2SEC << " / "
                     << std::fixed << std::setprecision(3) << max_dh / var.dt * 1000. * YEAR2SEC << '\n';
 
         if ( param.mat.phase_change_option == 2) {
             for (int i=0;i<ntop;i++)
                 max_dh_oc = std::max(max_dh_oc, dh_oc[i]);
-            std::cout << "   max igneous eruption rate (mm/yr):  "
+            std::cout << "\tmax igneous eruption rate (mm/yr):  "
                         << std::fixed << std::setprecision(3) << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
         }
     }

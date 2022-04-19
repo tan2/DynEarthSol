@@ -246,6 +246,8 @@ static void declare_parameters(po::options_description &cfg,
          "Coefficient of terrigenous deposition formula.")
         ("control.surf_terrig_base",po::value<double>(&p.control.surf_terrig_base)->default_value(1.25),
          "Power base of terrigenous deposition formula.")
+        ("control.is_reporting_terrigenous_info",po::value<bool>(&p.control.is_reporting_terrigenous_info)->default_value(false),
+         "If report surface terrigenous information.")
 
         ("control.surf_src_vol",po::value<double>(&p.control.surf_src_vol)->default_value(1.),
          "The volume of the sediment bring from continent source (in m^3/s). "

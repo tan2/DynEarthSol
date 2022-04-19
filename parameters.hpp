@@ -109,6 +109,7 @@ struct Control {
     double surf_src_area;
     double surf_terrig_coeff;
     double surf_terrig_base;
+    bool is_reporting_terrigenous_info;
 
     bool is_quasi_static;
     bool has_thermal_diffusion;
