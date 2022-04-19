@@ -2,7 +2,7 @@
 #define DYNEARTHSOL3D_BC_HPP
 
 bool is_on_boundary(const Variables &var, int node);
-double find_max_vbc(const BC &bc, const double_vec &vbc_period_ratio_x);
+double find_max_vbc(const BC &bc);
 void create_boundary_normals(const Variables &var, array_t &bnormals,
                              std::map<std::pair<int,int>, double*>  &edge_vectors);
 void apply_vbcs(const Param &param, const Variables &var, array_t &vel);

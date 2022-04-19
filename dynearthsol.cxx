@@ -43,7 +43,7 @@ void init_var(const Param& param, Variables& var)
     var.bnormals = new array_t(nbdrytypes);
 
     if (param.control.characteristic_speed == 0)
-        var.max_vbc_val = find_max_vbc(param.bc, *var.vbc_period_ratio_x);
+        var.max_vbc_val = find_max_vbc(param.bc);
         // todo max_vbc_val change with boundary period.
     else
         var.max_vbc_val = param.control.characteristic_speed;

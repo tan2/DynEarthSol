@@ -67,9 +67,9 @@ bool is_on_boundary(const uint_vec &bcflag, int node)
 }
 
 
-double find_max_vbc(const BC &bc, const double_vec &vbc_period_ratio_x)
+double find_max_vbc(const BC &bc)
 {
-    double max_vbc_val = 0;
+    double max_vbc_val = 1e-12; // equal to 0.03 mm/yr
     if (bc.vbc_x0 % 2 == 1) // odd number indicates fixed velocity component
         max_vbc_val = std::max(max_vbc_val, std::fabs(bc.vbc_val_x0));
     if (bc.vbc_x1 % 2 == 1)
