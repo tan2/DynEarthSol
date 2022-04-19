@@ -228,7 +228,7 @@ void restart(const Param& param, Variables& var)
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, *var.bnormals, var.edge_vectors);
-    apply_vbcs(param, var, *var.vel);
+
     // Initializing field variables
     {
         bin_save.read_array(*var.vel, "velocity");
@@ -241,6 +241,7 @@ void restart(const Param& param, Variables& var)
         if (param.mat.is_plane_strain)
             bin_chkpt.read_array(*var.stressyy, "stressyy");
     }
+    apply_vbcs(param, var, *var.vel);
 
     // Misc. items
     {
