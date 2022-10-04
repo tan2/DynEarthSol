@@ -57,6 +57,8 @@ Run
 ===========
 
 * Execute "dynearthsol2d inputfile".
+* Pay attention to any warnings. For instance, if a warning about potential 
+  race condition is printed on screen, do follow the given suggestions.
 * Several example input files are provided under 'examples/' directory. The
   format of the input file is described in 'examples/defaults.cfg'.
 * Benchmark cases with analytical solution can be found under 'benchmarks/'
