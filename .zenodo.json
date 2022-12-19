@@ -1,4 +1,12 @@
 {
+    "description": "DynEarthSol for sedimentology.",
+    "license": "MIT",
+    "title": "DynEarthSol",
+    "upload_type": "software",
+    "keywords": [
+        "DynEarthSol",
+        "Sedimentology"
+    ],
     "creators": [
         {
             "orcid": "0000-0002-7144-1394",
@@ -16,16 +24,13 @@
             "name": "Choi, Eunseo"
         }
     ],
-
-    "description" : "DynEarthSol for sedimentology.",
-
-    "license": "MIT",
-
-    "title": "DynEarthSol",
-
-    "keywords": [
-        "DynEarthSol", 
-        "Sedimentology"
+    "access_right": "open",
+    "related_identifiers": [
+        {
+            "scheme": "doi", 
+            "identifier": "10.5281/zenodo.7455730", 
+            "relation": "isVersionOf"
+        }
     ]
 
 }
