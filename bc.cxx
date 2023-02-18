@@ -1575,11 +1575,13 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
     nvtxRangePushA(__FUNCTION__);
 #endif
 
+    const int_vec &top_nodes = *surfinfo.top_nodes;
     const int slow_updates_interval = 10;
     bool has_partial_melting = false;
     const int ntop = var.surfinfo.ntop;
     double_vec &dh = *var.surfinfo.dh;
     double_vec &dh_oc = *var.surfinfo.dh_oc;
+    double_vec &dhacc = *var.surfinfo.dhacc;
 
     #pragma acc parallel loop
     for (int i=0;i<ntop;i++)
@@ -1610,10 +1612,9 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         std::exit(1);
     }
 #ifdef THREED
-    const int_vec *top_nodes = surfinfo.top_nodes;
     #pragma acc parallel loop
     for (std::size_t i=0; i<ntop; ++i) {
-        int n = (*top_nodes)[i];
+        int n = top_nodes[i];
         coord[n][NDIMS-1] += dh[i];
     }
     // todo
@@ -1623,16 +1624,16 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         // get global index of node
         // update coordinate via dh
         // update dhacc for marker correction
-        int n = (*surfinfo.top_nodes)[i];
-        (coord)[n][NDIMS-1] += dh[i];
-        (*surfinfo.dhacc)[n] += dh[i];
+        int n = top_nodes[i];
+        coord[n][NDIMS-1] += dh[i];
+        dhacc[n] += dh[i];
 
         // go through connected elements
         // get local index of surface element
         // get global index of element
         // get local index of node in connected element
         // update edhacc of connected elements
-        for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+        for (std::size_t j=0; j<(*surfinfo.nelem_with_node)[i]; j++) {
             int e = (*surfinfo.node_and_elems)[i][j];
             int eg = (*surfinfo.top_facet_elems)[e];
             int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
@@ -1669,7 +1670,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                 (coord)[n][NDIMS-1] += dh_oc[i];
                 (*surfinfo.dhacc_oc)[n] += dh_oc[i];
 
-                for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+                for (std::size_t j=0; j<(*surfinfo.nelem_with_node)[i]; j++) {
                     int e = (*surfinfo.node_and_elems)[i][j];
                     int eg = (*surfinfo.top_facet_elems)[e];
                     int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];

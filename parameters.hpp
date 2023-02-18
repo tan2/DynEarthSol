@@ -314,8 +314,9 @@ struct SurfaceInfo {
     double_vec *dhacc;
     array_t *edhacc;
     segment_t *edhacc_ind;
-    int_vec2D *node_and_elems;
+    segment_t *node_and_elems;
     segment_t *elem_and_nodes;
+    int_vec *nelem_with_node;
     int_vec2D *node_and_nodes;
 
     double_vec *dhacc_oc;
