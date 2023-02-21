@@ -1611,6 +1611,18 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
         std::exit(1);
     }
+
+    // find max surface velocity
+    double maxdh = 0.;
+    #pragma omp parallel for reduction(max:maxdh) \
+        default(none) shared(dh)
+    for (std::size_t i=0; i<ntop; ++i) {
+        double tmp = fabs(dh[i]);
+        if (maxdh < tmp)
+            maxdh = tmp;
+    }
+    surfinfo.max_surf_vel = maxdh / var.dt;
+
 #ifdef THREED
     #pragma acc parallel loop
     for (std::size_t i=0; i<ntop; ++i) {

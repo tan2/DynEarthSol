@@ -1764,7 +1764,7 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.top_nodes =  new int_vec(top_nodes.begin(),top_nodes.end());
 
     surfinfo.ntop = ntop;
-    surfinfo.dh_max = 0;
+    surfinfo.max_surf_vel = 0;
     surfinfo.base_level = param.control.surf_base_level;
     surfinfo.surf_diff = param.control.surface_diffusivity;
     surfinfo.diff_ratio_terrig = param.control.surf_diff_ratio_terrig;

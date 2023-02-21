@@ -294,11 +294,10 @@ struct SurfaceInfo {
     double terrig_base;
     double depo_universal;
     double ero_rate;
+    double max_surf_vel;
 
     double_vec *dh;
     double_vec *dh_oc;
-    double dh_max;
-    double dh_min;
     double_vec *src_locs;
     double_vec *src_abj;
 
