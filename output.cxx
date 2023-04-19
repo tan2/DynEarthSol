@@ -27,7 +27,7 @@
 namespace std { using ::snprintf; }
 #endif // WIN32
 
-Output::Output(const Param& param, double start_time, int start_frame) :
+Output::Output(const Param& param, int64_t start_time, int start_frame) :
     modelname(param.sim.modelname),
     start_time(start_time),
     is_averaged(param.sim.is_outputting_averaged_fields),

@@ -142,9 +142,9 @@ static int64_t get_nanoseconds() {
 }
 
 static void print_time_ns(const int64_t duration) {
-    int64_t hours = duration / 3600 / 1e9;
-    int64_t minutes = (duration % (3600 * (int64_t)100000000)) / 60 / 1e9;
-    double seconds = (duration % (60 * (int64_t)100000000)) / 1e9;
+    int hours = duration / (int64_t)3600000000000;
+    int minutes = (duration % (int64_t)3600000000000) / (int64_t)60000000000;
+    double seconds = (duration % (int64_t)60000000000) / 1e9;
     std::cout << std::setw(3) << std::setfill('0') << hours << ":"
     << std::setw(2) << std::setfill('0') << minutes << ":"
     << std::setw(9) << std::fixed << std::setprecision(6) << std::setfill('0') << seconds;
