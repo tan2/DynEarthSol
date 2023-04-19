@@ -298,16 +298,16 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
     double bc_vx0r2 = bc.vbc_val_x0_ratio2;
 
 #ifdef THREED
-    #pragma omp parallel for default(none) \
-        shared(bc, var, vel)
+    // #pragma omp parallel for default(none) \
+    //     shared(bc, var, vel)
     #pragma acc parallel loop
 #else
-    #pragma omp parallel for default(none) \
-        shared(bc, var, vel, vbc_vertical_ratios_x0, vbc_vertical_ratios_x1, \
-                vbc_vertical_divisions_x0, vbc_vertical_divisions_x1, \
-                vbc_applied_x0, vbc_applied_x1,var_bcflag,var_coord,var_bnormals,var_vbc_types, \
-                var_vbc_values,edgevec,bc_x0,bc_vx0min,bc_vx0r0, \
-                bc_vx0max,bc_vx0r2,bc_vx0r1,bc_x1,bc_z0,bc_z1,bc_vz0,bc_vz1)
+    // #pragma omp parallel for default(none) \
+    //     shared(bc, var, vel, vbc_vertical_ratios_x0, vbc_vertical_ratios_x1, \
+    //             vbc_vertical_divisions_x0, vbc_vertical_divisions_x1, \
+    //             vbc_applied_x0, vbc_applied_x1,var_bcflag,var_coord,var_bnormals,var_vbc_types, \
+    //             var_vbc_values,edgevec,bc_x0,bc_vx0min,bc_vx0r0, \
+    //             bc_vx0max,bc_vx0r2,bc_vx0r1,bc_x1,bc_z0,bc_z1,bc_vz0,bc_vz1)
     #pragma acc parallel loop
 #endif
     for (int i=0; i<var_nnode; ++i) {
@@ -1115,6 +1115,74 @@ namespace {
 #endif
     }
 
+    int terrigenous_deposition(const SurfaceInfo& surfinfo, const array_t& coord, const int_vec& top_nodes, \
+        const int side, const int start, const int end, const double target_vol, const double_vec& top_depth, \
+        const double_vec& top_base, double_vec2D& dhacc_side, const double incre_pow, \
+        const double_vec& dhacc_tmp, const double dx) {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
+
+        int nstep_in_basin = abs(end - start);
+        double rem_vol = target_vol;
+        int status = 0;
+        int sign = pow(-1,side);
+        int j0 = start;
+
+        // calculate the dh of basin
+        for (int istep=1; istep<nstep_in_basin; istep++) {
+
+            int j = j0 + sign*istep;
+            int pj = j - sign;
+            double slope_tmp = -1. * (top_depth[j] - top_depth[pj]);
+            slope_tmp += dhacc_tmp[j] - dhacc_tmp[pj];
+
+            // stop if slope direction is changed
+            if ( slope_tmp > 0. ) {
+                status = 1;
+                break;
+            }
+
+            // distance to the coastline
+            double dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[j0]][0]) - dx;
+
+            // deposit based on distance to coastline and remained unit volume
+            // double dh_tmp = surfinfo.terrig_coeff * pow(surfinfo.terrig_base, incre_pow) * rem_vol * dist;
+            double dh_tmp = 1e-10 * pow(surfinfo.terrig_base, incre_pow) * rem_vol * dist;
+
+            if ( dh_tmp != dh_tmp ) {
+                std::cout << "\ndh_tmp is NaN.\n";
+                std::cout << std::fixed << std::scientific << dh_tmp << "\t" << rem_vol;
+                std::cout << "\t dist: " << std::dec << dist << std::endl;
+                std::cout << "\t j: " << j << std::endl;
+                std::cout << "\t top_nodes[j]: " << top_nodes[j] << std::endl;
+                std::cout << "\t coord[top_nodes[j]][0]: " << coord[top_nodes[j]][0] << std::endl;
+                std::cout << "\t iside: "<< side << std::endl;
+                std::cout << "\t j0: " << j0 << std::endl;
+                std::cout << "\ttop_nodes[j0]: " << top_nodes[j0] << std::endl;
+                std::cout << "\t coord[top_nodes[start]][0]: " << coord[top_nodes[j0]][0] << std::endl;
+                exit(168);
+            }
+
+            // if dhacc larger than depth, dhacc = depth (down is negative)
+            if (dhacc_tmp[j] + dh_tmp > top_depth[j])
+                dh_tmp = std::max(0.0, top_depth[j] - dhacc_tmp[j] + 0.1);
+
+            rem_vol -= dh_tmp * top_base[j];
+
+            dhacc_side[j][side] = dh_tmp;
+
+            if (rem_vol < 0.) {
+                status = 2;
+                break;
+            }
+        }
+        return status;
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
+    }
+
     void simple_deposition(const Param& param,const Variables& var) {
 #ifdef USE_NPROF
         nvtxRangePushA(__FUNCTION__);
@@ -1123,18 +1191,9 @@ namespace {
         // not ready for 3D
         std::cout << "3D deposition of sediment processes is not ready yet.";
         exit(168);
-//        std::cout << "Press enter to continue ...";
-//        std::cin.get();
 #endif
         double_vec &dh = *var.surfinfo.dh;
         double_vec &src_locs = *var.surfinfo.src_locs;
-        double_vec &src_abj = *var.surfinfo.src_abj;
-
-    #pragma acc serial
-    for (int i=0;i<2;i++) {
-        src_locs[i] = 0.;
-        src_abj[i] = 0.;
-    }
 
         const array_t& coord = *var.coord;
         const SurfaceInfo& surfinfo = var.surfinfo;
@@ -1147,10 +1206,12 @@ namespace {
         std::vector<bool> if_source(2,true);
         double_vec dh_terrig(ntop,0.);
         double_vec dhacc_tmp(ntop,0.);
+        double_vec2D dhacc_side(ntop,double_vec(2,0.));  // todo: use Array2D
         int interval_report = 10000;
 
         if ( param.control.is_reporting_terrigenous_info && var.steps%interval_report == 0 )
             std::cout << "\t** Sedimentation report: ";
+
         get_surface_info(var,top_base,top_depth);
 
 //******************************************************************
@@ -1170,141 +1231,133 @@ namespace {
         int vol_ratio = 10;
         int ntry = 200;
 
-        bool if_finish, if_shift;
-        int nloop, nstep_in_basin;
-        double unit_vol, depo_vol, dh_tmp, dist, old_dhacc_tmp;
-        int_vec if_land(ntop,0);
-        int_vec starts(2,0), ends(2,0);
-        int_vec sign(2,0), nsedi(2,0);
-        double_vec sedi_vol(2,0.), dx(2,0.);
-        std::vector<bool> if_space_limited(2,false);
-        std::vector<bool> if_slope_limited(2,false);
+        double unit_vol = max_sedi_vol / vol_ratio;
 
-        sign[0] = 1;
-        sign[1] = -1;
+        int_vec if_land(ntop,0);
+        int_vec starts(2,0), ends(2,0); // todo: int starts[2] = {0}
+        int_vec nsedi(2,0);
+        double_vec sedi_vol(2,0.), dx(2,0.);
+        std::vector<bool> if_space_limited(2,false), is_open(2,false); // bool XXX[2] = {false}
+        std::vector<bool> if_slope_limited(2,false);
 
         get_basin_info(param,var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
 
         // recored possible source locations
-        for (int i=0;i<2;i++) {
-//            printf("%d %d\n",if_source[0],if_source[1]);
-            if (if_source[i]) {
+        for (int i=0;i<2;i++)
+            if (if_source[i])
                 src_locs[i] = coord[top_nodes[starts[i]]][0] + dx[i] * pow(-1,i);
-//                src_abj[i] = dx[i];
-//                printf("side %d: %f\n",i, src_abj[i]);
-            }
-        }
 
         // deal with the sedimentation for the aspect of coastal source
         // to n times of both two sides
-        for (int islide=0; islide<vol_ratio; islide++) {
+        for (int islide=0; islide<(vol_ratio+1); islide++) {
+            dx[0] = 0.;
+            dx[1] = 0.;
+            // if coast line is changed or basin is filled, search topo for finding basin again
+            get_basin_info(param,var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
             // do deposit for two sides
             for (int iside=0; iside<2; iside++) {
-                // if iside is on source, do next side directly
+                // if this side become no source, do next side directly
                 if (! if_source[iside]) continue;
-                // of this side reach max_sedi_vol, do next side directly
-                if (sedi_vol[iside] - max_sedi_vol > -1.e-4 ) continue;
-                // slided volumn for each side
-                unit_vol = std::min(max_sedi_vol / vol_ratio, max_sedi_vol - sedi_vol[iside]);
+                if ( is_open[iside] ) continue;
+
+                // if this side reach max_sedi_vol, do next side directly
+                if ( (max_sedi_vol - sedi_vol[iside]) / max_sedi_vol < 1.e-4 ) continue;
+
+                if (starts[iside] == ends[iside]) {
+                    if_space_limited[iside] = true;
+                    continue;
+                }
+
                 // recorder of deposited volumn for do loop
-                depo_vol = 0.;
-                if_shift = true;
-                // start do loop
-                if_finish = false;
-                nloop = 0;
+                bool is_finish = false, is_over = false;
+                int nloop = 0, sign = pow(-1,iside);
+                // slided volumn for each side
+                double target_vol = std::min(unit_vol, max_sedi_vol - sedi_vol[iside]);
+                double incre_pow = 1.;
+                // search for best distribution of sediment
                 do {
-                    // if coast line is changed or basin is filled, search topo for finding basin again
-                    if (if_shift || if_space_limited[iside] || if_slope_limited[iside]) {
-                        if_shift = false;
-                        if_slope_limited[iside] = false;
-                        dx[0] = 0.;
-                        dx[1] = 0.;
-                        get_basin_info(param,var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
-                        if (starts[iside] == ends[iside]) {
-                            if_space_limited[iside] = true;
-                            break;
-                        } else {
-                            if_space_limited[iside] = false;
-                        }
-                    }
-                    // if this side become no source, do next side directly
-                    if (! if_source[iside]) break;
-                    // record times of one side loop
-                    nloop++;
-                    // the times for one side deposit
-                    nstep_in_basin = abs(ends[iside] - starts[iside]);
+                    int inc = terrigenous_deposition(surfinfo,coord,top_nodes,iside,\
+                                starts[iside],ends[iside],target_vol,top_depth,top_base,\
+                                dhacc_side,incre_pow,dhacc_tmp,dx[iside]);
 
-                    // calculate the dh of basin
-                    for (int istep=1; istep<nstep_in_basin; istep++) {
-
-                        int j = starts[iside] + sign[iside]*istep;
-                        int pj = starts[iside] + sign[iside]*(istep-1);
-                        double slope_tmp = -1. * ( top_depth[j] - top_depth[j-sign[iside]] );
-                        slope_tmp += dhacc_tmp[j] - dhacc_tmp[j-sign[iside]];
-
-                        // stop propagate if slope is increasing
-                        if ( slope_tmp > 0. ) {
-                            if_slope_limited[iside] = true;
-                            break;
-                        }
-
-                        // distance to the coastline
-                        dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[starts[iside]]][0]); //Todo - dx[iside] + 1.;
-                        if (dist < 1.) {
-                            std::cout << dist << " ";
-//                            printf("%f",dist);
-                        }
-
-//                        printf("%f\n",dist);
-                        // deposit based on distance to coastline and remained unit volumn
-                        dh_tmp = surfinfo.terrig_coeff * pow(surfinfo.terrig_base,nloop) * (unit_vol - depo_vol) * dist;
-
-                        if ( dh_tmp != dh_tmp ) {
-                            std::cout << "\ndh_tmp is NaN.\n";
-                            std::cout << std::fixed << std::scientific << dh_tmp << "\t" << (unit_vol - depo_vol);
-                            std::cout << "\t dist: " << std::dec << dist << std::endl;
-                            std::cout << "\t j: " << j << std::endl;
-                            std::cout << "\t top_nodes[j]: " << top_nodes[j] << std::endl;
-                            std::cout << "\t coord[top_nodes[j]][0]: " << coord[top_nodes[j]][0] << std::endl;
-                            std::cout << "\t iside: "<< iside << std::endl;
-                            std::cout << "\t starts[iside]: " << starts[iside] << std::endl;
-                            std::cout << "\ttop_nodes[starts[iside]]: " << top_nodes[starts[iside]] << std::endl;
-                            std::cout << "\t coord[top_nodes[starts[iside]]][0]: " << coord[top_nodes[starts[iside]]][0] << std::endl;
-                            exit(168);
-//                            printf("\ndh_tmp is NaN.\n");
-//                            printf("\n%e\t%e\t%f\n",dh_tmp, (unit_vol - depo_vol), dist);
-                        }
-
-                        old_dhacc_tmp = dhacc_tmp[j];
-                        dhacc_tmp[j] += dh_tmp;
-
-                        // if dhacc larger than depth, dhacc = depth (down is negative)
-                        if (dhacc_tmp[j] > top_depth[j])
-                            dhacc_tmp[j] = top_depth[j] + 0.1;
-
-
-                        depo_vol += top_base[j] * (dhacc_tmp[j] - old_dhacc_tmp);
-
-                        if (depo_vol >= unit_vol) {
-                            if_finish = true;
-                            break;
-                        }
+                    if (inc == 1) {
+                        // slope limited
+                        if_slope_limited[iside] = true;
+                        if (is_over)
+                            printf("Over is fixed.\n");
+                    } else if (inc == 2) {
+                        // over volume
+                        is_over = true;
+                        // printf("Warning(islide %d): over volume (%.2e) for terrigenous deposition. (side %d)\n",islide,incre_pow,iside);
+                    } else if (inc == 0) {
+                        // open basin
+                        is_open[iside] = true;
+                        break;
                     }
 
-                    // move coast if basin is filled.
-                    if (dhacc_tmp[starts[iside]+sign[iside]] >= top_depth[starts[iside]+sign[iside]]) {
-                        starts[iside] += sign[iside];
-                        if_shift = true;
-                        if (starts[iside] == ends[iside])
-                            if_space_limited[iside] = true;
+                    double tmp_vol = 0.;
+                    for (int i=0;i<ntop;i++)
+                        tmp_vol += top_base[i] * dhacc_side[i][iside];
+
+                    double diff_ratio = std::max(-1e-2, (target_vol - tmp_vol) / target_vol);
+
+                    if (nloop == ntry)
+                        printf("nloop: %d diff_ratio %.2e incre_pow %f tmp_vol %.2e target_vol %.2e\n",nloop, diff_ratio, incre_pow, tmp_vol,target_vol);
+
+                    if (fabs(diff_ratio) > 1e-2 && !if_space_limited[iside]) {
+                        // record times of one side loop
+                        nloop++;
+                        // incre_pow += (diff_ratio*5);
+                        incre_pow *= (diff_ratio+1.);
+
+                        // move coast if basin is filled.
+                        if (dhacc_tmp[starts[iside]+sign] >= top_depth[starts[iside]+sign]) {
+                            starts[iside] += sign;
+
+                            if (starts[iside] == ends[iside])
+                                if_space_limited[iside] = true;
+                        }
+                    } else {
+                        double_vec tmp_arr(ntop, 0.);
+                        // if reach target volume, record the deposited volume
+                        for (int i=1;i<(ntop-1);i++){
+                            const double *p0 = coord[top_nodes[i-1]];
+                            const double *p1 = coord[top_nodes[i]];
+                            const double *p2 = coord[top_nodes[i+1]];
+
+                            tmp_arr[i] = ( (p1[0]-p0[0])*dhacc_side[i+1][iside] + \
+                                           (p2[0]-p1[0])*dhacc_side[i-1][iside] ) / (p2[0]-p0[0]);
+                            tmp_arr[i] = ( tmp_arr[i]+dhacc_side[i][iside] ) / 2.;
+                        }
+
+                        for (int i=1;i<(ntop-1);i++)
+                            if (dhacc_side[i][iside] > 0.)
+                                dhacc_side[i][iside] = tmp_arr[i];
+
+                        tmp_vol = 0.;
+                        for (int i=0;i<ntop;i++)
+                            tmp_vol += top_base[i] * dhacc_side[i][iside];
+
+                        double missing_rvol = target_vol / tmp_vol;
+
+                        if (! if_space_limited[iside])
+                            for (int i=0;i<ntop;i++)
+                                dhacc_side[i][iside] *= missing_rvol;
+
+                        for (int i=0;i<(ntop);i++) {
+                            sedi_vol[iside] += top_base[i] * dhacc_side[i][iside];
+                            dhacc_tmp[i] += dhacc_side[i][iside];
+                        }
+                        // printf("nloop: %d diff_ratio %.2e incre_pow %f target_vol %.2e tmp_vol %.2e sedi_vol %.2e %d\n",nloop, diff_ratio, incre_pow, target_vol,tmp_vol,sedi_vol[iside],iside);
+                        is_finish = true;
                     }
 
                 // end of do loop of one side deposit
-                // finish of reach unit_vol or ntry
-                } while (unit_vol - depo_vol > 1.e-4 && !if_finish && nloop <= ntry);
+                } while (!is_finish && nloop <= ntry);
+                if (nloop > ntry)
+                    std::cout << "nloop > ntry" << std::endl;
 
                 nsedi[iside] += nloop;
-                sedi_vol[iside] += depo_vol;
             } // end of each side
 
             if (if_space_limited[0] || if_space_limited[1]) break;
@@ -1313,7 +1366,9 @@ namespace {
                 dh_terrig[j] += dhacc_tmp[j];
                 dhacc_tmp[j] = 0.;
             }
-            if (sedi_vol[0] >= max_sedi_vol && sedi_vol[1] >= max_sedi_vol) break;
+
+            if ( ( (max_sedi_vol-sedi_vol[0])/max_sedi_vol < 1.e-4 ) && \
+                 ( (max_sedi_vol-sedi_vol[1])/max_sedi_vol < 1.e-4 ) ) break;
         } // end of deposit slides
 
         if (if_source[0] || if_source[1]) {
@@ -1487,8 +1542,8 @@ void surface_plstrain_diffusion(const Param &param, \
 #endif
     double half_life = 1.e2 * YEAR2SEC;
     double lambha = 0.69314718056 / half_life; // ln2
-    #pragma omp parallel for default(none)      \
-        shared(param, var, plstrain, lambha)
+    // #pragma omp parallel for default(none)      \
+    //     shared(param, var, plstrain, lambha)
     for (auto e=(*var.top_elems).begin();e<(*var.top_elems).end();e++) {
         // Find the most abundant marker mattype in this element
         int_vec &a = (*var.elemmarkers)[*e];
@@ -1514,13 +1569,13 @@ void correct_surface_element(const Variables& var, \
     double_vec new_volumes(ntop_elem,0.);
 
 #ifdef LLVM
-    #pragma omp parallel for default(none)      \
-        shared(ntop_elem, var, dhacc, stress,   \
-        strain, strain_rate, plstrain, coord0s, new_volumes)
+    // #pragma omp parallel for default(none)      \
+    //     shared(ntop_elem, var, dhacc, stress,   \
+    //     strain, strain_rate, plstrain, coord0s, new_volumes)
 #else
-    #pragma omp parallel for default(none)      \
-        shared(var, dhacc, stress, strain,      \
-        strain_rate, plstrain, coord0s, new_volumes)
+    // #pragma omp parallel for default(none)      \
+    //     shared(var, dhacc, stress, strain,      \
+    //     strain_rate, plstrain, coord0s, new_volumes)
 #endif
     for (size_t i=0;i<ntop_elem;i++) {
         const double *coord1[NODES_PER_ELEM];
@@ -1551,6 +1606,7 @@ void correct_surface_element(const Variables& var, \
         double rdv = new_volumes[i] / dArea0;
 
         if (rdv > 1.) {
+            // correct the plastic strain overestimation of surface element caused by sedimentation.
             plstrain[e] /= rdv;
             for (int i=0;i<NSTR;i++) {
                 stress[e][i] /= rdv;
@@ -1575,11 +1631,13 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
     nvtxRangePushA(__FUNCTION__);
 #endif
 
+    const int_vec &top_nodes = *surfinfo.top_nodes;
     const int slow_updates_interval = 10;
     bool has_partial_melting = false;
     const int ntop = var.surfinfo.ntop;
     double_vec &dh = *var.surfinfo.dh;
     double_vec &dh_oc = *var.surfinfo.dh_oc;
+    double_vec &dhacc = *var.surfinfo.dhacc;
 
     #pragma acc parallel loop
     for (int i=0;i<ntop;i++)
@@ -1609,34 +1667,43 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         std::cout << "Error: unknown surface process option: " << param.control.surface_process_option << '\n';
         std::exit(1);
     }
+
+    // find max surface velocity
+    double maxdh = 0.;
+    // #pragma omp parallel for reduction(max:maxdh) \
+    //     default(none) shared(dh)
+    for (std::size_t i=0; i<ntop; ++i) {
+        double tmp = fabs(dh[i]);
+        if (maxdh < tmp)
+            maxdh = tmp;
+    }
+    surfinfo.max_surf_vel = maxdh / var.dt;
+
 #ifdef THREED
-    const int_vec *top_nodes = surfinfo.top_nodes;
     #pragma acc parallel loop
     for (std::size_t i=0; i<ntop; ++i) {
-        int n = (*top_nodes)[i];
+        int n = top_nodes[i];
         coord[n][NDIMS-1] += dh[i];
     }
     // todo
 #else
     // go through all surface nodes and abject all surface node by dh
+    // #pragma omp parallel for default(none) \
+    //     shared(top_nodes, coord, dh, dhacc)
     for (int i=0; i<ntop; i++) {
         // get global index of node
         // update coordinate via dh
         // update dhacc for marker correction
-        int n = (*surfinfo.top_nodes)[i];
-        (coord)[n][NDIMS-1] += dh[i];
-        (*surfinfo.dhacc)[n] += dh[i];
+        int n = top_nodes[i];
+        coord[n][NDIMS-1] += dh[i];
+        dhacc[n] += dh[i];
 
-        // go through connected elements
-        // get local index of surface element
-        // get global index of element
-        // get local index of node in connected element
-        // update edhacc of connected elements
-        for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
-            int e = (*surfinfo.node_and_elems)[i][j];
-            int eg = (*surfinfo.top_facet_elems)[e];
-            int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
-            (*surfinfo.edhacc)[eg][ind] += dh[i];
+    // update edhacc of connected elements
+        for (std::size_t j=0; j<(*surfinfo.nelem_with_node)[i]; j++) {
+            int e = (*surfinfo.node_and_elems)[i][j]; // get local index of surface element
+            int eg = (*surfinfo.top_facet_elems)[e]; // get global index of element
+            int ind = (*surfinfo.arcelem_and_nodes_num)[e][i]; // get local index of node in connected element
+            (*surfinfo.edhacc)[eg][ind] += dh[i]; // update edhacc of connected elements
         }
     }
 #endif
@@ -1650,7 +1717,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             correct_surface_element(var, *surfinfo.dhacc, *markersets[0], stress, strain, strain_rate, plstrain);
             std::fill(surfinfo.dhacc->begin(), surfinfo.dhacc->end(), 0.);
             // set marker of sediment.
-            markersets[0]->set_surface_marker(var, param.mat.mattype_sed, *surfinfo.edhacc, elemmarkers);
+            markersets[0]->set_surface_marker(var, param.mesh.smallest_size, param.mat.mattype_sed, *surfinfo.edhacc, elemmarkers);
         }
     }
 #endif
@@ -1669,7 +1736,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                 (coord)[n][NDIMS-1] += dh_oc[i];
                 (*surfinfo.dhacc_oc)[n] += dh_oc[i];
 
-                for (std::size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+                for (std::size_t j=0; j<(*surfinfo.nelem_with_node)[i]; j++) {
                     int e = (*surfinfo.node_and_elems)[i][j];
                     int eg = (*surfinfo.top_facet_elems)[e];
                     int ind = (*surfinfo.arcelem_and_nodes_num)[e][i];
@@ -1682,7 +1749,7 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
                 correct_surface_element(var, *surfinfo.dhacc_oc, *markersets[0], stress, strain, strain_rate, plstrain);
                 std::fill(surfinfo.dhacc_oc->begin(), surfinfo.dhacc_oc->end(), 0.);
                 // set marker of sediment.
-                markersets[0]->set_surface_marker(var,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers);
+                markersets[0]->set_surface_marker(var,param.mesh.smallest_size,param.mat.mattype_oceanic_crust,*surfinfo.edhacc_oc,elemmarkers);
             }
         }
 #endif

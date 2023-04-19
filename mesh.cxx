@@ -1661,7 +1661,10 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
     delete surfinfo.elem_and_nodes;
     surfinfo.elem_and_nodes = new segment_t(etop);
     delete surfinfo.node_and_elems;
-    surfinfo.node_and_elems = new int_vec2D(ntop,int_vec());
+    surfinfo.node_and_elems = new segment_t(ntop);
+    delete surfinfo.nelem_with_node;
+    surfinfo.nelem_with_node = new int_vec(ntop,0);
+
     delete surfinfo.node_and_nodes;
     surfinfo.node_and_nodes = new int_vec2D(ntop,int_vec());
     delete surfinfo.arcelem_and_nodes_num;
@@ -1698,9 +1701,10 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
             (*surfinfo.arcelem_and_nodes_num)[i][n[k]]= k;
             (*surfinfo.edhacc_ind)[i][k] = n[k];
         }
-        for (int k=0; k<NDIMS; k++) {
+        for (int k=0; k<2; k++) {
             // store the elements connect to node
-            (*surfinfo.node_and_elems)[n[k]].push_back(i);
+            (*surfinfo.node_and_elems)[n[k]][(*surfinfo.nelem_with_node)[n[k]]] = i;
+            (*surfinfo.nelem_with_node)[n[k]]++;
 
             // store the nodes connect to ndoe
             for (int l=0; l<NDIMS; l++)
@@ -1715,7 +1719,7 @@ void update_surface_info(const Variables& var, SurfaceInfo& surfinfo)
         int n = (*surfinfo.top_nodes)[i];
 
         // go through connected elements
-        for (size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+        for (size_t j=0; j<(*surfinfo.nelem_with_node)[i]; j++) {
             // get local index of surface element
             int e = (*surfinfo.node_and_elems)[i][j];
             // get global index of element
@@ -1760,7 +1764,7 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.top_nodes =  new int_vec(top_nodes.begin(),top_nodes.end());
 
     surfinfo.ntop = ntop;
-    surfinfo.dh_max = 0;
+    surfinfo.max_surf_vel = 0;
     surfinfo.base_level = param.control.surf_base_level;
     surfinfo.surf_diff = param.control.surface_diffusivity;
     surfinfo.diff_ratio_terrig = param.control.surf_diff_ratio_terrig;
@@ -1779,7 +1783,8 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.edhacc_ind = new segment_t(etop);
     surfinfo.top_facet_elems = new int_vec(etop,0);
     surfinfo.elem_and_nodes = new segment_t(etop);
-    surfinfo.node_and_elems = new int_vec2D(ntop,int_vec());
+    surfinfo.node_and_elems = new segment_t(ntop);
+    surfinfo.nelem_with_node = new int_vec(ntop,0);
     surfinfo.node_and_nodes = new int_vec2D(ntop,int_vec());
     surfinfo.arcelem_and_nodes_num = new int_map2D(etop);
 
@@ -1789,7 +1794,6 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.edhacc_ind_oc = new segment_t(etop);
 
     surfinfo.src_locs = new double_vec(2,0.);
-    surfinfo.src_abj = new double_vec(2,0.);
 
     surfinfo.total_dx = new double_vec(var.nnode,0.);
     surfinfo.total_slope = new double_vec(var.nnode,0.);
@@ -1814,7 +1818,8 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
         }
         for (int k=0; k<NDIMS; k++) {
             // store the elements connect to node
-            (*surfinfo.node_and_elems)[n[k]].push_back(i);
+            (*surfinfo.node_and_elems)[n[k]][(*surfinfo.nelem_with_node)[n[k]]] = i;
+            (*surfinfo.nelem_with_node)[n[k]]++;
 
             // store the nodes connect to ndoe
             for (int l=0; l<NDIMS; l++)
