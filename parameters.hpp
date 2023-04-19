@@ -15,7 +15,6 @@ typedef std::unordered_map<int,int> int_map;
 typedef std::vector<int_map> int_map2D;
 
 typedef std::vector<double> double_vec;
-typedef std::vector<double_vec> double_vec2D;
 typedef std::vector<int> int_vec;
 typedef std::vector<int_vec> int_vec2D;
 typedef std::vector<uint> uint_vec;

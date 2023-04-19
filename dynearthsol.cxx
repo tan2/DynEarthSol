@@ -493,10 +493,10 @@ int main(int argc, const char* argv[])
     std::cout << "\n  Remesh : ";
     print_time_ns(var.func_time.remesh_time);
     std::cout << " (" <<  std::setw(5) << std::fixed << std::setprecision(2) << std::setfill(' ')
-        << (double)var.func_time.remesh_time / duration_ns * 100 << "%)\n";
+        << 100.*var.func_time.remesh_time/duration_ns << "%)\n";
     std::cout << "  Output : ";
     print_time_ns(var.func_time.output_time);
     std::cout << " (" <<  std::setw(5) <<  std::fixed << std::setprecision(2) << std::setfill(' ')
-        << (double)var.func_time.output_time / duration_ns * 100 << "%)\n";
+        << 100./var.func_time.output_time/duration_ns << "%)\n";
     return 0;
 }
