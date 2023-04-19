@@ -1794,7 +1794,6 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.edhacc_ind_oc = new segment_t(etop);
 
     surfinfo.src_locs = new double_vec(2,0.);
-    surfinfo.src_abj = new double_vec(2,0.);
 
     surfinfo.total_dx = new double_vec(var.nnode,0.);
     surfinfo.total_slope = new double_vec(var.nnode,0.);

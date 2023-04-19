@@ -299,7 +299,6 @@ struct SurfaceInfo {
     double_vec *dh;
     double_vec *dh_oc;
     double_vec *src_locs;
-    double_vec *src_abj;
 
     double_vec *total_dx;
     double_vec *total_slope;
