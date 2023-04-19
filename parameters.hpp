@@ -25,6 +25,7 @@ typedef Array2D<double,NSTR> tensor_t;
 typedef Array2D<double,NODES_PER_ELEM> shapefn;
 typedef Array2D<double,1> regattr_t;
 typedef Array2D<double,NODES_PER_ELEM*3> elem_cache;
+typedef Array2D<double,2> dh_t;
 
 typedef Array2D<int,NODES_PER_ELEM> conn_t;
 typedef Array2D<int,NDIMS> segment_t;

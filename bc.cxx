@@ -1117,7 +1117,7 @@ namespace {
 
     int terrigenous_deposition(const SurfaceInfo& surfinfo, const array_t& coord, const int_vec& top_nodes, \
         const int side, const int start, const int end, const double target_vol, const double_vec& top_depth, \
-        const double_vec& top_base, double_vec2D& dhacc_side, const double incre_pow, \
+        const double_vec& top_base, dh_t& dhacc_side, const double incre_pow, \
         const double_vec& dhacc_tmp, const double dx) {
 #ifdef USE_NPROF
         nvtxRangePushA(__FUNCTION__);
@@ -1206,7 +1206,7 @@ namespace {
         std::vector<bool> if_source(2,true);
         double_vec dh_terrig(ntop,0.);
         double_vec dhacc_tmp(ntop,0.);
-        double_vec2D dhacc_side(ntop,double_vec(2,0.));  // todo: use Array2D
+        dh_t dhacc_side(ntop,0);
         int interval_report = 10000;
 
         if ( param.control.is_reporting_terrigenous_info && var.steps%interval_report == 0 )
