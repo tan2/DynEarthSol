@@ -2,7 +2,7 @@
 from __future__ import print_function
 import sys, os
 import numpy as np
-#sys.path.append('/home/chaseshyu/Programs/DynEarthSol')
+sys.path.append('../')
 from Dynearthsol import Dynearthsol
 
 def first_invariant(t):
