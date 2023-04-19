@@ -4,9 +4,6 @@
 #endif
 #include <limits>
 
-#ifdef USE_OMP
-#include <omp.h>
-#endif
 
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -23,6 +20,7 @@
 #include "phasechanges.hpp"
 #include "remeshing.hpp"
 #include "rheology.hpp"
+#include "utils.hpp"
 
 #ifdef WIN32
 #ifdef _MSC_VER
@@ -35,6 +33,9 @@ void init_var(const Param& param, Variables& var)
 {
     var.time = 0;
     var.steps = 0;
+    var.func_time.output_time = 0;
+    var.func_time.remesh_time = 0;
+    var.func_time.start_time = get_nanoseconds();
 
     for (int i=0;i<nbdrytypes;++i)
         var.bfacets[i] = new std::vector< std::pair<int,int> >;
@@ -341,11 +342,6 @@ void isostasy_adjustment(const Param &param, Variables &var)
 
 int main(int argc, const char* argv[])
 {
-    double start_time = 0;
-#ifdef USE_OMP
-    start_time = omp_get_wtime();
-#endif
-
     //
     // read command line
     //
@@ -364,7 +360,7 @@ int main(int argc, const char* argv[])
     static Variables var; // declared as static to silence valgrind's memory leak detection
     init_var(param, var);
 
-    Output output(param, start_time,
+    Output output(param, var.func_time.start_time,
                   (param.sim.is_restarting) ? param.sim.restarting_from_frame : 0);
 
     if (! param.sim.is_restarting) {
@@ -455,7 +451,9 @@ int main(int argc, const char* argv[])
             if (next_regular_frame % param.sim.checkpoint_frame_interval == 0)
                 output.write_checkpoint(param, var);
 
+            int64_t time_tmp = get_nanoseconds();
             output.write(var);
+            var.func_time.output_time += get_nanoseconds() - time_tmp;
 
             next_regular_frame ++;
         }
@@ -466,13 +464,19 @@ int main(int argc, const char* argv[])
             if (quality_is_bad) {
 
                 if (param.sim.has_output_during_remeshing) {
+                    int64_t time_tmp = get_nanoseconds();
                     output.write_exact(var);
+                    var.func_time.output_time += get_nanoseconds() - time_tmp;
                 }
 
+                int64_t time_tmp = get_nanoseconds();
                 remesh(param, var, quality_is_bad);
+                var.func_time.remesh_time += get_nanoseconds() - time_tmp;
 
                 if (param.sim.has_output_during_remeshing) {
+                    int64_t time_tmp = get_nanoseconds();
                     output.write_exact(var);
+                    var.func_time.output_time += get_nanoseconds() - time_tmp;
                 }
             }
         }
@@ -483,5 +487,16 @@ int main(int argc, const char* argv[])
     } while (var.steps < param.sim.max_steps && var.time <= param.sim.max_time_in_yr * YEAR2SEC);
 
     std::cout << "Ending simulation.\n";
+    int64_t duration_ns = get_nanoseconds() - var.func_time.start_time;
+    std::cout << "Time summary...\n  Execute: ";
+    print_time_ns(duration_ns);
+    std::cout << "\n  Remesh : ";
+    print_time_ns(var.func_time.remesh_time);
+    std::cout << " (" <<  std::setw(5) << std::fixed << std::setprecision(2) << std::setfill(' ')
+        << (double)var.func_time.remesh_time / duration_ns * 100 << "%)\n";
+    std::cout << "  Output : ";
+    print_time_ns(var.func_time.output_time);
+    std::cout << " (" <<  std::setw(5) <<  std::fixed << std::setprecision(2) << std::setfill(' ')
+        << (double)var.func_time.output_time / duration_ns * 100 << "%)\n";
     return 0;
 }

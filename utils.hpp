@@ -7,6 +7,12 @@
 #include <vector>
 #include <cfloat>
 #include <math.h>
+#include <iomanip>
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <time.h>
+#endif
 
 static void print(std::ostream& os, const double& x)
 {
@@ -120,6 +126,28 @@ static double interp1(const double_vec& x, const double_vec& y, double x_new)
         slope = (y[idx+1] - y[idx]) / (x[idx+1] - x[idx]);
 
     return slope * (x_new-x[idx]) + y[idx];
+}
+
+static int64_t get_nanoseconds() {
+    #if defined(_WIN32)
+    LARGE_INTEGER frequency, counter;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&counter);
+    return (int64_t)((double)counter.QuadPart / frequency.QuadPart * 1e9);
+    #else
+    timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1e9 + ts.tv_nsec;
+    #endif
+}
+
+static void print_time_ns(const int64_t duration) {
+    int64_t hours = duration / 3600 / 1e9;
+    int64_t minutes = (duration % (3600 * (int64_t)100000000)) / 60 / 1e9;
+    double seconds = (duration % (60 * (int64_t)100000000)) / 1e9;
+    std::cout << std::setw(3) << std::setfill('0') << hours << ":"
+    << std::setw(2) << std::setfill('0') << minutes << ":"
+    << std::setw(9) << std::fixed << std::setprecision(6) << std::setfill('0') << seconds;
 }
 
 #endif
