@@ -21,6 +21,7 @@ opt = 2
 openacc = 0
 openmp = 1
 nprof = 0
+gprof = 0
 useadapt = 0
 usemmg = 0
 adaptive_time_step = 0
@@ -170,6 +171,11 @@ else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 		ifdef VTK_INCLUDE
 			CXXFLAGS += -I$(VTK_INCLUDE)
 		endif
+	endif
+
+	ifeq ($(gprof), 1)
+		CXXFLAGS += -pg
+		LDFLAGS += -pg
 	endif
 
 else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tested with v14

@@ -294,13 +294,11 @@ struct SurfaceInfo {
     double terrig_base;
     double depo_universal;
     double ero_rate;
+    double max_surf_vel;
 
     double_vec *dh;
     double_vec *dh_oc;
-    double dh_max;
-    double dh_min;
     double_vec *src_locs;
-    double_vec *src_abj;
 
     double_vec *total_dx;
     double_vec *total_slope;
@@ -314,8 +312,9 @@ struct SurfaceInfo {
     double_vec *dhacc;
     array_t *edhacc;
     segment_t *edhacc_ind;
-    int_vec2D *node_and_elems;
+    segment_t *node_and_elems;
     segment_t *elem_and_nodes;
+    int_vec *nelem_with_node;
     int_vec2D *node_and_nodes;
 
     double_vec *dhacc_oc;

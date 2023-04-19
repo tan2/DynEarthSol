@@ -221,7 +221,7 @@ void prepare_dhacc(SurfaceInfo &surfinfo)
         // get global index of node
         int n = (*surfinfo.top_nodes)[i];
         // go through connected elements
-        for (size_t j=0; j<(*surfinfo.node_and_elems)[i].size(); j++) {
+        for (size_t j=0; j<(*surfinfo.nelem_with_node)[i]; j++) {
             // get local index of surface element
             int e = (*surfinfo.node_and_elems)[i][j];
             // get global index of element
@@ -232,8 +232,8 @@ void prepare_dhacc(SurfaceInfo &surfinfo)
             (*surfinfo.dhacc)[n] += (*surfinfo.edhacc)[eg][ind];
             (*surfinfo.dhacc_oc)[n] += (*surfinfo.edhacc_oc)[eg][ind];
         }
-        (*surfinfo.dhacc)[n] /= (*surfinfo.node_and_elems)[i].size();
-        (*surfinfo.dhacc_oc)[n] /= (*surfinfo.node_and_elems)[i].size();
+        (*surfinfo.dhacc)[n] /= (*surfinfo.nelem_with_node)[i];
+        (*surfinfo.dhacc_oc)[n] /= (*surfinfo.nelem_with_node)[i];
     }
 #ifdef USE_NPROF
     nvtxRangePop();
