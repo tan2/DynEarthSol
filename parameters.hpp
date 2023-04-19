@@ -25,6 +25,7 @@ typedef Array2D<double,NSTR> tensor_t;
 typedef Array2D<double,NODES_PER_ELEM> shapefn;
 typedef Array2D<double,1> regattr_t;
 typedef Array2D<double,NODES_PER_ELEM*3> elem_cache;
+typedef Array2D<double,2> dh_t;
 
 typedef Array2D<int,NODES_PER_ELEM> conn_t;
 typedef Array2D<int,NDIMS> segment_t;
@@ -406,7 +407,8 @@ struct Variables {
     array_t *vel, *force, *coord0;
     tensor_t *strain_rate, *strain, *stress;
     shapefn *shpdx, *shpdy, *shpdz;
-    double_vec2D *tmp_result;
+    elem_cache *tmp_result;
+    double_vec *tmp_result_sg;
 
     MatProps *mat;
 

@@ -986,8 +986,8 @@ namespace {
     }
 
     void get_basin_info(const Param& param, const Variables& var, double_vec& top_depth, \
-        std::vector<bool>& if_source, int_vec& if_land,\
-        int_vec& starts, int_vec& ends, double_vec& dhacc_tmp, double_vec& dx) {
+        bool if_source[], int_vec& if_land,\
+        int starts[], int ends[], double_vec& dhacc_tmp, double dx[]) {
 #ifdef USE_NPROF
         nvtxRangePushA(__FUNCTION__);
 #endif
@@ -997,7 +997,7 @@ namespace {
         const int_vec& top_nodes = *surfinfo.top_nodes;
         const std::size_t ntop = top_nodes.size();
         int_vec left_mouse, right_mouse;
-        int_vec starts0(2,0);
+        int starts0[2] = {0};
         left_mouse.reserve(4);
         right_mouse.reserve(4);
 
@@ -1117,7 +1117,7 @@ namespace {
 
     int terrigenous_deposition(const SurfaceInfo& surfinfo, const array_t& coord, const int_vec& top_nodes, \
         const int side, const int start, const int end, const double target_vol, const double_vec& top_depth, \
-        const double_vec& top_base, double_vec2D& dhacc_side, const double incre_pow, \
+        const double_vec& top_base, dh_t& dhacc_side, const double incre_pow, \
         const double_vec& dhacc_tmp, const double dx) {
 #ifdef USE_NPROF
         nvtxRangePushA(__FUNCTION__);
@@ -1203,10 +1203,10 @@ namespace {
         double_vec top_base(ntop,0.);
         double_vec top_depth(ntop,0.);
 
-        std::vector<bool> if_source(2,true);
+        bool if_source[2] = {true};
         double_vec dh_terrig(ntop,0.);
         double_vec dhacc_tmp(ntop,0.);
-        double_vec2D dhacc_side(ntop,double_vec(2,0.));  // todo: use Array2D
+        dh_t dhacc_side(ntop,0);
         int interval_report = 10000;
 
         if ( param.control.is_reporting_terrigenous_info && var.steps%interval_report == 0 )
@@ -1234,11 +1234,10 @@ namespace {
         double unit_vol = max_sedi_vol / vol_ratio;
 
         int_vec if_land(ntop,0);
-        int_vec starts(2,0), ends(2,0); // todo: int starts[2] = {0}
-        int_vec nsedi(2,0);
-        double_vec sedi_vol(2,0.), dx(2,0.);
-        std::vector<bool> if_space_limited(2,false), is_open(2,false); // bool XXX[2] = {false}
-        std::vector<bool> if_slope_limited(2,false);
+        int starts[2] = {0}, ends[2] = {0}, nsedi[2] = {0};
+        double sedi_vol[2] = {0.}, dx[2] = {0.};
+        bool if_space_limited[2] = {false}, is_open[2] = {false};
+        bool if_slope_limited[2] = {false};
 
         get_basin_info(param,var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
 
