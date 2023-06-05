@@ -1422,6 +1422,121 @@ namespace {
 #endif
     }
 
+    void terrigenous_diffusion(const Param& param,const Variables& var,const double **total_xz, \
+            const int nbasin,const int option, double_vec& dh_terrig) {
+        const double S0 = param.control.surf_src_area;
+        const double C0 = 2e-3;
+        const double C1 = 5e-3;
+        const double base_level = param.control.surf_base_level;
+
+        double_vec top_depth(nbasin,0.);
+        double_vec total_dx(nbasin,0.);
+
+        // loops over all top facets
+        for (int i=0;i<nbasin-1;i++) {
+            double dx = std::fabs(total_xz[i+1][0] - total_xz[i][0]) / 2.;
+            total_dx[i] += dx;
+            total_dx[i+1] += dx;
+        }
+
+        for (int i=0; i<nbasin;i++)
+            top_depth[i] = base_level - total_xz[i][1];
+
+
+        for (int i=1; i<(nbasin-1);i++) {
+            double diff = C0 * exp(-C1*top_depth[i]);
+            dh_terrig[i] = var.dt * diff / pow(total_dx[i],2) * (total_xz[i+1][1] - 2*total_xz[i][1] + total_xz[i-1][1]);
+        }
+
+        if (option == 0) {
+            // left source
+            dh_terrig[0] = dh_terrig[1] + total_dx[0]*2. *  param.control.surf_src_area / C0;
+            dh_terrig[nbasin-1] = (2*(total_xz[nbasin-2][1]+dh_terrig[nbasin-2]) - (total_xz[nbasin-3][1]+dh_terrig[nbasin-3])) - total_xz[nbasin-1][1];
+        } else if (option == 1) {
+            // right source
+            dh_terrig[0] = (2*(total_xz[1][1]+dh_terrig[1]) - (total_xz[2][1]+dh_terrig[2])) - total_xz[0][1];
+            dh_terrig[nbasin-1] = dh_terrig[nbasin-2] + total_dx[nbasin-1]*2. *  param.control.surf_src_area / C0;
+        }
+
+
+        for (int i=0;i<nbasin;i++)
+            if (dh_terrig[i] < 0.) dh_terrig[i] = 0.;
+
+        double darea = 0.;
+        for (int i=0;i<nbasin;i++)
+            darea += total_dx[i] * dh_terrig[i];
+        double ratio =  param.control.surf_src_area * var.dt / darea;
+        for (int i=0;i<nbasin;i++)
+            dh_terrig[i] = dh_terrig[i] * ratio;
+
+    }
+
+
+    void terrigenous_process(const Param& param,const Variables& var) {
+
+        const array_t& coord = *var.coord;
+        const SurfaceInfo& surfinfo = var.surfinfo;
+        const int_vec& top_nodes = *surfinfo.top_nodes;
+
+        const int top_bdry = iboundz1;
+        const auto& top = *(var.bfacets[top_bdry]);
+
+        const int ntop = surfinfo.ntop;
+
+        const double var_dt = var.dt;
+        const double surf_diff = surfinfo.surf_diff;
+        const double base_level = surfinfo.base_level;
+
+        double_vec& dh = *var.surfinfo.dh;
+
+        double_vec top_depth(ntop,0.);
+        double_vec bdy((ntop-1),0.);
+
+
+
+        for (int i=0; i<ntop;i++)
+            top_depth[i] = base_level - coord[top_nodes[i]][1];
+
+        for (int i=0; i<(ntop-2);i++)
+            bdy[i] =top_depth[i] * top_depth[i+1];
+
+        int coast_left = -1;
+        int coast_right = -1;
+        for (int i=0;i<(ntop-1);i++)
+            if(bdy[i] < 0.) {
+                coast_left=i+1;
+                break;
+            }
+
+        for (int i=(ntop-2);i>=0;i--)
+            if(bdy[i] < 0.) {
+                coast_right=i;
+                break;
+            }
+
+        if (coast_left == -1 || coast_right == -1) {
+            printf("coast not found\n");
+            std::exit(168);
+        }
+        int nbasin = coast_right - coast_left + 1;
+        
+        const double *total_xz[nbasin];
+
+        for (int i=0;i<nbasin;i++)
+            total_xz[i] = coord[top_nodes[coast_left+i]];
+
+        double_vec dh_left(nbasin,0.);
+        terrigenous_diffusion(param,var,total_xz,nbasin,0,dh_left);
+
+        double_vec dh_right(nbasin,0.);
+        terrigenous_diffusion(param,var,total_xz,nbasin,1,dh_right);
+
+
+        for (int i=0; i<nbasin; ++i)
+            dh[coast_left+i] += dh_left[i] + dh_right[i];
+    }
+
+
     void simple_igneous(const Param& param,const Variables& var, double_vec& dh_oc, bool& has_partial_melting) {
 #ifdef USE_NPROF
         nvtxRangePushA(__FUNCTION__);
