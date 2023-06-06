@@ -1422,40 +1422,40 @@ namespace {
 #endif
     }
 
-    void terrigenous_diffusion(const Param& param,const Variables& var,const double **total_xz, \
-            const int nbasin,const int option, double_vec& dh_terrig) {
+    void terrigenous_diffusion(const Param& param,const Variables& var,const double **basin_xz, \
+            const int nbasin,const int option, double *dh_terrig) {
         const double S0 = param.control.surf_src_area;
-        const double C0 = 2e-3;
+        const double C0 = 1e-5;
         const double C1 = 5e-3;
         const double base_level = param.control.surf_base_level;
 
         double_vec top_depth(nbasin,0.);
-        double_vec total_dx(nbasin,0.);
+        double_vec basin_dx(nbasin,0.);
 
         // loops over all top facets
         for (int i=0;i<nbasin-1;i++) {
-            double dx = std::fabs(total_xz[i+1][0] - total_xz[i][0]) / 2.;
-            total_dx[i] += dx;
-            total_dx[i+1] += dx;
+            double dx = std::fabs(basin_xz[i+1][0] - basin_xz[i][0]) / 2.;
+            basin_dx[i] += dx;
+            basin_dx[i+1] += dx;
         }
 
         for (int i=0; i<nbasin;i++)
-            top_depth[i] = base_level - total_xz[i][1];
+            top_depth[i] = base_level - basin_xz[i][1];
 
 
         for (int i=1; i<(nbasin-1);i++) {
             double diff = C0 * exp(-C1*top_depth[i]);
-            dh_terrig[i] = var.dt * diff / pow(total_dx[i],2) * (total_xz[i+1][1] - 2*total_xz[i][1] + total_xz[i-1][1]);
+            dh_terrig[i] = var.dt * diff / pow(basin_dx[i],2) * (basin_xz[i+1][1] - 2*basin_xz[i][1] + basin_xz[i-1][1]);
         }
 
         if (option == 0) {
             // left source
-            dh_terrig[0] = dh_terrig[1] + total_dx[0]*2. *  param.control.surf_src_area / C0;
-            dh_terrig[nbasin-1] = (2*(total_xz[nbasin-2][1]+dh_terrig[nbasin-2]) - (total_xz[nbasin-3][1]+dh_terrig[nbasin-3])) - total_xz[nbasin-1][1];
+            dh_terrig[0] = dh_terrig[1] + basin_dx[0]*2. *  param.control.surf_src_area / C0;
+            dh_terrig[nbasin-1] = 0.;//(2*(basin_xz[nbasin-2][1]+dh_terrig[nbasin-2]) - (basin_xz[nbasin-3][1]+dh_terrig[nbasin-3])) - basin_xz[nbasin-1][1];
         } else if (option == 1) {
             // right source
-            dh_terrig[0] = (2*(total_xz[1][1]+dh_terrig[1]) - (total_xz[2][1]+dh_terrig[2])) - total_xz[0][1];
-            dh_terrig[nbasin-1] = dh_terrig[nbasin-2] + total_dx[nbasin-1]*2. *  param.control.surf_src_area / C0;
+            dh_terrig[0] = 0.;//(2*(basin_xz[1][1]+dh_terrig[1]) - (basin_xz[2][1]+dh_terrig[2])) - basin_xz[0][1];
+            dh_terrig[nbasin-1] = dh_terrig[nbasin-2] + basin_dx[nbasin-1]*2. *  param.control.surf_src_area / C0;
         }
 
 
@@ -1464,11 +1464,58 @@ namespace {
 
         double darea = 0.;
         for (int i=0;i<nbasin;i++)
-            darea += total_dx[i] * dh_terrig[i];
+            darea += basin_dx[i] * dh_terrig[i];
         double ratio =  param.control.surf_src_area * var.dt / darea;
         for (int i=0;i<nbasin;i++)
             dh_terrig[i] = dh_terrig[i] * ratio;
 
+        for (int i=0;i<nbasin;i++)
+            if (dh_terrig[i] > top_depth[i])
+                dh_terrig[i] = top_depth[i]+1;
+
+    }
+
+    void find_basin(const double *top_depth, const double_vec& dh_tmp,const int ntop, const int option, int* basin) {
+        double_vec depth_tmp(ntop,0.);
+        double_vec boundary(ntop-1,0.);
+
+        for (int i=0;i<ntop;i++)
+            depth_tmp[i] = top_depth[i] - dh_tmp[i];
+        for (int i=0;i<(ntop-1);i++)
+            boundary[i] = depth_tmp[i] * depth_tmp[i+1];
+
+        if (option == 0) {
+            for (int i=0;i<(ntop-1);i++) {
+                if (boundary[i] <= 0. && depth_tmp[i] <= 0.) {
+                    basin[0] = i+1;
+                    for (int j=i+2;j<ntop;j++) {
+                        if (boundary[j] <= 0. && depth_tmp[j+1] <= 0.) {
+                            basin[1] = j;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        } else {
+            for (int i=ntop-2;i>-1;i--) {
+                if (boundary[i] <= 0. && depth_tmp[i+1] <= 0.) {
+                    basin[1] = i;
+                    for (int j=i-2;j>=0;j--) {
+                        if (boundary[j] <= 0. && depth_tmp[j] <= 0.) {
+                            basin[0] = j+1;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        if (basin[0] == -1 || basin[1] == -1) {
+            for (int i=0;i<ntop;i++)
+                printf("boundary %d %f\n",i,boundary[i]);
+            std::exit(168);
+        }
     }
 
 
@@ -1489,51 +1536,35 @@ namespace {
 
         double_vec& dh = *var.surfinfo.dh;
 
-        double_vec top_depth(ntop,0.);
-        double_vec bdy((ntop-1),0.);
+        double top_depth[ntop];
+        double_vec dh_tmp(ntop,0.);
 
-
-
-        for (int i=0; i<ntop;i++)
-            top_depth[i] = base_level - coord[top_nodes[i]][1];
-
-        for (int i=0; i<(ntop-2);i++)
-            bdy[i] =top_depth[i] * top_depth[i+1];
-
-        int coast_left = -1;
-        int coast_right = -1;
-        for (int i=0;i<(ntop-1);i++)
-            if(bdy[i] < 0.) {
-                coast_left=i+1;
-                break;
-            }
-
-        for (int i=(ntop-2);i>=0;i--)
-            if(bdy[i] < 0.) {
-                coast_right=i;
-                break;
-            }
-
-        if (coast_left == -1 || coast_right == -1) {
-            printf("coast not found\n");
-            std::exit(168);
+        const double *surface_xz[ntop];
+        for (int i=0;i<ntop;i++) {
+            surface_xz[i] = coord[top_nodes[i]];
+            top_depth[i] = base_level - surface_xz[i][1];
         }
-        int nbasin = coast_right - coast_left + 1;
-        
-        const double *total_xz[nbasin];
 
-        for (int i=0;i<nbasin;i++)
-            total_xz[i] = coord[top_nodes[coast_left+i]];
+        for (int i=0;i<2;i++){
+            int basin[2] = {-1};
 
-        double_vec dh_left(nbasin,0.);
-        terrigenous_diffusion(param,var,total_xz,nbasin,0,dh_left);
+            find_basin(top_depth,dh_tmp,ntop,i,basin);
 
-        double_vec dh_right(nbasin,0.);
-        terrigenous_diffusion(param,var,total_xz,nbasin,1,dh_right);
+            int nbasin = basin[1] - basin[0] + 1;
+            
+            const double *basin_xz[nbasin];
+            for (int j=0;j<nbasin;j++)
+                basin_xz[j] = surface_xz[basin[0]+j];
 
+            double dh_basin[nbasin];
+            terrigenous_diffusion(param,var,basin_xz,nbasin,i,dh_basin);
 
-        for (int i=0; i<nbasin; ++i)
-            dh[coast_left+i] += dh_left[i] + dh_right[i];
+            for (int j=0; j<nbasin; j++)
+                dh_tmp[basin[0]+j] += dh_basin[j];
+        }
+
+        for (int i=0; i<ntop; i++)
+            dh[i] += dh_tmp[i];
     }
 
 
@@ -1774,7 +1805,8 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
 #else
         simple_diffusion(var);
         if (var.steps != 0)
-            simple_deposition(param, var);
+            // simple_deposition(param, var);
+            terrigenous_process(param, var);
 #endif
         break;
     default:
