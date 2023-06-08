@@ -1770,8 +1770,8 @@ void create_surface_info(const Param& param, const Variables& var, SurfaceInfo& 
     surfinfo.diff_ratio_terrig = param.control.surf_diff_ratio_terrig;
     surfinfo.diff_ratio_marine = param.control.surf_diff_ratio_marine;
     surfinfo.depo_universal = param.control.surf_depo_universal;
-    surfinfo.terrig_coeff = param.control.surf_terrig_coeff;
-    surfinfo.terrig_base = param.control.surf_terrig_base;
+    surfinfo.terrig_diffusivity = param.control.terrig_sediment_diffusivity;
+    surfinfo.terrig_dpeth_coeff = param.control.terrig_depth_coefficient;
 
     // create globle --> local map
     surfinfo.arctop_nodes.clear();
