@@ -242,18 +242,20 @@ static void declare_parameters(po::options_description &cfg,
          "Sedimentation rate of universal suspended deposite (in m/s).")
         ("control.surf_base_level",po::value<double>(&p.control.surf_base_level)->default_value(0.e0),
          "Base level of surface processes.")
-        ("control.surf_terrig_coeff",po::value<double>(&p.control.surf_terrig_coeff)->default_value(8.e-9),
-         "Coefficient of terrigenous deposition formula.")
-        ("control.surf_terrig_base",po::value<double>(&p.control.surf_terrig_base)->default_value(1.25),
-         "Power base of terrigenous deposition formula.")
+        ("control.terrig_sediment_diffusivity",po::value<double>(&p.control.terrig_sediment_diffusivity)->default_value(3.17e-6),
+         "Submarine diffusion coefficient (=100 m^2/yr, Kaufman et al., 1991) (in m^2/s).")
+        ("control.terrig_depth_coefficient",po::value<double>(&p.control.terrig_depth_coefficient)->default_value(5e-4),
+         "Submarine diffusion coefficient decay (Kaufman et al., 1991) (in m^-1).")
         ("control.is_reporting_terrigenous_info",po::value<bool>(&p.control.is_reporting_terrigenous_info)->default_value(false),
          "If report surface terrigenous information.")
+        ("control.hemipelagic_sedimentation_rate",po::value<double>(&p.control.hemipelagic_sedimentation_rate)->default_value(3.17e-15),
+         "At 1km depth, 1e-1 mm/yr ~= 3.17e-12 m/s / 1e3 m = 3.17e-15 m/s")
 
-        ("control.surf_src_vol",po::value<double>(&p.control.surf_src_vol)->default_value(1.),
+        ("control.terrig_sediment_volume",po::value<double>(&p.control.terrig_sediment_volume)->default_value(1.),
          "The volume of the sediment bring from continent source (in m^3/s). "
          "5e7 ton/yr ~= 1 m^3/s")
-        ("control.surf_src_area",po::value<double>(&p.control.surf_src_area)->default_value(2.e-5),
-         "The are of the sediment bring from continent source (in m^2/s). "
+        ("control.terrig_sediment_area",po::value<double>(&p.control.terrig_sediment_area)->default_value(3.17e-7),
+         "The are of the sediment bring from continent source (=10 m^2/yr) (in m^2/s). "
          "Assuming the width of the channel is 50 km, 5e7 ton/yr ~= 2.e-5 m^2/s")
 
         ("control.has_thermal_diffusion", po::value<bool>(&p.control.has_thermal_diffusion)->default_value(true),

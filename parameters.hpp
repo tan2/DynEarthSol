@@ -105,11 +105,12 @@ struct Control {
     double surf_diff_ratio_marine;
     double surf_depo_universal;
     double surf_base_level;
-    double surf_src_vol;
-    double surf_src_area;
-    double surf_terrig_coeff;
-    double surf_terrig_base;
+    double terrig_sediment_volume;
+    double terrig_sediment_area;
+    double terrig_sediment_diffusivity;
+    double terrig_depth_coefficient;
     bool is_reporting_terrigenous_info;
+    double hemipelagic_sedimentation_rate;
 
     bool is_quasi_static;
     bool has_thermal_diffusion;
@@ -296,8 +297,8 @@ struct SurfaceInfo {
     double surf_diff;
     double diff_ratio_terrig;
     double diff_ratio_marine;
-    double terrig_coeff;
-    double terrig_base;
+    double terrig_diffusivity;
+    double terrig_dpeth_coeff;
     double depo_universal;
     double ero_rate;
     double max_surf_vel;
