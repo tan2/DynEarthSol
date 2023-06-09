@@ -964,471 +964,41 @@ namespace {
 #endif
     }
 
-    void out_basin_info(const int_vec& if_land) {
-        const int chart_width = 80;
-        const int data_num = if_land.size();
-        const double ratio = double(chart_width) / data_num;
+    void out_basin_info(const double_vec& top_depth) {
+        const int chart_width = 60;
+        const int ntop = top_depth.size();
+        const double ratio = double(chart_width) / ntop;
 
         int sum = 0;
         std::cout << "\t";
-        for (int i=0;i<data_num;i++) {
+
+        for (int i=0;i<ntop;i++) {
             double prec = i * ratio;
             if(prec > sum) {
                 int diff = ceil(prec) - sum;
                 sum += diff;
-                for (int j=0;j<diff;j++)
-                    std::cout << std::setw(1) << std::dec << if_land[i];
-//                    printf("%d",if_land[i]);
+                for (int j=0;j<diff;j++) {
+                    int bl;
+                    if (top_depth[i] <= 0.)
+                        bl = 1;
+                    else
+                        bl = 0;
+                    std::cout << std::setw(1) << std::dec << bl;
+                }
             }
         }
-        std::cout << " (ntop: " << std::setw(3) << data_num << ")\n";
-//        printf(" (ntop: %d)\n",data_num);
+        std::cout << " (ntop: " << std::setw(3) << ntop << ")\n";
     }
 
-    void get_basin_info(const Param& param, const Variables& var, double_vec& top_depth, \
-        bool if_source[], int_vec& if_land,\
-        int starts[], int ends[], double_vec& dhacc_tmp, double dx[]) {
-#ifdef USE_NPROF
-        nvtxRangePushA(__FUNCTION__);
-#endif
 
-        const array_t& coord = *var.coord;
-        const SurfaceInfo& surfinfo = var.surfinfo;
-        const int_vec& top_nodes = *surfinfo.top_nodes;
-        const std::size_t ntop = top_nodes.size();
-        int_vec left_mouse, right_mouse;
-        int starts0[2] = {0};
-        left_mouse.reserve(4);
-        right_mouse.reserve(4);
-
-        starts0[0] = starts[0];
-        starts0[1] = starts[1];
-
-        // find land:1 and sea:0
-        for (std::size_t i=0; i<ntop; i++) {
-            double topo_tmp = top_depth[i] - dhacc_tmp[i];
-            if (topo_tmp <= 0.) if_land[i] = 1;
-        }
-
-        // find river mouth
-        for (std::size_t i=0; i<ntop-1; i++)
-            if (if_land[i] + if_land[i+1] == 1) {
-                if (if_land[i] == 1)
-                    left_mouse.push_back(i);
-                else
-                    right_mouse.push_back(i+1);
-            }
-        
-        // find basin sets
-        int left_mouth_num = left_mouse.size();
-        int right_mouth_num = right_mouse.size();
-
-        if (left_mouth_num == 0) {
-            if_source[0] = false;
-        } else {
-            if_source[0] = true;
-            starts[0] = left_mouse[0];
-
-
-            if (left_mouth_num == right_mouth_num) {
-                if (left_mouse[0] < right_mouse[0]) {
-                    ends[0] = right_mouse[0];
-                } else {
-                    if (left_mouth_num > 1) {
-                        ends[0] = right_mouse[1];
-                    } else {
-                        ends[0] = ntop-3;
-                    }
-                }
-            } else if (left_mouth_num < right_mouth_num) {
-                ends[0] = right_mouse[1];
-            } else {
-                if (left_mouth_num == 1) {
-                    ends[0] = ntop-3;
-                } else {
-                    ends[0] = right_mouse[0];
-                }
-            }
-        }
-
-        if (right_mouth_num == 0 ) {
-            if_source[1] = false;
-        } else {
-            if_source[1] = true;
-            starts[1] = right_mouse[right_mouth_num-1];
-
-            if (left_mouth_num == right_mouth_num) {
-                if (left_mouse[0] < right_mouse[0]) {
-                    ends[1] = left_mouse[left_mouth_num-1];
-                } else {
-                    if (right_mouth_num > 1) {
-                        ends[1] = left_mouse[left_mouth_num-2];
-                    } else {
-                        ends[1] = 2;
-                    }
-                }
-            } else if (left_mouth_num > right_mouth_num) {
-                ends[1] = left_mouse[left_mouth_num-2];
-            } else {
-                if (right_mouth_num == 1) {
-                    ends[1] = 2;
-                } else {
-                    ends[1] = left_mouse[left_mouth_num-1];
-                }
-            }
-
-        }
-        for (int i=0;i<2;i++){
-            if (if_source[i]) {
-                int inext = pow(-1, i);
-                double topo_tmp0 = top_depth[starts[i]] - dhacc_tmp[starts[i]];
-                double topo_tmp1 = top_depth[starts[i]+inext] - dhacc_tmp[starts[i]+inext];
-                double x0 = (*var.coord)[top_nodes[starts[i]]][0];
-                double x1 = (*var.coord)[top_nodes[starts[i]+inext]][0];
-                dx[i] = fabs( (x1-x0) * topo_tmp0 / (topo_tmp0 - topo_tmp1) );
-//                printf("%d %d %f %f %f ",top_nodes[starts[i]],top_nodes[starts[i]+inext],x0,x1,dx[i]);
-//                printf("%f %f \n",topo_tmp0,topo_tmp1);
-            }
-        }
-
-
-        if ( param.control.is_reporting_terrigenous_info && var.steps%10000 == 0 ) {
-            if (starts0[0] != starts[0] || starts0[1] != starts[1]) {
-                printf("%d starts0: %d %d; starts: %d %d\n", \
-                        var.steps,starts0[0],starts0[1],starts[0],starts[1]);
-                out_basin_info(if_land);
-//                for (std::size_t i=0;i<ntop;i++)
-//                printf("%d",if_land[i]);
-//                printf("\n");
-            }
-        }
-
-
-        // the source is too close to boundary
-        if (abs(starts[0]-int(ntop)/2) >= int(ntop)/2)
-            if_source[0] = false;
-
-        if (abs(starts[1]-int(ntop)/2) >= int(ntop)/2)
-            if_source[1] = false;
-#ifdef USE_NPROF
-        nvtxRangePop();
-#endif
-    }
-
-    int terrigenous_deposition(const SurfaceInfo& surfinfo, const array_t& coord, const int_vec& top_nodes, \
-        const int side, const int start, const int end, const double target_vol, const double_vec& top_depth, \
-        const double_vec& top_base, dh_t& dhacc_side, const double incre_pow, \
-        const double_vec& dhacc_tmp, const double dx) {
-#ifdef USE_NPROF
-        nvtxRangePushA(__FUNCTION__);
-#endif
-
-        int nstep_in_basin = abs(end - start);
-        double rem_vol = target_vol;
-        int status = 0;
-        int sign = pow(-1,side);
-        int j0 = start;
-
-        // calculate the dh of basin
-        for (int istep=1; istep<nstep_in_basin; istep++) {
-
-            int j = j0 + sign*istep;
-            int pj = j - sign;
-            double slope_tmp = -1. * (top_depth[j] - top_depth[pj]);
-            slope_tmp += dhacc_tmp[j] - dhacc_tmp[pj];
-
-            // stop if slope direction is changed
-            if ( slope_tmp > 0. ) {
-                status = 1;
-                break;
-            }
-
-            // distance to the coastline
-            double dist = fabs(coord[top_nodes[j]][0] - coord[top_nodes[j0]][0]) - dx;
-
-            // deposit based on distance to coastline and remained unit volume
-            // double dh_tmp = surfinfo.terrig_diffusivity * pow(surfinfo.terrig_dpeth_coeff, incre_pow) * rem_vol * dist;
-            double dh_tmp = 1e-10 * pow(surfinfo.terrig_dpeth_coeff, incre_pow) * rem_vol * dist;
-
-            if ( dh_tmp != dh_tmp ) {
-                std::cout << "\ndh_tmp is NaN.\n";
-                std::cout << std::fixed << std::scientific << dh_tmp << "\t" << rem_vol;
-                std::cout << "\t dist: " << std::dec << dist << std::endl;
-                std::cout << "\t j: " << j << std::endl;
-                std::cout << "\t top_nodes[j]: " << top_nodes[j] << std::endl;
-                std::cout << "\t coord[top_nodes[j]][0]: " << coord[top_nodes[j]][0] << std::endl;
-                std::cout << "\t iside: "<< side << std::endl;
-                std::cout << "\t j0: " << j0 << std::endl;
-                std::cout << "\ttop_nodes[j0]: " << top_nodes[j0] << std::endl;
-                std::cout << "\t coord[top_nodes[start]][0]: " << coord[top_nodes[j0]][0] << std::endl;
-                exit(168);
-            }
-
-            // if dhacc larger than depth, dhacc = depth (down is negative)
-            if (dhacc_tmp[j] + dh_tmp > top_depth[j])
-                dh_tmp = std::max(0.0, top_depth[j] - dhacc_tmp[j] + 0.1);
-
-            rem_vol -= dh_tmp * top_base[j];
-
-            dhacc_side[j][side] = dh_tmp;
-
-            if (rem_vol < 0.) {
-                status = 2;
-                break;
-            }
-        }
-        return status;
-#ifdef USE_NPROF
-        nvtxRangePop();
-#endif
-    }
-
-    void simple_deposition(const Param& param,const Variables& var) {
-#ifdef USE_NPROF
-        nvtxRangePushA(__FUNCTION__);
-#endif
-#ifdef THREED
-        // not ready for 3D
-        std::cout << "3D deposition of sediment processes is not ready yet.";
-        exit(168);
-#endif
-        double_vec &dh = *var.surfinfo.dh;
-        double_vec &src_locs = *var.surfinfo.src_locs;
-
-        const array_t& coord = *var.coord;
-        const SurfaceInfo& surfinfo = var.surfinfo;
-        const int_vec& top_nodes = *surfinfo.top_nodes;
-        const std::size_t ntop = top_nodes.size();
-
-        double_vec top_base(ntop,0.);
-        double_vec top_depth(ntop,0.);
-
-        bool if_source[2] = {true};
-        double_vec dh_terrig(ntop,0.);
-        double_vec dhacc_tmp(ntop,0.);
-        dh_t dhacc_side(ntop,0);
-        int interval_report = 10000;
-
-        if ( param.control.is_reporting_terrigenous_info && var.steps%interval_report == 0 )
-            std::cout << "\t** Sedimentation report: ";
-
-        get_surface_info(var,top_base,top_depth);
-
-//******************************************************************
-//              sedimentation by terrigenous source
-//******************************************************************
-
-        // The Pearl River Shibao et al. (2007)
-        // 5.e7 ton/yr ~= 1. m^3/s
-        // assuming the width is 50 km --> 2.e-5 m^2/s
-        double terrig_width = 50.e3;
-        double max_sedi_vol = param.control.terrig_sediment_volume;
-        if (max_sedi_vol != 1.)
-            max_sedi_vol = max_sedi_vol / terrig_width * var.dt;
-        else
-            max_sedi_vol = param.control.terrig_sediment_area * var.dt;
-
-        int vol_ratio = 10;
-        int ntry = 200;
-
-        double unit_vol = max_sedi_vol / vol_ratio;
-
-        int_vec if_land(ntop,0);
-        int starts[2] = {0}, ends[2] = {0}, nsedi[2] = {0};
-        double sedi_vol[2] = {0.}, dx[2] = {0.};
-        bool if_space_limited[2] = {false}, is_open[2] = {false};
-        bool if_slope_limited[2] = {false};
-
-        get_basin_info(param,var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
-
-        // recored possible source locations
-        for (int i=0;i<2;i++)
-            if (if_source[i])
-                src_locs[i] = coord[top_nodes[starts[i]]][0] + dx[i] * pow(-1,i);
-
-        // deal with the sedimentation for the aspect of coastal source
-        // to n times of both two sides
-        for (int islide=0; islide<(vol_ratio+1); islide++) {
-            dx[0] = 0.;
-            dx[1] = 0.;
-            // if coast line is changed or basin is filled, search topo for finding basin again
-            get_basin_info(param,var,top_depth,if_source, if_land, starts, ends, dhacc_tmp, dx);
-            // do deposit for two sides
-            for (int iside=0; iside<2; iside++) {
-                // if this side become no source, do next side directly
-                if (! if_source[iside]) continue;
-                if ( is_open[iside] ) continue;
-
-                // if this side reach max_sedi_vol, do next side directly
-                if ( (max_sedi_vol - sedi_vol[iside]) / max_sedi_vol < 1.e-4 ) continue;
-
-                if (starts[iside] == ends[iside]) {
-                    if_space_limited[iside] = true;
-                    continue;
-                }
-
-                // recorder of deposited volumn for do loop
-                bool is_finish = false, is_over = false;
-                int nloop = 0, sign = pow(-1,iside);
-                // slided volumn for each side
-                double target_vol = std::min(unit_vol, max_sedi_vol - sedi_vol[iside]);
-                double incre_pow = 1.;
-                // search for best distribution of sediment
-                do {
-                    int inc = terrigenous_deposition(surfinfo,coord,top_nodes,iside,\
-                                starts[iside],ends[iside],target_vol,top_depth,top_base,\
-                                dhacc_side,incre_pow,dhacc_tmp,dx[iside]);
-
-                    if (inc == 1) {
-                        // slope limited
-                        if_slope_limited[iside] = true;
-                        if (is_over)
-                            printf("Over is fixed.\n");
-                    } else if (inc == 2) {
-                        // over volume
-                        is_over = true;
-                        // printf("Warning(islide %d): over volume (%.2e) for terrigenous deposition. (side %d)\n",islide,incre_pow,iside);
-                    } else if (inc == 0) {
-                        // open basin
-                        is_open[iside] = true;
-                        break;
-                    }
-
-                    double tmp_vol = 0.;
-                    for (int i=0;i<ntop;i++)
-                        tmp_vol += top_base[i] * dhacc_side[i][iside];
-
-                    double diff_ratio = std::max(-1e-2, (target_vol - tmp_vol) / target_vol);
-
-                    if (nloop == ntry)
-                        printf("nloop: %d diff_ratio %.2e incre_pow %f tmp_vol %.2e target_vol %.2e\n",nloop, diff_ratio, incre_pow, tmp_vol,target_vol);
-
-                    if (fabs(diff_ratio) > 1e-2 && !if_space_limited[iside]) {
-                        // record times of one side loop
-                        nloop++;
-                        // incre_pow += (diff_ratio*5);
-                        incre_pow *= (diff_ratio+1.);
-
-                        // move coast if basin is filled.
-                        if (dhacc_tmp[starts[iside]+sign] >= top_depth[starts[iside]+sign]) {
-                            starts[iside] += sign;
-
-                            if (starts[iside] == ends[iside])
-                                if_space_limited[iside] = true;
-                        }
-                    } else {
-                        double_vec tmp_arr(ntop, 0.);
-                        // if reach target volume, record the deposited volume
-                        for (int i=1;i<(ntop-1);i++){
-                            const double *p0 = coord[top_nodes[i-1]];
-                            const double *p1 = coord[top_nodes[i]];
-                            const double *p2 = coord[top_nodes[i+1]];
-
-                            tmp_arr[i] = ( (p1[0]-p0[0])*dhacc_side[i+1][iside] + \
-                                           (p2[0]-p1[0])*dhacc_side[i-1][iside] ) / (p2[0]-p0[0]);
-                            tmp_arr[i] = ( tmp_arr[i]+dhacc_side[i][iside] ) / 2.;
-                        }
-
-                        for (int i=1;i<(ntop-1);i++)
-                            if (dhacc_side[i][iside] > 0.)
-                                dhacc_side[i][iside] = tmp_arr[i];
-
-                        tmp_vol = 0.;
-                        for (int i=0;i<ntop;i++)
-                            tmp_vol += top_base[i] * dhacc_side[i][iside];
-
-                        double missing_rvol = target_vol / tmp_vol;
-
-                        if (! if_space_limited[iside])
-                            for (int i=0;i<ntop;i++)
-                                dhacc_side[i][iside] *= missing_rvol;
-
-                        for (int i=0;i<(ntop);i++) {
-                            sedi_vol[iside] += top_base[i] * dhacc_side[i][iside];
-                            dhacc_tmp[i] += dhacc_side[i][iside];
-                        }
-                        // printf("nloop: %d diff_ratio %.2e incre_pow %f target_vol %.2e tmp_vol %.2e sedi_vol %.2e %d\n",nloop, diff_ratio, incre_pow, target_vol,tmp_vol,sedi_vol[iside],iside);
-                        is_finish = true;
-                    }
-
-                // end of do loop of one side deposit
-                } while (!is_finish && nloop <= ntry);
-                if (nloop > ntry)
-                    std::cout << "nloop > ntry" << std::endl;
-
-                nsedi[iside] += nloop;
-            } // end of each side
-
-            if (if_space_limited[0] || if_space_limited[1]) break;
-
-            for (std::size_t j=0; j<ntop; j++) {
-                dh_terrig[j] += dhacc_tmp[j];
-                dhacc_tmp[j] = 0.;
-            }
-
-            if ( ( (max_sedi_vol-sedi_vol[0])/max_sedi_vol < 1.e-4 ) && \
-                 ( (max_sedi_vol-sedi_vol[1])/max_sedi_vol < 1.e-4 ) ) break;
-        } // end of deposit slides
-
-        if (if_source[0] || if_source[1]) {
-            double_vec tmp_slope(ntop,0.);
-            for (std::size_t i=0;i<ntop-1;i++) {
-                tmp_slope[i] = 0.5 * ( dh_terrig[i+1] - dh_terrig[i] ) / top_base[i];
-                tmp_slope[i+1] = 0.5 * ( dh_terrig[i+1] - dh_terrig[i] ) / top_base[i];
-            }
-            for (std::size_t i=0;i<ntop;i++)
-                if (dh_terrig[i]!=0.)
-                    if (fabs(tmp_slope[i]) > 3.e-3 ) {
-                        std::cout << "arge ddh:" << std::setw(5) << std::dec << i << top_nodes[i];
-                        std::cout <<  std::setw(9) << std::setprecision(2) << std::scientific << dh_terrig[i] << tmp_slope[i] << std::endl;
-                    }
-        }
-
-        for (size_t i=0; i<ntop; i++)
-            dh[i] += dh_terrig[i];
-
-        if (param.control.is_reporting_terrigenous_info && var.steps%interval_report == 0 ) {
-            if (!if_source[0] || (!if_source[0]) ) {
-                if (!if_source[0]) std::cout << "No source from 0. ";
-                if (!if_source[1]) std::cout << "No source from 1. ";
-                std::cout << std::endl;
-            }
-            for (int i=0;i<2;i++) {
-                if (if_source[i]) {
-                    if (if_space_limited[i]) std::cout << "\n   Space limited at " << i;
-                    if (if_slope_limited[i]) std::cout << "\n   Slope limited at " << i;
-                    std::cout << "\n\tSide " << std::setw(1) << std::dec << i << ": Loc.: " << std::setw(8) << std::setprecision(2) << coord[top_nodes[starts[i]]][0]/1000.;
-                    std::cout << " km (" << std::setw(5) << std::dec << starts[i] << " - " << std::setw(5) << ends[i] << "). Sediment: ";
-                    std::cout << std::setw(8) << std::setprecision(2) << sedi_vol[i] << " m^2 (max: " << max_sedi_vol << " Loop: ";
-                    std::cout << std::setw(5) << std::dec << nsedi[i] << std::endl;
-                }
-            }
-            if (if_space_limited[0] || if_space_limited[1]) {
-                std::cout << "\tSpace of basin is not enough for sediment . Do next round.";
-                std::cout << std::setw(5) << std::dec << nsedi[0] << "/" << nsedi[1] << std::endl;
-            }
-        }
-
-//******************************************************************
-//              sedimentation by suspended source
-//******************************************************************
-
-        double ddh = surfinfo.depo_universal * var.dt;
-        for (std::size_t i=0; i<ntop; i++)
-            // if below the base level
-            if (top_depth[i] > 0.) dh[i] += ddh;
-#ifdef USE_NPROF
-        nvtxRangePop();
-#endif
-    }
-
-    double terrigenous_diffusion(const Param& param,const Variables& var, double *basin_dx, double *basin_depth, \
-            const int nbasin,const int option, double *dh_terrig, double area_target) {
+    double terrigenous_diffusion(const Param& param,const Variables& var, const double_vec& basin_dx, const double_vec& basin_depth, \
+            const int nbasin,const int option, double_vec& dh_terrig, double area_target) {
         const double S0 = param.control.terrig_sediment_area;
         const double C0 = param.control.terrig_sediment_diffusivity;
         const double C1 = param.control.terrig_depth_coefficient;
         const double coeff = var.dt * C0;
 
+        // todo: include the distance between the location and the source
         for (int i=1; i<(nbasin-1);i++)
             dh_terrig[i] = coeff * exp(-C1*basin_depth[i]) / pow(basin_dx[i],2) * \
                 (-basin_depth[i+1] + 2*basin_depth[i] - basin_depth[i-1]);
@@ -1444,8 +1014,12 @@ namespace {
         }
 
         double darea = 0.;
-        for (int i=0;i<nbasin;i++)
+        for (int i=0;i<nbasin;i++){
+            // make sure the sedimentation is positive
+            if (dh_terrig[i] < 0.)
+                dh_terrig[i] = 0.;
             darea += basin_dx[i] * dh_terrig[i];
+        }
 
         double ratio =  area_target / darea;
         for (int i=0;i<nbasin;i++) {
@@ -1463,7 +1037,7 @@ namespace {
         return area;
     }
 
-    int* find_basin(const double *depth_tmp,const int ntop, const int option) {
+    int* find_basin(const double_vec& depth_tmp,const int ntop, const int option) {
 
         int *basin = new int[2];
         basin[0] = -1;
@@ -1513,59 +1087,72 @@ namespace {
 
 
     void terrigenous_process(const Param& param,const Variables& var) {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
         const array_t& coord = *var.coord;
         const SurfaceInfo& surfinfo = var.surfinfo;
         const int_vec& top_nodes = *surfinfo.top_nodes;
         const int ntop = surfinfo.ntop;
-        const double surf_diff = surfinfo.surf_diff;
         double_vec& dh = *var.surfinfo.dh;
 
-        double top_depth[ntop], dh_tmp[ntop];
-        const double *surface_xz[ntop];
+        double_vec top_depth(ntop), dh_tmp(ntop);
 
-        double max_depth = 0.;
-        double min_depth = 0.;
+        double max_depth = 0., min_depth = 0.;
+        int itry[2] = {0,0};
+        bool is_report = param.control.is_reporting_terrigenous_info && var.steps%10000 == 0;
+
         for (int i=0;i<ntop;i++) {
             dh_tmp[i] = 0.;
-            surface_xz[i] = coord[top_nodes[i]];
-            top_depth[i] = surfinfo.base_level - surface_xz[i][1];
+            top_depth[i] = surfinfo.base_level - coord[top_nodes[i]][1];
             if (top_depth[i] > max_depth)
                 max_depth = top_depth[i];
             if (top_depth[i] < min_depth)
                 min_depth = top_depth[i];
         }
-        if (max_depth*min_depth >= 0.)
+
+        if (is_report) {
+            std::cout << "\t** Sedimentation report: \n";
+            out_basin_info(top_depth);
+        }
+
+        if (max_depth*min_depth >= 0.) {
+            if (is_report)
+                std::cout << "\tNo basin exist.\n";
             return;
+        }
 
         for (int i=0;i<2;i++){
             double area_ref = param.control.terrig_sediment_area * var.dt;
             double area = area_ref;
 
-            int itry = 0;
             do {
-                double depth_tmp[ntop];
+                double_vec depth_tmp(ntop);
                 for (int j=0;j<ntop;j++)
                     depth_tmp[j] = top_depth[j] - dh_tmp[j];
 
                 int *basin = find_basin(depth_tmp,ntop,i);
 
-                if (basin[0] == -1 || basin[1] == -1)
+                if (basin[0] == -1 || basin[1] == -1) {
+                    if (is_report)
+                        std::cout << "\tSource " << i << " : No accommodation space.\n";
                     break;
+                } else {
+                    if (is_report)
+                        std::cout << "\tSource " << i << " : Basin at " << basin[0] << " " << basin[1] << "\n";
+                }
 
-                itry++;
+                itry[i]++;
                 int nbasin = basin[1] - basin[0] + 1;
-                double basin_dx[nbasin];
-                double basin_depth[nbasin];
-                double dh_basin[nbasin];
+                double_vec basin_x(nbasin+2), basin_dx(nbasin);
+                double_vec basin_depth(nbasin), dh_basin(nbasin);
                 double basin_area = 0.;
-                const double *basin_xz[nbasin+2];
 
                 for (int j=0;j<nbasin+2;j++)
-                    basin_xz[j] = surface_xz[basin[0]+j-1];
-
+                    basin_x[j] = coord[top_nodes[basin[0]+j-1]][0];
                 // loops over all top facets
                 for (int j=0;j<nbasin;j++) {
-                    basin_dx[j] = std::fabs(basin_xz[j+2][0] - basin_xz[j][0]) / 2.;
+                    basin_dx[j] = std::fabs(basin_x[j+2] - basin_x[j]) / 2.;
                     basin_depth[j] = depth_tmp[basin[0]+j];
                     // calculate the area of the basin
                     basin_area += basin_dx[j] * (basin_depth[j] + 1e-2);
@@ -1581,7 +1168,7 @@ namespace {
                 for (int j=0; j<nbasin; j++)
                     dh_tmp[basin[0]+j] += dh_basin[j];
 
-                if (itry > 50) {
+                if (itry[i] > 50) {
                     printf("i %d\n",i);
                     printf("area %e %e %e\n",area,area_ref,basin_area);
                     for (int j=0;j<nbasin;j++)
@@ -1593,11 +1180,15 @@ namespace {
                 }
                 delete [] basin;
             } while (area/area_ref > 5e-2);
-            if (itry == 0) break;
+            if (itry[i] == 0) break;
         }
 
         for (int i=0; i<ntop; i++)
             dh[i] += dh_tmp[i];
+
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
     }
 
 
@@ -1838,8 +1429,8 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
 #else
         simple_diffusion(var);
         if (var.steps != 0)
-            // simple_deposition(param, var);
             terrigenous_process(param, var);
+            // todo sedimentation by suspended source
 #endif
         break;
     default:
