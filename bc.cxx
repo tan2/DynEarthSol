@@ -1085,8 +1085,39 @@ namespace {
         return basin;
     }
 
+    void hemipelagic_deposition(const Param& param,const Variables& var) {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
+        const array_t& coord = *var.coord;
+        const SurfaceInfo& surfinfo = var.surfinfo;
+        const int_vec& top_nodes = *surfinfo.top_nodes;
+        const int ntop = surfinfo.ntop;
+        double_vec& dh = *var.surfinfo.dh;
 
-    void terrigenous_process(const Param& param,const Variables& var) {
+        const double dh_hemipelagic = param.control.hemipelagic_sedimentation_rate * var.dt;
+        const bool is_report = param.control.is_reporting_terrigenous_info && var.steps%10000 == 0;
+
+        double max_depth = 0.;
+
+        for (int i=0;i<ntop;i++) {
+            double depth = surfinfo.base_level - coord[top_nodes[i]][1];
+            if (depth > 0. )
+                dh[i] += depth * dh_hemipelagic;
+            if (depth > max_depth)
+                max_depth = depth;
+        }
+        if (is_report)
+            std::cout << "\tMax hemipelagic sedimentation rate (mm/yr): " << std::fixed << std::setprecision(3) << \
+                max_depth*param.control.hemipelagic_sedimentation_rate*YEAR2SEC*1e3 << std::endl;
+
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
+    }
+
+
+    void terrigenous_deposition(const Param& param,const Variables& var) {
 #ifdef USE_NPROF
         nvtxRangePushA(__FUNCTION__);
 #endif
@@ -1100,7 +1131,7 @@ namespace {
 
         double max_depth = 0., min_depth = 0.;
         int itry[2] = {0,0};
-        bool is_report = param.control.is_reporting_terrigenous_info && var.steps%10000 == 0;
+        const bool is_report = param.control.is_reporting_terrigenous_info && var.steps%10000 == 0;
 
         for (int i=0;i<ntop;i++) {
             dh_tmp[i] = 0.;
@@ -1428,9 +1459,10 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         exit(168);
 #else
         simple_diffusion(var);
-        if (var.steps != 0)
-            terrigenous_process(param, var);
-            // todo sedimentation by suspended source
+        if (var.steps != 0) {
+            terrigenous_deposition(param, var);
+            hemipelagic_deposition(param, var);
+        }
 #endif
         break;
     default:
@@ -1540,14 +1572,14 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
             // std::cout << n << "  dh:  " << dh << '\n';
         }
 
-        std::cout << "\tmax erosion / sedimentation rate (mm/yr):  "
+        std::cout << "\tMax erosion / sedimentation rate (mm/yr):  "
                     << std::fixed << std::setprecision(3) << min_dh / var.dt * 1000. * YEAR2SEC << " / "
                     << std::fixed << std::setprecision(3) << max_dh / var.dt * 1000. * YEAR2SEC << '\n';
 
         if ( param.mat.phase_change_option == 2) {
             for (int i=0;i<ntop;i++)
                 max_dh_oc = std::max(max_dh_oc, dh_oc[i]);
-            std::cout << "\tmax igneous eruption rate (mm/yr):  "
+            std::cout << "\tMax igneous eruption rate (mm/yr):  "
                         << std::fixed << std::setprecision(3) << max_dh_oc / var.dt * 1000. * YEAR2SEC << '\n';
         }
     }

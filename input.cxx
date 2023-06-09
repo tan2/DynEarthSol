@@ -248,6 +248,8 @@ static void declare_parameters(po::options_description &cfg,
          "Submarine diffusion coefficient decay (Kaufman et al., 1991) (in m^-1).")
         ("control.is_reporting_terrigenous_info",po::value<bool>(&p.control.is_reporting_terrigenous_info)->default_value(false),
          "If report surface terrigenous information.")
+        ("control.hemipelagic_sedimentation_rate",po::value<double>(&p.control.hemipelagic_sedimentation_rate)->default_value(3.17e-15),
+         "At 1km depth, 1e-1 mm/yr ~= 3.17e-12 m/s / 1e3 m = 3.17e-15 m/s")
 
         ("control.terrig_sediment_volume",po::value<double>(&p.control.terrig_sediment_volume)->default_value(1.),
          "The volume of the sediment bring from continent source (in m^3/s). "
