@@ -1021,6 +1021,9 @@ namespace {
             darea += basin_dx[i] * dh_terrig[i];
         }
 
+        // make sure the total sedimentation is positive
+        if (darea <= 0.) return 0.;
+
         double ratio =  area_target / darea;
         for (int i=0;i<nbasin;i++) {
             dh_terrig[i] = dh_terrig[i] * ratio;

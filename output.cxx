@@ -7,10 +7,6 @@
 #include <nvToolsExt.h>
 #endif
 
-#ifdef USE_OMP
-#include <omp.h>
-#endif
-
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "binaryio.hpp"
