@@ -143,7 +143,7 @@ ifneq (, $(findstring clang++, $(CXX)))
 	endif
  
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP -L/usr/local/lib
+		CXXFLAGS += -fopenmp -L/usr/local/lib
 		LDFLAGS += -fopenmp -L/usr/local/lib
 	endif
 
@@ -163,7 +163,7 @@ else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 	endif
 
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP
+		CXXFLAGS += -fopenmp
 		LDFLAGS += -fopenmp
 	endif
 
@@ -193,7 +193,7 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 	endif
 
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP
+		CXXFLAGS += -fopenmp
 		LDFLAGS += -fopenmp
 	endif
 
@@ -236,7 +236,7 @@ else ifneq (, $(findstring pgc++, $(CXX)))
 	endif
  
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -mp -DUSE_OMP
+		CXXFLAGS += -mp
 		LDFLAGS += -mp
 	endif
 

@@ -4,9 +4,6 @@
 #include <cmath>
 #include <limits>
 #include <iostream>
-#ifdef USE_OMP
-#include "omp.h"
-#endif
 
 #include "constants.hpp"
 #include "parameters.hpp"
