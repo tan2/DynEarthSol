@@ -216,6 +216,11 @@ else ifneq (, $(findstring nvc++, $(CXX)))
 		LDFLAGS += -acc=gpu -gpu=managed -Mcuda
 	endif
 
+	ifeq ($(openmp), 1)
+		CXXFLAGS += -fopenmp
+		LDFLAGS += -fopenmp
+	endif
+
 	ifeq ($(nprof), 1)
 		CXXFLAGS += -Minfo=mp -I$(CUDA_DIR)/include -DUSE_NPROF
 		LDFLAGS += -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
