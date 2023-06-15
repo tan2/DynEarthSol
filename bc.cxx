@@ -993,6 +993,9 @@ namespace {
 
     double terrigenous_diffusion(const Param& param,const Variables& var, const double_vec& basin_dx, const double_vec& basin_depth, \
             const int nbasin,const int option, double_vec& dh_terrig, double area_target) {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
         const double S0 = param.control.terrig_sediment_area;
         const double C0 = param.control.terrig_sediment_diffusivity;
         const double C1 = param.control.terrig_depth_coefficient;
@@ -1022,7 +1025,12 @@ namespace {
         }
 
         // make sure the total sedimentation is positive
-        if (darea <= 0.) return 0.;
+        if (darea <= 0.) {
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
+            return 0.;
+        }
 
         double ratio =  area_target / darea;
         for (int i=0;i<nbasin;i++) {
@@ -1037,6 +1045,9 @@ namespace {
         for (int i=0;i<nbasin;i++)
             area += basin_dx[i] * dh_terrig[i];
 
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
         return area;
     }
 
@@ -1153,6 +1164,9 @@ namespace {
         if (max_depth*min_depth >= 0.) {
             if (is_report)
                 std::cout << "\tNo basin exist.\n";
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
             return;
         }
 
@@ -1245,8 +1259,12 @@ namespace {
 
         has_partial_melting = var.markersets[0]->if_melt(param.mat.mattype_partial_melting_mantle);
 
-        if (!has_partial_melting) return;
-
+        if (!has_partial_melting) {
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
+            return;
+        }
         double_vec top_base(ntop,0.);
         double_vec top_depth(ntop,0.);
 
@@ -1293,8 +1311,12 @@ namespace {
                 }
             }
         }
-        if (melting_marker.size() == 0)
+        if (melting_marker.size() == 0) {
             return;
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
+        }
         // find the depth of melting top of node
         for (size_t i=1;i<ntop-1;i++) {
             if (melting_depth_elem[i-1] < -100.e3 && melting_depth_elem[i] < -100.e3) continue;
