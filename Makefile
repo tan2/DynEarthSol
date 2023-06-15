@@ -56,7 +56,7 @@ else
 		CXX = nvc++
 	else
 		ifeq ($(nprof), 1)
-			CXX = pgc++
+			CXX = nvc++
 		else
 			CXX = g++
 		endif
@@ -66,12 +66,10 @@ endif
 
 
 ## path to cuda's base directory
-CUDA_DIR = $(CUDA_HOME)
-#CUDA_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda
+CUDA_DIR =
 
 ## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR = ${HOME}/opt/boost_1_62_0
-#BOOST_ROOT_DIR = ${HOME}/opt/boost_1_62_0
+BOOST_ROOT_DIR = 
 
 ########################################################################
 ## Select compiler and linker flags
