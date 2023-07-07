@@ -969,24 +969,51 @@ namespace {
         const int ntop = top_depth.size();
         const double ratio = double(chart_width) / ntop;
 
-        int sum = 0;
-        std::cout << "\t";
+        int sum = 0, count_sign = 0;
+        int_vec signs(chart_width);
 
         for (int i=0;i<ntop;i++) {
             double prec = i * ratio;
             if(prec > sum) {
                 int diff = ceil(prec) - sum;
                 sum += diff;
-                for (int j=0;j<diff;j++) {
-                    int bl;
-                    if (top_depth[i] <= 0.)
-                        bl = 1;
+                for (int j=0;j<diff;j++)
+                    if (top_depth[i] > 0.)
+                        signs[count_sign++] = 0;
                     else
-                        bl = 0;
-                    std::cout << std::setw(1) << std::dec << bl;
-                }
+                        signs[count_sign++] = 1;
             }
         }
+        std::cout << "\t";
+
+        for (int i=0;i<chart_width;i++)
+            if (signs[i] == 0)
+                std::cout << " ";
+            else
+                if (i == 0 || i == (chart_width-1))
+                    std::cout << " ";
+                else if (signs[i+1] == 0)
+                    std::cout << " ";
+                else if (signs[i-1] == 0)
+                    std::cout << " ";
+                else
+                    std::cout << "_";
+
+        std::cout << std::endl << "\t";
+
+        for (int i=0;i<chart_width;i++)
+            if (signs[i] == 0)
+                std::cout << "_";
+            else
+                if (i == 0 || i == (chart_width-1))
+                    std::cout << "|";
+                else if (signs[i+1] == 0)
+                    std::cout << "\\";
+                else if (signs[i-1] == 0)
+                    std::cout << "/";
+                else
+                    std::cout << " ";
+
         std::cout << " (ntop: " << std::setw(3) << ntop << ")\n";
     }
 
