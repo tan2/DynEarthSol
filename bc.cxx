@@ -1023,9 +1023,12 @@ namespace {
             else
                 dh_terrig[0] = 0.;
 
-        // avoid deposition above the base level
         for (int i=0;i<nbasin;i++)
-            if (dh_terrig[i] > basin_depth[i+1])
+            // make sure the sedimentation is positive
+            if (dh_terrig[i] < 0.)
+                dh_terrig[i] = 0.;
+            // avoid deposition above the base level
+            else if (dh_terrig[i] > basin_depth[i+1])
                 dh_terrig[i] = basin_depth[i+1]+1e-2;
 
 #ifdef USE_NPROF
