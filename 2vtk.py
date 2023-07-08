@@ -42,6 +42,13 @@ output_principle_stress = False
 # Save markers?
 output_markers = True
 
+# Calculate melting?
+output_melting = False
+
+# Calculate heat flow?
+output_heatflux = True
+conductivity = 3.3
+
 ########################
 # Is numpy version < 1.8?
 eigh_vectorized = True
@@ -241,31 +248,59 @@ def main(modelname, start, end, delta):
             vtk_dataarray(fvtu, np.arange(nelem, dtype=np.int32), 'elem number')
 
             # melting mantle
-            from scipy import interpolate
-            material = des.read_field(frame, 'material')
-            temperature = des.read_field(frame, 'temperature')
-            connectivity = des.read_field(frame, 'connectivity')
-            # Calculate the temperature of element
-            ecoord = np.array([coord[connectivity[e,:],:].mean(axis=0) for e in range(nelem)])
-            etemp = np.array([temperature[connectivity[e,:]].mean(axis=0) for e in range(nelem)])
+            if output_melting:
+                material = des.read_field(frame, 'material')
+                temperature = des.read_field(frame, 'temperature')
+                connectivity = des.read_field(frame, 'connectivity')
+                # Calculate the temperature of element
+                ecoord = np.array([coord[connectivity[e,:],:].mean(axis=0) for e in range(nelem)])
+                etemp = np.array([temperature[connectivity[e,:]].mean(axis=0) for e in range(nelem)])
 
-            melting = np.zeros(sI.shape)
+                melting = np.zeros(sI.shape)
 
-            # find surface
-            bcflag = des.read_field(frame, 'bcflag')
-            filter = Filter()
-            surfx, surfz = filter.node(coord[:,0],coord[:,1],bcflag)
-            orders = np.argsort(surfx)
-            surface = np.vstack((surfx[orders],surfz[orders]))
-            depth = np.interp(ecoord[:,0], surface[0], surface[1]) - ecoord[:,1]
-            pressure = depth * 9.8 * 2900.
-            # Hirschmann, 2000  https://doi.org/10.1029/2000GC000070
-            # Assumeing solidus is a line between (0 GPa, 1120 C) - (7 GPa, 1800 C)
-            #                                                    adibatic  themral gradient 0.3 C/km
-            melting[:] = -1000
-            ind = material < 2
-            melting[ind] = (etemp[ind]-273. + depth[ind]*3.e-4) - (1120 + (680./7.e9)*pressure[ind])
-            vtk_dataarray(fvtu, melting, 'melting')
+                # find surface
+                bcflag = des.read_field(frame, 'bcflag')
+                filter = Filter()
+                surfx, surfz = filter.node(coord[:,0],coord[:,1],bcflag)
+                orders = np.argsort(surfx)
+                surface = np.vstack((surfx[orders],surfz[orders]))
+                depth = np.interp(ecoord[:,0], surface[0], surface[1]) - ecoord[:,1]
+                pressure = depth * 9.8 * 2900.
+                # Hirschmann, 2000  https://doi.org/10.1029/2000GC000070
+                # Assumeing solidus is a line between (0 GPa, 1120 C) - (7 GPa, 1800 C)
+                #                                                    adibatic  themral gradient 0.3 C/km
+                melting[:] = -1000
+                ind = material < 2
+                melting[ind] = (etemp[ind]-273. + depth[ind]*3.e-4) - (1120 + (680./7.e9)*pressure[ind])
+                vtk_dataarray(fvtu, melting, 'melting')
+
+            # heat flow
+            # 3D is not implemented and tested yet
+            if output_heatflux:
+                temperature = des.read_field(frame, 'temperature')
+                connectivity = des.read_field(frame, 'connectivity')
+
+                p = np.transpose(coord[connectivity], (1,2,0))
+                t = np.transpose(temperature[connectivity], (1,0))
+
+                v_arr = np.zeros((des.ndims,des.ndims+1,nelem))                
+                v_arr[:,:-1] = p[:-1] - p[-1]
+                v_arr[:,-1] = t[:-1] - t[-1]
+
+                nv = np.cross(v_arr[0].T,v_arr[1].T)
+                v_slope = np.cross(nv, np.cross(nv, [0,0,1])).T
+                
+                norm = np.linalg.norm(v_slope[:-1], axis=0)
+                
+                flux_val = -1.e3 * conductivity * v_slope[-1] / norm
+
+                flux = v_slope[:-1] * flux_val / norm
+
+                vtk_dataarray(fvtu, flux[0], 'heat flux x')
+                if des.ndims == 3:
+                    vtk_dataarray(fvtu, flux[1], 'heat flux y')
+                vtk_dataarray(fvtu, flux[-1], 'heat flux z')
+                vtk_dataarray(fvtu, flux_val, 'heat flux magnitude')
 
             fvtu.write('  </CellData>\n')
 
@@ -597,6 +632,10 @@ if __name__ == '__main__':
         output_tensor_components = True
     if '-m' in sys.argv:
         output_markers = True
+    if '-melt' in sys.argv:
+        output_melting = True
+    if '-heat' in sys.argv:
+        output_heatflux = True
 
     # delete options
     for i in range(len(sys.argv)):
