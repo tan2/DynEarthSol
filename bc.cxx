@@ -969,75 +969,99 @@ namespace {
         const int ntop = top_depth.size();
         const double ratio = double(chart_width) / ntop;
 
-        int sum = 0;
-        std::cout << "\t";
+        int sum = 0, count_sign = 0;
+        int_vec signs(chart_width);
 
         for (int i=0;i<ntop;i++) {
             double prec = i * ratio;
             if(prec > sum) {
                 int diff = ceil(prec) - sum;
                 sum += diff;
-                for (int j=0;j<diff;j++) {
-                    int bl;
-                    if (top_depth[i] <= 0.)
-                        bl = 1;
+                for (int j=0;j<diff;j++)
+                    if (top_depth[i] > 0.)
+                        signs[count_sign++] = 0;
                     else
-                        bl = 0;
-                    std::cout << std::setw(1) << std::dec << bl;
-                }
+                        signs[count_sign++] = 1;
             }
         }
+        std::cout << "\t";
+
+        for (int i=0;i<chart_width;i++)
+            if (signs[i] == 0)
+                std::cout << " ";
+            else
+                if (i == 0 || i == (chart_width-1))
+                    std::cout << " ";
+                else if (signs[i+1] == 0)
+                    std::cout << " ";
+                else if (signs[i-1] == 0)
+                    std::cout << " ";
+                else
+                    std::cout << "_";
+
+        std::cout << std::endl << "\t";
+
+        for (int i=0;i<chart_width;i++)
+            if (signs[i] == 0)
+                std::cout << "_";
+            else
+                if (i == 0 || i == (chart_width-1))
+                    std::cout << "|";
+                else if (signs[i+1] == 0)
+                    std::cout << "\\";
+                else if (signs[i-1] == 0)
+                    std::cout << "/";
+                else
+                    std::cout << " ";
+
         std::cout << " (ntop: " << std::setw(3) << ntop << ")\n";
     }
 
 
-    double terrigenous_diffusion(const Param& param,const Variables& var, const double_vec& basin_dx, const double_vec& basin_depth, \
-            const int nbasin,const int option, double_vec& dh_terrig, double area_target) {
+    void terrigenous_diffusion(const Param& param,const Variables& var, const double_vec& basin_x, const double_vec& basin_dx, const double_vec& basin_depth, \
+            const int nbasin,const int option, double_vec& dh_terrig, double dt_cycle) {
+#ifdef USE_NPROF
+        nvtxRangePushA(__FUNCTION__);
+#endif
         const double S0 = param.control.terrig_sediment_area;
         const double C0 = param.control.terrig_sediment_diffusivity;
         const double C1 = param.control.terrig_depth_coefficient;
-        const double coeff = var.dt * C0;
+        const double coeff = dt_cycle * C0;
+        double_vec basin_slope(nbasin+1);
 
-        // todo: include the distance between the location and the source
-        for (int i=1; i<(nbasin-1);i++)
-            dh_terrig[i] = coeff * exp(-C1*basin_depth[i]) / pow(basin_dx[i],2) * \
-                (-basin_depth[i+1] + 2*basin_depth[i] - basin_depth[i-1]);
+        // calculate basin slope
+        for (int i=0; i<nbasin+1;i++)
+            basin_slope[i] = -(basin_depth[i+1] - basin_depth[i]) / (basin_x[i+1] - basin_x[i]);
 
-        if (option == 0) {
-            // source from left
-            dh_terrig[nbasin-1] = 0.;
-            dh_terrig[0] = dh_terrig[1] + basin_dx[0] *  S0 / C0;
-        } else {
-            // source from right
-            dh_terrig[0] = 0.;
-            dh_terrig[nbasin-1] = dh_terrig[nbasin-2] + basin_dx[nbasin-1] *  S0 / C0;
-        }
+        // set boundary condition of basin_slope
+        if (option == 0)
+            basin_slope[0] = - S0 / C0;
+        else
+            basin_slope[nbasin] = S0 / C0;
 
-        double darea = 0.;
-        for (int i=0;i<nbasin;i++){
+        // calculate dh for depth-dependent terrigenous diffusion
+        for (int i=0; i<nbasin;i++)
+            dh_terrig[i] = coeff * exp(-C1*basin_depth[i+1]) * (basin_slope[i+1] - basin_slope[i]) / basin_dx[i];
+
+        // set boundary condition if basin is larger than 1
+        if (nbasin > 1)
+            if (option == 0)
+                dh_terrig[nbasin-1] = 0.;
+            else
+                dh_terrig[0] = 0.;
+
+        for (int i=0;i<nbasin;i++)
             // make sure the sedimentation is positive
             if (dh_terrig[i] < 0.)
                 dh_terrig[i] = 0.;
-            darea += basin_dx[i] * dh_terrig[i];
-        }
+            // avoid deposition above the base level
+            else if (dh_terrig[i] > basin_depth[i+1])
+                dh_terrig[i] = basin_depth[i+1]+1e-2;
 
-        // make sure the total sedimentation is positive
-        if (darea <= 0.) return 0.;
-
-        double ratio =  area_target / darea;
-        for (int i=0;i<nbasin;i++) {
-            dh_terrig[i] = dh_terrig[i] * ratio;
-
-            if (dh_terrig[i] > basin_depth[i] && basin_depth[i] > 0.)
-                dh_terrig[i] = basin_depth[i]+1e-2;
-        }
-
-        // sum actual area
-        double area = 0.;
-        for (int i=0;i<nbasin;i++)
-            area += basin_dx[i] * dh_terrig[i];
-
-        return area;
+#ifdef USE_NPROF
+        nvtxRangePop();
+#endif
+        return;
     }
 
     int* find_basin(const double_vec& depth_tmp,const int ntop, const int option) {
@@ -1133,8 +1157,8 @@ namespace {
         double_vec top_depth(ntop), dh_tmp(ntop);
 
         double max_depth = 0., min_depth = 0.;
-        int itry[2] = {0,0};
         const bool is_report = param.control.is_reporting_terrigenous_info && var.steps%10000 == 0;
+        int iter = 10;
 
         for (int i=0;i<ntop;i++) {
             dh_tmp[i] = 0.;
@@ -1153,68 +1177,76 @@ namespace {
         if (max_depth*min_depth >= 0.) {
             if (is_report)
                 std::cout << "\tNo basin exist.\n";
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
             return;
         }
 
-        for (int i=0;i<2;i++){
-            double area_ref = param.control.terrig_sediment_area * var.dt;
-            double area = area_ref;
+        // run source from both side
+        for (int iside=0;iside<2;iside++){
+            double dt_next = 0.;
+            int itry = 0;
 
+            // decreae dt of terrigenous sedimentation to increase the stability
             do {
                 double_vec depth_tmp(ntop);
                 for (int j=0;j<ntop;j++)
                     depth_tmp[j] = top_depth[j] - dh_tmp[j];
 
-                int *basin = find_basin(depth_tmp,ntop,i);
+                int *basin = find_basin(depth_tmp,ntop,iside);
 
+                // check if basin exist
                 if (basin[0] == -1 || basin[1] == -1) {
                     if (is_report)
-                        std::cout << "\tSource " << i << " : No accommodation space.\n";
+                        std::cout << "\tSource " << iside << " : No accommodation space.\n";
                     break;
                 } else {
-                    if (is_report)
-                        std::cout << "\tSource " << i << " : Basin at " << basin[0] << " " << basin[1] << "\n";
+                    if (is_report && itry == 0)
+                        std::cout << "\tSource " << iside << " : Basin at " << basin[0] << " " << basin[1] << "\n";
                 }
 
-                itry[i]++;
+                itry++;
                 int nbasin = basin[1] - basin[0] + 1;
                 double_vec basin_x(nbasin+2), basin_dx(nbasin);
-                double_vec basin_depth(nbasin), dh_basin(nbasin);
+                double_vec basin_depth(nbasin+2), dh_basin(nbasin);
                 double basin_area = 0.;
+                double dt_cycle = var.dt / iter;
+                if (dt_next > 0.){
+                    dt_cycle = dt_next;
+                    dt_next = 0.;
+                }
+                double area_ref = param.control.terrig_sediment_area * dt_cycle;
 
-                for (int j=0;j<nbasin+2;j++)
+                for (int j=0;j<nbasin+2;j++) {
                     basin_x[j] = coord[top_nodes[basin[0]+j-1]][0];
+                    basin_depth[j] = depth_tmp[basin[0]+j-1];
+                }
                 // loops over all top facets
                 for (int j=0;j<nbasin;j++) {
                     basin_dx[j] = std::fabs(basin_x[j+2] - basin_x[j]) / 2.;
-                    basin_depth[j] = depth_tmp[basin[0]+j];
                     // calculate the area of the basin
-                    basin_area += basin_dx[j] * (basin_depth[j] + 1e-2);
+                    basin_area += basin_dx[j] * (basin_depth[j+1] + 1e-2);
                 }
 
-                if (basin_area <= area) {
+                // if the area of the basin is smaller than the reference area,
+                // use basin depth as the dh
+                if (basin_area <= area_ref) {
+                    itry -= 1;
+                    dt_next = dt_cycle * (1. - basin_area/area_ref);
+                    printf("dt_next %e dt_cycle %e\n",dt_next,dt_cycle);
                     for (int j=0; j<nbasin; j++)
-                        dh_basin[j] = basin_depth[j] + 1e-2;
-                    area -= basin_area;
+                        dh_basin[j] = basin_depth[j+1] + 1e-2;
                 } else
-                    area -= terrigenous_diffusion(param,var,basin_dx,basin_depth,nbasin,i,dh_basin,area);
+                    // calculate the terrigenous sedimentation
+                    terrigenous_diffusion(param,var,basin_x,basin_dx,basin_depth,nbasin,iside,dh_basin,dt_cycle);
 
                 for (int j=0; j<nbasin; j++)
                     dh_tmp[basin[0]+j] += dh_basin[j];
 
-                if (itry[i] > 50) {
-                    printf("i %d\n",i);
-                    printf("area %e %e %e\n",area,area_ref,basin_area);
-                    for (int j=0;j<nbasin;j++)
-                        printf("basin %d %f %e %e\n",j,basin_dx[j],basin_depth[j],dh_basin[j]);
-                    for (int j=0;j<ntop;j++)
-                        printf("top %d %e\n",j,top_depth[j]);
-                    printf("Error: terrigneous deposite %d %d reaches iteration limit 50.\n",basin[0],basin[1]);
-                    exit(1);
-                }
                 delete [] basin;
-            } while (area/area_ref > 5e-2);
-            if (itry[i] == 0) break;
+            } while (itry < iter);
+            if (itry == 0) break;
         }
 
         for (int i=0; i<ntop; i++)
@@ -1245,8 +1277,12 @@ namespace {
 
         has_partial_melting = var.markersets[0]->if_melt(param.mat.mattype_partial_melting_mantle);
 
-        if (!has_partial_melting) return;
-
+        if (!has_partial_melting) {
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
+            return;
+        }
         double_vec top_base(ntop,0.);
         double_vec top_depth(ntop,0.);
 
@@ -1293,8 +1329,12 @@ namespace {
                 }
             }
         }
-        if (melting_marker.size() == 0)
+        if (melting_marker.size() == 0) {
             return;
+#ifdef USE_NPROF
+            nvtxRangePop();
+#endif
+        }
         // find the depth of melting top of node
         for (size_t i=1;i<ntop-1;i++) {
             if (melting_depth_elem[i-1] < -100.e3 && melting_depth_elem[i] < -100.e3) continue;

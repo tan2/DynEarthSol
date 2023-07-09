@@ -456,7 +456,7 @@ double compute_dt(const Param& param, const Variables& var)
     if (param.control.characteristic_speed == 0) {
         max_vbc_val = var.max_vbc_val;
         if (param.control.surface_process_option > 0)
-            max_vbc_val = std::max(max_vbc_val, var.surfinfo.max_surf_vel);
+            max_vbc_val = std::max(max_vbc_val, var.surfinfo.max_surf_vel*5e-1);
     }
     else
         max_vbc_val = param.control.characteristic_speed;

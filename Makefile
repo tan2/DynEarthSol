@@ -56,7 +56,7 @@ else
 		CXX = nvc++
 	else
 		ifeq ($(nprof), 1)
-			CXX = pgc++
+			CXX = nvc++
 		else
 			CXX = g++
 		endif
@@ -66,12 +66,10 @@ endif
 
 
 ## path to cuda's base directory
-CUDA_DIR = $(CUDA_HOME)
-#CUDA_DIR = /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda
+CUDA_DIR = # /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda
 
 ## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR = ${HOME}/opt/boost_1_62_0
-#BOOST_ROOT_DIR = ${HOME}/opt/boost_1_62_0
+BOOST_ROOT_DIR = # ${HOME}/opt/boost_1_62_0
 
 ########################################################################
 ## Select compiler and linker flags
@@ -203,8 +201,8 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 		endif
 	endif
 else ifneq (, $(findstring nvc++, $(CXX)))
-	CXXFLAGS = -mno-fma -Minfo=mp,accel -I$(CUDA_DIR)/include -DUSE_NPROF
-	LDFLAGS = -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt -g
+	CXXFLAGS = -mno-fma
+	LDFLAGS =
 	TETGENFLAGS = 
 
 	ifeq ($(opt), 1)
@@ -218,9 +216,14 @@ else ifneq (, $(findstring nvc++, $(CXX)))
 		LDFLAGS += -acc=gpu -gpu=managed -Mcuda
 	endif
 
+	ifeq ($(openmp), 1)
+		CXXFLAGS += -fopenmp
+		LDFLAGS += -fopenmp
+	endif
+
 	ifeq ($(nprof), 1)
-		CXXFLAGS += -Minfo=mp -I$(CUDA_DIR)/include -DUSE_NPROF
-		LDFLAGS += -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt
+		CXXFLAGS += -Minfo=mp,accel -I$(CUDA_DIR)/include -DUSE_NPROF
+		LDFLAGS += -L$(CUDA_DIR)/lib64 -Wl,-rpath,$(CUDA_DIR)/lib64 -lnvToolsExt -g
 	endif
 else ifneq (, $(findstring pgc++, $(CXX)))
 	CXXFLAGS = -march=core2
