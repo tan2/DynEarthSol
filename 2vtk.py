@@ -274,27 +274,10 @@ def main(modelname, start, end, delta):
                 melting[ind] = (etemp[ind]-273. + depth[ind]*3.e-4) - (1120 + (680./7.e9)*pressure[ind])
                 vtk_dataarray(fvtu, melting, 'melting')
 
-            # heat flow
+            # heat flux
             # 3D is not implemented and tested yet
-            if output_heatflux:
-                temperature = des.read_field(frame, 'temperature')
-                connectivity = des.read_field(frame, 'connectivity')
-
-                p = np.transpose(coord[connectivity], (1,2,0))
-                t = np.transpose(temperature[connectivity], (1,0))
-
-                v_arr = np.zeros((des.ndims,des.ndims+1,nelem))                
-                v_arr[:,:-1] = p[:-1] - p[-1]
-                v_arr[:,-1] = t[:-1] - t[-1]
-
-                nv = np.cross(v_arr[0].T,v_arr[1].T)
-                v_slope = np.cross(nv, np.cross(nv, [0,0,1])).T
-                
-                norm = np.linalg.norm(v_slope[:-1], axis=0)
-                
-                flux_val = -1.e3 * conductivity * v_slope[-1] / norm
-
-                flux = v_slope[:-1] * flux_val / norm
+            if output_heatflux:               
+                flux, flux_val = des.load_calculation(frame, 'heat flux')
 
                 vtk_dataarray(fvtu, flux[0], 'heat flux x')
                 if des.ndims == 3:

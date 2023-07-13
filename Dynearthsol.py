@@ -110,6 +110,33 @@ class Dynearthsol:
             f.seek(pos)
             field = np.fromfile(f, dtype=dtype, count=count).reshape(shape)
         return field
+    
+    def load_calculation(self, frame, name):
+        if name == 'heat flux':
+            conductivity = 3.3
+            coord = self.read_field(frame, 'coordinate')
+            temperature = self.read_field(frame, 'temperature')
+            connectivity = self.read_field(frame, 'connectivity')
+            
+            p = np.transpose(coord[connectivity], (1,2,0))
+            t = np.transpose(temperature[connectivity], (1,0))
+
+            v_arr = np.zeros((self.ndims,self.ndims+1,connectivity.shape[0]))                
+            v_arr[:,:-1] = p[:-1] - p[-1]
+            v_arr[:,-1] = t[:-1] - t[-1]
+
+            nv = np.cross(v_arr[0].T,v_arr[1].T)
+            v_slope = np.cross(nv, np.cross(nv, [0,0,1])).T
+            
+            norm = np.linalg.norm(v_slope[:-1], axis=0)
+            
+            flux_val = -1.e3 * conductivity * v_slope[-1] / norm
+
+            flux = v_slope[:-1] * flux_val / norm
+            return flux, flux_val
+        else:
+            raise NameError('uknown field name: ' + name)
+        
 
 
     def overwrite_field(self, frame, name, data):
