@@ -130,7 +130,7 @@ ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 
 	ifeq ($(openmp), 1)
 		CXXFLAGS += -fopenmp -DUSE_OMP
-		LDFLAGS += -fopenmp
+		LDFLAGS += -fopenmp -Wl,-rpath=/lib64
 	endif
 
 	ifeq ($(useadapt), 1)
