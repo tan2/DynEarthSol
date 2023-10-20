@@ -111,6 +111,10 @@ struct Control {
     double terrig_depth_coefficient;
     bool is_reporting_terrigenous_info;
     double hemipelagic_sedimentation_rate;
+    double hemipelagic_width;
+    double hemipelagic_max_depth;
+    double pelagic_sedimentation_rate;
+    double pelagic_increasing_width;
 
     bool is_quasi_static;
     bool has_thermal_diffusion;

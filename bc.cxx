@@ -1122,21 +1122,29 @@ namespace {
         const int ntop = surfinfo.ntop;
         double_vec& dh = *var.surfinfo.dh;
 
-        const double dh_hemipelagic = param.control.hemipelagic_sedimentation_rate * var.dt;
         const bool is_report = param.control.is_reporting_terrigenous_info && var.steps%10000 == 0;
+        // hemipelagic sedimentation (Emmerich et al., 2009)
+        // maximum accumulation rate (m/s)
+        const double dh_hemipelagic = param.control.hemipelagic_sedimentation_rate * var.dt;
+        // pelagic sedimentation (Emmerich et al., 2009)
+        // maximum accumulation rate (m/s)
+        const double dh_pelagic = param.control.pelagic_sedimentation_rate * var.dt;
 
-        double max_depth = 0.;
+        double max_dhi = 0.;
 
         for (int i=0;i<ntop;i++) {
             double depth = surfinfo.base_level - coord[top_nodes[i]][1];
-            if (depth > 0. )
-                dh[i] += depth * dh_hemipelagic;
-            if (depth > max_depth)
-                max_depth = depth;
+            if (depth > 0. ) {
+                double dhi = dh_hemipelagic * exp(-pow((depth - param.control.hemipelagic_max_depth)/param.control.hemipelagic_width,2));
+                dhi += dh_pelagic * (1. - exp(-pow(depth/param.control.pelagic_increasing_width,2)));
+                dh[i] += dhi;
+                if (dhi > max_dhi)
+                    max_dhi = dhi;
+            }
         }
         if (is_report)
-            std::cout << "\tMax hemipelagic sedimentation rate (mm/yr): " << std::fixed << std::setprecision(3) << \
-                max_depth*param.control.hemipelagic_sedimentation_rate*YEAR2SEC*1e3 << std::endl;
+            std::cout << "\tMax hemi/pelagic sedimentation rate (km/Myr): " << std::fixed << std::setprecision(3) << \
+                max_dhi*YEAR2SEC*1e3/var.dt << std::endl;
 
 #ifdef USE_NPROF
         nvtxRangePop();
