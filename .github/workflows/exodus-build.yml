@@ -1,0 +1,35 @@
+name: Exodus build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: get exodus
+      run: |
+        git clone https://github.com/sandialabs/seacas.git
+        cd seacas && export ACCESS=`pwd`
+        COMPILER=gnu MATIO=NO GNU_PARALLEL=NO CGNS=NO FMT=NO ./install-tpl.sh
+        mkdir build; cd build
+        ../cmake-exodus
+        make; make install
+    - name: get boost
+      run: sudo apt install libboost-program-options-dev
+    - name: make debug 2d
+      run: make ndims=2 opt=0 openmp=0
+    # - name: make debug 3d
+    #   run: make ndims=3 opt=0 openmp=0  
+    # - name: make 2d
+    #   run: make ndims=2 opt=2 openmp=1
+    # - name: make 3d
+    #   run: make ndims=3 opt=2 openmp=1  
+    # - name: make check
+    #   run: make check
+    # - name: make distcheck
+    #   run: make distcheck
