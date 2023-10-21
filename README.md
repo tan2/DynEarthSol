@@ -1,0 +1,72 @@
+[![Basic build](https://github.com/tan2/DynEarthSol/actions/workflows/basic-build.yml/badge.svg)](https://github.com/tan2/DynEarthSol/actions/workflows/basic-build.yml)
+
+# Overview
+
+DynEarthSol3D, DES3D in short, is a finite element code that solves the momentum balance and 
+the heat transfer in Lagrangian form using unstructured meshes. It can be
+used to study the long-term deformation of Earth's lithosphere and problems
+alike.
+
+# Building DES3D
+## Requirements
+* You will need a recent C++ compiler that supports C++11 standard. (GNU g++
+  4.4 or newer version will suffice.)
+* You will need a recent version of `Boost::Program_options` library (1.42 or
+  newer version). Instructions for building the library:
+  * Download the source code from www.boost.org
+  * In the untarred source directory, run `./bootstrap.sh`
+  * In the same directory, run `./b2 --with-program_options -q` to build
+     the library.
+* You will need Python 2.6+ or 3.2+ and the Numpy package.
+### Optional packages
+* [Exodus](https://github.com/gsjaardema/seacas/) for importing a mesh in the ExodusII format
+* [MMG3D](https://www.mmgtools.org/mmg-remesher-downloads) for mesh optimization during remeshing in three-dimensional models
+
+## Building procedure
+* Edit `Makefile` 
+  * Modify `BOOST_ROOT_DIR` if you manually built or installed 
+  boost library.
+    * If you followed the instructions above to build 
+  `Boost::Program_options` library, set `BOOST_ROOT_DIR` to the untarred boost
+  directory.
+  * If importing an exodus mesh:
+    * Set `useexo = 1` and `ndims = 3`. Only 3D exodus mesh can be imported.
+    * Set `EXO_INCLUDE` and `EXO_LIB_DIR` paths.
+* Run `make` to build optimized executable.
+* Or run `make opt=0` to build a debugging executable.
+* Or run `make openmp=0` to build the executable without OpenMP. This is
+  necessary to debug the code under valgrind.
+
+# Running DES3D
+* Execute `dynearthsol2d [inputfile: examples/defaults.cfg by default]`.
+* Pay attention to any warnings. For instance, if a warning about potential 
+  race condition is printed on screen, do follow the given suggestions.
+* Several example input files are provided under `examples/` directory. The
+  format of the input file is described in `examples/defaults.cfg`.
+* Benchmark cases with analytical solution can be found under `benchmarks/`
+  directory.
+* Execute the executable with `-h` flag to see the available input parameters
+  and their descriptions.
+
+# Visualizing DES3D outputs
+* Run `2vtk.py [modelname: 'results' by default]` to convert the binary output to VTK files.
+* Execute `2vtk.py -h` to see more usage information.
+* Some of the simulation outputs might be disabled. Edit `2vtk.py` and
+  `output.cxx` to disable/enable them.
+* Plot the VTK files with [Paraview](https://www.paraview.org/download/) or [Visit](https://visit-dav.github.io/visit-website/).
+
+# Bug reports
+      
+Bug reports, comments, and suggestions are always welcome. The best 
+channel is to create an issue on the Issue Tracker here:
+  https://github.com/tan2/DynEarthSol/issues
+
+# License
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the MIT / X Windows System license. See
+[LICENSE](https://github.com/tan2/DynEarthSol/blob/master/LICENSE) for the full text.
+
+The files under the subdirectories `3x3-C/`, `ann/`, `tetgen/`
+and `triangles/` are distributed by their own license(s).
+
