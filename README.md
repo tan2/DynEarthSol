@@ -42,6 +42,7 @@ alike.
       cmake ..
       make
       ```
+    * The header files and built shared library will be in `mmg/build/include` and `mmg/build/lib`. 
 ## Building procedure
 * Edit `Makefile` 
   * Modify `BOOST_ROOT_DIR` if you manually built or installed 
@@ -52,6 +53,9 @@ alike.
   * If importing an exodus mesh:
     * Set `useexo = 1` and `ndims = 3`. Only 3D exodus mesh can be imported.
     * Set `EXO_INCLUDE` and `EXO_LIB_DIR` paths if different from the default values.
+  * If mesh optimization with mmg is desired for remeshing:
+    * Set `usemmg = 1`.
+    * Set `MMG_INCLUDE` and `MMG_LIB_DIR` paths if different from the default values.
 * Run `make` to build optimized executable.
 * Or run `make opt=0` to build a debugging executable.
 * Or run `make openmp=0` to build the executable without OpenMP. This is
