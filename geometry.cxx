@@ -310,58 +310,53 @@ double compute_dt(const Param& param, const Variables& var)
 }
 
 
-void compute_mass(const Param &param,
+void compute_mass(const Param &param, const Variables& var,
                   const int_vec &egroups, const conn_t &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double max_vbc_val, double_vec &volume_n,
-                  double_vec &mass, double_vec &tmass)
+                  double_vec &mass, double_vec &tmass, elem_cache &tmp_result,
+                  int_vec2D &support)
 {
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
-    volume_n.assign(volume_n.size(), 0);
-    mass.assign(mass.size(), 0);
-    tmass.assign(tmass.size(), 0);
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
 
-    class ElemFunc_mass : public ElemFunc
-    {
-    private:
-        const MatProps &mat;
-        const conn_t &connectivity;
-        const double_vec &volume;
-        double_vec &volume_n;
-        double_vec &mass;
-        double_vec &tmass;
-        double pseudo_speed;
-        bool is_quasi_static;
-        bool has_thermal_diffusion;
-    public:
-        ElemFunc_mass(const MatProps &mat, const conn_t &connectivity, const double_vec &volume,
-                      double pseudo_speed, bool is_quasi_static, bool has_thermal_diffusion,
-                      double_vec &volume_n, double_vec &mass, double_vec &tmass) :
-            mat(mat), connectivity(connectivity), volume(volume),
-            volume_n(volume_n), mass(mass), tmass(tmass),
-            pseudo_speed(pseudo_speed), is_quasi_static(is_quasi_static),
-            has_thermal_diffusion(has_thermal_diffusion) {};
-        void operator()(int e)
-        {
-            double rho = (is_quasi_static) ?
-                mat.bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
-                mat.rho(e);                                     // true density for dynamic sim
-            double m = rho * volume[e] / NODES_PER_ELEM;
-            double tm = mat.rho(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
-            const int *conn = connectivity[e];
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                volume_n[conn[i]] += volume[e];
-                mass[conn[i]] += m;
-                if (has_thermal_diffusion)
-                    tmass[conn[i]] += tm;
-            }
-        }
-    } elemf(mat, connectivity, volume, pseudo_speed, param.control.is_quasi_static,
-            param.control.has_thermal_diffusion, volume_n, mass, tmass);
+    const bool is_quasi_static = param.control.is_quasi_static;
+    const bool has_thermal_diffusion = param.control.has_thermal_diffusion;
+    const int var_nelem = var.nelem;
+    const int var_nnode = var.nnode;
 
-    loop_all_elem(egroups, elemf);
+    #pragma omp parallel for default(none)      \
+        shared(tmp_result,mat,volume)
+    #pragma acc parallel loop
+    for (int e=0;e<var_nelem;e++) {
+        double *tr = tmp_result[e];
+        double rho = (is_quasi_static) ?
+            mat.bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
+            mat.rho(e);                                     // true density for dynamic sim
+        double m = rho * volume[e] / NODES_PER_ELEM;
+        double tm = mat.rho(e) * mat.cp(e) * volume[e] / NODES_PER_ELEM;
+        tr[0] = volume[e];
+        tr[1] = m;
+        if (has_thermal_diffusion)
+            tr[2] = tm;
+    }
+
+    #pragma omp parallel for default(none)      \
+        shared(volume_n,mass,tmass,tmp_result,support)
+    #pragma acc parallel loop
+    for (int n=0;n<var_nnode;n++) {
+        volume_n[n]=0;
+        mass[n]=0;
+        tmass[n]=0;
+        for( auto e = support[n].begin(); e < support[n].end(); ++e) {
+            double *tr = tmp_result[*e];
+            volume_n[n] += tr[0];
+            mass[n] += tr[1];
+            if (has_thermal_diffusion)
+                tmass[n] += tr[2];
+        }
+    }
 }
 
 
