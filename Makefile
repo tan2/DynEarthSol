@@ -52,6 +52,7 @@ ifeq ($(useadapt), 1)
 else
 	ifeq ($(openacc), 1)
 		CXX = nvc++
+		openmp = 0 # force no openmp when using openacc
 	else
 		ifeq ($(nprof), 1)
 			CXX = nvc++
