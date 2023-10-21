@@ -1,9 +1,18 @@
 #ifndef DYNEARTHSOL3D_UTILS_HPP
 #define DYNEARTHSOL3D_UTILS_HPP
 
+#include "parameters.hpp"
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <cfloat>
+#include <math.h>
+#include <iomanip>
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <time.h>
+#endif
 
 static void print(std::ostream& os, const double& x)
 {
@@ -84,6 +93,48 @@ static double second_invariant(const double* t)
      * defined as: td = deviatoric(t); sqrt( td(i,j) * td(i,j) / 2)
      */
     return std::sqrt(second_invariant2(t));
+}
+
+
+static int findNearestNeighbourIndex( double x_new, const double_vec& x )
+{
+    /* find nearest neighbour index for interpolation
+     * x vector only can be ascending
+     */
+    double dist = DBL_MAX;
+    int idx = -1;
+    for (size_t i = 0; i < x.size(); ++i ) {
+        double newDist = x_new - x[i];
+        if ( newDist >= 0 && newDist <= dist ) {
+            dist = newDist;
+            idx = i;
+        }
+    }
+
+    return idx;
+}
+
+
+static int64_t get_nanoseconds() {
+    #if defined(_WIN32)
+    LARGE_INTEGER frequency, counter;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&counter);
+    return (int64_t)((double)counter.QuadPart / frequency.QuadPart * 1e9);
+    #else
+    timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1e9 + ts.tv_nsec;
+    #endif
+}
+
+static void print_time_ns(const int64_t duration) {
+    int hours = duration / (int64_t)3600000000000;
+    int minutes = (duration % (int64_t)3600000000000) / (int64_t)60000000000;
+    double seconds = (duration % (int64_t)60000000000) / 1e9;
+    std::cout << std::setw(3) << std::setfill('0') << hours << ":"
+    << std::setw(2) << std::setfill('0') << minutes << ":"
+    << std::setw(9) << std::fixed << std::setprecision(6) << std::setfill('0') << seconds;
 }
 
 #endif

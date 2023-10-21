@@ -144,7 +144,7 @@ ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 	endif
 
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP
+		CXXFLAGS += -fopenmp
 		LDFLAGS += -fopenmp -Wl,-rpath=/lib64
 	endif
 
@@ -169,7 +169,7 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 	endif
 
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -DUSE_OMP
+		CXXFLAGS += -fopenmp
 		LDFLAGS += -fopenmp
 	endif
 

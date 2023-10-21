@@ -196,6 +196,12 @@ struct Mat {
     double_vec dilation_angle0, dilation_angle1;
 };
 
+struct Time {
+    int64_t remesh_time;
+    int64_t output_time;
+    int64_t start_time;
+};
+
 struct Markers {
     int init_marker_option;
     int markers_per_element;
@@ -230,6 +236,7 @@ struct Variables {
     double time;
     double dt;
     int steps;
+    Time func_time;
 
     int nnode;
     int nelem;

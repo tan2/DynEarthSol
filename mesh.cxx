@@ -5,10 +5,6 @@
 #include <string>
 #include <sstream>
 
-#ifdef USE_OMP
-#include <omp.h>
-#endif
-
 #ifdef THREED
 
 #define TETLIBRARY
