@@ -23,7 +23,7 @@ void compute_mass(const Param &param, const Variables& var,
                   double_vec &mass, double_vec &tmass, elem_cache &tmp_result,
                   int_vec2D &support);
 
-void compute_shape_fn(const array_t &coord, const conn_t &connectivity,
+void compute_shape_fn(const Variables& var, const array_t &coord, const conn_t &connectivity,
                       const double_vec &volume,
                       const int_vec &egroups,
                       shapefn &shpdx, shapefn &shpdy, shapefn &shpdz);

@@ -88,7 +88,7 @@ void init(const Param& param, Variables& var)
     compute_mass(param, var, var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result,
                  *var.support);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
+    compute_shape_fn(var, *var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, var.bnormals, var.edge_vectors);
@@ -186,7 +186,7 @@ void restart(const Param& param, Variables& var)
     compute_mass(param, var, var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result,
                  *var.support);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
+    compute_shape_fn(var, *var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, var.bnormals, var.edge_vectors);
@@ -230,7 +230,7 @@ void update_mesh(const Param& param, Variables& var)
     compute_mass(param, var, var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result,
                  *var.support);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
+    compute_shape_fn(var, *var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 }
 

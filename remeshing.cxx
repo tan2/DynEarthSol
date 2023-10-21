@@ -1996,7 +1996,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     compute_mass(param, var, var.egroups, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result,
                  *var.support);
-    compute_shape_fn(*var.coord, *var.connectivity, *var.volume, var.egroups,
+    compute_shape_fn(var, *var.coord, *var.connectivity, *var.volume, var.egroups,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     if (param.mesh.remeshing_option==1 ||
