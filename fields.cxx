@@ -115,14 +115,14 @@ void update_temperature(const Param &param, const Variables &var,
     const shapefn *var_shpdy = var.shpdy;
     const MatProps *var_mat = var.mat;
     const uint_vec *var_bcflag = var.bcflag;
-    const int var_nnode = var.nnode;
-    const int var_nelem=var.nelem;
-    const double var_dt = var.dt;
-    const double surface_temperature = param.bc.surface_temperature;
+    int var_nnode = var.nnode;
+    int var_nelem = var.nelem;
+    double var_dt = var.dt;
+    double surface_temperature = param.bc.surface_temperature;
 
     #pragma omp parallel for default(none) \
         shared(temperature,tmp_result,connectivity,var_shpdx,var_shpdz,var_shpdy, \
-                volume,var_mat,support,var_bcflag)
+                volume,var_mat,support,var_bcflag,var_nelem)
     #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         // diffusion matrix
@@ -152,7 +152,8 @@ void update_temperature(const Param &param, const Variables &var,
     }
 
     #pragma omp parallel for default(none) \
-        shared(tdot,temperature,tmp_result,support,connectivity,var_bcflag,tmass)
+        shared(tdot,temperature,tmp_result,support,connectivity,var_bcflag, \
+               tmass,var_dt,var_nnode,surface_temperature)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         tdot[n]=0;
@@ -304,7 +305,6 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
 
 void update_force(const Param& param, const Variables& var, array_t& force, elem_cache& tmp_result)
 {
-    const int var_nelem = var.nelem;
     const conn_t *var_connectivity = var.connectivity;
     const double_vec *var_temperature = var.temperature;
     const int_vec2D *var_elemmarkers = var.elemmarkers;
@@ -314,15 +314,17 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     tensor_t *var_stress = var.stress;
     double_vec *var_volume = var.volume;
     const MatProps *var_mat = var.mat;
-    const double gravity = param.control.gravity;
-    const int nmat = param.mat.nmat;
     const double_vec *rho0 = &param.mat.rho0;
     const double_vec *alpha = &param.mat.alpha;
-    const int var_nnode = var.nnode;
     const int_vec2D *var_support = var.support;
+    double gravity = param.control.gravity;
+    int nmat = param.mat.nmat;
+    int var_nnode = var.nnode;
+    int var_nelem = var.nelem;
 
     #pragma omp parallel for default(none)      \
-        shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stress,var_volume,var_mat)
+        shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stress, \
+               var_volume,var_mat,var_nelem,nmat,gravity)
     #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         const int *conn = (*var_connectivity)[e];
@@ -352,7 +354,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     }
 
     #pragma omp parallel for default(none)      \
-        shared(var,force,tmp_result,var_support,var_connectivity)
+        shared(var,force,tmp_result,var_support,var_connectivity,var_nnode)
     #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         std::fill_n(force[n],NDIMS,0); 
