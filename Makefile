@@ -83,10 +83,10 @@ endif
 
 ifeq ($(useexo), 1)
 	# path to exodus header files
-	EXO_INCLUDE = ${HOME}/opt/seacas/include
+	EXO_INCLUDE = ./seacas/include
 
 	# path of exodus library files, if not in standard system location
-	EXO_LIB_DIR = ${HOME}/opt/seacas/lib
+	EXO_LIB_DIR = ./seacas/lib
 
 	EXO_CXXFLAGS = -I$(EXO_INCLUDE) -DUSEEXODUS
 	EXO_LDFLAGS = -L$(EXO_LIB_DIR) -lexodus
