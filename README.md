@@ -1,4 +1,5 @@
 [![Basic build](https://github.com/tan2/DynEarthSol/actions/workflows/basic-build.yml/badge.svg)](https://github.com/tan2/DynEarthSol/actions/workflows/basic-build.yml)
+[![Exodus build](https://github.com/tan2/DynEarthSol/actions/workflows/exodus-build.yml/badge.svg)](https://github.com/tan2/DynEarthSol/actions/workflows/exodus-build.yml)
 
 # Overview
 
@@ -43,7 +44,7 @@ alike.
   directory.
   * If importing an exodus mesh:
     * Set `useexo = 1` and `ndims = 3`. Only 3D exodus mesh can be imported.
-    * Set `EXO_INCLUDE` and `EXO_LIB_DIR` paths.
+    * Set `EXO_INCLUDE` and `EXO_LIB_DIR` paths if different from the default values.
 * Run `make` to build optimized executable.
 * Or run `make opt=0` to build a debugging executable.
 * Or run `make openmp=0` to build the executable without OpenMP. This is
