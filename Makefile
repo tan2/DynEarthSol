@@ -97,10 +97,10 @@ endif
 
 ifeq ($(useexo), 1)
 	# path to exodus header files
-	EXO_INCLUDE = ${HOME}/opt/seacas/include
+	EXO_INCLUDE = ./seacas/include
 
 	# path of exodus library files, if not in standard system location
-	EXO_LIB_DIR = ${HOME}/opt/seacas/lib
+	EXO_LIB_DIR = ./seacas/lib
 
 	EXO_CXXFLAGS = -I$(EXO_INCLUDE) -DUSEEXODUS
 	EXO_LDFLAGS = -L$(EXO_LIB_DIR) -lexodus
@@ -111,10 +111,10 @@ endif
 
 ifeq ($(usemmg), 1)
 	# path to MMG3D header files
-	MMG_INCLUDE = ${HOME}/opt/mmg/Release/include
+	MMG_INCLUDE = ./mmg/build/include
 
 	# path of MMG3D library files, if not in standard system location
-	MMG_LIB_DIR = ${HOME}/opt/mmg/Release/lib
+	MMG_LIB_DIR = ./mmg/build/lib
 
 	MMG_CXXFLAGS = -I$(MMG_INCLUDE) -DUSEMMG
 	ifeq ($(ndims), 3)	

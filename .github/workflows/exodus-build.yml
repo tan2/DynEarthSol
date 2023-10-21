@@ -1,0 +1,31 @@
+name: Exodus build
+
+on:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/README.md'
+  pull_request:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: get exodus
+      run: |
+        sudo apt install libcurl4-openssl-dev
+        git clone https://github.com/sandialabs/seacas.git
+        cd seacas && export ACCESS=`pwd`
+        COMPILER=gnu MATIO=NO GNU_PARALLEL=NO CGNS=NO FMT=NO ./install-tpl.sh
+        mkdir build; cd build
+        ../cmake-exodus
+        make; make install
+    - name: get boost
+      run: sudo apt install libboost-program-options-dev
+    - name: make 3d
+      run: make ndims=3 useexo=1
+    

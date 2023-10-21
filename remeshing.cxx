@@ -1470,9 +1470,8 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
 
     // 2) Build mesh in MMG5 format
     // Manually set of the mesh 
-    //  a) give the size of the mesh: vertices, triangles, edges
-    if ( MMG2D_Set_meshSize(mmgMesh, old_nnode, old_nelem,
-                            old_nseg) != 1 )
+    //  a) give the size of the mesh: vertices, triangles, quads(=0), edges
+    if ( MMG2D_Set_meshSize(mmgMesh, old_nnode, old_nelem, 0, old_nseg) != 1 )
         exit(EXIT_FAILURE);
     //   b) give the vertex coordinates. References are NULL but can be an integer array for boundary flag etc.
     if( MMG2D_Set_vertices(mmgMesh, qcoord, NULL) != 1)
@@ -1563,7 +1562,7 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
     //--- STEP III: Get results
     // 1) Preparations
     //   a) get the size of the mesh: vertices, tetra, triangles, edges */
-    if ( MMG2D_Get_meshSize(mmgMesh, &(var.nnode), &(var.nelem), &(var.nseg)) !=1 )
+    if ( MMG2D_Get_meshSize(mmgMesh, &(var.nnode), &(var.nelem), NULL, &(var.nseg)) !=1 )
         exit(EXIT_FAILURE);
     std::cerr << "Updated mesh size\n";
     std::cerr << "New number of vertices:" << var.nnode << std::endl;

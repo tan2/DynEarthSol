@@ -1270,7 +1270,7 @@ void new_mesh_from_exofile(const Param& param, Variables& var)
             std::cerr << "Error: Unable to read "<< i <<"-th side set." << std::endl;
             std::exit(2);
         }
-        if (num_df_in_set > 0) {
+        if (*num_df_in_set > 0) {
             error = ex_get_set_dist_fact (exoid, EX_SIDE_SET, ids[i], dist_fact[i]);
             if( error != 0 ) {
                 std::cerr << "Error: Unable to read "<< i;
