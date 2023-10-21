@@ -1,0 +1,28 @@
+name: MMG build
+
+on:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/README.md'
+  pull_request:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: get mmg
+      run: |
+        git clone https://github.com/MmgTools/mmg.git
+        cd mmg; mkdir build; cd build
+        cmake ..
+        make
+    - name: get boost
+      run: sudo apt install libboost-program-options-dev
+    - name: make 3d with mmg
+      run: make clean; make ndims=3 usemmg=1
+    
