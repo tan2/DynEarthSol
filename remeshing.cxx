@@ -1107,7 +1107,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     var.segflag->reset(psegflag, var.nseg);
 }
 
-void compute_metric_field(const Variables &var, const conn_t &connectivity, const double resolution, double_vec &metric)
+void compute_metric_field(const Variables &var, const conn_t &connectivity, const double resolution, double_vec &metric, double_vec &tmp_result_sg)
 {
     /* dvoldt is the volumetric strain rate, weighted by the element volume,
      * lumped onto the nodes.
@@ -1116,35 +1116,19 @@ void compute_metric_field(const Variables &var, const conn_t &connectivity, cons
     const double_vec& volume_n = *var.volume_n;
     std::fill_n(metric.begin(), var.nnode, 0);
 
-    class ElemFunc_metric : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        const double_vec &volume;
-        const conn_t &connectivity;
-        const double resolution;
-        double_vec &metric;
-    public:
-        ElemFunc_metric(const Variables &var, const double_vec &volume, const conn_t &connectivity, const double resolution, double_vec &metric) :
-            var(var), volume(volume), connectivity(connectivity), resolution(resolution), metric(metric) {};
-        void operator()(int e)
-        {
-            const int *conn = connectivity[e];
-            double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);
-            // resolution/(1.0+(*var.plstrain)[e]);
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                int n = conn[i];
-                metric[n] += plstrain * volume[e];
-            }
-        }
-    } elemf(var, volume, connectivity, resolution, metric);
+    #pragma omp parallel for default(none) shared(var,volume,connectivity,tmp_result_sg)
+    for (int e=0;e<var.nelem;e++) {
+        const int *conn = connectivity[e];
+        double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);
+        tmp_result_sg[e] = plstrain * volume[e];
+    }
 
-    loop_all_elem(var.egroups, elemf);
-
-    #pragma omp parallel for default(none)      \
-        shared(var, metric, volume_n)
-    for (int n=0; n<var.nnode; ++n)
-         metric[n] /= volume_n[n];
+    #pragma omp parallel for default(none) shared(var,metric,tmp_result_sg,volume_n)
+    for (int n=0;n<var.nnode;n++) {
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
+            metric[n] += tmp_result_sg[*e];
+        metric[n] /= volume_n[n];
+    }
 }
 
 #ifdef USEMMG
@@ -1268,7 +1252,7 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     if( MMG3D_Set_solSize(mmgMesh, mmgSol, MMG5_Vertex, old_nnode, MMG5_Scalar) != 1 )
         exit(EXIT_FAILURE);
     //   b) give solutions values and positions
-    compute_metric_field(var, old_connectivity, param.mesh.resolution, *var.ntmp);
+    compute_metric_field(var, old_connectivity, param.mesh.resolution, *var.ntmp, *var.tmp_result_sg);
     //      i) If sol array is available:
     if( MMG3D_Set_scalarSols(mmgSol, (*var.ntmp).data()) != 1 )
         exit(EXIT_FAILURE);
@@ -1517,7 +1501,7 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
     if( MMG2D_Set_solSize(mmgMesh, mmgSol, MMG5_Vertex, old_nnode, MMG5_Scalar) != 1 )
         exit(EXIT_FAILURE);
     //   b) give solutions values and positions
-    compute_metric_field(var, old_connectivity, param.mesh.resolution, *var.ntmp);
+    compute_metric_field(var, old_connectivity, param.mesh.resolution, *var.ntmp, *var.tmp_result_sg);
     //      i) If sol array is available:
     if( MMG2D_Set_scalarSols(mmgSol, (*var.ntmp).data()) != 1 )
         exit(EXIT_FAILURE);
