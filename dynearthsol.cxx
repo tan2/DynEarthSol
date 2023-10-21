@@ -329,7 +329,7 @@ int main(int argc, const char* argv[])
         var.time += var.dt;
 
         if (param.control.has_thermal_diffusion)
-            update_temperature(param, var, *var.temperature, *var.ntmp);
+            update_temperature(param, var, *var.temperature, *var.ntmp, *var.tmp_result);
 
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp, *var.tmp_result_sg);

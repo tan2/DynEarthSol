@@ -103,65 +103,76 @@ void reallocate_variables(const Param& param, Variables& var)
 
 
 void update_temperature(const Param &param, const Variables &var,
-                        double_vec &temperature, double_vec &tdot)
+                        double_vec &temperature, double_vec &tdot, elem_cache &tmp_result)
 {
-    tdot.assign(var.nnode, 0);
 
-    class ElemFunc_temperature : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        const double_vec &temperature;
-        double_vec &tdot;
-    public:
-        ElemFunc_temperature(const Variables &var, const double_vec &temperature, double_vec &tdot) :
-            var(var), temperature(temperature), tdot(tdot) {};
-        void operator()(int e)
-        {
-            // diffusion matrix
-            double D[NODES_PER_ELEM][NODES_PER_ELEM];
+    const conn_t &connectivity = *var.connectivity;
+    const int_vec2D &support = *var.support;
+    const double_vec &volume = *var.volume;
+    const double_vec &tmass = *var.tmass;
+    const shapefn *var_shpdx = var.shpdx;
+    const shapefn *var_shpdz = var.shpdz; 
+    const shapefn *var_shpdy = var.shpdy;
+    const MatProps *var_mat = var.mat;
+    const uint_vec *var_bcflag = var.bcflag;
+    const int var_nnode = var.nnode;
+    const int var_nelem=var.nelem;
+    const double var_dt = var.dt;
+    const double surface_temperature = param.bc.surface_temperature;
 
-            const int *conn = (*var.connectivity)[e];
-            double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volumn
-            const double *shpdx = (*var.shpdx)[e];
+    #pragma omp parallel for default(none) \
+        shared(temperature,tmp_result,connectivity,var_shpdx,var_shpdz,var_shpdy, \
+                volume,var_mat,support,var_bcflag)
+    #pragma acc parallel loop
+    for (int e=0;e<var_nelem;e++) {
+        // diffusion matrix
+
+        const int *conn = connectivity[e];
+        double *tr = tmp_result[e];
+        double kv = var_mat->k(e) *  volume[e]; // thermal conductivity * volume
+        const double *shpdx = (*var_shpdx)[e];
 #ifdef THREED
-            const double *shpdy = (*var.shpdy)[e];
+        const double *shpdy = (*var_shpdy)[e];
 #endif
-            const double *shpdz = (*var.shpdz)[e];
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                for (int j=0; j<NODES_PER_ELEM; ++j) {
+        const double *shpdz = (*var_shpdz)[e];
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            double diffusion = 0.;
+            for (int j=0; j<NODES_PER_ELEM; ++j) {
 #ifdef THREED
-                    D[i][j] = (shpdx[i] * shpdx[j] +
-                               shpdy[i] * shpdy[j] +
-                               shpdz[i] * shpdz[j]);
+                diffusion += (shpdx[i] * shpdx[j] + \
+                            shpdy[i] * shpdy[j] + \
+                            shpdz[i] * shpdz[j]) * temperature[conn[j]];
 #else
-                    D[i][j] = (shpdx[i] * shpdx[j] +
-                               shpdz[i] * shpdz[j]);
+                diffusion += (shpdx[i] * shpdx[j] + \
+                            shpdz[i] * shpdz[j]) * temperature[conn[j]];
 #endif
+            }
+            tr[i] = diffusion * kv;
+        }
+    }
+
+    #pragma omp parallel for default(none) \
+        shared(tdot,temperature,tmp_result,support,connectivity,var_bcflag,tmass)
+    #pragma acc parallel loop
+    for (int n=0;n<var_nnode;n++) {
+        tdot[n]=0;
+        for( auto e = support[n].begin(); e < support[n].end(); ++e) {
+            const int *conn = connectivity[*e];
+            const double *tr = tmp_result[*e];
+            for (int i=0;i<NODES_PER_ELEM;i++) {
+                if (n == conn[i]) {
+                    tdot[n] += tr[i];
+                    break;
                 }
             }
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                double diffusion = 0;
-                for (int j=0; j<NODES_PER_ELEM; ++j)
-                    diffusion += D[i][j] * temperature[conn[j]];
-
-                tdot[conn[i]] += diffusion * kv;
-            }
         }
-    } elemf(var, temperature, tdot);
-
-    loop_all_elem(var.egroups, elemf);
-
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
-     #pragma omp parallel for default(none)      \
-         shared(var, param, tdot, temperature)
-     for (int n=0; n<var.nnode; ++n) {
-        if ((*var.bcflag)[n] & BOUNDZ1)
-            temperature[n] = param.bc.surface_temperature;
+        if ((*var_bcflag)[n] & BOUNDZ1)
+            temperature[n] = surface_temperature;
         else
-            temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
+            temperature[n] -= tdot[n] * var_dt / tmass[n];
     }
 }
 
