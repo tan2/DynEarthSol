@@ -108,46 +108,39 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
 }
 
 
-void compute_dvoldt(const Variables &var, double_vec &dvoldt)
+void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_result_sg)
 {
     /* dvoldt is the volumetric strain rate, weighted by the element volume,
      * lumped onto the nodes.
      */
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
-    std::fill_n(dvoldt.begin(), var.nnode, 0);
-
-    class ElemFunc_dvoldt : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        const double_vec &volume;
-        double_vec &dvoldt;
-    public:
-        ElemFunc_dvoldt(const Variables &var, const double_vec &volume, double_vec &dvoldt) :
-            var(var), volume(volume), dvoldt(dvoldt) {};
-        void operator()(int e)
-        {
-            const int *conn = (*var.connectivity)[e];
-            const double* strain_rate = (*var.strain_rate)[e];
-            // TODO: try another definition:
-            // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
-            double dj = trace(strain_rate);
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                int n = conn[i];
-                dvoldt[n] += dj * volume[e];
-            }
-        }
-    } elemf(var, volume, dvoldt);
-
-
-    loop_all_elem(var.egroups, elemf);
-
+    const conn_t& connectivity = *var.connectivity;
+    const tensor_t& strain_rate = *var.strain_rate;
+    const int_vec2D& support = *var.support;
+    const int var_nelem = var.nelem;
+    const int var_nnode = var.nnode;
 
     #pragma omp parallel for default(none)      \
-        shared(var, dvoldt, volume_n)
-    for (int n=0; n<var.nnode; ++n)
-         dvoldt[n] /= volume_n[n];
+        shared(tmp_result_sg,strain_rate,volume)
+    #pragma acc parallel loop
+    for (int e=0;e<var_nelem;e++) {
+        const double *srate= strain_rate[e];
+        // TODO: try another definition:
+        // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
+        double dj = trace(srate);
+        tmp_result_sg[e] = dj * volume[e];
+    }
+
+    #pragma omp parallel for default(none)      \
+        shared(dvoldt,tmp_result_sg,support,volume_n)
+    #pragma acc parallel loop
+    for (int n=0;n<var_nnode;n++) {
+        dvoldt[n] = 0.;
+        for( auto e = support[n].begin(); e < support[n].end(); ++e)
+	        dvoldt[n] += tmp_result_sg[*e];
+        dvoldt[n] /= volume_n[n];
+    }
 
     // std::cout << "dvoldt:\n";
     // print(std::cout, dvoldt);
