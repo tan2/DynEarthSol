@@ -20,16 +20,18 @@ alike.
 * You will need Python 2.6+ or 3.2+ and the Numpy package.
 ### Optional packages
 * [Exodus](https://github.com/gsjaardema/seacas/) for importing a mesh in the ExodusII format
-  * Suggested building procedure: In the root directory of DES3D,
-    ```BASH
-    git clone https://github.com/sandialabs/seacas.git
-    cd seacas && export ACCESS=`pwd`
-    COMPILER=gnu MATIO=NO GNU_PARALLEL=NO CGNS=NO FMT=NO ./install-tpl.sh
-    mkdir build; cd build
-    ../cmake-exodus
-    make; make install
-    ```
-  * The above procedure will download and build NetCDF and HDF5. Your system should have CURL library already.
+  * Suggested building procedure
+    * Run the following in the root directory of DES3D:
+      ```BASH
+      git clone https://github.com/sandialabs/seacas.git
+      cd seacas && export ACCESS=`pwd`
+      COMPILER=gnu MATIO=NO GNU_PARALLEL=NO CGNS=NO FMT=NO ./install-tpl.sh
+      mkdir build; cd build
+      ../cmake-exodus
+      make; make install
+      ```
+  * The above procedure will download and build NetCDF and HDF5; and then build EXODUS.
+  * The header files and built shared library will be in `./seacas/include` and `./seacas/lib`. 
 * [MMG3D](https://www.mmgtools.org/mmg-remesher-downloads) for mesh optimization during remeshing in three-dimensional models
 
 ## Building procedure
