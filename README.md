@@ -34,7 +34,14 @@ alike.
   * The above procedure will download and build NetCDF and HDF5; and then build EXODUS.
   * The header files and built shared library will be in `./seacas/include` and `./seacas/lib`. 
 * [MMG3D](https://www.mmgtools.org/mmg-remesher-downloads) for mesh optimization during remeshing in three-dimensional models
-
+  * Suggested building procedure
+    * Run the following in the root directory of DES3D:
+      ```BASH
+      git clone https://github.com/MmgTools/mmg.git
+      cd mmg; mkdir build; cd build
+      cmake ..
+      make
+      ```
 ## Building procedure
 * Edit `Makefile` 
   * Modify `BOOST_ROOT_DIR` if you manually built or installed 
