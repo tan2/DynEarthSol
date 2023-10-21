@@ -1988,15 +1988,14 @@ void remesh(const Param &param, Variables &var, int bad_quality)
      * delete var.support;
      * create_support(var);
      */
-    create_elem_groups(var);
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     // TODO: using edvoldt and volume to get volume_old
     std::copy(var.volume->begin(), var.volume->end(), var.volume_old->begin());
-    compute_mass(param, var, var.egroups, *var.connectivity, *var.volume, *var.mat,
+    compute_mass(param, var, *var.connectivity, *var.volume, *var.mat,
                  var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result,
                  *var.support);
-    compute_shape_fn(var, *var.coord, *var.connectivity, *var.volume, var.egroups,
+    compute_shape_fn(var, *var.coord, *var.connectivity, *var.volume,
                      *var.shpdx, *var.shpdy, *var.shpdz);
 
     if (param.mesh.remeshing_option==1 ||

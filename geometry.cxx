@@ -324,7 +324,7 @@ double compute_dt(const Param& param, const Variables& var)
 
 
 void compute_mass(const Param &param, const Variables& var,
-                  const int_vec &egroups, const conn_t &connectivity,
+                  const conn_t &connectivity,
                   const double_vec &volume, const MatProps &mat,
                   double max_vbc_val, double_vec &volume_n,
                   double_vec &mass, double_vec &tmass, elem_cache &tmp_result,
@@ -374,7 +374,7 @@ void compute_mass(const Param &param, const Variables& var,
 
 
 void compute_shape_fn(const Variables& var, const array_t &coord, const conn_t &connectivity,
-                      const double_vec &volume, const int_vec &egroups,
+                      const double_vec &volume,
                       shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
 {
     const int var_nelem = var.nelem;
