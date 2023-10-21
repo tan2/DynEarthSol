@@ -338,7 +338,7 @@ int main(int argc, const char* argv[])
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
 
 	// Nodal Mixed Discretization For Stress
-	NMD_stress(var, *var.ntmp, *var.stress);
+	NMD_stress(var, *var.ntmp, *var.stress, *var.tmp_result_sg);
 
         update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);

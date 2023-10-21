@@ -11,7 +11,8 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt,
 void compute_edvoldt(const Variables &var, double_vec &dvoldt,
                      double_vec &edvoldt);
 
-void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress);
+void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress,
+                double_vec &tmp_result_sg);
 
 double compute_dt(const Param& param, const Variables& var);
 
