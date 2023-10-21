@@ -245,7 +245,7 @@ void isostasy_adjustment(const Param &param, Variables &var)
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
         update_stress(var, *var.stress, *var.stressyy, *var.dpressure, *var.strain,
                       *var.plstrain, *var.delta_plstrain, *var.strain_rate);
-        update_force(param, var, *var.force);
+        update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);
 
         // do not apply vbc to allow free boundary
@@ -337,7 +337,7 @@ int main(int argc, const char* argv[])
 	// Nodal Mixed Discretization For Stress
 	NMD_stress(var, *var.ntmp, *var.stress);
 
-        update_force(param, var, *var.force);
+        update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);
         apply_vbcs(param, var, *var.vel);
         update_mesh(param, var);

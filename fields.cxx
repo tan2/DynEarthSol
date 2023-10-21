@@ -291,49 +291,73 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
 }
 
 
-void update_force(const Param& param, const Variables& var, array_t& force)
+void update_force(const Param& param, const Variables& var, array_t& force, elem_cache& tmp_result)
 {
-    std::fill_n(force.data(), var.nnode*NDIMS, 0);
+    const int var_nelem = var.nelem;
+    const conn_t *var_connectivity = var.connectivity;
+    const double_vec *var_temperature = var.temperature;
+    const int_vec2D *var_elemmarkers = var.elemmarkers;
+    const shapefn *var_shpdx = var.shpdx;
+    const shapefn *var_shpdy = var.shpdy;
+    const shapefn *var_shpdz = var.shpdz;
+    tensor_t *var_stress = var.stress;
+    double_vec *var_volume = var.volume;
+    const MatProps *var_mat = var.mat;
+    const double gravity = param.control.gravity;
+    const int nmat = param.mat.nmat;
+    const double_vec *rho0 = &param.mat.rho0;
+    const double_vec *alpha = &param.mat.alpha;
+    const int var_nnode = var.nnode;
+    const int_vec2D *var_support = var.support;
 
-    class ElemFunc_force : public ElemFunc
-    {
-    private:
-        const Variables &var;
-        array_t &force;
-        const double gravity;
-    public:
-        ElemFunc_force(const Variables &var, array_t &force, double gravity) :
-            var(var), force(force), gravity(gravity) {};
-        void operator()(int e)
-        {
-            const int *conn = (*var.connectivity)[e];
-            const double *shpdx = (*var.shpdx)[e];
+    #pragma omp parallel for default(none)      \
+        shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stress,var_volume,var_mat)
+    #pragma acc parallel loop
+    for (int e=0;e<var_nelem;e++) {
+        const int *conn = (*var_connectivity)[e];
+        const double *shpdx = (*var_shpdx)[e];
 #ifdef THREED
-            const double *shpdy = (*var.shpdy)[e];
+        const double *shpdy = (*var_shpdy)[e];
 #endif
-            const double *shpdz = (*var.shpdz)[e];
-            double *s = (*var.stress)[e];
-            double vol = (*var.volume)[e];
+        const double *shpdz = (*var_shpdz)[e];
+        double *s = (*var_stress)[e];
+        double vol = (*var_volume)[e];
+        double *tr = tmp_result[e];
 
-            double buoy = 0;
-            if (gravity != 0)
-                buoy = var.mat->rho(e) * gravity / NODES_PER_ELEM;
+        double buoy = 0;
+        if (gravity != 0)
+            buoy = var_mat->rho(e) * gravity / NODES_PER_ELEM;
 
-            for (int i=0; i<NODES_PER_ELEM; ++i) {
-                double *f = force[conn[i]];
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
-                f[0] -= (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
-                f[1] -= (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
-                f[2] -= (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
+            tr[i] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
+            tr[i+NODES_PER_ELEM] = (s[3]*shpdx[i] + s[1]*shpdy[i] + s[5]*shpdz[i]) * vol;
+            tr[i+NODES_PER_ELEM*2] = (s[4]*shpdx[i] + s[5]*shpdy[i] + s[2]*shpdz[i] + buoy) * vol;
 #else
-                f[0] -= (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
-                f[1] -= (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
+            tr[i] = (s[0]*shpdx[i] + s[2]*shpdz[i]) * vol;
+            tr[i+NODES_PER_ELEM] = (s[2]*shpdx[i] + s[1]*shpdz[i] + buoy) * vol;
 #endif
+        }
+    }
+
+    #pragma omp parallel for default(none)      \
+        shared(var,force,tmp_result,var_support,var_connectivity)
+    #pragma acc parallel loop
+    for (int n=0;n<var_nnode;n++) {
+        std::fill_n(force[n],NDIMS,0); 
+        double *f = force[n];
+        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
+            const int *conn = (*var_connectivity)[*e];
+            const double *tr = tmp_result[*e];
+            for (int i=0;i<NODES_PER_ELEM;i++) {
+                if (n == conn[i]) {
+                    for (int j=0;j<NDIMS;j++)
+                        f[j] -= tr[i+NODES_PER_ELEM*j];
+                    break;
+                }
             }
         }
-    } elemf(var, force, param.control.gravity);
-
-    loop_all_elem(var.egroups, elemf);
+    }
 
     apply_stress_bcs(param, var, force);
 
