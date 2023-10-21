@@ -14,6 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: get boost
+      run: |
         echo Install boost-program-options ====================
         sudo apt install libboost-program-options-dev
     - name: make debug 2d
