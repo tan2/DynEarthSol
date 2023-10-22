@@ -64,9 +64,9 @@
 
 #ifdef USEMMG
 #ifdef THREED
-#include "mmg/mmg3d/libmmg3d.h"
+#include "mmg/src/mmg3d/libmmg3d.h"
 #else
-#include "mmg/mmg2d/libmmg2d.h"
+#include "mmg/src/mmg2d/libmmg2d.h"
 #endif
 #define MAX0(a,b)     (((a) > (b)) ? (a) : (b))
 #define MAX4(a,b,c,d)  (((MAX0(a,b)) > (MAX0(c,d))) ? (MAX0(a,b)) : (MAX0(c,d)))
@@ -1107,16 +1107,17 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
     var.segflag->reset(psegflag, var.nseg);
 }
 
-void compute_metric_field(const Variables &var, const conn_t &connectivity, const double resolution, double_vec &metric, double_vec &tmp_result_sg)
+void compute_metric_field(const Variables &var, const conn_t &connectivity, const double resolution0, double_vec &metric, double_vec &tmp_result_sg)
 {
     /* dvoldt is the volumetric strain rate, weighted by the element volume,
      * lumped onto the nodes.
      */
     const double_vec& volume = *var.volume;
     const double_vec& volume_n = *var.volume_n;
+    double resolution = resolution0;
     std::fill_n(metric.begin(), var.nnode, 0);
 
-    #pragma omp parallel for default(none) shared(var,volume,connectivity,tmp_result_sg)
+    #pragma omp parallel for default(none) shared(var,volume,connectivity,tmp_result_sg,resolution)
     for (int e=0;e<var.nelem;e++) {
         const int *conn = connectivity[e];
         double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);
