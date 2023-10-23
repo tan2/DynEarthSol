@@ -20,6 +20,7 @@ ndims = 3
 opt = 2
 openacc = 0
 openmp = 1
+nprof = 0
 useadapt = 0
 usemmg = 0
 adaptive_time_step = 0
@@ -179,7 +180,7 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 		endif
 	endif
 else ifneq (, $(findstring nvc++, $(CXX)))
-	CXXFLAGS = -mno-fma -DNVCPP
+	CXXFLAGS = -mno-fma
 	LDFLAGS =
 	TETGENFLAGS = 
 
