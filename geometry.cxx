@@ -1,3 +1,6 @@
+#ifdef USE_NPROF
+#include <nvToolsExt.h> 
+#endif
 #include <cmath>
 #include <limits>
 #include <iostream>
@@ -83,6 +86,9 @@ static double triangle_area(const double *a,
 void compute_volume(const array_t &coord, const conn_t &connectivity,
                     double_vec &volume)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     #pragma omp parallel for default(none)      \
         shared(coord, connectivity, volume)
     for (std::size_t e=0; e<volume.size(); ++e) {
@@ -102,11 +108,17 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
         volume[e] = triangle_area(a, b, c);
 #endif
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_result_sg)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     /* dvoldt is the volumetric strain rate, weighted by the element volume,
      * lumped onto the nodes.
      */
@@ -142,12 +154,18 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
     // std::cout << "dvoldt:\n";
     // print(std::cout, dvoldt);
     // std::cout << "\n";
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void compute_edvoldt(const Variables &var, double_vec &dvoldt,
                      double_vec &edvoldt)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     /* edvoldt is the averaged (i.e. smoothed) dvoldt on the element.
      * It is used in update_stress() to prevent mesh locking.
      */
@@ -166,12 +184,18 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
     // std::cout << "edvoldt:\n";
     // print(std::cout, edvoldt);
     // std::cout << "\n";
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress,
                 double_vec &tmp_result_sg)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     /* dp_nd is the pressure change, weighted by the element volume,
      * lumped onto the nodes.
      */
@@ -243,11 +267,17 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress,
 	    for (int i=0; i<NDIMS; ++i)
             s[i] += ddp;
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 double compute_dt(const Param& param, const Variables& var)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     // constant dt
     if (param.control.fixed_dt != 0) return param.control.fixed_dt;
 
@@ -316,6 +346,9 @@ double compute_dt(const Param& param, const Variables& var)
                   << " " << dt_advection << " " << dt_elastic << "\n";
         std::exit(11);
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
     return dt;
 }
 
@@ -327,6 +360,9 @@ void compute_mass(const Param &param, const Variables& var,
                   double_vec &mass, double_vec &tmass, elem_cache &tmp_result,
                   int_vec2D &support)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     // volume_n is (node-averaged volume * NODES_PER_ELEM)
 
     double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
@@ -368,6 +404,9 @@ void compute_mass(const Param &param, const Variables& var,
                 tmass[n] += tr[2];
         }
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -375,6 +414,9 @@ void compute_shape_fn(const Variables& var, const array_t &coord, const conn_t &
                       const double_vec &volume,
                       shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     int var_nelem = var.nelem;
 
     #pragma omp parallel for default(none)      \
@@ -447,6 +489,9 @@ void compute_shape_fn(const Variables& var, const array_t &coord, const conn_t &
         }
 #endif
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
