@@ -1,3 +1,6 @@
+#ifdef USE_NPROF
+#include <nvToolsExt.h> 
+#endif
 #include <iostream>
 #include "constants.hpp"
 #include "parameters.hpp"
@@ -105,6 +108,9 @@ void reallocate_variables(const Param& param, Variables& var)
 void update_temperature(const Param &param, const Variables &var,
                         double_vec &temperature, double_vec &tdot, elem_cache &tmp_result)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
 
     const conn_t &connectivity = *var.connectivity;
     const int_vec2D &support = *var.support;
@@ -123,7 +129,7 @@ void update_temperature(const Param &param, const Variables &var,
     #pragma omp parallel for default(none) \
         shared(temperature,tmp_result,connectivity,var_shpdx,var_shpdz,var_shpdy, \
                 volume,var_mat,support,var_bcflag,var_nelem)
-    #pragma acc parallel loop
+    // #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         // diffusion matrix
 
@@ -154,7 +160,7 @@ void update_temperature(const Param &param, const Variables &var,
     #pragma omp parallel for default(none) \
         shared(tdot,temperature,tmp_result,support,connectivity,var_bcflag, \
                tmass,var_dt,var_nnode,surface_temperature)
-    #pragma acc parallel loop
+    // #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         tdot[n]=0;
         for( auto e = support[n].begin(); e < support[n].end(); ++e) {
@@ -175,11 +181,17 @@ void update_temperature(const Param &param, const Variables &var,
         else
             temperature[n] -= tdot[n] * var_dt / tmass[n];
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     double *v[NODES_PER_ELEM];
 
     #pragma omp parallel for default(none) \
@@ -244,11 +256,17 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
             s[n] += 0.5 * (v[i][1] * shpdz[i] + v[i][2] * shpdy[i]);
 #endif
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 static void apply_damping(const Param& param, const Variables& var, array_t& force)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     // flatten 2d arrays to simplify indexing
     double* ff = force.data();
     const double* v = var.vel->data();
@@ -300,11 +318,17 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         std::cerr << "Error: unknown damping_option: " << param.control.damping_option << '\n';
         std::exit(1);
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void update_force(const Param& param, const Variables& var, array_t& force, elem_cache& tmp_result)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     const conn_t *var_connectivity = var.connectivity;
     const double_vec *var_temperature = var.temperature;
     const int_vec2D *var_elemmarkers = var.elemmarkers;
@@ -325,7 +349,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     #pragma omp parallel for default(none)      \
         shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stress, \
                var_volume,var_mat,var_nelem,nmat,gravity)
-    #pragma acc parallel loop
+    // #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         const int *conn = (*var_connectivity)[e];
         const double *shpdx = (*var_shpdx)[e];
@@ -355,7 +379,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
 
     #pragma omp parallel for default(none)      \
         shared(var,force,tmp_result,var_support,var_connectivity,var_nnode)
-    #pragma acc parallel loop
+    // #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         std::fill_n(force[n],NDIMS,0); 
         double *f = force[n];
@@ -377,11 +401,17 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     if (param.control.is_quasi_static) {
         apply_damping(param, var, force);
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void update_velocity(const Variables& var, array_t& vel)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     const double* m = &(*var.mass)[0];
     // flatten 2d arrays to simplify indexing
     const double* f = var.force->data();
@@ -392,11 +422,17 @@ void update_velocity(const Variables& var, array_t& vel)
         int n = i / NDIMS;
         v[i] += var.dt * f[i] / m[n];
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
 void update_coordinate(const Variables& var, array_t& coord)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     double* x = var.coord->data();
     const double* v = var.vel->data();
 
@@ -405,6 +441,9 @@ void update_coordinate(const Variables& var, array_t& coord)
     for (int i=0; i<var.nnode*NDIMS; ++i) {
         x[i] += v[i] * var.dt;
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
 
@@ -450,6 +489,9 @@ namespace {
 
 void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 {
+#ifdef USE_NPROF
+    nvtxRangePush(__FUNCTION__);
+#endif
     // The spin rate tensor, W, and the Cauchy stress tensor, S, are
     //     [  0  w3  w4]     [s0 s3 s4]
     // W = [-w3   0  w5],  S=[s3 s1 s5].
@@ -520,5 +562,8 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 
 #endif
     }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
 }
 
