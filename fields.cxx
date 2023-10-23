@@ -123,7 +123,7 @@ void update_temperature(const Param &param, const Variables &var,
     #pragma omp parallel for default(none) \
         shared(temperature,tmp_result,connectivity,var_shpdx,var_shpdz,var_shpdy, \
                 volume,var_mat,support,var_bcflag,var_nelem)
-    #pragma acc parallel loop
+    // #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         // diffusion matrix
 
@@ -154,7 +154,7 @@ void update_temperature(const Param &param, const Variables &var,
     #pragma omp parallel for default(none) \
         shared(tdot,temperature,tmp_result,support,connectivity,var_bcflag, \
                tmass,var_dt,var_nnode,surface_temperature)
-    #pragma acc parallel loop
+    // #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         tdot[n]=0;
         for( auto e = support[n].begin(); e < support[n].end(); ++e) {
@@ -325,7 +325,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     #pragma omp parallel for default(none)      \
         shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stress, \
                var_volume,var_mat,var_nelem,nmat,gravity)
-    #pragma acc parallel loop
+    // #pragma acc parallel loop
     for (int e=0;e<var_nelem;e++) {
         const int *conn = (*var_connectivity)[e];
         const double *shpdx = (*var_shpdx)[e];
@@ -355,7 +355,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
 
     #pragma omp parallel for default(none)      \
         shared(var,force,tmp_result,var_support,var_connectivity,var_nnode)
-    #pragma acc parallel loop
+    // #pragma acc parallel loop
     for (int n=0;n<var_nnode;n++) {
         std::fill_n(force[n],NDIMS,0); 
         double *f = force[n];
