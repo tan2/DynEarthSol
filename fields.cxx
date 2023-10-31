@@ -314,41 +314,24 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
 #ifdef USE_NPROF
     nvtxRangePush(__FUNCTION__);
 #endif
-    const conn_t *var_connectivity = var.connectivity;
-    const double_vec *var_temperature = var.temperature;
-    const int_vec2D *var_elemmarkers = var.elemmarkers;
-    const shapefn *var_shpdx = var.shpdx;
-    const shapefn *var_shpdy = var.shpdy;
-    const shapefn *var_shpdz = var.shpdz;
-    tensor_t *var_stress = var.stress;
-    double_vec *var_volume = var.volume;
-    const MatProps *var_mat = var.mat;
-    const double_vec *rho0 = &param.mat.rho0;
-    const double_vec *alpha = &param.mat.alpha;
-    const int_vec2D *var_support = var.support;
-    double gravity = param.control.gravity;
-    int nmat = param.mat.nmat;
-    int var_nnode = var.nnode;
-    int var_nelem = var.nelem;
 
     #pragma omp parallel for default(none)      \
-        shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stress, \
-               var_volume,var_mat,var_nelem,nmat,gravity)
+        shared(var,param,tmp_result)
     // #pragma acc parallel loop
-    for (int e=0;e<var_nelem;e++) {
-        const int *conn = (*var_connectivity)[e];
-        const double *shpdx = (*var_shpdx)[e];
+    for (int e=0;e<var.nelem;e++) {
+        const int *conn = (*var.connectivity)[e];
+        const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
-        const double *shpdy = (*var_shpdy)[e];
+        const double *shpdy = (*var.shpdy)[e];
 #endif
-        const double *shpdz = (*var_shpdz)[e];
-        double *s = (*var_stress)[e];
-        double vol = (*var_volume)[e];
+        const double *shpdz = (*var.shpdz)[e];
+        const double *s = (*var.stress)[e];
+        const double vol = (*var.volume)[e];
         double *tr = tmp_result[e];
 
         double buoy = 0;
-        if (gravity != 0)
-            buoy = var_mat->rho(e) * gravity / NODES_PER_ELEM;
+        if (param.control.gravity != 0)
+            buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
@@ -363,13 +346,13 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     }
 
     #pragma omp parallel for default(none)      \
-        shared(var,force,tmp_result,var_support,var_connectivity,var_nnode)
-    // #pragma acc parallel loop
-    for (int n=0;n<var_nnode;n++) {
+        shared(var,force,tmp_result)
+    #pragma acc parallel loop
+    for (int n=0;n<var.nnode;n++) {
         std::fill_n(force[n],NDIMS,0); 
         double *f = force[n];
-        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
-            const int *conn = (*var_connectivity)[*e];
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            const int *conn = (*var.connectivity)[*e];
             const double *tr = tmp_result[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
