@@ -347,14 +347,12 @@ void compute_mass(const Param &param, const Variables& var,
 
     bool is_quasi_static = param.control.is_quasi_static;
     bool has_thermal_diffusion = param.control.has_thermal_diffusion;
-    int var_nelem = var.nelem;
-    int var_nnode = var.nnode;
 
     #pragma omp parallel for default(none)      \
-        shared(tmp_result,mat,volume,var_nelem,pseudo_speed,is_quasi_static, \
+        shared(var,tmp_result,mat,volume,var_nelem,pseudo_speed,is_quasi_static, \
                has_thermal_diffusion)
-    // #pragma acc parallel loop
-    for (int e=0;e<var_nelem;e++) {
+    #pragma acc parallel loop
+    for (int e=0;e<var.nelem;e++) {
         double *tr = tmp_result[e];
         double rho = (is_quasi_static) ?
             mat.bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
@@ -368,9 +366,9 @@ void compute_mass(const Param &param, const Variables& var,
     }
 
     #pragma omp parallel for default(none)      \
-        shared(volume_n,mass,tmass,tmp_result,support,var_nnode,has_thermal_diffusion)
-    // #pragma acc parallel loop
-    for (int n=0;n<var_nnode;n++) {
+        shared(var,volume_n,mass,tmass,tmp_result,support,var_nnode,has_thermal_diffusion)
+    #pragma acc parallel loop
+    for (int n=0;n<var.nnode;n++) {
         volume_n[n]=0;
         mass[n]=0;
         tmass[n]=0;
