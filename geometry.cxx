@@ -162,6 +162,7 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
      */
     #pragma omp parallel for default(none)      \
         shared(var, dvoldt, edvoldt)
+    #pragma acc parallel loop
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
         double dj = 0;
