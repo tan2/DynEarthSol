@@ -203,8 +203,7 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress,
         tmp_result_sg[e] = dp * (*var.volume)[e];
     }
 
-    #pragma omp parallel for default(none)      \
-        shared(var,dp_nd,tmp_result_sg,support)
+    #pragma omp parallel for default(none) shared(var,dp_nd,tmp_result_sg)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         dp_nd[n] = 0;
@@ -217,7 +216,7 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress,
 
     /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
      */
-    #pragma omp parallel for default(none) shared(dp_nd,stress)
+    #pragma omp parallel for default(none) shared(var,dp_nd,stress)
     #pragma acc parallel loop
     for (int e=0; e<var.nelem; ++e) {
 
@@ -349,7 +348,7 @@ void compute_mass(const Param &param, const Variables& var,
     bool has_thermal_diffusion = param.control.has_thermal_diffusion;
 
     #pragma omp parallel for default(none)      \
-        shared(var,tmp_result,mat,volume,var_nelem,pseudo_speed,is_quasi_static, \
+        shared(var,tmp_result,mat,volume,pseudo_speed,is_quasi_static, \
                has_thermal_diffusion)
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
@@ -366,7 +365,7 @@ void compute_mass(const Param &param, const Variables& var,
     }
 
     #pragma omp parallel for default(none)      \
-        shared(var,volume_n,mass,tmass,tmp_result,support,var_nnode,has_thermal_diffusion)
+        shared(var,volume_n,mass,tmass,tmp_result,support,has_thermal_diffusion)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         volume_n[n]=0;
