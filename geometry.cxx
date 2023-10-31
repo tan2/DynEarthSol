@@ -264,37 +264,33 @@ double compute_dt(const Param& param, const Variables& var)
     if (param.control.fixed_dt != 0) return param.control.fixed_dt;
 
     // dynamic dt
-    const int nelem = var.nelem;
-    const conn_t& connectivity = *var.connectivity;
-    const array_t& coord = *var.coord;
-    const double_vec& volume = *var.volume;
-
     double dt_maxwell = std::numeric_limits<double>::max();
     double dt_diffusion = std::numeric_limits<double>::max();
     double minl = std::numeric_limits<double>::max();
 
-    for (int e=0; e<nelem; ++e) {
-        int n0 = connectivity[e][0];
-        int n1 = connectivity[e][1];
-        int n2 = connectivity[e][2];
+    #pragma acc parallel loop reduction(min:minl, dt_maxwell, dt_diffusion)
+    for (int e=0; e<var.nelem; ++e) {
+        int n0 = (*var.connectivity)[e][0];
+        int n1 = (*var.connectivity)[e][1];
+        int n2 = (*var.connectivity)[e][2];
 
-        const double *a = coord[n0];
-        const double *b = coord[n1];
-        const double *c = coord[n2];
+        const double *a = (*var.coord)[n0];
+        const double *b = (*var.coord)[n1];
+        const double *c = (*var.coord)[n2];
 
         // min height of this element
         double minh;
 #ifdef THREED
         {
-            int n3 = connectivity[e][3];
-            const double *d = coord[n3];
+            int n3 = (*var.connectivity)[e][3];
+            const double *d = (*var.coord)[n3];
 
             // max facet area of this tet
             double maxa = std::max(std::max(triangle_area(a, b, c),
                                             triangle_area(a, b, d)),
                                    std::max(triangle_area(c, d, a),
                                             triangle_area(c, d, b)));
-            minh = 3 * volume[e] / maxa;
+            minh = 3 * (*var.volume)[e] / maxa;
         }
 #else
         {
@@ -302,7 +298,7 @@ double compute_dt(const Param& param, const Variables& var)
             double maxl = std::sqrt(std::max(std::max(dist2(a, b),
                                                       dist2(b, c)),
                                              dist2(a, c)));
-            minh = 2 * volume[e] / maxl;
+            minh = 2 * (*var.volume)[e] / maxl;
         }
 #endif
         dt_maxwell = std::min(dt_maxwell,
