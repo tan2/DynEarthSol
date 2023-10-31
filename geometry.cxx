@@ -191,45 +191,35 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress,
     /* dp_nd is the pressure change, weighted by the element volume,
      * lumped onto the nodes.
      */
-    const double_vec& volume = *var.volume;
-    const double_vec& volume_n = *var.volume_n;
-    const conn_t& connectivity = *var.connectivity;
-    const double_vec& dpressure = *var.dpressure;
-    const int_vec2D& support = *var.support;
     // const double_vec& viscosity = *var.viscosity;
-    int var_nnode = var.nnode;
-    int var_nelem = var.nelem;
     // const int rheol_type = param.mat.rheol_type;
     // const double ref_visc = param.control.mixed_stress_reference_viscosity;
 
-    #pragma omp parallel for default(none)      \
-        shared(tmp_result_sg,connectivity,dpressure,volume,var_nelem)
-    // #pragma acc parallel loop
-    for (int e=0;e<var_nelem;e++) {
-        const int *conn = connectivity[e];
-        double dp = dpressure[e];
-        tmp_result_sg[e] = dp * volume[e];
+    #pragma omp parallel for default(none) shared(var,tmp_result_sg)
+    #pragma acc parallel loop
+    for (int e=0;e<var.nelem;e++) {
+        const int *conn = (*var.connectivity)[e];
+        double dp = (*var.dpressure)[e];
+        tmp_result_sg[e] = dp * (*var.volume)[e];
     }
 
     #pragma omp parallel for default(none)      \
-        shared(dp_nd,tmp_result_sg,support,volume_n,var_nnode)
-    // #pragma acc parallel loop
-    for (int n=0;n<var_nnode;n++) {
+        shared(var,dp_nd,tmp_result_sg,support)
+    #pragma acc parallel loop
+    for (int n=0;n<var.nnode;n++) {
         dp_nd[n] = 0;
-        for( auto e = support[n].begin(); e < support[n].end(); ++e)
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
             dp_nd[n] += tmp_result_sg[*e];
-        dp_nd[n] /= volume_n[n];
+        dp_nd[n] /= (*var.volume_n)[n];
     }
 
 
 
     /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
      */
-    #pragma omp parallel for default(none)      \
-        shared(connectivity,dp_nd,stress,dpressure,var_nelem)
-        // shared(param, dp_nd, stress,viscosity,connectivity,dpressure)
-    // #pragma acc parallel loop
-    for (int e=0; e<var_nelem; ++e) {
+    #pragma omp parallel for default(none) shared(dp_nd,stress)
+    #pragma acc parallel loop
+    for (int e=0; e<var.nelem; ++e) {
 
         // double factor;
         // switch (rheol_type) {
@@ -245,7 +235,7 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress,
         //     factor = 1;
         // }
 
-        const int *conn = connectivity[e];
+        const int *conn = (*var.connectivity)[e];
         double dp = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
@@ -254,7 +244,7 @@ void NMD_stress(const Variables &var, double_vec &dp_nd, tensor_t& stress,
         double dp_el = dp / NODES_PER_ELEM;
 
     	double* s = stress[e];
-	    double dp_orig = dpressure[e];
+	    double dp_orig = (*var.dpressure)[e];
         double ddp = ( - dp_orig + dp_el ) / NDIMS;// * factor;
 	    for (int i=0; i<NDIMS; ++i)
             s[i] += ddp;
