@@ -197,6 +197,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
     // diverging x-boundary
     #pragma omp parallel for default(none) \
         shared(bc, var, vel)
+    #pragma acc parallel loop
     for (int i=0; i<var.nnode; ++i) {
 
         // fast path: skip nodes not on boundary
