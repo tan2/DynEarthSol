@@ -112,35 +112,21 @@ void update_temperature(const Param &param, const Variables &var,
     nvtxRangePush(__FUNCTION__);
 #endif
 
-    const conn_t &connectivity = *var.connectivity;
-    const int_vec2D &support = *var.support;
-    const double_vec &volume = *var.volume;
-    const double_vec &tmass = *var.tmass;
-    const shapefn *var_shpdx = var.shpdx;
-    const shapefn *var_shpdz = var.shpdz; 
-    const shapefn *var_shpdy = var.shpdy;
-    const MatProps *var_mat = var.mat;
-    const uint_vec *var_bcflag = var.bcflag;
-    int var_nnode = var.nnode;
-    int var_nelem = var.nelem;
-    double var_dt = var.dt;
     double surface_temperature = param.bc.surface_temperature;
 
-    #pragma omp parallel for default(none) \
-        shared(temperature,tmp_result,connectivity,var_shpdx,var_shpdz,var_shpdy, \
-                volume,var_mat,support,var_bcflag,var_nelem)
-    // #pragma acc parallel loop
-    for (int e=0;e<var_nelem;e++) {
+    #pragma omp parallel for default(none) shared(var,temperature,tmp_result)
+    #pragma acc parallel loop
+    for (int e=0;e<var.nelem;e++) {
         // diffusion matrix
 
-        const int *conn = connectivity[e];
+        const int *conn = (*var.connectivity)[e];
         double *tr = tmp_result[e];
-        double kv = var_mat->k(e) *  volume[e]; // thermal conductivity * volume
-        const double *shpdx = (*var_shpdx)[e];
+        double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volume
+        const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
-        const double *shpdy = (*var_shpdy)[e];
+        const double *shpdy = (*var.shpdy)[e];
 #endif
-        const double *shpdz = (*var_shpdz)[e];
+        const double *shpdz = (*var.shpdz)[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             double diffusion = 0.;
             for (int j=0; j<NODES_PER_ELEM; ++j) {
@@ -158,13 +144,12 @@ void update_temperature(const Param &param, const Variables &var,
     }
 
     #pragma omp parallel for default(none) \
-        shared(tdot,temperature,tmp_result,support,connectivity,var_bcflag, \
-               tmass,var_dt,var_nnode,surface_temperature)
-    // #pragma acc parallel loop
-    for (int n=0;n<var_nnode;n++) {
+        shared(var,tdot,temperature,tmp_result,surface_temperature)
+    #pragma acc parallel loop
+    for (int n=0;n<var.nnode;n++) {
         tdot[n]=0;
-        for( auto e = support[n].begin(); e < support[n].end(); ++e) {
-            const int *conn = connectivity[*e];
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            const int *conn = (*var.connectivity)[*e];
             const double *tr = tmp_result[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
@@ -176,10 +161,10 @@ void update_temperature(const Param &param, const Variables &var,
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
-        if ((*var_bcflag)[n] & BOUNDZ1)
+        if ((*var.bcflag)[n] & BOUNDZ1)
             temperature[n] = surface_temperature;
         else
-            temperature[n] -= tdot[n] * var_dt / tmass[n];
+            temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
     }
 #ifdef USE_NPROF
     nvtxRangePop();
