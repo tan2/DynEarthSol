@@ -21,8 +21,10 @@ jobs:
     - name: get boost
       run: |
         sudo apt install libboost-program-options-dev
+
     - name: Set env
-      run: echo "PATH=$NVHPC_PATH/compilers/bin" >> $GITHUB_ENV
+      run: |
+        echo "PATH=$PATH:$NVHPC_PATH/compilers/bin" >> $GITHUB_ENV
 
     - name: make 2d CPU
       run: |
@@ -39,7 +41,6 @@ jobs:
         echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
         sudo apt-get update -y
         sudo apt-get install -y nvhpc-23-9
-        echo $BIN_PATH
 
     - name: make 2d CPU with nvidia profiling tools
       run: |
@@ -63,6 +64,5 @@ jobs:
         
     - name: make 3d GPU with nvidia profiling tools
       run: |
-        export $BIN_PATH
         make clean; make CUDA_DIR=$NVHPC_PATH/cuda ndims=3 nprof=1 openacc=1
       
