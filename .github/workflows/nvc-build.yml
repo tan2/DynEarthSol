@@ -14,7 +14,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: cuda-toolkit
     # You may pin to the exact commit or the version.
     # uses: Jimver/cuda-toolkit@acce010762576d6d7eafccf022b5e1e808f210b7
     - uses: Jimver/cuda-toolkit@v0.2.11
@@ -32,7 +31,7 @@ jobs:
         # linux-local-args: # optional, default is ["--toolkit", "--samples"]
         # Use GitHub cache to cache downloaded installer on GitHub servers
         # use-github-cache: # optional, default is true
-    - uses: actions/checkout@v3
+    # - uses: actions/checkout@v3
     - name: get boost
       run: sudo apt install libboost-program-options-dev
     - name: make 2d with nvidia profiling tools
