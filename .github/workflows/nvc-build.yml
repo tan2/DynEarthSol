@@ -10,39 +10,57 @@ on:
     paths-ignore:
       - '**/README.md'
 
+env:
+  NVHPC_PATH: /opt/nvidia/hpc_sdk/Linux_x86_64/23.9
+  
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      env:
+        PATH: $PATH:$NVHPC_PATH/compilers/bin
+    - name: get boost
+      run: |
+        sudo apt install libboost-program-options-dev
+
+    - name: make 2d CPU
+      run: |
+        echo $PATH
+        make cleanall; make ndims=2
+
+    - name: make 3d CPU
+      run: |
+        make cleanall; make ndims=3
+
     - name: get nvidia hpc-sdk
       run: |
         curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
         echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
         sudo apt-get update -y
-        echo Install nvhpc-23-9 ====================
         sudo apt-get install -y nvhpc-23-9
-    - name: get boost
+
+    - name: make 2d GPU
       run: |
-        echo Install boost-program-options ====================
-        sudo apt install libboost-program-options-dev
-    - name: make 2d with nvidia profiling tools
+        make cleanall; make ndims=2 openacc=1
+
+    - name: make 3d GPU
       run: |
-        echo Export hpc-sdk path ====================
-        NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/23.9
-        PATH=$PATH:$NVHPC_PATH/compilers/bin
-        export PATH
-        echo $PATH
-        echo Build 2d with nvc++ ====================
-        make clean; make ndims=2 nprof=1 CUDA_DIR=$NVHPC_PATH/cuda
-    - name: make 3d with nvidia profiling tools
+        make cleanall; make ndims=3 openacc=1
+
+    - name: make 2d CPU with nvidia profiling tools
       run: |
-        echo $PATH
-        echo Export hpc-sdk path ====================
-        NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/23.9
-        PATH=$PATH:$NVHPC_PATH/compilers/bin
-        export PATH
-        echo $PATH
-        echo Build 3d with nvc++ ====================
-        make clean; make ndims=3 nprof=1 CUDA_DIR=$NVHPC_PATH/cuda
+        make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=2 nprof=1
+
+    - name: make 3d CPU with nvidia profiling tools
+      run: |
+        make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=3 nprof=1
+
+    - name: make 2d GPU with nvidia profiling tools
+      run: |
+        make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=2 nprof=1 openacc=1
+        
+    - name: make 3d GPU with nvidia profiling tools
+      run: |
+        make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=3 nprof=1 openacc=1
       
