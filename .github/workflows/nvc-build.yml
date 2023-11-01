@@ -20,7 +20,7 @@ jobs:
       id: cuda-toolkit
       with:
         # Cuda version
-        cuda: 10.2 # optional, default is 12.2.0
+        cuda: 10.2.89 # optional, default is 12.2.0
         # Only installs specified subpackages, must be in the form of a JSON array. For example, if you only want to install nvcc and visual studio integration: ["nvcc", "visual_studio_integration"] double quotes required! Note that if you want to use this on Linux, 'network' method MUST be used.
         # sub-packages: # optional, default is []
         # Only installs specified subpackages that do not have the cuda prefix, must be in the form of a JSON array. For example, if you only want to install libcublas and libcufft: ["libcublas", "libcufft"] double quotes required! Note that this only works with 'network' method on only on Linux.
