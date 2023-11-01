@@ -16,10 +16,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      BIN_PATH: $PATH:$NVHPC_PATH/compilers/bin
     steps:
     - uses: actions/checkout@v3
-      env:
-        BIN_PATH: $PATH:$NVHPC_PATH/compilers/bin
     - name: get boost
       run: |
         sudo apt install libboost-program-options-dev
@@ -27,6 +27,7 @@ jobs:
     - name: make 2d CPU
       run: |
         make cleanall; make ndims=2
+        echo $BIN_PATH #test
 
     - name: make 3d CPU
       run: |
@@ -40,16 +41,6 @@ jobs:
         sudo apt-get install -y nvhpc-23-9
         echo $BIN_PATH
 
-    - name: make 2d GPU
-      run: |
-        export $BIN_PATH
-        make cleanall; make ndims=2 openacc=1
-
-    - name: make 3d GPU
-      run: |
-        export $BIN_PATH
-        make cleanall; make ndims=3 openacc=1
-
     - name: make 2d CPU with nvidia profiling tools
       run: |
         export $BIN_PATH
@@ -60,13 +51,23 @@ jobs:
         export $BIN_PATH
         make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=3 nprof=1
 
+    - name: make 2d GPU
+      run: |
+        export $BIN_PATH
+        make cleanall; make ndims=2 openacc=1
+
+    - name: make 3d GPU
+      run: |
+        export $BIN_PATH
+        make cleanall; make ndims=3 openacc=1
+
     - name: make 2d GPU with nvidia profiling tools
       run: |
         export $BIN_PATH
-        make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=2 nprof=1 openacc=1
+        make clean; make CUDA_DIR=$NVHPC_PATH/cuda ndims=2 nprof=1 openacc=1
         
     - name: make 3d GPU with nvidia profiling tools
       run: |
         export $BIN_PATH
-        make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=3 nprof=1 openacc=1
+        make clean; make CUDA_DIR=$NVHPC_PATH/cuda ndims=3 nprof=1 openacc=1
       
