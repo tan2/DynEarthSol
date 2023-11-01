@@ -17,7 +17,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      BIN_PATH: $PATH:$NVHPC_PATH/compilers/bin
+      BIN_PATH: ${{ env.PATH }}:${{ env.NVHPC_PATH }}/compilers/bin
     steps:
     - uses: actions/checkout@v3
     - name: get boost
