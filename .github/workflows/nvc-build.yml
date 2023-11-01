@@ -31,7 +31,20 @@ jobs:
         echo Install boost-program-options ====================
         sudo apt install libboost-program-options-dev
     - name: make 2d with nvidia profiling tools
-      run: make clean; make ndims=2 nprof=1
+      run: |
+        echo $PATH
+        ls -l /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/compilers/bin
+        echo Export hpc-sdk path ====================
+        PATH=$PATH:/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/compilers/bin
+        export PATH
+        echo $PATH
+        make clean; make ndims=2 nprof=1
     - name: make 3d with nvidia profiling tools
-      run: make clean; make ndims=3 nprof=1
+      run: |
+        echo $PATH
+        echo Export hpc-sdk path ====================
+        PATH=$PATH:/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/compilers/bin
+        export PATH
+        echo $PATH
+        make clean; make ndims=3 nprof=1
       
