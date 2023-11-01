@@ -30,15 +30,19 @@ jobs:
       run: |
         echo Export hpc-sdk path ====================
         NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/23.9
-        export $PATH:$NVHPC_PATH/compilers/bin
+        PATH=$PATH:$NVHPC_PATH/compilers/bin
+        export PATH
         echo $PATH
+        echo Build 2d with nvc++ ====================
         make clean; make ndims=2 nprof=1 CUDA_DIR=$NVHPC_PATH/cuda
     - name: make 3d with nvidia profiling tools
       run: |
         echo $PATH
         echo Export hpc-sdk path ====================
         NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/23.9
-        export $PATH:$NVHPC_PATH/compilers/bin
+        PATH=$PATH:$NVHPC_PATH/compilers/bin
+        export PATH
         echo $PATH
+        echo Build 3d with nvc++ ====================
         make clean; make ndims=3 nprof=1 CUDA_DIR=$NVHPC_PATH/cuda
       
