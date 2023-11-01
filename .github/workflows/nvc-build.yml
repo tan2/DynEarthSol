@@ -19,14 +19,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       env:
-        PATH: $PATH:$NVHPC_PATH/compilers/bin
+        BIN_PATH: $PATH:$NVHPC_PATH/compilers/bin
     - name: get boost
       run: |
         sudo apt install libboost-program-options-dev
 
     - name: make 2d CPU
       run: |
-        echo $PATH
         make cleanall; make ndims=2
 
     - name: make 3d CPU
@@ -39,28 +38,35 @@ jobs:
         echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
         sudo apt-get update -y
         sudo apt-get install -y nvhpc-23-9
+        echo $BIN_PATH
 
     - name: make 2d GPU
       run: |
+        export $BIN_PATH
         make cleanall; make ndims=2 openacc=1
 
     - name: make 3d GPU
       run: |
+        export $BIN_PATH
         make cleanall; make ndims=3 openacc=1
 
     - name: make 2d CPU with nvidia profiling tools
       run: |
+        export $BIN_PATH
         make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=2 nprof=1
 
     - name: make 3d CPU with nvidia profiling tools
       run: |
+        export $BIN_PATH
         make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=3 nprof=1
 
     - name: make 2d GPU with nvidia profiling tools
       run: |
+        export $BIN_PATH
         make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=2 nprof=1 openacc=1
         
     - name: make 3d GPU with nvidia profiling tools
       run: |
+        export $BIN_PATH
         make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=3 nprof=1 openacc=1
       
