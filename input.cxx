@@ -248,8 +248,16 @@ static void declare_parameters(po::options_description &cfg,
          "Submarine diffusion coefficient decay (Kaufman et al., 1991) (in m^-1).")
         ("control.is_reporting_terrigenous_info",po::value<bool>(&p.control.is_reporting_terrigenous_info)->default_value(false),
          "If report surface terrigenous information.")
-        ("control.hemipelagic_sedimentation_rate",po::value<double>(&p.control.hemipelagic_sedimentation_rate)->default_value(3.17e-15),
-         "At 1km depth, 1e-1 mm/yr ~= 3.17e-12 m/s / 1e3 m = 3.17e-15 m/s")
+        ("control.hemipelagic_sedimentation_rate",po::value<double>(&p.control.hemipelagic_sedimentation_rate)->default_value(3.17e-11),
+         "Hemipelagic sedimentation (Emmerich et al., 2009) (1 km/Myr ~= 3.17e-11 m/s)")
+        ("control.hemipelagic_width",po::value<double>(&p.control.hemipelagic_width)->default_value(90.),
+         "Width of the productivity function (m)")
+        ("control.hemipelagic_max_depth",po::value<double>(&p.control.hemipelagic_max_depth)->default_value(40.),
+         "Maximum accumulation bathymetry (m)")
+        ("control.pelagic_sedimentation_rate",po::value<double>(&p.control.pelagic_sedimentation_rate)->default_value(1.585e-12),
+         "Pelagic sedimentation rate (Emmerich et al., 2009) (0.05 km/Myr ~= 1.585e-12 m/s)")
+        ("control.pelagic_increasing_width",po::value<double>(&p.control.pelagic_increasing_width)->default_value(30.),
+         "Width of the suface increasing zone (m)")
 
         ("control.terrig_sediment_volume",po::value<double>(&p.control.terrig_sediment_volume)->default_value(1.),
          "The volume of the sediment bring from continent source (in m^3/s). "
