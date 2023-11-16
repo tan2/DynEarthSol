@@ -112,6 +112,20 @@ class Dynearthsol:
         return field
     
     def load_calculation(self, frame, name):
+        def second_invariant(t):
+            '''The second invariant of the deviatoric part of a symmetric tensor t,
+            where t[:,0:ndims] are the diagonal components;
+            and t[:,ndims:] are the off-diagonal components.'''
+            nstr = t.shape[1]
+
+            # second invariant: sqrt(0.5 * t_ij**2)
+            if nstr == 3:  # 2D
+                return np.sqrt(0.25 * (t[:,0] - t[:,1])**2 + t[:,2]**2)
+            else:  # 3D
+                a = (t[:,0] + t[:,1] + t[:,2]) / 3
+                return np.sqrt( 0.5 * ((t[:,0] - a)**2 + (t[:,1] - a)**2 + (t[:,2] - a)**2) +
+                                t[:,3]**2 + t[:,4]**2 + t[:,5]**2)
+
         if name == 'heat flux':
             conductivity = 3.3
             coord = self.read_field(frame, 'coordinate')
@@ -134,6 +148,15 @@ class Dynearthsol:
 
             flux = v_slope[:-1] * flux_val / norm
             return flux, flux_val
+        elif name == 'strain II':
+            strain = self.read_field(frame, 'strain')
+            sII = second_invariant(strain)
+            return sII
+        elif name == 'ecoordinate':
+            coord = self.read_field(frame, 'coordinate')
+            connectivity = self.read_field(frame, 'connectivity')
+            ecoord = coord[connectivity]
+            return ecoord
         else:
             raise NameError('uknown field name: ' + name)
         
@@ -178,6 +201,15 @@ class Dynearthsol:
                 tmp = np.fromfile(f, dtype=np.float64, count=nmarkers*self.ndims)
                 marker_data[name] = tmp.reshape(-1, self.ndims)
                 #print(marker_data[name].shape, marker_data[name])
+
+            try:
+                for name in (markername+'.eta',):
+                    pos = self.field_pos[name]
+                    f.seek(pos)
+                    tmp = np.fromfile(f, dtype=np.float64, count=nmarkers*(self.ndims+1))
+                    marker_data[name] = tmp.reshape(-1, (self.ndims+1))
+            except:
+                pass
 
             # int
             for name in (markername+'.elem', markername+'.mattype', markername+'.id'):

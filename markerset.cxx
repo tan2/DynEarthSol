@@ -840,6 +840,7 @@ void MarkerSet::write_save_file(const Variables &var, BinaryOutput &bin) const
     }
 
     bin.write_array(mcoord, (_name + ".coord").c_str(), _nmarkers);
+    bin.write_array(*_eta, (_name + ".eta").c_str(), _nmarkers);
     bin.write_array(*_elem, (_name + ".elem").c_str(), _nmarkers);
     bin.write_array(*_mattype, (_name + ".mattype").c_str(), _nmarkers);
     bin.write_array(*_id, (_name + ".id").c_str(), _nmarkers);
