@@ -61,6 +61,11 @@ def main():
     H0_arr = [0, 6.0e-10] # W/kg heat production
     H0 = 6.0e-10 # W/kg heat production
     # 9.6e-10 W/kg for granite
+    k_arr = [3.3, 2.5, 2.5] # W/mK thermal conductivity
+    rho_arr = [3300, 2800, 2800] # kg/m^3 density
+    cp_arr = [1000, 1000, 1000] # J/kgK specific heat capacity
+    H0_arr = [0, 1e-10,6.0e-10] # W/kg heat production
+    nlayer = len(k_arr)
 
     k_arr = np.array(k_arr)
     rho_arr = np.array(rho_arr)
@@ -71,12 +76,16 @@ def main():
     rhoH0_arr = rho_arr * H0_arr
     
     Zbot = 120e3 # km
+    Zulb = 22e3 # km
     Zmoho = 33e3 # km
     thick_arr = [Zbot-Zmoho, Zmoho]
+    thick_arr = [Zbot-Zmoho, Zmoho-Zulb, Zulb]
+
     thick_arr = np.array(thick_arr)
-    hr = 50e3 # km length_scale_for_the_decrease_of_heat_production
+    hr = 33e3 # km length_scale_for_the_decrease_of_heat_production
 
     # Brune 2014
+    rhoH0_arr[-2] = 0.2e-6 # W/m^3
     rhoH0_arr[-1] = 1.5e-6 # W/m^3
 
     T0 = 273
@@ -84,7 +93,7 @@ def main():
     
     age = 26 # Myrs
 
-    z = np.linspace(0, Zbot, 1000)
+    z = np.linspace(0, Zbot, int(Zbot*0.1)+1)
 
     th = half_space_cooling_T(z, T0, Tm, age,alpha_arr[0])
 
@@ -138,7 +147,7 @@ def main():
     ax.plot([tmoho-273],[Zmoho*1e-3],'o',color='k')
     ax.text(tmoho-273-10,Zmoho*1e-3+1,f"{tmoho-273:.0f}",fontsize=12,ha='right',va='top')
 
-    ax.plot(tr3-273, z/1e3,'--b',label="Radiogenic in Zmoho")
+    ax.plot(tr3-273, z/1e3,'--b',label="Radiogenic 3 layers")
     tmoho3 = np.interp(Zmoho,z,tr3)
     ax.plot([tmoho3-273],[Zmoho*1e-3],'o',color='b')
     ax.text(tmoho3-273+10,Zmoho*1e-3-1,f"{tmoho3-273:.0f}",fontsize=12,ha='left',va='bottom',color='b')
@@ -164,7 +173,9 @@ def main():
     ax.set_xlim(0,1500)
     ax.grid(ls='--')
     fig.tight_layout()
-    filename = f'geo-{H0:e}-{hr/1e3:.0f}km.png'
+    filename = f'geo-{nlayer:d}-{H0:e}-{hr/1e3:.0f}km.png'
+    
+    print(f'save figure to {filename}')
     fig.savefig(filename)
     
     return
