@@ -445,19 +445,26 @@ static void declare_parameters(po::options_description &cfg,
          "How to set the initial temperature?\n"
          "0: uniform half-space cooling.\n"
          "1: continental thermal gradient.\n"
-         "2: equilibrium temperature for crustal radiogenic heating (mattype_crust).\n"
+         "2: equilibrium temperature for crustal radiogenic heating.\n"
          "90: temperature read from an external grid\n")
 
         // for temperature_option = 0
 	    ("ic.oceanic_plate_age_in_yr", po::value<double>(&p.ic.oceanic_plate_age_in_yr)->default_value(60e6),
          "Age of the oceanic plate (in years), used for the temperature profile on the plate.\n")
-
+        // for temperature_option = 2
+        ("ic.num_radiogenic_heat_layer", po::value<int>(&p.ic.nhlayer)->default_value(1),
+         "Number of radiogenic heat layers")
+        ("ic.radiogenic_heat_boundry", po::value<std::string>()->default_value("[-1,-1]"),
+        "The layer boundry of radiogenic heating from the top to the bottom (depth -> positive, in meters).\n"
+        "Using -1 to indicate the top and bottom of the model.\n")
+        ("ic.radiogenic_heat_mat_in_layer",  po::value<std::string>()->default_value("[0]"),
+        "The material type of radiogenic heating in each layer.\n")
         // for temperature_option = 1 and 2
         ("ic.radiogenic_folding_depth", po::value<double>(&p.ic.radiogenic_folding_depth)->default_value(10.e3),
          "Radiogenic folding depth (in meters), used for the temperature profile on the plate.\n")
+        // for temperature_option = 1
         ("ic.radiogenic_heating_of_crust", po::value<double>(&p.ic.radiogenic_heating_of_crust)->default_value(1.e-9),
          "Radiogenic heating of crust (in W/kg), used for the temperature profile on the plate.\n")
-        // for temperature_option = 1
         ("ic.continental_plate_age_in_yr", po::value<double>(&p.ic.continental_plate_age_in_yr)->default_value(100.e6),
          "Age of the continental plate (in years), used for the temperature profile on the plate.\n")
         ("ic.radiogenic_crustal_thickness", po::value<double>(&p.ic.radiogenic_crustal_thickness)->default_value(30.e3),
@@ -544,6 +551,9 @@ static void declare_parameters(po::options_description &cfg,
          "Heat capacity (isobaric) of the materials '[d0, d1, d2, ...]' (in J/kg/Kelvin)")
         ("mat.therm_cond", po::value<std::string>()->default_value("[3]"),
          "Thermal conductivity of the materials '[d0, d1, d2, ...]' (in W/m/Kelvin)")
+        ("mat.radiogenic_heat_prod", po::value<std::string>()->default_value("[0]"),
+         "Radiogenic heat production rate of the materials '[d0, d1, d2, ...]' (in W/kg)"
+         "Only for initial temperature condition")
 
         ("mat.pls0", po::value<std::string>()->default_value("[0]"),
          "Plastic strain of the materials where weakening starts '[d0, d1, d2, ...]' (no unit)")
@@ -905,6 +915,14 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         get_numbers(vm, "bc.vbc_period_x0_ratio", p.bc.vbc_period_x0_ratio, p.bc.num_vbc_period_x0, 1);
         get_numbers(vm, "bc.vbc_period_x1_ratio", p.bc.vbc_period_x1_ratio, p.bc.num_vbc_period_x1, 1);
 
+        get_numbers(vm, "ic.radiogenic_heat_boundry", p.ic.radiogenic_heat_boundry, p.ic.nhlayer+1, 1);
+        if (p.ic.radiogenic_heat_boundry[0] == -1)
+            p.ic.radiogenic_heat_boundry[0] = 0;
+        if (p.ic.radiogenic_heat_boundry[p.ic.nhlayer] == -1)
+            p.ic.radiogenic_heat_boundry[p.ic.nhlayer] = p.mesh.zlength;
+
+        get_numbers(vm, "ic.radiogenic_heat_mat_in_layer", p.ic.radiogenic_heat_mat_in_layer, p.ic.nhlayer, 1);
+
         get_numbers(vm, "mat.rho0", p.mat.rho0, p.mat.nmat, 1);
         get_numbers(vm, "mat.alpha", p.mat.alpha, p.mat.nmat, 1);
 
@@ -917,6 +935,7 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
 
         get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat, 1);
         get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat, 1);
+        get_numbers(vm, "mat.radiogenic_heat_prod", p.mat.radiogenic_heat_prod, p.mat.nmat, 1);
 
         get_numbers(vm, "mat.pls0", p.mat.pls0, p.mat.nmat, 1);
         get_numbers(vm, "mat.pls1", p.mat.pls1, p.mat.nmat, 1);
