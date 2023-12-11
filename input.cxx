@@ -546,6 +546,8 @@ static void declare_parameters(po::options_description &cfg,
          "Pre-exponent coefficient of non-linear viscosity of the materials '[d0, d1, d2, ...]'")
         ("mat.visc_activation_energy", po::value<std::string>()->default_value("[3.76e5]"),
          "Activation energy of non-linear viscosity of the materials '[d0, d1, d2, ...]' (in J/mol)")
+        ("mat.visc_activation_volume", po::value<std::string>()->default_value("[0]"),
+         "Activation volume of non-linear viscosity of the materials '[d0, d1, d2, ...]' (in cm^3/mol)")
 
         ("mat.heat_capacity", po::value<std::string>()->default_value("[1e3]"),
          "Heat capacity (isobaric) of the materials '[d0, d1, d2, ...]' (in J/kg/Kelvin)")
@@ -932,6 +934,7 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         get_numbers(vm, "mat.visc_exponent", p.mat.visc_exponent, p.mat.nmat, 1);
         get_numbers(vm, "mat.visc_coefficient", p.mat.visc_coefficient, p.mat.nmat, 1);
         get_numbers(vm, "mat.visc_activation_energy", p.mat.visc_activation_energy, p.mat.nmat, 1);
+        get_numbers(vm, "mat.visc_activation_volume", p.mat.visc_activation_volume, p.mat.nmat, 1);
 
         get_numbers(vm, "mat.heat_capacity", p.mat.heat_capacity, p.mat.nmat, 1);
         get_numbers(vm, "mat.therm_cond", p.mat.therm_cond, p.mat.nmat, 1);

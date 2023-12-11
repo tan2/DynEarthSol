@@ -248,6 +248,7 @@ struct Mat {
     double_vec visc_exponent;
     double_vec visc_coefficient;
     double_vec visc_activation_energy;
+    double_vec visc_activation_volume;
 
     double_vec heat_capacity;
     double_vec therm_cond;

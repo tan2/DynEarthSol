@@ -224,6 +224,7 @@ MatProps::MatProps(const Param& p, const Variables& var) :
     visc_exponent = VectorBase::create(p.mat.visc_exponent, nmat);
     visc_coefficient = VectorBase::create(p.mat.visc_coefficient, nmat);
     visc_activation_energy = VectorBase::create(p.mat.visc_activation_energy, nmat);
+    visc_activation_volume = VectorBase::create(p.mat.visc_activation_volume, nmat);
     heat_capacity = VectorBase::create(p.mat.heat_capacity, nmat);
     therm_cond = VectorBase::create(p.mat.therm_cond, nmat);
     pls0 = VectorBase::create(p.mat.pls0, nmat);
@@ -246,6 +247,7 @@ MatProps::~MatProps()
     delete visc_exponent;
     delete visc_coefficient;
     delete visc_activation_energy;
+    delete visc_activation_volume;
     delete heat_capacity;
     delete therm_cond;
     delete pls0;
@@ -284,6 +286,10 @@ double MatProps::visc(int e) const
     }
     T /= NODES_PER_ELEM;
 
+    // stress
+    const double *s = stress[e];
+    double s0 = trace(s) / NDIMS * 1e-6; // in MPa
+
     // strain-rate
     double edot = second_invariant(strain_rate[e]);
     // min strain rate to prevent viscosity -> inf
@@ -296,7 +302,8 @@ double MatProps::visc(int e) const
         double pow = 1 / (*visc_exponent)[m] - 1;
         double pow1 = -1 / (*visc_exponent)[m];
         double visc0 = 0.25 * std::pow(edot, pow) * std::pow(0.75 * (*visc_coefficient)[m], pow1)
-            * std::exp((*visc_activation_energy)[m] / ((*visc_exponent)[m] * gas_constant * T)) * 1e6;
+            * std::exp(((*visc_activation_energy)[m]+ (*visc_activation_volume)[m] * s0)
+            / ((*visc_exponent)[m] * gas_constant * T)) * 1e6;
         result += elemmarkers[e][m] / visc0;
         n += elemmarkers[e][m];
     }
