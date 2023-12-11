@@ -65,6 +65,7 @@ private:
     const VectorBase *rho0, *alpha;
     const VectorBase *bulk_modulus, *shear_modulus;
     const VectorBase *visc_exponent, *visc_coefficient, *visc_activation_energy;
+    const VectorBase *visc_activation_volume;
     const VectorBase *heat_capacity, *therm_cond;
     const VectorBase *pls0, *pls1;
     const VectorBase *cohesion0, *cohesion1;
