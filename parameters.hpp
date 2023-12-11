@@ -214,6 +214,9 @@ struct IC {
     double radiogenic_folding_depth;
     double radiogenic_heating_of_crust;
     double lithospheric_thickness;
+    int nhlayer;
+    double_vec radiogenic_heat_boundry;
+    int_vec radiogenic_heat_mat_in_layer;
 
     double isostasy_adjustment_time_in_yr;
 };
@@ -248,6 +251,7 @@ struct Mat {
 
     double_vec heat_capacity;
     double_vec therm_cond;
+    double_vec radiogenic_heat_prod;
 
     // plastic parameters
     double_vec pls0, pls1;
