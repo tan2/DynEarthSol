@@ -288,7 +288,7 @@ double MatProps::visc(int e) const
 
     // stress
     const double *s = stress[e];
-    double s0 = trace(s) / NDIMS * 1e-6; // in MPa
+    double s0 = trace(s) / NDIMS;
 
     // strain-rate
     double edot = second_invariant(strain_rate[e]);
@@ -302,7 +302,7 @@ double MatProps::visc(int e) const
         double pow = 1 / (*visc_exponent)[m] - 1;
         double pow1 = -1 / (*visc_exponent)[m];
         double visc0 = 0.25 * std::pow(edot, pow) * std::pow(0.75 * (*visc_coefficient)[m], pow1)
-            * std::exp(((*visc_activation_energy)[m]+ (*visc_activation_volume)[m] * s0)
+            * std::exp(((*visc_activation_energy)[m] + (*visc_activation_volume)[m] * s0)
             / ((*visc_exponent)[m] * gas_constant * T)) * 1e6;
         result += elemmarkers[e][m] / visc0;
         n += elemmarkers[e][m];

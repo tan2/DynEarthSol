@@ -546,8 +546,8 @@ static void declare_parameters(po::options_description &cfg,
          "Pre-exponent coefficient of non-linear viscosity of the materials '[d0, d1, d2, ...]'")
         ("mat.visc_activation_energy", po::value<std::string>()->default_value("[3.76e5]"),
          "Activation energy of non-linear viscosity of the materials '[d0, d1, d2, ...]' (in J/mol)")
-        ("mat.visc_activation_volume", po::value<std::string>()->default_value("[0]"),
-         "Activation volume of non-linear viscosity of the materials '[d0, d1, d2, ...]' (in cm^3/mol)")
+        ("mat.visc_activation_volume", po::value<std::string>()->default_value("[0.e-6]"),
+         "Activation volume of non-linear viscosity of the materials '[d0, d1, d2, ...]' (in m^3/mol)")
 
         ("mat.heat_capacity", po::value<std::string>()->default_value("[1e3]"),
          "Heat capacity (isobaric) of the materials '[d0, d1, d2, ...]' (in J/kg/Kelvin)")
