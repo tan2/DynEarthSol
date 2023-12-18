@@ -143,7 +143,8 @@ static void declare_parameters(po::options_description &cfg,
          " 1: move all bottom nodes to initial depth, other boundaries are intact.\n"
          " 2: create a new bottom boundary at the initial depth, other boundaries are intact (2D only).\n"
          "10: no modification on any boundary, except small boundary segments might get merged.\n"
-         "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments might get merged.\n")
+         "11: move all bottom nodes to initial depth, other boundaries are intact, small boundary segments might get merged.\n"
+         "12: flatten x0 when using fixed bottom boundary.\n")
 
         ("mesh.is_discarding_internal_segments", po::value<bool>(&p.mesh.is_discarding_internal_segments)->default_value(true),
          "Discarding internal segments after initial mesh is created? "
