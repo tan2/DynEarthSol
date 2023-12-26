@@ -154,20 +154,60 @@ void flatten_x0(const uint_vec &old_bcflag, double *qcoord, double bx0,
                     double x1x, int_vec &points_to_delete, double min_dist)
 {
     std::cout << "x1x: " << x1x << "; bx0: "<<bx0<< '\n';
+    double x0_zmin = std::numeric_limits<double>::max();
+    double bot_xmax = std::numeric_limits<double>::lowest();
+    double b0_exceed_xmax = std::numeric_limits<double>::lowest();
+
     for (std::size_t i=0; i<old_bcflag.size(); ++i) {
         uint flag = old_bcflag[i];
-        // set all x0 to x1x in X
         if (is_x0(flag)) {
+            if ((x0_zmin > qcoord[i*NDIMS + NDIMS-1]) && !(qcoord[i*NDIMS] > x1x))
+                x0_zmin = qcoord[i*NDIMS + NDIMS-1];
+            else if (is_bottom(flag))
+                b0_exceed_xmax = qcoord[i*NDIMS];
+            // set all x0 to x1x in X
             qcoord[i*NDIMS] = x1x;
-            // set (x0 & z0) to bx0 in Y
-            if (is_bottom(flag)) {
-                qcoord[i*NDIMS + NDIMS-1] = bx0;
-            }
         }
-        // delete nodes close to [x1x, bx0]
-        else if ((x1x - qcoord[i*NDIMS] < 5e2)  &&
-                 (qcoord[i*NDIMS + NDIMS-1] - (bx0 ) < 5e2)) {
-            points_to_delete.push_back(i);
+    }
+
+    double z0_xmax_ref = 2*x1x - b0_exceed_xmax;
+
+    for (std::size_t i=0; i<old_bcflag.size(); ++i)
+        if (is_bottom(old_bcflag[i]))
+            if ((bot_xmax < qcoord[i*NDIMS]) && (qcoord[i*NDIMS] < z0_xmax_ref))
+                bot_xmax = qcoord[i*NDIMS];
+
+    double v = (x1x - bot_xmax) / (x0_zmin - bx0);
+
+#ifdef USEMMG
+    double shrink_x = (x1x - bot_xmax) / (b0_exceed_xmax - bot_xmax);
+#else
+    double b0_clean_zmin_ref = x0_zmin - (x0_zmin - bx0)/2.;
+#endif
+
+    for (std::size_t i=0; i < old_bcflag.size(); ++i) {
+        uint flag = old_bcflag[i];
+        double x = qcoord[i*NDIMS];
+        double y = qcoord[i*NDIMS + NDIMS-1];
+        if (!is_x0(flag)) {
+            double fx = v * (y - x0_zmin) + x1x;
+            if (fx < x) {
+#ifdef USEMMG
+                // adjust all nodes at the right side of edge line
+                double dx = (x - fx) * shrink_x;
+                qcoord[i*NDIMS] = fx + dx;
+#else
+                // remove all nodes at the right side of edge line
+                points_to_delete.push_back(i);
+#endif
+            }
+#ifdef USEMMG
+#else
+        } else if (!is_bottom(flag)) {
+            // remove b0 nodes close to the z0-b0 corner
+            if (y < b0_clean_zmin_ref)
+                points_to_delete.push_back(i);
+#endif
         }
     }
 }
