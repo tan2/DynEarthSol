@@ -302,6 +302,12 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
     //     shared(bc, var, vel)
     #pragma acc parallel loop
 #else
+    double zmin = 0;
+    for (int k=0; k<var.nnode; ++k) {
+        double* tmpx = (*var.coord)[k];
+        if ( tmpx[NDIMS-1] < zmin )
+            zmin = tmpx[NDIMS-1];
+    }
     // #pragma omp parallel for default(none) \
     //     shared(bc, var, vel, vbc_vertical_ratios_x0, vbc_vertical_ratios_x1, \
     //             vbc_vertical_divisions_x0, vbc_vertical_divisions_x1, \
@@ -322,14 +328,6 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #else
         const double *x = (*var_coord)[i];
         double ratio, rr, dvr;
-        double miy; double* tmpx;
-        miy = 0;
-        for (int k=0; k<var.nnode; ++k) {
-            tmpx = (*var.coord)[k];
-            if ( tmpx[NDIMS-1] < miy ) {
-            miy = tmpx[NDIMS-1];
-            }
-        }
 #endif
         //
         // X
@@ -352,27 +350,19 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #endif
                 break;
             case 3:
-                if (x[NDIMS-1]>miy+1e3) {
-                    v[0] = bc.vbc_val_x0;
-                }
-                else {
-                    v[0] = bc.vbc_val_x0 * (x[NDIMS-1] - miy ) * 1e-3;
-                }
+#ifdef THREED
+                v[0] = bc_vx0;
+#else
+                v[0] = vbc_applied_x0 * interp1(vbc_vertical_divisions_x0, vbc_vertical_ratios_x0,-x[1]);
+                double dz = x[NDIMS-1] - zmin;
+                if (dz < bc.bottom_shear_zone_thickness)
+                    v[0] = v[0] * dz / bc.bottom_shear_zone_thickness;
+#endif
                 v[1] = 0;
 #ifdef THREED
                 v[2] = 0;
 #endif
                 break;
-/*#ifdef THREED
-                v[0] = bc_vx0;
-#else
-                v[0] = vbc_applied_x0 * interp1(vbc_vertical_divisions_x0, vbc_vertical_ratios_x0,-x[1]);
-#endif
-                v[1] = 0;
-#ifdef THREED
-                v[2] = 0;
-#endif
-                break;*/
 #ifdef THREED
             case 4:
                 v[1] = bc_vx0;

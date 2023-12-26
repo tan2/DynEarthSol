@@ -390,6 +390,9 @@ static void declare_parameters(po::options_description &cfg,
         ("bc.vbc_val_n3", po::value<double>(&p.bc.vbc_val_n3)->default_value(0),
          "Value of boundary condition for slant boundary #3 (if velocity, unit is m/s, "
          "outward normal direction is positive; if stress, unit is Pa)")
+        
+        ("bc.bottom_shear_zone_thickness", po::value<double>(&p.bc.bottom_shear_zone_thickness)->default_value(0.),
+         "Thickness of the bottom shear zone for bc_x0 = 3 and ndims = 2, unit is km.")
         ;
 
     cfg.add_options()
