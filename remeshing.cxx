@@ -150,9 +150,38 @@ void flatten_bottom(const uint_vec &old_bcflag, double *qcoord,
 }
 
 
-void flatten_x0(const uint_vec &old_bcflag, double *qcoord, double bx0,
-                    double x1x, int_vec &points_to_delete, double min_dist)
+void flatten_x0(const uint_vec &old_bcflag, double *qcoord,
+                int_vec &points_to_delete)
 {
+
+    // for cutting x0 boundary to (x0 & z1) in X
+    double x1x, bx0;
+
+    int j=0;
+    while (j>-1) {
+        uint flag = old_bcflag[j];
+        if ((flag & BOUNDX0 ) && (flag & BOUNDZ1)) {
+            x1x = qcoord[j*NDIMS]; break;
+        }
+        j++;
+    }
+
+    // interpolation or extrapolation 4 bx0
+    j=0;
+    int l=0;
+    double bo_X[2], bo_depth[2];
+    do {
+        uint flag = old_bcflag[j];
+        if (is_bottom(flag)) {
+           bo_depth[l]  = qcoord[j*NDIMS + NDIMS-1];
+           bo_X[l] = qcoord[j*NDIMS];
+           l++;
+        }
+        j++;
+    } while (l<2);
+
+    bx0 = bo_depth[0] + (bo_depth[1]-bo_depth[0])*(x1x-bo_X[0])/(bo_X[1]-bo_X[0]);
+
     std::cout << "x1x: " << x1x << "; bx0: "<<bx0<< '\n';
     double x0_zmin = std::numeric_limits<double>::max();
     double bot_xmax = std::numeric_limits<double>::lowest();
@@ -1078,34 +1107,6 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
         old_bnodes[i] = *(var.bnodes[i]);  // copying whole vector
     }
 
-    // for cutting x0 boundary to (x0 & z1) in X
-    double x1x, bx0;
-
-    int j=0;
-    while (j>-1) {
-        uint flag = old_bcflag[j];
-        if ((flag & BOUNDX0 ) && (flag & BOUNDZ1)) {
-            x1x = qcoord[j*NDIMS]; break;
-        }
-        j++;
-    }
-
-    // interpolation or extrapolation 4 bx0
-    j=0;
-    int l=0;
-    double bo_X[2], bo_depth[2];
-    do {
-        uint flag = old_bcflag[j];
-        if (is_bottom(flag)) {
-           bo_depth[l]  = qcoord[j*NDIMS + NDIMS-1];
-           bo_X[l] = qcoord[j*NDIMS];
-           l++;
-        }
-        j++;
-    } while (l<2);
-
-    bx0 = bo_depth[0] + (bo_depth[1]-bo_depth[0])*(x1x-bo_X[0])/(bo_X[1]-bo_X[0]);
-
     bool (*excl_func)(uint) = NULL; // function pointer indicating which point cannot be deleted
     switch (param.mesh.remeshing_option) {
     case 0:
@@ -1145,8 +1146,7 @@ void new_mesh(const Param &param, Variables &var, int bad_quality,
                    points_to_delete, min_dist, qsegment, qsegflag, old_nseg);
         break;
     case 12:
-        flatten_x0(old_bcflag, qcoord, bx0, x1x,
-                       points_to_delete, min_dist);
+        flatten_x0(old_bcflag, qcoord, points_to_delete);
         break;
     }
 
@@ -1402,10 +1402,6 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     case 11:
         excl_func = &is_corner;
         flatten_bottom(old_bcflag, qcoord, -param.mesh.zlength,
-                       points_to_delete, min_dist);
-        break;
-    case 12:
-        flatten_x0(old_bcflag, qcoord, bx0, x1x,
                    points_to_delete, min_dist);
         break;
     default:
@@ -1629,34 +1625,6 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
     int_vec points_to_delete;
     bool (*excl_func)(uint) = NULL; // function pointer indicating which point cannot be deleted
 
-    // for cutting x0 boundary to (x0 & z1) in X
-    double x1x, bx0;
-
-    int j=0;
-    while (j>-1) {
-        uint flag = old_bcflag[j];
-        if ((flag & BOUNDX0 ) && (flag & BOUNDZ1)) {
-            x1x = qcoord[j*NDIMS]; break;
-        }
-        j++;
-    }
-
-    // interpolation or extrapolation 4 bx0
-    j=0;
-    int l=0;
-    double bo_X[2], bo_depth[2];
-    do {
-        uint flag = old_bcflag[j];
-        if (is_bottom(flag)) {
-           bo_depth[l]  = qcoord[j*NDIMS + NDIMS-1];
-           bo_X[l] = qcoord[j*NDIMS];
-           l++;
-        }
-        j++;
-    } while (l<2);
-
-    bx0 = bo_depth[0] + (bo_depth[1]-bo_depth[0])*(x1x-bo_X[0])/(bo_X[1]-bo_X[0]);
-
     /* choosing which way to remesh the boundary */
     switch (param.mesh.remeshing_option) {
     case 0:
@@ -1682,8 +1650,7 @@ void optimize_mesh_2d(const Param &param, Variables &var, int bad_quality,
                        points_to_delete, min_dist);
         break;
     case 12:
-        flatten_x0(old_bcflag, qcoord, bx0, x1x,
-                   points_to_delete, min_dist);
+        flatten_x0(old_bcflag, qcoord, points_to_delete);
         break;
     default:
         std::cerr << "Error: unknown remeshing_option: " << param.mesh.remeshing_option << '\n';
@@ -1922,10 +1889,6 @@ void optimize_mesh(const Param &param, Variables &var, int bad_quality,
     case 11:
         excl_func = &is_corner;
         flatten_bottom(old_bcflag, qcoord, -param.mesh.zlength,
-                       points_to_delete, min_dist);
-        break;
-    case 12:
-        flatten_x0(old_bcflag, qcoord, bx0, x1x,
                    points_to_delete, min_dist);
         break;
     default:
