@@ -157,6 +157,8 @@ struct BC {
     double vbc_val_n2;
     double vbc_val_n3;
 
+    double bottom_shear_zone_thickness;
+
     double vbc_val_division_x0_min;
     double vbc_val_division_x0_max;
     double vbc_val_division_x1_min;

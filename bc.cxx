@@ -302,6 +302,12 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
     //     shared(bc, var, vel)
     #pragma acc parallel loop
 #else
+    double zmin = 0;
+    for (int k=0; k<var.nnode; ++k) {
+        double* tmpx = (*var.coord)[k];
+        if ( tmpx[NDIMS-1] < zmin )
+            zmin = tmpx[NDIMS-1];
+    }
     // #pragma omp parallel for default(none) \
     //     shared(bc, var, vel, vbc_vertical_ratios_x0, vbc_vertical_ratios_x1, \
     //             vbc_vertical_divisions_x0, vbc_vertical_divisions_x1, \
@@ -322,6 +328,8 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #else
         const double *x = (*var_coord)[i];
         double ratio, rr, dvr;
+        double vbc_exact_x0 = vbc_applied_x0 * interp1(vbc_vertical_divisions_x0, vbc_vertical_ratios_x0,-x[1]);
+        double vbc_exact_x1 = vbc_applied_x1 * interp1(vbc_vertical_divisions_x1, vbc_vertical_ratios_x1,-x[1]);
 #endif
         //
         // X
@@ -334,7 +342,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #ifdef THREED
                 v[0] = bc_vx0;
 #else
-                v[0] = vbc_applied_x0 * interp1(vbc_vertical_divisions_x0, vbc_vertical_ratios_x0, -x[1]);
+                v[0] = vbc_exact_x0;
 #endif
                 break;
             case 2:
@@ -347,7 +355,12 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #ifdef THREED
                 v[0] = bc_vx0;
 #else
-                v[0] = vbc_applied_x0 * interp1(vbc_vertical_divisions_x0, vbc_vertical_ratios_x0,-x[1]);
+                v[0] = vbc_exact_x0;
+                if (bc.bottom_shear_zone_thickness > 0.) {
+                    double dz = x[NDIMS-1] - zmin;
+                    if (dz < bc.bottom_shear_zone_thickness)
+                        v[0] = v[0] * dz / bc.bottom_shear_zone_thickness;
+                }
 #endif
                 v[1] = 0;
 #ifdef THREED
@@ -379,7 +392,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #ifdef THREED
                 v[0] = bc_vx1;
 #else
-                v[0] = vbc_applied_x1 * interp1(vbc_vertical_divisions_x1, vbc_vertical_ratios_x1, -x[1]);
+                v[0] = vbc_exact_x1;
 #endif
                 break;
             case 2:
@@ -392,7 +405,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #ifdef THREED
                 v[0] = bc_vx1;
 #else
-                v[0] = vbc_applied_x1 * interp1(vbc_vertical_divisions_x1, vbc_vertical_ratios_x1, -x[1]);
+                v[0] = vbc_exact_x1;
 #endif
                 v[1] = 0;
 #ifdef THREED
