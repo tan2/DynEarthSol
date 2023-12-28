@@ -109,24 +109,40 @@ def get_dTlayer_acc(bdy_arr,k_arr,rhoH0_arr,qm,hr,is_hr_from_layer_top):
 
 def main():
     # material properties
+    # Brune 2014
     mat_rho = [3280, 2850, 2700] # kg/m^3 density
     mat_k = [3.3, 2.5, 2.5] # W/mK thermal conductivity
     mat_cp = [1200, 1200, 1200] # J/kgK specific heat capacity
     mat_H0 = [0, 1e-10,6.0e-10] # W/kg heat production
-    mat_A = [2.87E+03, 8.29E+00, 5.21E-07]
-    mat_n = [3.5, 3.0, 4.0]
+    mat_n = np.array([3.5, 3.0, 4.0])
+    mat_B = [-15.56,-15.40,-28.00]
+
+    # mat_A = np.array([2.87E+03, 8.29E+00, 5.21E-07])
+    mat_A = np.power(4,1-mat_n) / 3 * np.power(10,mat_B) * np.power(1e6,mat_n)
+    # mat_A = np.power(4,1-mat_n) / 3 * np.exp(mat_B) * np.power(1e6,mat_n)
+    # mat_A = np.power(4,1-mat_n) / 3 * np.exp(mat_B) * np.power(1e6,1)
+
     mat_E = [5.30E+05, 3.56E+05, 2.23E+05]
     mat_V = [13.0, 0.0, 0.0] # cm^3/mol
+    # Andres 2019
+    # mat_rho = [3300,3300,2850,2700] # kg/m^3 density
+    # mat_k = [3.3, 3.3, 2.5, 2.1]
+    # mat_cp = [1200, 1200, 1200, 1200]
+    # mat_H0 = [0.0, 0.0, 7.02E-11, 4.81e-10]
+    # mat_A = [1.17E+03, 5.58E+01, 8.29E+00, 5.21E-07]
+    # mat_n = [3.5, 4.2, 3.0, 4.0]
+    # mat_E = [5.30E+05, 4.45E+05, 3.56E+05, 2.23E+05]
+    # mat_V = [13.0, 0.0, 0.0, 0.0] # cm^3/mol
+
+
     # 9.6e-10 W/kg for granite
-    hr = 33e3 # km length_scale_for_the_decrease_of_heat_production
+    hr = 20e3 # km length_scale_for_the_decrease_of_heat_production
     is_hr_from_layer_top = True
 
     mat_k = np.array(mat_k)
     mat_rho = np.array(mat_rho)
     mat_cp = np.array(mat_cp)
     mat_H0 = np.array(mat_H0)
-    mat_A = np.array(mat_A)
-    mat_n = np.array(mat_n)
     mat_E = np.array(mat_E)
     mat_V = np.array(mat_V)
     mat_rhoH0 = mat_rho * mat_H0
@@ -139,7 +155,7 @@ def main():
 
     Zulb = 22e3 # km
     Zmoho = 33e3 # km
-    Zbot = 120e3 # km
+    Zbot = 90e3 # km
     edot = 1e-15 # 1/s
     
     phase_arr = [2, 1, 0]
@@ -231,6 +247,9 @@ def main():
 
     ax.text(300,93,'q$_m$='+f'{qm*1e3:.0f} mW/m$^2$',fontsize=12,ha='left',va='top',color=color)
 
+
+    ax.text(100,hr/1e3,'hr='+f'{hr*1e-3:.0f} km',fontsize=12,ha='left',va='bottom',color=color)
+
     ax2 = ax.twiny()
     
     ax2.plot(hp*1e6,z/1e3,'--',color='r',label="Heat production",lw=1)
@@ -248,8 +267,8 @@ def main():
         ax.set_ylim(Zbot/1e3,0)
         ax.grid(ls='--')
     fig.tight_layout()
-    filename = f'geo-{nlayer:d}-{rhoH0_arr[0]:.1e}-{hr/1e3:.0f}km.png'
-    # filename = 'test.png'
+    filename = f'geo-{nlayer:d}-{Zmoho/1e3:.0f}-{rhoH0_arr[0]:.1e}-{hr/1e3:.0f}km.png'
+    filename = 'test.png'
     
     print(f'save figure to {filename}')
     fig.savefig(filename)
