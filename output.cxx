@@ -197,20 +197,9 @@ void Output::_write(const Variables& var, bool disable_averaging)
 
     frame ++;
 
-    {
-        // check for NaN in coordinate
-        for (int i=0; i<var.nnode; i++)
-            for (int j=0; j<NDIMS; j++) {
-                if (std::isnan((*var.coord)[i][j])) {
-                    std::cerr << "Error: coordinate becomes NaN\n";
-                    std::exit(11);
-                }
-                if (std::isinf((*var.coord)[i][j])) {
-                    std::cerr << "Error: coordinate becomes Infinity\n";
-                    std::exit(11);
-                }
-            }
-    }
+    // check for NaN in var
+    check_nan(var);
+
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
