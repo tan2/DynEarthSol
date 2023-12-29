@@ -344,7 +344,7 @@ void initial_temperature(const Param &param, const Variables &var,
 
                 if (y == 0.)
                     temperature[i] = t_top;
-            }
+            }            
             break;
         }
     case 2:
@@ -369,10 +369,20 @@ void initial_temperature(const Param &param, const Variables &var,
 
             for (int i=0;i<nlayer;i++) {
                 int mat = layer_mat[i];
-                cond[i] = mat_cond[mat];
-                rho[i] = mat_rho[mat];
-                hp[i] = mat_hp[mat];
-                rhohp[i] = mat_hp[mat] * mat_rho[mat];
+                if (mat_cond.size() == 1)
+                    cond[i] = mat_cond[0];
+                else
+                    cond[i] = mat_cond[mat];
+                if (mat_rho.size() == 1)
+                    rho[i] = mat_rho[0];
+                else
+                    rho[i] = mat_rho[mat];
+                if (mat_hp.size() == 1)
+                    hp[i] = mat_hp[0];
+                else
+                    hp[i] = mat_hp[mat];
+
+                rhohp[i] = hp[i] * rho[i];
                 thickness[i] = layer_bdy[i+1] - layer_bdy[i];
                 dT_layer_init[i] = dTh_sum;
                 dTh_sum += hp[i]*rho[i]*hr*hr*(1-exp(-thickness[i]/hr)) / cond[i];
