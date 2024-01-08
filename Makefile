@@ -176,6 +176,10 @@ else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 		LDFLAGS += -pg
 	endif
 
+	ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
+		ANNFLAGS = macosx-g++-13
+	endif
+
 else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tested with v14
 	CXXFLAGS = -g -std=c++0x
 	LDFLAGS = -lm
@@ -469,7 +473,7 @@ $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
 	@+$(MAKE) -C $(C3X3_DIR) openacc=$(openacc) CUDA_DIR=$(CUDA_DIR)
 
 $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
-	@+$(MAKE) -C $(ANN_DIR) linux-g++
+	@+$(MAKE) -C $(ANN_DIR) $(ANNFLAGS)
 
 deepclean: cleanadapt
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)

@@ -537,10 +537,10 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 #else
     #pragma omp parallel for default(none)                           \
         shared(param, var, stress, stressyy, dpressure, viscosity, strain, plstrain, delta_plstrain, \
-               strain_rate, std::cerr, var_edvoldt, var_mat, var_volume,var_volume_old)
+               strain_rate, std::cerr, var_edvoldt, var_mat, var_volume,var_volume_old,rheol_type)
 #endif
     #pragma acc parallel loop
-    for (int e=0; e<var_nelem; ++e) {
+    for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
         double* s = stress[e];
         double& syy = stressyy[e];
@@ -559,13 +559,13 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 
         // update strain with strain rate
         for (int i=0; i<NSTR; ++i) {
-            es[i] += edot[i] * var_dt;
+            es[i] += edot[i] * var.dt;
         }
 
         // modified strain increment
         double de[NSTR];
         for (int i=0; i<NSTR; ++i) {
-            de[i] = edot[i] * var_dt;
+            de[i] = edot[i] * var.dt;
         }
 
         switch (rheol_type) {
@@ -590,7 +590,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                 double shearm = var_mat->shearm(e);
                 viscosity[e] = var_mat->visc(e);
                 double dv = (*var_volume)[e] / (*var_volume_old)[e] - 1;
-                maxwell(bulkm, shearm, viscosity[e], var_dt, dv, de, s);
+                maxwell(bulkm, shearm, viscosity[e], var.dt, dv, de, s);
             }
             break;
         case MatProps::rh_ep:
@@ -624,7 +624,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                 // stress due to maxwell rheology
                 double sv[NSTR];
                 for (int i=0; i<NSTR; ++i) sv[i] = s[i];
-                maxwell(bulkm, shearm, viscosity[e], var_dt, dv, de, sv);
+                maxwell(bulkm, shearm, viscosity[e], var.dt, dv, de, sv);
                 double svII = second_invariant2(sv);
 
                 double amc, anphi, anpsi, hardn, ten_max;
@@ -661,7 +661,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 //            std::exit(1);
             break;
         }
-        if (is_using_mixed_stress)
+        if (param.control.is_using_mixed_stress)
             dpressure[e] = trace(s) - old_s;
         // std::cerr << "stress " << e << ": ";
         // print(std::cerr, s, NSTR);

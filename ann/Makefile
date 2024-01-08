@@ -43,6 +43,7 @@ default:
 	@echo "Enter one of the following:"
 	@echo "  make linux-g++            for Linux and g++"
 	@echo "  make macosx-g++           for Mac OS X and g++"
+	@echo "  make macosx-g++-13        for Mac OS X and g++-13"
 	@echo "  make sunos5               for Sun with SunOS 5.x"
 	@echo "  make sunos5-sl            for Sun with SunOS 5.x, make shared libs"
 	@echo "  make sunos5-g++           for Sun with SunOS 5.x and g++"
@@ -56,7 +57,7 @@ default:
 #-----------------------------------------------------------------------------
 # main make entry point
 #-----------------------------------------------------------------------------
-alpha-g++ macosx-g++ linux-g++ sgi sunos4 sunos4-g++ sunos5 sunos5-g++ sunos5-g++-sl authors-debug authors-perf:
+alpha-g++ macosx-g++ macosx-g++-13 linux-g++ sgi sunos4 sunos4-g++ sunos5 sunos5-g++ sunos5-g++-sl authors-debug authors-perf:
 	cd src ; $(MAKE) $@
 
 #-----------------------------------------------------------------------------

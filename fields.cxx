@@ -123,25 +123,22 @@ void update_temperature(const Param &param, const Variables &var,
 #endif
     
 
-    const int var_nelem=var.nelem;
     const conn_t *var_connectivity=var.connectivity;
     const shapefn *var_shpdx=var.shpdx;
     const shapefn *var_shpdz=var.shpdz; 
     const shapefn *var_shpdy=var.shpdy;
     const double_vec *var_volume = var.volume;
     const MatProps *var_mat = var.mat;
-    const int var_nnode = var.nnode;
     const int_vec2D *var_support = var.support;
     const uint_vec *var_bcflag = var.bcflag;
     const double surface_temperature = param.bc.surface_temperature;
     const double_vec *var_tmass = var.tmass;
-    const double var_dt = var.dt;
 
     #pragma omp parallel for default(none) \
         shared(var,temperature,tmp_result,var_connectivity,var_shpdx,var_shpdz,var_shpdy, \
                 var_volume,var_mat,var_support,var_bcflag,var_tmass)
     #pragma acc parallel loop
-    for (int e=0;e<var_nelem;e++) {
+    for (int e=0;e<var.nelem;e++) {
         // diffusion matrix
 
         const int *conn = (*var_connectivity)[e];
@@ -171,7 +168,7 @@ void update_temperature(const Param &param, const Variables &var,
     #pragma omp parallel for default(none) \
         shared(param,var,tdot,temperature,tmp_result,var_support,var_connectivity,var_bcflag,var_tmass)
     #pragma acc parallel loop
-    for (int n=0;n<var_nnode;n++) {
+    for (int n=0;n<var.nnode;n++) {
         tdot[n]=0;
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
             const int *conn = (*var_connectivity)[*e];
@@ -187,9 +184,9 @@ void update_temperature(const Param &param, const Variables &var,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
         if ((*var_bcflag)[n] & BOUNDZ1)
-            temperature[n] = surface_temperature;
+            temperature[n] = param.bc.surface_temperature;
         else
-            temperature[n] -= tdot[n] * var_dt / (*var_tmass)[n];
+            temperature[n] -= tdot[n] * var.dt / (*var_tmass)[n];
     }
 
     // Combining temperature update and bc in the same loop for efficiency,
@@ -216,7 +213,6 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
     double *v[NODES_PER_ELEM];
 
     // extract all variables
-    const int var_nelem=var.nelem;
     const conn_t *var_connectivity=var.connectivity;
     const shapefn *var_shpdx=var.shpdx;
     const shapefn *var_shpdz=var.shpdz; 
@@ -226,7 +222,7 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
     #pragma omp parallel for default(none) \
         shared(var, strain_rate,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_vel) private(v)
     #pragma acc parallel loop private(v)
-    for (int e=0; e<var_nelem; ++e) {
+    for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var_connectivity)[e];
         const double *shpdx = (*var_shpdx)[e];
         const double *shpdz = (*var_shpdz)[e];
@@ -301,7 +297,6 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     const double small_vel = 1e-13;
     const double damping_factor = param.control.damping_factor;
 
-    const int var_nnode = var.nnode;
     const array_t *var_vel = var.vel;
 
     switch (param.control.damping_option) {
@@ -319,10 +314,10 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
             shared(var, param, force, var_vel)
 #endif
         #pragma acc parallel loop
-        for (int i=0; i<var_nnode; ++i) {
+        for (int i=0; i<var.nnode; ++i) {
             for (int j=0;j<NDIMS;j++)
                 if (std::fabs((*var_vel)[i][j]) > small_vel) {
-                    force[i][j] -= damping_factor * std::copysign(force[i][j], (*var_vel)[i][j]);
+                    force[i][j] -= param.control.damping_factor * std::copysign(force[i][j], (*var_vel)[i][j]);
                 }
         }
         break;
@@ -331,9 +326,9 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         #pragma omp parallel for default(none) \
             shared(var, param, force)
         #pragma acc parallel loop
-        for (int i=0; i<var_nnode; ++i) {
+        for (int i=0; i<var.nnode; ++i) {
             for (int j=0;j<NDIMS;j++)
-                force[i][j] -= damping_factor * force[i][j];
+                force[i][j] -= param.control.damping_factor * force[i][j];
         }
         break;
     case 3:
@@ -342,15 +337,15 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         #pragma omp parallel for default(none) \
             shared(var, param, force, var_vel)
         #pragma acc parallel loop
-        for (int i=0; i<var_nnode; ++i) {
+        for (int i=0; i<var.nnode; ++i) {
             for (int j=0;j<NDIMS;j++) {
                 if ((force[i][j]<0) == ((*var_vel)[i][j]<0)) {
                     // strong damping
-                    force[i][j] -= damping_factor * force[i][j], (*var_vel)[i][j];
+                    force[i][j] -= param.control.damping_factor * force[i][j], (*var_vel)[i][j];
                 }
                 else {
                     // weak acceleration
-                    force[i][j] += (1 - damping_factor) * force[i][j];
+                    force[i][j] += (1 - param.control.damping_factor) * force[i][j];
                 }
             }
         }
@@ -401,7 +396,6 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    const int var_nelem = var.nelem;
     const conn_t *var_connectivity = var.connectivity;
     const double_vec *var_temperature = var.temperature;
     const int_vec2D *var_elemmarkers = var.elemmarkers;
@@ -415,13 +409,12 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     const int nmat = param.mat.nmat;
     const double_vec *rho0 = &param.mat.rho0;
     const double_vec *alpha = &param.mat.alpha;
-    const int var_nnode = var.nnode;
     const int_vec2D *var_support = var.support;
 
     #pragma omp parallel for default(none)      \
         shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stress,var_volume,var_mat)
     #pragma acc parallel loop
-    for (int e=0;e<var_nelem;e++) {
+    for (int e=0;e<var.nelem;e++) {
         const int *conn = (*var_connectivity)[e];
         const double *shpdx = (*var_shpdx)[e];
 #ifdef THREED
@@ -433,8 +426,8 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
         double *tr = tmp_result[e];
 
         double buoy = 0;
-        if (gravity != 0)
-            buoy = var_mat->rho(e) * gravity / NODES_PER_ELEM;
+        if (param.control.gravity != 0)
+            buoy = var_mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
@@ -451,7 +444,7 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     #pragma omp parallel for default(none)      \
         shared(var,force,tmp_result,var_support,var_connectivity)
     #pragma acc parallel loop
-    for (int n=0;n<var_nnode;n++) {
+    for (int n=0;n<var.nnode;n++) {
         std::fill_n(force[n],NDIMS,0); 
         double *f = force[n];
         for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
@@ -483,17 +476,15 @@ void update_velocity(const Variables& var, array_t& vel)
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    const int var_nnode = var.nnode;
-    const double var_dt = var.dt;
     const array_t *var_force = var.force;
     const double_vec *var_mass = var.mass;
 
     #pragma omp parallel for default(none) \
         shared(var, vel, var_force, var_mass)
     #pragma acc parallel loop
-    for (int i=0; i<var_nnode; ++i)
+    for (int i=0; i<var.nnode; ++i)
         for (int j=0;j<NDIMS;j++)
-            vel[i][j] += var_dt * (*var_force)[i][j] / (*var_mass)[i];
+            vel[i][j] += var.dt * (*var_force)[i][j] / (*var_mass)[i];
 
 #ifdef USE_NPROF
     nvtxRangePop();
@@ -512,15 +503,13 @@ void update_coordinate(const Variables& var, array_t& coord)
     const array_t *var_vel=var.vel;
 
     // for gpu parallelization dt and bound need to be sent to 
-    const int var_nnode=var.nnode;
-    const double var_dt=var.dt;
 
     #pragma omp parallel for default(none) \
         shared(var, var_coord, var_vel)
     #pragma acc parallel loop collapse(2) 
-    for (int i=0; i<var_nnode; ++i) {
+    for (int i=0; i<var.nnode; ++i) {
         for (int j=0 ; j<NDIMS; ++j){
-            (*var_coord)[i][j] += (*var_vel)[i][j] * var_dt;
+            (*var_coord)[i][j] += (*var_vel)[i][j] * var.dt;
         }
         
     }
@@ -591,8 +580,6 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
     // sj[4] = dt * ( s0 * w4 - s2 * w4 + s3 * w5 - s5 * w3)
     // sj[5] = dt * ( s1 * w5 - s2 * w5 + s3 * w4 + s4 * w3)
 
-    const int var_nelem=var.nelem;
-    const double var_dt=var.dt;
 
     const shapefn *var_shpdx=var.shpdx;
     const shapefn *var_shpdz=var.shpdz;
@@ -603,7 +590,7 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
     #pragma omp parallel for default(none) \
         shared(var, stress, strain, var_connectivity, var_shpdx,var_shpdy,var_shpdz,var_vel)
     #pragma acc parallel loop
-    for (int e=0; e<var_nelem; ++e) {
+    for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var_connectivity)[e];
 
 #ifdef THREED
@@ -631,8 +618,8 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
                 w5 += 0.5 * (v[i][1] * shpdz[i] - v[i][NDIMS-1] * shpdy[i]);
         }
 
-        jaumann_rate_3d(stress[e], var_dt, w3, w4, w5);
-        jaumann_rate_3d(strain[e], var_dt, w3, w4, w5);
+        jaumann_rate_3d(stress[e], var.dt, w3, w4, w5);
+        jaumann_rate_3d(strain[e], var.dt, w3, w4, w5);
 
 #else
 
@@ -650,8 +637,8 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
                 w2 += 0.5 * (v[i][NDIMS-1] * shpdx[i] - v[i][0] * shpdz[i]);
         }
 
-        jaumann_rate_2d(stress[e], var_dt, w2);
-        jaumann_rate_2d(strain[e], var_dt, w2);
+        jaumann_rate_2d(stress[e], var.dt, w2);
+        jaumann_rate_2d(strain[e], var.dt, w2);
 
 #endif
     }
