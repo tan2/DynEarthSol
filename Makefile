@@ -27,6 +27,7 @@ usemmg = 0
 adaptive_time_step = 0
 use_R_S = 0
 useexo = 0
+ANNFLAGS = linux-g++
 
 ifeq ($(ndims), 2)
 	useadapt = 0  # libadaptivity is 3d only
