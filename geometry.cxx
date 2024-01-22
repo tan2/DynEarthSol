@@ -113,12 +113,10 @@ void compute_volume(const array_t &coord, const conn_t &connectivity,
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    const int bound = volume.size();
-
     #pragma omp parallel for default(none)      \
-        shared(bound,coord, connectivity, volume)
+        shared(coord, connectivity, volume)
     #pragma acc parallel loop 
-    for (int e=0; e<bound; ++e) {
+    for (int e=0; e<volume.size(); ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
         int n2 = connectivity[e][2];
@@ -187,34 +185,26 @@ void compute_dvoldt(const Variables &var, double_vec &dvoldt, double_vec &tmp_re
      */
 //    std::fill_n(dvoldt.begin(), var.nnode, 0);
 
-    const int var_nelem = var.nelem;
-    const conn_t *var_connectivity = var.connectivity;
-    const tensor_t *var_strain_rate= var.strain_rate;
-    const double_vec *var_volume = var.volume;
-    const double_vec *var_volume_n = var.volume_n;
-    const int var_nnode = var.nnode;
-    const int_vec2D *var_support = var.support;
-
     #pragma omp parallel for default(none)      \
-        shared(var, tmp_result_sg,var_connectivity,var_strain_rate,var_volume)
+        shared(var, tmp_result_sg)
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
-        const int *conn = (*var_connectivity)[e];
-        const double *strain_rate= (*var_strain_rate)[e];
+        const int *conn = (*var.connectivity)[e];
+        const double *strain_rate= (*var.strain_rate)[e];
         // TODO: try another definition:
         // dj = (volume[e] - volume_old[e]) / volume_old[e] / dt
         double dj = trace(strain_rate);
-        tmp_result_sg[e] = dj * (*var_volume)[e];
+        tmp_result_sg[e] = dj * (*var.volume)[e];
     }
 
     #pragma omp parallel for default(none)      \
-        shared(var,dvoldt,tmp_result_sg,var_support,var_volume_n)
+        shared(var,dvoldt,tmp_result_sg)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         dvoldt[n] = 0.;
-        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
 	        dvoldt[n] += tmp_result_sg[*e];
-        dvoldt[n] /= (*var_volume_n)[n];
+        dvoldt[n] /= (*var.volume_n)[n];
     }
 
     // std::cout << "dvoldt:\n";
@@ -236,14 +226,11 @@ void compute_edvoldt(const Variables &var, double_vec &dvoldt,
      * It is used in update_stress() to prevent mesh locking.
      */
 
-    const int var_nelem = var.nelem;
-    const conn_t *var_connectivity = var.connectivity;
-
     #pragma omp parallel for default(none)      \
-        shared(var, dvoldt, edvoldt,var_connectivity)
+        shared(var, dvoldt, edvoldt)
     #pragma acc parallel loop
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var_connectivity)[e];
+        const int *conn = (*var.connectivity)[e];
         double dj = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
@@ -388,7 +375,6 @@ double compute_dt(const Param& param, const Variables& var)
     if (param.control.fixed_dt != 0) return param.control.fixed_dt;
 
     // dynamic dt
-    const int nelem = var.nelem;
     const conn_t& connectivity = *var.connectivity;
     const array_t& coord = *var.coord;
     const double_vec& volume = *var.volume;    
@@ -403,15 +389,9 @@ double compute_dt(const Param& param, const Variables& var)
     double dt_diffusion = std::numeric_limits<double>::max();
     double minl = std::numeric_limits<double>::max();
 
-#ifdef LLVM
-    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion)    \
-        default(none) shared(param, var, nelem, connectivity, coord, volume,var_mat,has_thermal_diffusion)
-    #pragma acc parallel loop reduction(min:minl,dt_maxwell,dt_diffusion)
-#else
     #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion)    \
         default(none) shared(param,var, connectivity, coord, volume,var_mat,has_thermal_diffusion)
     #pragma acc parallel loop reduction(min:minl, dt_maxwell, dt_diffusion)
-#endif
     for (int e=0; e<var.nelem; ++e) {
         int n0 = connectivity[e][0];
         int n1 = connectivity[e][1];
@@ -497,43 +477,36 @@ void compute_mass(const Param &param, const Variables &var,
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
 
-    const bool is_quasi_static = param.control.is_quasi_static;
-    const bool has_thermal_diffusion = param.control.has_thermal_diffusion;
-    const int var_nelem = var.nelem;
-    const double_vec *var_volume = var.volume;
-    const MatProps *var_mat = var.mat;
-    const int var_nnode = var.nnode;
-    const int_vec2D *var_support = var.support;
 
-#ifdef LLVM
+#ifdef GPP1X
     #pragma omp parallel for default(none)      \
         shared(var, param, pseudo_speed, tmp_result)
 #else
     #pragma omp parallel for default(none)      \
-        shared(var, param, pseudo_speed, tmp_result,var_mat,var_volume)
+        shared(var, param, tmp_result)
 #endif
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
         double *tr = tmp_result[e];
         double rho = (param.control.is_quasi_static) ?
-            (*var_mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
-            (*var_mat).rho(e);                                     // true density for dynamic sim
-        double m = rho * (*var_volume)[e] / NODES_PER_ELEM;
-        double tm = (*var_mat).rho(e) * (*var_mat).cp(e) * (*var_volume)[e] / NODES_PER_ELEM;
-        tr[0] = (*var_volume)[e];
+            (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
+            (*var.mat).rho(e);                                     // true density for dynamic sim
+        double m = rho * (* var.volume)[e] / NODES_PER_ELEM;
+        double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (* var.volume)[e] / NODES_PER_ELEM;
+        tr[0] = (* var.volume)[e];
         tr[1] = m;
         if (param.control.has_thermal_diffusion)
             tr[2] = tm;
     }
 
     #pragma omp parallel for default(none)      \
-        shared(param,var,volume_n,mass,tmass,tmp_result,var_support)
+        shared(param,var,volume_n,mass,tmass,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         volume_n[n]=0;
         mass[n]=0;
         tmass[n]=0;
-        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             double *tr = tmp_result[*e];
             volume_n[n] += tr[0];
             mass[n] += tr[1];

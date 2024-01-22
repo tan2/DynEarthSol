@@ -1430,15 +1430,6 @@ void correct_surface_element(const Variables& var, \
     array_t coord0s(ntop_elem*NODES_PER_ELEM,0.);
     double_vec new_volumes(ntop_elem,0.);
 
-#ifdef LLVM
-    // #pragma omp parallel for default(none)      \
-    //     shared(ntop_elem, var, dhacc, stress,   \
-    //     strain, strain_rate, plstrain, coord0s, new_volumes)
-#else
-    // #pragma omp parallel for default(none)      \
-    //     shared(var, dhacc, stress, strain,      \
-    //     strain_rate, plstrain, coord0s, new_volumes)
-#endif
     for (size_t i=0;i<ntop_elem;i++) {
         const double *coord1[NODES_PER_ELEM];
 

@@ -306,7 +306,7 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     case 1:
         // damping when force and velocity are parallel
         // acclerating when force and velocity are anti-parallel
-#ifdef LLVM
+#ifdef GPP1X
         #pragma omp parallel for default(none) \
             shared(var, param, force, var_vel, small_vel)
 #else
