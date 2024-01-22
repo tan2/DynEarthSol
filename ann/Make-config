@@ -85,6 +85,15 @@ macosx-g++:
 	"MAKELIB = libtool -static -o " \
 	"RANLIB = true"
 
+#					Mac OS X using g++-13
+macosx-g++-13:
+	$(MAKE) targets \
+	"ANNLIB = libANN.a" \
+	"C++ = g++-13" \
+	"CFLAGS = -O3" \
+	"MAKELIB = libtool -static -o " \
+	"RANLIB = true"
+
 #					SunOS5
 sunos5:
 	$(MAKE) targets \

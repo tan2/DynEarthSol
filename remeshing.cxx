@@ -3,6 +3,7 @@
 #include <functional>
 #include <iostream>
 #include <numeric>
+#include <limits>
 #include <unordered_map>
 #ifdef USE_NPROF
 #include <nvToolsExt.h> 

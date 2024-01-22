@@ -267,7 +267,6 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #endif
 
     // diverging x-boundary
-    const int var_nnode = var.nnode;
     const uint_vec *var_bcflag = var.bcflag;
     const array_t *var_coord = var.coord;
     const array_t *var_bnormals = var.bnormals;
@@ -316,7 +315,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
     //             bc_vx0max,bc_vx0r2,bc_vx0r1,bc_x1,bc_z0,bc_z1,bc_vz0,bc_vz1)
     #pragma acc parallel loop
 #endif
-    for (int i=0; i<var_nnode; ++i) {
+    for (int i=0; i<var.nnode; ++i) {
 
         // fast path: skip nodes not on boundary
         if (! is_on_boundary(*var_bcflag, i)) continue;
@@ -761,7 +760,6 @@ namespace {
         const int top_bdry = iboundz1;
         const auto& top = *(var.bfacets[top_bdry]);
 
-        const int var_nnode = var.nnode;
         const int ntop = surfinfo.ntop;
 
         const conn_t *var_connectivity = var.connectivity;
@@ -776,7 +774,7 @@ namespace {
         double_vec& dh = *var.surfinfo.dh;
 
         #pragma acc parallel loop
-        for (int i=0;i<var_nnode;i++) {
+        for (int i=0;i<var.nnode;i++) {
             total_dx[i] = 0.;
             total_slope[i] = 0.;
         }
