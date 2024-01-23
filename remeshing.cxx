@@ -1309,27 +1309,25 @@ void compute_metric_field(const Variables &var, const conn_t &connectivity, cons
     /* dvoldt is the volumetric strain rate, weighted by the element volume,
      * lumped onto the nodes.
      */
-    const double_vec& volume = *var.volume;
-    const double_vec& volume_n = *var.volume_n;
     std::fill_n(metric.begin(), var.nnode, 0);
 
-#ifdef LLVM
-    #pragma omp parallel for default(none) shared(resolution,var,volume,connectivity,tmp_result_sg)
+#ifdef GPP1X
+    #pragma omp parallel for default(none) shared(var,connectivity,tmp_result_sg,resolution)
 #else
-    #pragma omp parallel for default(none) shared(var,volume,connectivity,tmp_result_sg)
+    #pragma omp parallel for default(none) shared(var,connectivity,tmp_result_sg)
 #endif
     for (int e=0;e<var.nelem;e++) {
         const int *conn = connectivity[e];
         double plstrain = resolution/(1.0+5.0*(*var.plstrain)[e]);
         // resolution/(1.0+(*var.plstrain)[e]);
-        tmp_result_sg[e] = plstrain * volume[e];
+        tmp_result_sg[e] = plstrain * (*var.volume)[e];
     }
 
-    #pragma omp parallel for default(none) shared(var,metric,tmp_result_sg,volume_n)
+    #pragma omp parallel for default(none) shared(var,metric,tmp_result_sg)
     for (int n=0;n<var.nnode;n++) {
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
             metric[n] += tmp_result_sg[*e];
-        metric[n] /= volume_n[n];
+        metric[n] /= (*var.volume_n)[n];
     }
 }
 

@@ -519,26 +519,10 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-//    const int rheol_type = var.mat->rheol_type;
-    const int rheol_type = param.mat.rheol_type;
 
-    const int var_nelem = var.nelem;
-    const double_vec *var_edvoldt = var.edvoldt;
-    const double var_dt = var.dt;
-    const MatProps *var_mat = var.mat;
-    const double_vec *var_volume = var.volume;
-    const double_vec *var_volume_old = var.volume_old;
-    const bool is_using_mixed_stress = param.control.is_using_mixed_stress;
-
-#ifdef LLVM
     #pragma omp parallel for default(none)                           \
         shared(param, var, stress, stressyy, dpressure, viscosity, strain, plstrain, delta_plstrain, \
-               strain_rate, std::cerr, rheol_type)
-#else
-    #pragma omp parallel for default(none)                           \
-        shared(param, var, stress, stressyy, dpressure, viscosity, strain, plstrain, delta_plstrain, \
-               strain_rate, std::cerr, var_edvoldt, var_mat, var_volume,var_volume_old,rheol_type)
-#endif
+               strain_rate, std::cerr)
     #pragma acc parallel loop
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
@@ -553,7 +537,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
             double div = trace(edot);
             //double div2 = ((*var.volume)[e] / (*var.volume_old)[e] - 1) / var.dt;
             for (int i=0; i<NDIMS; ++i) {
-                edot[i] += ((*var_edvoldt)[e] - div) / NDIMS;  // XXX: should NDIMS -> 3 in plane strain?
+                edot[i] += ((*var.edvoldt)[e] - div) / NDIMS;  // XXX: should NDIMS -> 3 in plane strain?
             }
         }
 
@@ -568,41 +552,41 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
             de[i] = edot[i] * var.dt;
         }
 
-        switch (rheol_type) {
+        switch (param.mat.rheol_type) {
         case MatProps::rh_elastic:
             {
-                double bulkm = var_mat->bulkm(e);
-                double shearm = var_mat->shearm(e);
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
                 elastic(bulkm, shearm, de, s);
             }
             break;
         case MatProps::rh_viscous:
             {
-                double bulkm = var_mat->bulkm(e);
-                viscosity[e] = var_mat->visc(e);
+                double bulkm = var.mat->bulkm(e);
+                viscosity[e] = var.mat->visc(e);
                 double total_dv = trace(es);
                 viscous(bulkm, viscosity[e], total_dv, edot, s);
             }
             break;
         case MatProps::rh_maxwell:
             {
-                double bulkm = var_mat->bulkm(e);
-                double shearm = var_mat->shearm(e);
-                viscosity[e] = var_mat->visc(e);
-                double dv = (*var_volume)[e] / (*var_volume_old)[e] - 1;
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                viscosity[e] = var.mat->visc(e);
+                double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
                 maxwell(bulkm, shearm, viscosity[e], var.dt, dv, de, s);
             }
             break;
         case MatProps::rh_ep:
             {
                 double depls = 0;
-                double bulkm = var_mat->bulkm(e);
-                double shearm = var_mat->shearm(e);
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
                 double amc, anphi, anpsi, hardn, ten_max;
-                var_mat->plastic_props(e, plstrain[e],
+                var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
                 int failure_mode;
-                if (var_mat->is_plane_strain) {
+                if (var.mat->is_plane_strain) {
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                      de, depls, s, syy, failure_mode);
                 }
@@ -617,10 +601,10 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
         case MatProps::rh_evp:
             {
                 double depls = 0;
-                double bulkm = var_mat->bulkm(e);
-                double shearm = var_mat->shearm(e);
-                viscosity[e] = var_mat->visc(e);
-                double dv = (*var_volume)[e] / (*var_volume_old)[e] - 1;
+                double bulkm = var.mat->bulkm(e);
+                double shearm = var.mat->shearm(e);
+                viscosity[e] = var.mat->visc(e);
+                double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
                 // stress due to maxwell rheology
                 double sv[NSTR];
                 for (int i=0; i<NSTR; ++i) sv[i] = s[i];
@@ -628,13 +612,13 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                 double svII = second_invariant2(sv);
 
                 double amc, anphi, anpsi, hardn, ten_max;
-                var_mat->plastic_props(e, plstrain[e],
+                var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
                 // stress due to elasto-plastic rheology
                 double sp[NSTR], spyy;
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
                 int failure_mode;
-                if (var_mat->is_plane_strain) {
+                if (var.mat->is_plane_strain) {
                     spyy = syy;
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                      de, depls, sp, spyy, failure_mode);

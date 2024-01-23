@@ -132,7 +132,7 @@ endif
 
 
 ifneq (, $(findstring clang++, $(CXX)))
-	CXXFLAGS = -v -DLLVM
+	CXXFLAGS = -v
 	LDFLAGS = -v
 
 	ifeq ($(opt), 1)
@@ -179,6 +179,12 @@ else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 
 	ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
 		ANNFLAGS = macosx-g++-13
+	endif
+
+	GCCVERSION = $(shell g++ --version | grep g++ | sed 's/^.* //g' | cut -d. -f1)
+
+	ifeq ($(shell expr $(GCCVERSION) \> 10), 1)
+		CXXFLAGS += -DGPP1X
 	endif
 
 else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tested with v14

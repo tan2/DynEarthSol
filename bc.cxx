@@ -267,11 +267,6 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
 #endif
 
     // diverging x-boundary
-    const uint_vec *var_bcflag = var.bcflag;
-    const array_t *var_coord = var.coord;
-    const array_t *var_bnormals = var.bnormals;
-    const int *var_vbc_types = var.vbc_types;
-    const double *var_vbc_values = var.vbc_values;
     const std::map<std::pair<int,int>, double*>  *edgevec = &(var.edge_vectors);
 
 
@@ -297,8 +292,6 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
     double bc_vx0r2 = bc.vbc_val_x0_ratio2;
 
 #ifdef THREED
-    // #pragma omp parallel for default(none) \
-    //     shared(bc, var, vel)
     #pragma acc parallel loop
 #else
     double zmin = 0;
@@ -307,25 +300,19 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
         if ( tmpx[NDIMS-1] < zmin )
             zmin = tmpx[NDIMS-1];
     }
-    // #pragma omp parallel for default(none) \
-    //     shared(bc, var, vel, vbc_vertical_ratios_x0, vbc_vertical_ratios_x1, \
-    //             vbc_vertical_divisions_x0, vbc_vertical_divisions_x1, \
-    //             vbc_applied_x0, vbc_applied_x1,var_bcflag,var_coord,var_bnormals,var_vbc_types, \
-    //             var_vbc_values,edgevec,bc_x0,bc_vx0min,bc_vx0r0, \
-    //             bc_vx0max,bc_vx0r2,bc_vx0r1,bc_x1,bc_z0,bc_z1,bc_vz0,bc_vz1)
     #pragma acc parallel loop
 #endif
     for (int i=0; i<var.nnode; ++i) {
 
         // fast path: skip nodes not on boundary
-        if (! is_on_boundary(*var_bcflag, i)) continue;
+        if (! is_on_boundary(*var.bcflag, i)) continue;
 
-        uint flag = (*var_bcflag)[i];
+        uint flag = (*var.bcflag)[i];
         double *v = vel[i];
 
 #ifdef THREED
 #else
-        const double *x = (*var_coord)[i];
+        const double *x = (*var.coord)[i];
         double ratio, rr, dvr;
         double vbc_exact_x0 = vbc_applied_x0 * interp1(vbc_vertical_divisions_x0, vbc_vertical_ratios_x0,-x[1]);
         double vbc_exact_x1 = vbc_applied_x1 * interp1(vbc_vertical_divisions_x1, vbc_vertical_ratios_x1,-x[1]);
@@ -501,11 +488,11 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
         //
         for (int ib=iboundn0; ib<=iboundn3; ib++) {
             const double eps = 1e-15;
-            const double *n = (*var_bnormals)[ib]; // unit normal vector
+            const double *n = (*var.bnormals)[ib]; // unit normal vector
 
             if (flag & (1 << ib)) {
                 double fac = 0;
-                switch (var_vbc_types[ib]) {
+                switch (var.vbc_types[ib]) {
                 case 1:
                     if (flag == (1U << ib)) {  // ordinary boundary
                         double vn = 0;
@@ -513,20 +500,20 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                             vn += v[d] * n[d];  // normal velocity
 
 			for (int d=0; d<NDIMS; d++)
-                            v[d] += (var_vbc_values[ib] - vn) * n[d];  // setting normal velocity
+                            v[d] += (var.vbc_values[ib] - vn) * n[d];  // setting normal velocity
                     }
                     else {  // intersection with another boundary
                         for (int ic=iboundx0; ic<ib; ic++) {
                             if (flag & (1 << ic)) {
-                                if (var_vbc_types[ic] == 0) {
+                                if (var.vbc_types[ic] == 0) {
                                     double vn = 0;
                                     for (int d=0; d<NDIMS; d++)
                                         vn += v[d] * n[d];  // normal velocity
 
 				    for (int d=0; d<NDIMS; d++)
-                                        v[d] += (var_vbc_values[ib] - vn) * n[d];  // setting normal velocity
+                                        v[d] += (var.vbc_values[ib] - vn) * n[d];  // setting normal velocity
                                 }
-                                else if (var_vbc_types[ic] == 1) {
+                                else if (var.vbc_types[ic] == 1) {
                                     auto edge = edgevec->at(std::make_pair(ic, ib));
                                     double ve = 0;
                                     for (int d=0; d<NDIMS; d++)
@@ -541,7 +528,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                     break;
                 case 3:
                     for (int d=0; d<NDIMS; d++)
-                        v[d] = var_vbc_values[ib] * n[d];  // v must be normal to n
+                        v[d] = var.vbc_values[ib] * n[d];  // v must be normal to n
                     break;
                 case 11:
                     fac = 1 / std::sqrt(1 - n[NDIMS-1]*n[NDIMS-1]);  // factor for horizontal normal unit vector
@@ -551,20 +538,20 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                             vn += v[d] * n[d];  // normal velocity
 
 			for (int d=0; d<NDIMS-1; d++)
-                            v[d] += (var_vbc_values[ib] * fac - vn) * n[d];  // setting normal velocity
+                            v[d] += (var.vbc_values[ib] * fac - vn) * n[d];  // setting normal velocity
                     }
                     else {  // intersection with another boundary
                         for (int ic=iboundx0; ic<ib; ic++) {
                             if (flag & (1 << ic)) {
-                                if (var_vbc_types[ic] == 0) {
+                                if (var.vbc_types[ic] == 0) {
                                     double vn = 0;
                                     for (int d=0; d<NDIMS-1; d++)
                                         vn += v[d] * n[d];  // normal velocity
 
 				    for (int d=0; d<NDIMS-1; d++)
-                                        v[d] += (var_vbc_values[ib] * fac - vn) * n[d];  // setting normal velocity
+                                        v[d] += (var.vbc_values[ib] * fac - vn) * n[d];  // setting normal velocity
                                 }
-                                else if (var_vbc_types[ic] == 1) {
+                                else if (var.vbc_types[ic] == 1) {
                                     auto edge = edgevec->at(std::make_pair(ic, ib));
                                     double ve = 0;
                                     for (int d=0; d<NDIMS; d++)
@@ -580,7 +567,7 @@ void apply_vbcs(const Param &param, const Variables &var, array_t &vel)
                 case 13:
                     fac = 1 / std::sqrt(1 - n[NDIMS-1]*n[NDIMS-1]);  // factor for horizontal normal unit vector
                     for (int d=0; d<NDIMS-1; d++)
-                        v[d] = var_vbc_values[ib] * fac * n[d];
+                        v[d] = var.vbc_values[ib] * fac * n[d];
                     v[NDIMS-1] = 0;
                     break;
                 }
@@ -666,19 +653,8 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
         if (i==iboundz1 && !param.bc.has_water_loading) continue;
 
         const auto& bdry = *(var.bfacets[i]);
-        const auto& coord = *var.coord;
 
         const int bound = static_cast<int>(bdry.size());
-        const conn_t *var_connectivity = var.connectivity;
-        const array_t *var_coord = var.coord;
-        const double var_compensation_pressure = var.compensation_pressure;
-        const MatProps *var_mat = var.mat;
-        const bool has_winkler_foundation = param.bc.has_winkler_foundation;
-        const double winkler_delta_rho = param.bc.winkler_delta_rho;
-        const double gravity = param.control.gravity;
-        const double zlength = param.mesh.zlength;
-        const double has_water_loading = param.bc.has_water_loading;
-        const double surf_base_level = param.control.surf_base_level;
 
         // loops over all bdry facets
         #pragma acc parallel loop
@@ -687,29 +663,29 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
             int e = bdry[n].first;
             // this facet is the f-th facet of e
             int f = bdry[n].second;
-            const int *conn = (*var_connectivity)[e];
+            const int *conn = (*var.connectivity)[e];
 
             // the outward-normal vector
             double normal[NDIMS];
             // the z-coordinate of the facet center
             double zcenter;
 
-            normal_vector_of_facet(f, conn, *var_coord, normal, zcenter);
+            normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
 
             double p;
-            if (i==iboundz0 && has_winkler_foundation) {
+            if (i==iboundz0 && param.bc.has_winkler_foundation) {
                 // Winkler foundation for the bottom boundary
-                p = var_compensation_pressure -
-                    (var_mat->rho(e) + winkler_delta_rho) *
-                    gravity * (zcenter + zlength);
+                p = var.compensation_pressure -
+                    (var.mat->rho(e) + param.bc.winkler_delta_rho) *
+                    param.control.gravity * (zcenter + param.mesh.zlength);
             }
-            else if (i==iboundz1 && has_water_loading) {
+            else if (i==iboundz1 && param.bc.has_water_loading) {
                 // hydrostatic water loading for the surface boundary
                 p = 0;
-                if (zcenter < surf_base_level) {
+                if (zcenter < param.control.surf_base_level) {
                     // below sea level
                     const double sea_water_density = 1030;
-                    p = sea_water_density * gravity * (surf_base_level - zcenter);
+                    p = sea_water_density * param.control.gravity * (param.control.surf_base_level - zcenter);
                 }
             }
             else {
@@ -762,7 +738,6 @@ namespace {
 
         const int ntop = surfinfo.ntop;
 
-        const conn_t *var_connectivity = var.connectivity;
 #ifdef USE_NPROF
         nvtxRangePushA("prepare variable total_dx");
 #endif
@@ -789,12 +764,12 @@ namespace {
             // this facet is the f-th facet of e
             int f = top[i].second;
 
-            const int *conn = (*var_connectivity)[e];
-            int n0 = (*var_connectivity)[e][NODE_OF_FACET[f][0]];
-            int n1 = (*var_connectivity)[e][NODE_OF_FACET[f][1]];
+            const int *conn = (*var.connectivity)[e];
+            int n0 = (*var.connectivity)[e][NODE_OF_FACET[f][0]];
+            int n1 = (*var.connectivity)[e][NODE_OF_FACET[f][1]];
 
 //#ifdef THREED
-            int n2 = (*var_connectivity)[e][NODE_OF_FACET[f][2]];
+            int n2 = (*var.connectivity)[e][NODE_OF_FACET[f][2]];
 
             double projected_area;
             {
@@ -891,25 +866,20 @@ namespace {
 #endif
         }
 
-        const double var_dt = var.dt;
-        const double surf_diff = surfinfo.surf_diff;
-        const double base_level = surfinfo.base_level;
-        const double diff_ratio_terrig = surfinfo.diff_ratio_terrig;
-        const double diff_ratio_marine = surfinfo.diff_ratio_marine;
 #ifdef THREED
         #pragma acc parallel loop
 #endif
         for (int i=0; i<ntop; ++i) {
             // we don't treat edge nodes specially, i.e. reflecting bc is used for erosion.
             int n = top_nodes[i];
-            double conv =  surf_diff * var_dt * total_slope[n] / total_dx[n];
+            double conv =  surfinfo.surf_diff * var.dt * total_slope[n] / total_dx[n];
 #ifdef THREED
             dh[i] -= conv;
 #else
-            if ( coord[n][1] >  base_level && conv > 0.) {
-                dh[i] -= diff_ratio_terrig * conv;
-            } else if ( coord[n][1] <= base_level && conv < 0. ) {
-                dh[i] -= diff_ratio_marine * conv;
+            if ( coord[n][1] >  surfinfo.base_level && conv > 0.) {
+                dh[i] -= surfinfo.diff_ratio_terrig * conv;
+            } else if ( coord[n][1] <= surfinfo.base_level && conv < 0. ) {
+                dh[i] -= surfinfo.diff_ratio_marine * conv;
             } else {
                 dh[i] -= conv;
             }
@@ -1430,15 +1400,6 @@ void correct_surface_element(const Variables& var, \
     array_t coord0s(ntop_elem*NODES_PER_ELEM,0.);
     double_vec new_volumes(ntop_elem,0.);
 
-#ifdef LLVM
-    // #pragma omp parallel for default(none)      \
-    //     shared(ntop_elem, var, dhacc, stress,   \
-    //     strain, strain_rate, plstrain, coord0s, new_volumes)
-#else
-    // #pragma omp parallel for default(none)      \
-    //     shared(var, dhacc, stress, strain,      \
-    //     strain_rate, plstrain, coord0s, new_volumes)
-#endif
     for (size_t i=0;i<ntop_elem;i++) {
         const double *coord1[NODES_PER_ELEM];
 
