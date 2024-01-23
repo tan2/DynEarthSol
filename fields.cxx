@@ -121,34 +121,20 @@ void update_temperature(const Param &param, const Variables &var,
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    
 
-    const conn_t *var_connectivity=var.connectivity;
-    const shapefn *var_shpdx=var.shpdx;
-    const shapefn *var_shpdz=var.shpdz; 
-    const shapefn *var_shpdy=var.shpdy;
-    const double_vec *var_volume = var.volume;
-    const MatProps *var_mat = var.mat;
-    const int_vec2D *var_support = var.support;
-    const uint_vec *var_bcflag = var.bcflag;
-    const double surface_temperature = param.bc.surface_temperature;
-    const double_vec *var_tmass = var.tmass;
-
-    #pragma omp parallel for default(none) \
-        shared(var,temperature,tmp_result,var_connectivity,var_shpdx,var_shpdz,var_shpdy, \
-                var_volume,var_mat,var_support,var_bcflag,var_tmass)
+    #pragma omp parallel for default(none) shared(var,temperature,tmp_result)
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
         // diffusion matrix
 
-        const int *conn = (*var_connectivity)[e];
+        const int *conn = (*var.connectivity)[e];
         double *tr = tmp_result[e];
-        double kv = var_mat->k(e) *  (*var_volume)[e]; // thermal conductivity * volume
-        const double *shpdx = (*var_shpdx)[e];
+        double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volume
+        const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
-        const double *shpdy = (*var_shpdy)[e];
+        const double *shpdy = (*var.shpdy)[e];
 #endif
-        const double *shpdz = (*var_shpdz)[e];
+        const double *shpdz = (*var.shpdz)[e];
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             double diffusion = 0.;
             for (int j=0; j<NODES_PER_ELEM; ++j) {
@@ -166,12 +152,12 @@ void update_temperature(const Param &param, const Variables &var,
     }
 
     #pragma omp parallel for default(none) \
-        shared(param,var,tdot,temperature,tmp_result,var_support,var_connectivity,var_bcflag,var_tmass)
+        shared(param,var,tdot,temperature,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         tdot[n]=0;
-        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
-            const int *conn = (*var_connectivity)[*e];
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            const int *conn = (*var.connectivity)[*e];
             const double *tr = tmp_result[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
@@ -183,10 +169,10 @@ void update_temperature(const Param &param, const Variables &var,
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
-        if ((*var_bcflag)[n] & BOUNDZ1)
+        if ((*var.bcflag)[n] & BOUNDZ1)
             temperature[n] = param.bc.surface_temperature;
         else
-            temperature[n] -= tdot[n] * var.dt / (*var_tmass)[n];
+            temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
     }
 
     // Combining temperature update and bc in the same loop for efficiency,
@@ -212,24 +198,16 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 #endif
     double *v[NODES_PER_ELEM];
 
-    // extract all variables
-    const conn_t *var_connectivity=var.connectivity;
-    const shapefn *var_shpdx=var.shpdx;
-    const shapefn *var_shpdz=var.shpdz; 
-    const shapefn *var_shpdy=var.shpdy;
-    array_t *var_vel=var.vel;
-
-    #pragma omp parallel for default(none) \
-        shared(var, strain_rate,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_vel) private(v)
+    #pragma omp parallel for default(none) shared(var, strain_rate) private(v)
     #pragma acc parallel loop private(v)
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var_connectivity)[e];
-        const double *shpdx = (*var_shpdx)[e];
-        const double *shpdz = (*var_shpdz)[e];
+        const int *conn = (*var.connectivity)[e];
+        const double *shpdx = (*var.shpdx)[e];
+        const double *shpdz = (*var.shpdz)[e];
         double *s = strain_rate[e];
 
         for (int i=0; i<NODES_PER_ELEM; ++i)
-            v[i] = (*var_vel)[conn[i]];
+            v[i] = (*var.vel)[conn[i]];
 
         // XX component
         int n = 0;
@@ -238,7 +216,7 @@ void update_strain_rate(const Variables& var, tensor_t& strain_rate)
             s[n] += v[i][0] * shpdx[i];
 
 #ifdef THREED
-        const double *shpdy = (*var_shpdy)[e];
+        const double *shpdy = (*var.shpdy)[e];
         // YY component
         n = 1;
         s[n] = 0;
@@ -295,9 +273,6 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
 #endif
     // flatten 2d arrays to simplify indexing
     const double small_vel = 1e-13;
-    const double damping_factor = param.control.damping_factor;
-
-    const array_t *var_vel = var.vel;
 
     switch (param.control.damping_option) {
     case 0:
@@ -308,16 +283,16 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         // acclerating when force and velocity are anti-parallel
 #ifdef GPP1X
         #pragma omp parallel for default(none) \
-            shared(var, param, force, var_vel, small_vel)
+            shared(var, param, force, small_vel)
 #else
         #pragma omp parallel for default(none) \
-            shared(var, param, force, var_vel)
+            shared(var, param, force)
 #endif
         #pragma acc parallel loop
         for (int i=0; i<var.nnode; ++i) {
             for (int j=0;j<NDIMS;j++)
-                if (std::fabs((*var_vel)[i][j]) > small_vel) {
-                    force[i][j] -= param.control.damping_factor * std::copysign(force[i][j], (*var_vel)[i][j]);
+                if (std::fabs((*var.vel)[i][j]) > small_vel) {
+                    force[i][j] -= param.control.damping_factor * std::copysign(force[i][j], (*var.vel)[i][j]);
                 }
         }
         break;
@@ -334,14 +309,13 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
     case 3:
         // damping when force and velocity are parallel
         // weakly acclerating when force and velocity are anti-parallel
-        #pragma omp parallel for default(none) \
-            shared(var, param, force, var_vel)
+        #pragma omp parallel for default(none) shared(var, param, force)
         #pragma acc parallel loop
         for (int i=0; i<var.nnode; ++i) {
             for (int j=0;j<NDIMS;j++) {
-                if ((force[i][j]<0) == ((*var_vel)[i][j]<0)) {
+                if ((force[i][j]<0) == ((*var.vel)[i][j]<0)) {
                     // strong damping
-                    force[i][j] -= param.control.damping_factor * force[i][j], (*var_vel)[i][j];
+                    force[i][j] -= param.control.damping_factor * force[i][j], (*var.vel)[i][j];
                 }
                 else {
                     // weak acceleration
@@ -396,38 +370,22 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    const conn_t *var_connectivity = var.connectivity;
-    const double_vec *var_temperature = var.temperature;
-    const int_vec2D *var_elemmarkers = var.elemmarkers;
-    const shapefn *var_shpdx = var.shpdx;
-    const shapefn *var_shpdy = var.shpdy;
-    const shapefn *var_shpdz = var.shpdz;
-    tensor_t *var_stress = var.stress;
-    double_vec *var_volume = var.volume;
-    const MatProps *var_mat = var.mat;
-    const double gravity = param.control.gravity;
-    const int nmat = param.mat.nmat;
-    const double_vec *rho0 = &param.mat.rho0;
-    const double_vec *alpha = &param.mat.alpha;
-    const int_vec2D *var_support = var.support;
-
-    #pragma omp parallel for default(none)      \
-        shared(var,param,tmp_result,var_connectivity,var_shpdx,var_shpdy,var_shpdz,var_stress,var_volume,var_mat)
+    #pragma omp parallel for default(none) shared(var,param,tmp_result)
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
-        const int *conn = (*var_connectivity)[e];
-        const double *shpdx = (*var_shpdx)[e];
+        const int *conn = (*var.connectivity)[e];
+        const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
-        const double *shpdy = (*var_shpdy)[e];
+        const double *shpdy = (*var.shpdy)[e];
 #endif
-        const double *shpdz = (*var_shpdz)[e];
-        double *s = (*var_stress)[e];
-        double vol = (*var_volume)[e];
+        const double *shpdz = (*var.shpdz)[e];
+        double *s = (*var.stress)[e];
+        double vol = (*var.volume)[e];
         double *tr = tmp_result[e];
 
         double buoy = 0;
         if (param.control.gravity != 0)
-            buoy = var_mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+            buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
@@ -441,14 +399,13 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
         }
     }
 
-    #pragma omp parallel for default(none)      \
-        shared(var,force,tmp_result,var_support,var_connectivity)
+    #pragma omp parallel for default(none) shared(var,force,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         std::fill_n(force[n],NDIMS,0); 
         double *f = force[n];
-        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e) {
-            const int *conn = (*var_connectivity)[*e];
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            const int *conn = (*var.connectivity)[*e];
             const double *tr = tmp_result[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
@@ -476,15 +433,12 @@ void update_velocity(const Variables& var, array_t& vel)
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    const array_t *var_force = var.force;
-    const double_vec *var_mass = var.mass;
 
-    #pragma omp parallel for default(none) \
-        shared(var, vel, var_force, var_mass)
+    #pragma omp parallel for default(none) shared(var, vel)
     #pragma acc parallel loop
     for (int i=0; i<var.nnode; ++i)
         for (int j=0;j<NDIMS;j++)
-            vel[i][j] += var.dt * (*var_force)[i][j] / (*var_mass)[i];
+            vel[i][j] += var.dt * (*var.force)[i][j] / (*var.mass)[i];
 
 #ifdef USE_NPROF
     nvtxRangePop();
@@ -499,17 +453,14 @@ void update_coordinate(const Variables& var, array_t& coord)
 #endif
     // double* x = var.coord->data();
     // const double* v = var.vel->data();
-    array_t *var_coord=var.coord;
-    const array_t *var_vel=var.vel;
 
     // for gpu parallelization dt and bound need to be sent to 
 
-    #pragma omp parallel for default(none) \
-        shared(var, var_coord, var_vel)
+    #pragma omp parallel for default(none) shared(var)
     #pragma acc parallel loop collapse(2) 
     for (int i=0; i<var.nnode; ++i) {
         for (int j=0 ; j<NDIMS; ++j){
-            (*var_coord)[i][j] += (*var_vel)[i][j] * var.dt;
+            (*var.coord)[i][j] += (*var.vel)[i][j] * var.dt;
         }
         
     }
@@ -580,30 +531,22 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
     // sj[4] = dt * ( s0 * w4 - s2 * w4 + s3 * w5 - s5 * w3)
     // sj[5] = dt * ( s1 * w5 - s2 * w5 + s3 * w4 + s4 * w3)
 
-
-    const shapefn *var_shpdx=var.shpdx;
-    const shapefn *var_shpdz=var.shpdz;
-    const shapefn *var_shpdy=var.shpdy;
-    const conn_t *var_connectivity=var.connectivity;
-    array_t *var_vel=var.vel;
-
-    #pragma omp parallel for default(none) \
-        shared(var, stress, strain, var_connectivity, var_shpdx,var_shpdy,var_shpdz,var_vel)
+    #pragma omp parallel for default(none) shared(var, stress, strain)
     #pragma acc parallel loop
     for (int e=0; e<var.nelem; ++e) {
-        const int *conn = (*var_connectivity)[e];
+        const int *conn = (*var.connectivity)[e];
 
 #ifdef THREED
 
         double w3, w4, w5;
         {
-            const double *shpdx = (*var_shpdx)[e];
-            const double *shpdy = (*var_shpdy)[e];
-            const double *shpdz = (*var_shpdz)[e];
+            const double *shpdx = (*var.shpdx)[e];
+            const double *shpdy = (*var.shpdy)[e];
+            const double *shpdz = (*var.shpdz)[e];
 
             double *v[NODES_PER_ELEM];
             for (int i=0; i<NODES_PER_ELEM; ++i)
-                v[i] = (*var_vel)[conn[i]];
+                v[i] = (*var.vel)[conn[i]];
 
             w3 = 0;
             for (int i=0; i<NODES_PER_ELEM; ++i)
@@ -625,12 +568,12 @@ void rotate_stress(const Variables &var, tensor_t &stress, tensor_t &strain)
 
         double w2;
         {
-            const double *shpdx = (*var_shpdx)[e];
-            const double *shpdz = (*var_shpdz)[e];
+            const double *shpdx = (*var.shpdx)[e];
+            const double *shpdz = (*var.shpdz)[e];
 
             double *v[NODES_PER_ELEM];
             for (int i=0; i<NODES_PER_ELEM; ++i)
-                v[i] = (*var_vel)[conn[i]];
+                v[i] = (*var.vel)[conn[i]];
 
             w2 = 0;
             for (int i=0; i<NODES_PER_ELEM; ++i)
