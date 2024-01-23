@@ -181,7 +181,7 @@ else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 		ANNFLAGS = macosx-g++-13
 	endif
 
-	GCCVERSION = $(shell g++ --version | grep g++ | sed 's/^.* //g' | cut -d. -f1)
+	GCCVERSION = $(shell $(CXX) --version | grep g++ | sed 's/^.* //g' | cut -d. -f1)
 
 	ifeq ($(shell expr $(GCCVERSION) \> 10), 1)
 		CXXFLAGS += -DGPP1X
