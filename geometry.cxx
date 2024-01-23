@@ -145,26 +145,20 @@ void compute_volume(const Variables &var,
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    const int var_nelem = var.nelem;
-    const conn_t &connectivity = *var.connectivity;
-    const array_t &coord = *var.coord;
-
-
-    #pragma omp parallel for default(none)      \
-        shared(var,coord, connectivity, volume)
+    #pragma omp parallel for default(none) shared(var, volume)
     #pragma acc parallel loop 
     for (int e=0; e<var.nelem; ++e) {
-        int n0 = connectivity[e][0];
-        int n1 = connectivity[e][1];
-        int n2 = connectivity[e][2];
+        int n0 = (*var.connectivity)[e][0];
+        int n1 = (*var.connectivity)[e][1];
+        int n2 = (*var.connectivity)[e][2];
 
-        const double *a = coord[n0];
-        const double *b = coord[n1];
-        const double *c = coord[n2];
+        const double *a = (*var.coord)[n0];
+        const double *b = (*var.coord)[n1];
+        const double *c = (*var.coord)[n2];
 
 #ifdef THREED
-        int n3 = connectivity[e][3];
-        const double *d = coord[n3];
+        int n3 = (*var.connectivity)[e][3];
+        const double *d = (*var.coord)[n3];
         volume[e] = tetrahedron_volume(a, b, c, d);
 #else
         volume[e] = triangle_area(a, b, c);
@@ -289,43 +283,28 @@ void NMD_stress(const Param& param, const Variables &var,
     // weight with volumn
     } else {
         */
-    const int var_nelem = var.nelem;
-    const conn_t *var_connectivity = var.connectivity;
-    const double_vec *var_dpressure = var.dpressure;
-    const double_vec *var_volume = var.volume;
-    const double_vec *var_volume_n = var.volume_n;
-    const int var_nnode = var.nnode;
-    const int_vec2D *var_support = var.support;
 
-    #pragma omp parallel for default(none)      \
-        shared(var,tmp_result_sg,var_connectivity,var_dpressure,var_volume)
+    #pragma omp parallel for default(none) shared(var,tmp_result_sg)
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
-        const int *conn = (*var_connectivity)[e];
-        double dp = (*var_dpressure)[e];
-        tmp_result_sg[e] = dp * (*var_volume)[e];
+        const int *conn = (*var.connectivity)[e];
+        double dp = (*var.dpressure)[e];
+        tmp_result_sg[e] = dp * (*var.volume)[e];
     }
 
-    #pragma omp parallel for default(none)      \
-        shared(var,dp_nd,tmp_result_sg,var_support,var_volume_n)
+    #pragma omp parallel for default(none) shared(var,dp_nd,tmp_result_sg)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         dp_nd[n] = 0;
-        for( auto e = (*var_support)[n].begin(); e < (*var_support)[n].end(); ++e)
+        for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e)
             dp_nd[n] += tmp_result_sg[*e];
-        dp_nd[n] /= (*var_volume_n)[n];
+        dp_nd[n] /= (*var.volume_n)[n];
     }
 //    }
 
-
-    const int rheol_type = param.mat.rheol_type;
-    const double_vec& var_viscosity = *var.viscosity;
-    const double ref_visc = param.control.mixed_stress_reference_viscosity;
-
     /* dp_el is the averaged (i.e. smoothed) dp_nd on the element.
      */
-    #pragma omp parallel for default(none)      \
-        shared(param, var, dp_nd, stress,var_viscosity,var_connectivity,var_dpressure)
+    #pragma omp parallel for default(none) shared(param, var, dp_nd, stress)
     #pragma acc parallel loop
     for (int e=0; e<var.nelem; ++e) {
 
@@ -334,16 +313,16 @@ void NMD_stress(const Param& param, const Variables &var,
         case MatProps::rh_viscous:
         case MatProps::rh_maxwell:
         case MatProps::rh_evp:
-            if (var_viscosity[e] < param.control.mixed_stress_reference_viscosity)
+            if ((*var.viscosity)[e] < param.control.mixed_stress_reference_viscosity)
                 factor = 0.;
             else
-                factor = std::min(var_viscosity[e] / (param.control.mixed_stress_reference_viscosity * 10.), 1.);
+                factor = std::min((*var.viscosity)[e] / (param.control.mixed_stress_reference_viscosity * 10.), 1.);
             break;
         default:
             factor = 1;
         }
 
-        const int *conn = (*var_connectivity)[e];
+        const int *conn = (*var.connectivity)[e];
         double dp = 0;
         for (int i=0; i<NODES_PER_ELEM; ++i) {
             int n = conn[i];
@@ -352,7 +331,7 @@ void NMD_stress(const Param& param, const Variables &var,
         double dp_el = dp / NODES_PER_ELEM;
 
     	double* s = stress[e];
-	    double dp_orig = (*var_dpressure)[e];
+	    double dp_orig = (*var.dpressure)[e];
         double ddp = ( - dp_orig + dp_el ) / NDIMS * factor;
 	    for (int i=0; i<NDIMS; ++i)
             s[i] += ddp;
@@ -375,45 +354,35 @@ double compute_dt(const Param& param, const Variables& var)
     if (param.control.fixed_dt != 0) return param.control.fixed_dt;
 
     // dynamic dt
-    const conn_t& connectivity = *var.connectivity;
-    const array_t& coord = *var.coord;
-    const double_vec& volume = *var.volume;    
-
-    const MatProps *var_mat = var.mat;
-    const double var_mat_visc_min= var.mat->visc_min;
-    const double var_mat_therm_diff_max = var.mat->therm_diff_max; 
-    bool has_thermal_diffusion= param.control.has_thermal_diffusion;
-
-
     double dt_maxwell = std::numeric_limits<double>::max();
     double dt_diffusion = std::numeric_limits<double>::max();
     double minl = std::numeric_limits<double>::max();
 
     #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion)    \
-        default(none) shared(param,var, connectivity, coord, volume,var_mat,has_thermal_diffusion)
+        default(none) shared(param,var)
     #pragma acc parallel loop reduction(min:minl, dt_maxwell, dt_diffusion)
     for (int e=0; e<var.nelem; ++e) {
-        int n0 = connectivity[e][0];
-        int n1 = connectivity[e][1];
-        int n2 = connectivity[e][2];
+        int n0 = (*var.connectivity)[e][0];
+        int n1 = (*var.connectivity)[e][1];
+        int n2 = (*var.connectivity)[e][2];
 
-        const double *a = coord[n0];
-        const double *b = coord[n1];
-        const double *c = coord[n2];
+        const double *a = (*var.coord)[n0];
+        const double *b = (*var.coord)[n1];
+        const double *c = (*var.coord)[n2];
 
         // min height of this element
         double minh;
 #ifdef THREED
         {
-            int n3 = connectivity[e][3];
-            const double *d = coord[n3];
+            int n3 = (*var.connectivity)[e][3];
+            const double *d = (*var.coord)[n3];
 
             // max facet area of this tet
             double maxa = std::max(std::max(triangle_area(a, b, c),
                                             triangle_area(a, b, d)),
                                    std::max(triangle_area(c, d, a),
                                             triangle_area(c, d, b)));
-            minh = 3 * volume[e] / maxa;
+            minh = 3 * (*var.volume)[e] / maxa;
         }
 #else
         {
@@ -421,11 +390,11 @@ double compute_dt(const Param& param, const Variables& var)
             double maxl = std::sqrt(std::max(std::max(dist2(a, b),
                                                       dist2(b, c)),
                                              dist2(a, c)));
-            minh = 2 * volume[e] / maxl;
+            minh = 2 * (*var.volume)[e] / maxl;
         }
 #endif
         dt_maxwell = std::min(dt_maxwell,
-                              0.5 * var.mat->visc_min / (1e-40 + var_mat->shearm(e)));
+                              0.5 * var.mat->visc_min / (1e-40 + var.mat->shearm(e)));
         if (param.control.has_thermal_diffusion)
             dt_diffusion = std::min(dt_diffusion,
                                     0.5 * minh * minh / var.mat->therm_diff_max);
@@ -479,11 +448,9 @@ void compute_mass(const Param &param, const Variables &var,
 
 
 #ifdef GPP1X
-    #pragma omp parallel for default(none)      \
-        shared(var, param, pseudo_speed, tmp_result)
+    #pragma omp parallel for default(none) shared(var, param, pseudo_speed, tmp_result)
 #else
-    #pragma omp parallel for default(none)      \
-        shared(var, param, tmp_result)
+    #pragma omp parallel for default(none) shared(var, param, tmp_result)
 #endif
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
@@ -491,9 +458,9 @@ void compute_mass(const Param &param, const Variables &var,
         double rho = (param.control.is_quasi_static) ?
             (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
             (*var.mat).rho(e);                                     // true density for dynamic sim
-        double m = rho * (* var.volume)[e] / NODES_PER_ELEM;
-        double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (* var.volume)[e] / NODES_PER_ELEM;
-        tr[0] = (* var.volume)[e];
+        double m = rho * (*var.volume)[e] / NODES_PER_ELEM;
+        double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (*var.volume)[e] / NODES_PER_ELEM;
+        tr[0] = (*var.volume)[e];
         tr[1] = m;
         if (param.control.has_thermal_diffusion)
             tr[2] = tm;
@@ -527,30 +494,25 @@ void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shap
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    const int var_nelem = var.nelem;
-    const conn_t *var_connectivity = var.connectivity;
-    const array_t *var_coord = var.coord;
-    const double_vec *var_volume = var.volume;
-
     #pragma omp parallel for default(none)      \
-        shared(var, shpdx, shpdy, shpdz, var_connectivity, var_coord, var_volume)
+        shared(var, shpdx, shpdy, shpdz)
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
 
-        int n0 = (*var_connectivity)[e][0];
-        int n1 = (*var_connectivity)[e][1];
-        int n2 = (*var_connectivity)[e][2];
+        int n0 = (*var.connectivity)[e][0];
+        int n1 = (*var.connectivity)[e][1];
+        int n2 = (*var.connectivity)[e][2];
 
-        const double *d0 = (*var_coord)[n0];
-        const double *d1 = (*var_coord)[n1];
-        const double *d2 = (*var_coord)[n2];
+        const double *d0 = (*var.coord)[n0];
+        const double *d1 = (*var.coord)[n1];
+        const double *d2 = (*var.coord)[n2];
 
 #ifdef THREED
         {
-            int n3 = (*var_connectivity)[e][3];
-            const double *d3 = (*var_coord)[n3];
+            int n3 = (*var.connectivity)[e][3];
+            const double *d3 = (*var.coord)[n3];
 
-            double iv = 1 / (6 * (*var_volume)[e]);
+            double iv = 1 / (6 * (*var.volume)[e]);
 
             double x01 = d0[0] - d1[0];
             double x02 = d0[0] - d2[0];
@@ -590,7 +552,7 @@ void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shap
         }
 #else
         {
-            double iv = 1 / (2 * (*var_volume)[e]);
+            double iv = 1 / (2 * (*var.volume)[e]);
 
             shpdx[e][0] = iv * (d1[1] - d2[1]);
             shpdx[e][1] = iv * (d2[1] - d0[1]);
