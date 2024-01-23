@@ -28,7 +28,6 @@ adaptive_time_step = 0
 use_R_S = 0
 useexo = 0
 ANNFLAGS = linux-g++
-g++-1x = 0
 
 ifeq ($(ndims), 2)
 	useadapt = 0  # libadaptivity is 3d only
@@ -182,7 +181,9 @@ else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 		ANNFLAGS = macosx-g++-13
 	endif
 
-	ifeq ($(g++-1x), 1)
+	GCCVERSION = $(shell g++ --version | grep g++ | sed 's/^.* //g' | cut -d. -f1)
+
+	ifeq ($(shell expr $(GCCVERSION) \> 10), 1)
 		CXXFLAGS += -DGPP1X
 	endif
 
