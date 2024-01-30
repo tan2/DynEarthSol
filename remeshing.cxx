@@ -2230,6 +2230,8 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         for (auto i=var.bnodes[iboundz0]->begin(); i<var.bnodes[iboundz0]->end(); ++i) {
             int n = *i;
             (*var.coord0)[n][NDIMS-1] = -param.mesh.zlength;
+            // Reest temperature of the bottom nodes to mantle temperature
+            (*var.temperature)[n] = param.bc.mantle_temperature;
         }
     }
 
