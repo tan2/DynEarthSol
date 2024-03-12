@@ -278,7 +278,7 @@ void initial_weak_zone(const Param &param, const Variables &var,
 
 
 void initial_temperature(const Param &param, const Variables &var,
-                         double_vec &temperature)
+                         double_vec &temperature, double_vec &radiogenic_source)
 {
     switch(param.ic.temperature_option) {
     case 0:
@@ -418,6 +418,34 @@ void initial_temperature(const Param &param, const Variables &var,
                         temperature[i] = t_top;
                     else
                         printf("Error: temperature is not set for y=%f\n", y);
+                }
+            }
+            // init rediogenic source in element
+            for (int e=0; e<var.nelem; ++e) {
+                const int *conn = (*var.connectivity)[e];
+                double zcenter = 0;
+                for (int j=0; j<NODES_PER_ELEM; ++j) {
+                    zcenter += (*var.coord)[conn[j]][NDIMS-1];
+                }
+                zcenter /= NODES_PER_ELEM;
+
+                double y = -zcenter;
+                bool is_layer = false;
+                for (int k=0;k<nlayer;k++) {
+                    if (y >= layer_bdy[k] && y < layer_bdy[k+1]) {
+                        radiogenic_source[e] = rhohp[k] * exp(-(y-layer_bdy[k])/hr);
+                        is_layer = true;
+                        break;
+                    }
+                }
+
+                if (!is_layer) {
+                    if (y >= layer_bdy[nlayer])
+                        radiogenic_source[e] = 0.;
+                    else if (y <= layer_bdy[0])
+                        radiogenic_source[e] = rhohp[0];
+                    else
+                        printf("Error: radiogenic source is not set for y=%f\n", y);
                 }
             }
             break;

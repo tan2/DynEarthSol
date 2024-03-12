@@ -35,6 +35,7 @@ void allocate_variables(const Param &param, Variables& var)
         var.strain = new tensor_t(e, 0);
         var.stress = new tensor_t(e, 0);
         var.stressyy = new double_vec(e, 0);
+        var.radiogenic_source = new double_vec(e, 0);
     }
 
     var.ntmp = new double_vec(n);

@@ -321,6 +321,11 @@ namespace {
         inject_field(idx, is_changed, elems_vec, ratios_vec, *var.stressyy, *a);
         delete var.stressyy;
         var.stressyy = a;
+
+        a = new double_vec(e);
+        inject_field(idx, is_changed, elems_vec, ratios_vec, *var.radiogenic_source, *a);
+        delete var.radiogenic_source;
+        var.radiogenic_source = a;
 #ifdef USE_NPROF
         nvtxRangePop();
 #endif

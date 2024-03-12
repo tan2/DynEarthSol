@@ -410,6 +410,7 @@ struct Variables {
     double_vec *temperature, *plstrain, *delta_plstrain;
     double_vec *stressyy, *dpressure, *viscosity;
     double_vec *ntmp;
+    double_vec *radiogenic_source;
 
     // For surface processes
     SurfaceInfo surfinfo;
