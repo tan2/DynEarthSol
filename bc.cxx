@@ -1484,7 +1484,8 @@ void surface_processes(const Param& param, const Variables& var, array_t& coord,
         simple_diffusion(var);
         if (var.steps != 0) {
             terrigenous_deposition(param, var);
-            hemipelagic_deposition(param, var);
+            if (param.control.hemipelagic_sedimentation_rate > 0. || param.control.pelagic_sedimentation_rate > 0.)
+                hemipelagic_deposition(param, var);
         }
 #endif
         break;
