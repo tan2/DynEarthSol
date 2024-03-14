@@ -433,7 +433,7 @@ void initial_temperature(const Param &param, const Variables &var,
                 bool is_layer = false;
                 for (int k=0;k<nlayer;k++) {
                     if (y >= layer_bdy[k] && y < layer_bdy[k+1]) {
-                        radiogenic_source[e] = rhohp[k] * exp(-(y-layer_bdy[k])/hr);
+                        radiogenic_source[e] = hp[k] * exp(-(y-layer_bdy[k])/hr);
                         is_layer = true;
                         break;
                     }
@@ -443,7 +443,7 @@ void initial_temperature(const Param &param, const Variables &var,
                     if (y >= layer_bdy[nlayer])
                         radiogenic_source[e] = 0.;
                     else if (y <= layer_bdy[0])
-                        radiogenic_source[e] = rhohp[0];
+                        radiogenic_source[e] = hp[0];
                     else
                         printf("Error: radiogenic source is not set for y=%f\n", y);
                 }
