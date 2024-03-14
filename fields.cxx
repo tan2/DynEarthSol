@@ -150,12 +150,14 @@ void update_temperature(const Param &param, const Variables &var,
             }
             tr[i] = diffusion * kv;
         }
+        tr[NODES_PER_ELEM] = (*var.radiogenic_source)[e] * (*var.volume)[e] / var.mat->cp(e);
     }
 
     #pragma omp parallel for default(none) \
         shared(param,var,tdot,temperature,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
+        double rhs = 0.;
         tdot[n]=0;
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
@@ -166,7 +168,9 @@ void update_temperature(const Param &param, const Variables &var,
                     break;
                 }
             }
+            rhs += tr[NODES_PER_ELEM];
         }
+        temperature[n] += rhs * var.dt / (*var.volume_n)[n];
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
