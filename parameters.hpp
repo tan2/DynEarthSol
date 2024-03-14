@@ -190,6 +190,7 @@ struct IC {
     double_vec mattype_layer_depths;
 
     int weakzone_option;
+    bool is_restarting_weakzone;
     double weakzone_plstrain;
     double weakzone_azimuth;
     double weakzone_inclination;

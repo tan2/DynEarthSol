@@ -254,6 +254,10 @@ void restart(const Param& param, Variables& var)
         // the following fields are not required for restarting
         bin_save.read_array(*var.force, "force");
     }
+    if (param.ic.is_restarting_weakzone) {
+        std::cout << "  Creating new weakzone...\n";
+        initial_weak_zone(param, var, *var.plstrain);
+    }
 
     phase_changes_init(param, var);
 }
