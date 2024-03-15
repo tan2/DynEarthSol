@@ -43,4 +43,4 @@
 # k  xk    zk      mattype  size
   0 10.e3  -5.e3  3        1.e0  # ratio to the area of regular setting
   1 10.e3  -25.e3 2        1.e0
-  2 10.e3  -50.e3 1        1.e0
+  2 10.e3  -50.e3 1        1.e1
