@@ -242,7 +242,6 @@ void restart(const Param& param, Variables& var)
         if (param.mat.is_plane_strain)
             bin_chkpt.read_array(*var.stressyy, "stressyy");
     }
-    apply_vbcs(param, var, *var.vel);
 
     // Misc. items
     {
@@ -254,6 +253,8 @@ void restart(const Param& param, Variables& var)
         // the following fields are not required for restarting
         bin_save.read_array(*var.force, "force");
     }
+    apply_vbcs(param, var, *var.vel);
+
     if (param.ic.is_restarting_weakzone) {
         std::cout << "  Creating new weakzone...\n";
         initial_weak_zone(param, var, *var.plstrain);
