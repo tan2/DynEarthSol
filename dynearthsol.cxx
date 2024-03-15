@@ -128,7 +128,7 @@ void init(const Param& param, Variables& var)
     apply_vbcs(param, var, *var.vel);
 
     // temperature should be init'd before stress and strain
-    initial_temperature(param, var, *var.temperature);
+    initial_temperature(param, var, *var.temperature, *var.radiogenic_source);
     initial_stress_state(param, var, *var.stress, *var.stressyy, *var.strain, var.compensation_pressure);
     initial_weak_zone(param, var, *var.plstrain);
 
@@ -238,6 +238,7 @@ void restart(const Param& param, Variables& var)
         bin_save.read_array(*var.strain, "strain");
         bin_save.read_array(*var.stress, "stress");
         bin_save.read_array(*var.plstrain, "plastic strain");
+        bin_save.read_array(*var.radiogenic_source, "radiogenic source");
 
         if (param.mat.is_plane_strain)
             bin_chkpt.read_array(*var.stressyy, "stressyy");

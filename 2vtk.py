@@ -202,6 +202,10 @@ def main(modelname, start, end, delta):
             convert_field(des, frame, 'mesh quality', fvtu)
             convert_field(des, frame, 'plastic strain', fvtu)
             convert_field(des, frame, 'plastic strain-rate', fvtu)
+            try:
+                convert_field(des, frame, 'radiogenic source', fvtu)
+            except KeyError:
+                pass
 
             strain_rate = des.read_field(frame, 'strain-rate')
             srII = second_invariant(strain_rate)

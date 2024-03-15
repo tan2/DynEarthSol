@@ -103,6 +103,8 @@ void Output::_write(const Variables& var, bool disable_averaging)
 
     bin.write_array(*var.temperature, "temperature", var.temperature->size());
 
+    bin.write_array(*var.radiogenic_source, "radiogenic source", var.radiogenic_source->size());
+
     bin.write_array(*var.plstrain, "plastic strain", var.plstrain->size());
 
     // Strain rate and plastic strain rate do not need to be checkpointed,

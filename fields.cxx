@@ -35,6 +35,7 @@ void allocate_variables(const Param &param, Variables& var)
         var.strain = new tensor_t(e, 0);
         var.stress = new tensor_t(e, 0);
         var.stressyy = new double_vec(e, 0);
+        var.radiogenic_source = new double_vec(e, 0);
     }
 
     var.ntmp = new double_vec(n);
@@ -130,6 +131,7 @@ void update_temperature(const Param &param, const Variables &var,
         const int *conn = (*var.connectivity)[e];
         double *tr = tmp_result[e];
         double kv = var.mat->k(e) *  (*var.volume)[e]; // thermal conductivity * volume
+        double rh = (*var.radiogenic_source)[e] * (*var.volume)[e] * var.mat->rho(e) / NODES_PER_ELEM;
         const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
         const double *shpdy = (*var.shpdy)[e];
@@ -147,7 +149,7 @@ void update_temperature(const Param &param, const Variables &var,
                             shpdz[i] * shpdz[j]) * temperature[conn[j]];
 #endif
             }
-            tr[i] = diffusion * kv;
+            tr[i] = diffusion * kv - rh;
         }
     }
 

@@ -9,7 +9,7 @@ void initial_stress_state(const Param &param, const Variables &var,
 void initial_weak_zone(const Param &param, const Variables &var,
                        double_vec &plstrain);
 void initial_temperature(const Param &param, const Variables &var,
-                         double_vec &temperature);
+                         double_vec &temperature, double_vec &radiogenic_source);
 
 
 #endif
