@@ -191,6 +191,7 @@ struct IC {
 
     int weakzone_option;
     bool is_restarting_weakzone;
+    bool is_restarting_reset_plstrain;
     double weakzone_plstrain;
     double weakzone_azimuth;
     double weakzone_inclination;

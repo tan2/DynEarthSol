@@ -416,6 +416,8 @@ static void declare_parameters(po::options_description &cfg,
          "3: Gaussian distribution point weak zone with specified center location and standard deviation.\n")
         ("ic.is_restarting_weakzone", po::value<bool>(&p.ic.is_restarting_weakzone)->default_value(false),
          "Create a new weakzone when restarting?")
+        ("ic.is_restarting_reset_plstrain", po::value<bool>(&p.ic.is_restarting_reset_plstrain)->default_value(false),
+         "Reset plastic strain when restarting?")
         ("ic.weakzone_plstrain", po::value<double>(&p.ic.weakzone_plstrain)->default_value(0.1),
          "Initial plastic strain in the weak zone")
         ("ic.weakzone_azimuth", po::value<double>(&p.ic.weakzone_azimuth)->default_value(0),

@@ -237,7 +237,11 @@ void restart(const Param& param, Variables& var)
         bin_save.read_array(*var.strain_rate, "strain-rate");
         bin_save.read_array(*var.strain, "strain");
         bin_save.read_array(*var.stress, "stress");
-        bin_save.read_array(*var.plstrain, "plastic strain");
+        if (param.ic.is_restarting_reset_plstrain)
+            for( auto e = var.plstrain->begin(); e < var.plstrain->end(); ++e)
+                (*var.plstrain)[*e] = 0.;
+        else
+            bin_save.read_array(*var.plstrain, "plastic strain");
         bin_save.read_array(*var.radiogenic_source, "radiogenic source");
 
         if (param.mat.is_plane_strain)
