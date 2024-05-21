@@ -44,6 +44,25 @@ alike.
       make
       ```
     * The header files and built shared library will be in `mmg/build/include` and `mmg/build/lib`. 
+## Or, using docker
+* Edit Dockerfile to specify dimension
+  * For 2D
+    ```bash
+    ndims=2
+    ```
+  * For 3D
+    ```bash
+    ndims=3
+    ```
+* Build docker image
+  ```bash
+  docker pull ubuntu:22.04
+  docker build -t dynearthsol .
+  ```
+* Run docker
+  ```bash
+  docker run --rm -it dynearthsol
+  ```
 ## Building procedure
 * Edit `Makefile` 
   * Modify `BOOST_ROOT_DIR` if you manually built or installed 
