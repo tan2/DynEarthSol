@@ -1,9 +1,7 @@
 ./Dockerfile
-./dynearthsol2d
-./dynearthsol3d
-./*.o
-./*/*.save.*
-./*/*.chkpt.*
-./*/*.vtu
-./*/*.vtp
-./*/*.info
+./dynearthsol*d
+**/*.save.*
+**/*.chkpt.*
+**/*.vtu
+**/*.vtp
+**/*.info
