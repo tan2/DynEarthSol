@@ -17,6 +17,8 @@ else
     exit 1
 fi
 
+# Pull the base image
+docker pull $BASE_IMAGE
 # Build the docker image
 docker build -t dynearthsol/$GCCVERSION . \
     --build-arg GCCVERSION=$GCCVERSION \
