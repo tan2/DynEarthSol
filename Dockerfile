@@ -75,7 +75,7 @@ COPY --chown=$USER:$USER . $HOME/DynEarthSol
 # make dynearthsol2d
 WORKDIR $HOME/DynEarthSol
 ARG NDIMS=2
-RUN make cleanall \
+RUN make ndims=$NDIMS cleanall \
     && if [ "$CXXVERSION" = "clang-14" ]; then \
       make ndims=$NDIMS -j4 CXX=clang++;\
     else \
