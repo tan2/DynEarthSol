@@ -1,0 +1,7 @@
+./Dockerfile
+./dynearthsol*d
+**/*.save.*
+**/*.chkpt.*
+**/*.vtu
+**/*.vtp
+**/*.info

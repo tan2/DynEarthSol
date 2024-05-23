@@ -44,6 +44,15 @@ alike.
       make
       ```
     * The header files and built shared library will be in `mmg/build/include` and `mmg/build/lib`. 
+## Or, using docker
+* Build docker image
+  ```bash
+  ./build.sh
+  ```
+* Run docker
+  ```bash
+  docker run --rm -it dynearthsol/gcc-11 # default compiler
+  ```
 ## Building procedure
 * Edit `Makefile` 
   * Modify `BOOST_ROOT_DIR` if you manually built or installed 
