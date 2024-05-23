@@ -30,11 +30,12 @@ docker build --rm -t dynearthsol/$CXXVERSION . \
 
 # Check if the build was successful
 if [ $? -eq 0 ]; then
-  echo "Docker build succeeded."
+    echo "Docker build succeeded."
+    echo ""
+    echo "To run the container execute:"
+    echo "$ docker run -it --rm dynearthsol/$CXXVERSION"
 else
-  echo "Docker build failed. Cleaning up..."  
+    echo "Docker build failed. Cleaning up..."
+    docker rmi dynearthsol/$CXXVERSION
 fi
 
-echo ""
-echo "To run the container execute:"
-echo "$ docker run -it --rm dynearthsol/$CXXVERSION"
