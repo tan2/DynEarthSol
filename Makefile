@@ -132,7 +132,7 @@ endif
 
 
 ifneq (, $(findstring clang++, $(CXX)))
-	CXXFLAGS = -v
+	CXXFLAGS = -v -DGPP1X
 	LDFLAGS = -v
 
 	ifeq ($(opt), 1)
@@ -142,8 +142,8 @@ ifneq (, $(findstring clang++, $(CXX)))
 	endif
  
 	ifeq ($(openmp), 1)
-		CXXFLAGS += -fopenmp -L/usr/local/lib
-		LDFLAGS += -fopenmp -L/usr/local/lib
+		CXXFLAGS += -fopenmp
+		LDFLAGS += -fopenmp
 	endif
 
 else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
