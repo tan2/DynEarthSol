@@ -1,7 +1,4 @@
 # This builds the image locally for the current platform
-# docker pull ubuntu:22.04
-# docker build -t dynearthsol .
-# docker run --rm -it dynearthsol
 
 # Use the Ubuntu 22.04 release as the base image
 ARG BASE_IMAGE=ubuntu:22.04

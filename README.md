@@ -45,23 +45,13 @@ alike.
       ```
     * The header files and built shared library will be in `mmg/build/include` and `mmg/build/lib`. 
 ## Or, using docker
-* Edit Dockerfile to specify dimension
-  * For 2D
-    ```bash
-    ndims=2
-    ```
-  * For 3D
-    ```bash
-    ndims=3
-    ```
 * Build docker image
   ```bash
-  docker pull ubuntu:22.04
-  docker build -t dynearthsol .
+  ./build.sh
   ```
 * Run docker
   ```bash
-  docker run --rm -it dynearthsol
+  docker run --rm -it dynearthsol/gcc-11 # default compiler
   ```
 ## Building procedure
 * Edit `Makefile` 
