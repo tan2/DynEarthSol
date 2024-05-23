@@ -13,24 +13,43 @@ LABEL maintainer="chaseshyu@gmail.com"
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG TZ=UTC
-ARG GCCVERSION=gcc-11
+ARG CXXVERSION=gcc-11
 # Update package list and install necessary software
 RUN apt-get update && apt-get install -y \
-      build-essential \
-      libboost-program-options-dev \
-      python3 \
-      python3-pip \
-      vim \
-    && if [ "$GCCVERSION" = "gcc-8" ]; then \
-      # Install gcc-8 and g++-8
+    build-essential \
+    libboost-program-options-dev \
+    python3 \
+    python3-pip \
+    vim \
+    sudo
+
+RUN if [ "$CXXVERSION" = "gcc-8" ]; then \
       apt-get install -y software-properties-common \
       && add-apt-repository ppa:ubuntu-toolchain-r/test \
       && apt-get update \
       && apt-get install -y gcc-8 g++-8 \
       && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60 \
       && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 60; \
-    elif [ "$GCCVERSION" = "gcc-11" ]; then \
+    elif [ "$CXXVERSION" = "gcc-11" ]; then \
       apt-get install -y tzdata; \
+    elif [ "$CXXVERSION" = "clang-14" ]; then \
+      apt-get update && apt-get install -y \
+      clang \
+      libomp-dev \
+      tzdata; \
+    # elif [ "$CXXVERSION" = "clang-17" ]; then \
+    #   apt-get install -y \
+    #   wget tzdata \
+    #   lsb-release gnupg \
+    #   software-properties-common \
+    #   cmake \
+    #   && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 17 \
+    #   && add-apt-repository ppa:ubuntu-toolchain-r/test \
+    #   && apt-get update && apt-get install -y \
+    #   clang-17 \
+    #   libomp-17-dev \
+    #   && update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 100 \
+    #   && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 100; \
     fi \
     && apt-get clean \
     # set time zone of system
@@ -59,9 +78,19 @@ COPY --chown=$USER:$USER . $HOME/DynEarthSol
 # make dynearthsol2d
 WORKDIR $HOME/DynEarthSol
 ARG NDIMS=2
-RUN make cleanall && make ndims=$NDIMS -j4
-
+RUN make cleanall \
+    && if [ "$CXXVERSION" = "clang-14" ]; then \
+      make ndims=$NDIMS -j4 CXX=clang++;\
+    else \
+      make ndims=$NDIMS -j4; \
+    fi
 # Default use 8 threads
 ENV OMP_NUM_THREADS=8
+
+# Set alias
+RUN echo '#!/bin/bash\nexport OMP_NUM_THREADS=$1 && echo OMP_NUM_THREADS = $OMP_NUM_THREADS' \
+    | sudo tee /usr/local/bin/set_omp_threads > /dev/null \
+    && sudo chmod +x /usr/local/bin/set_omp_threads \
+    && echo 'function omp() { . /usr/local/bin/set_omp_threads $1; }' >> ~/.bashrc
 
 CMD ["bash"]
