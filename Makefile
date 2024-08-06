@@ -11,7 +11,6 @@
 ## opt = 1 ~ 3: optimized build; others: debugging build
 ## openacc = 1: enable OpenACC
 ## openmp = 1: enable OpenMP
-## useadapt = 1: use libadaptivity for mesh optimization during remeshing
 ## adaptive_time_step = 1: use adaptive time stepping technique
 ## use_R_S = 1: use Rate - State friction law
 ## useexo = 1: import a exodusII mesh (e.g., created with Trelis)
@@ -22,7 +21,6 @@ openacc = 0
 openmp = 1
 nprof = 0
 gprof = 0
-useadapt = 0
 usemmg = 0
 adaptive_time_step = 0
 use_R_S = 0
@@ -30,7 +28,6 @@ useexo = 0
 ANNFLAGS = linux-g++
 
 ifeq ($(ndims), 2)
-	useadapt = 0  # libadaptivity is 3d only
 	useexo = 0    # for now, can import only 3d exo mesh
 endif
 
@@ -39,31 +36,16 @@ ifneq ($(adaptive_time_step), 1)
 endif
 
 ## Select C++ compiler and set paths to necessary libraries
-ifeq ($(useadapt), 1)
-	CXX = mpicxx # g++-mp-4.7
-	CXX_BACKEND = g++
-
-	# path to vtk header files, if not in standard system location
-	VTK_INCLUDE = /opt/local/include/vtk-8.1
-
-	# path of vtk library files, if not in standard system location
-	VTK_LIBS = /opt/local/lib
-
-	# flag to link with fortran binding of MPI library
-	#LIB_MPIFORTRAN = -lmpi_mpifh # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
-	LIB_MPIFORTRAN = -lfmpich # OpenMPI 1.10.2. Other possibilities: -lmpifort, -lfmpich, -lmpi_f77
+ifeq ($(openacc), 1)
+	CXX = nvc++
 else
-	ifeq ($(openacc), 1)
+	ifeq ($(nprof), 1)
 		CXX = nvc++
 	else
-		ifeq ($(nprof), 1)
-			CXX = nvc++
-		else
-			CXX = g++
-		endif
+		CXX = g++
 	endif
-	CXX_BACKEND = ${CXX}
 endif
+CXX_BACKEND = ${CXX}
 
 
 ## path to cuda's base directory
@@ -100,10 +82,10 @@ endif
 
 ifeq ($(useexo), 1)
 	# path to exodus header files
-	EXO_INCLUDE = ${HOME}/opt/seacas/include
+	EXO_INCLUDE = ./seacas/include
 
 	# path of exodus library files, if not in standard system location
-	EXO_LIB_DIR = ${HOME}/opt/seacas/lib
+	EXO_LIB_DIR = ./seacas/lib
 
 	EXO_CXXFLAGS = -I$(EXO_INCLUDE) -DUSEEXODUS
 	EXO_LDFLAGS = -L$(EXO_LIB_DIR) -lexodus
@@ -166,12 +148,6 @@ else ifneq (, $(findstring g++, $(CXX_BACKEND))) # if using any version of g++
 		LDFLAGS += -fopenmp
 	endif
 
-	ifeq ($(useadapt), 1)
-		ifdef VTK_INCLUDE
-			CXXFLAGS += -I$(VTK_INCLUDE)
-		endif
-	endif
-
 	ifeq ($(gprof), 1)
 		CXXFLAGS += -pg
 		LDFLAGS += -pg
@@ -206,11 +182,6 @@ else ifneq (, $(findstring icpc, $(CXX_BACKEND))) # if using intel compiler, tes
 		LDFLAGS += -fopenmp
 	endif
 
-	ifeq ($(useadapt), 1)
-		ifdef VTK_INCLUDE
-			CXXFLAGS += -I$(VTK_INCLUDE)
-		endif
-	endif
 else ifneq (, $(findstring nvc++, $(CXX)))
 	CXXFLAGS = -mno-fma
 	LDFLAGS =
@@ -355,53 +326,12 @@ ANN_DIR = ann
 ANN_LIBNAME = ANN
 CXXFLAGS += -I$(ANN_DIR)/include
 
-ifeq ($(useadapt), 1)
-	LIBADAPTIVITY_DIR = ./libadaptivity
-	LIBADAPTIVITY_INC = $(LIBADAPTIVITY_DIR)/include
-	LIBADAPTIVITY_LIB = $(LIBADAPTIVITY_DIR)/lib
-	LIBADAPTIVITY_LIBNAME = adaptivity
-	CXXFLAGS += -I$(LIBADAPTIVITY_INC) -DADAPT -DHAVE_VTK=1 \
-		-I$(LIBADAPTIVITY_DIR)/adapt3d/include -I$(LIBADAPTIVITY_DIR)/metric_field/include \
-		-I$(LIBADAPTIVITY_DIR)/load_balance/include
-endif
-
 ## Action
 
 .PHONY: all clean take-snapshot
 
 all: $(EXE) tetgen/tetgen triangle/triangle take-snapshot
 
-ifeq ($(useadapt), 1)
-
-$(LIBADAPTIVITY_DIR)/lflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
-	@grep '^LFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile > $@
-
-$(LIBADAPTIVITY_DIR)/cppflags.mk: $(LIBADAPTIVITY_DIR)/Makefile
-	@grep '^CPPFLAGS' $(LIBADAPTIVITY_DIR)/adapt3d/Makefile | sed "s:-I./include -I../include::" > $@
-
-$(LIBADAPTIVITY_DIR)/Makefile: $(LIBADAPTIVITY_DIR)/configure
-	@cd $(LIBADAPTIVITY_DIR) && VTK_INCLUDE=${VTK_INCLUDE} VTK_LIBS=${VTK_LIBS} ./configure --enable-vtk exec_prefix=`pwd`
-
-$(LIBADAPTIVITY_LIB)/libadaptivity.a: $(LIBADAPTIVITY_DIR)/Makefile $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
-	@+$(MAKE) -C $(LIBADAPTIVITY_DIR)
-
--include $(LIBADAPTIVITY_DIR)/lflags.mk
--include $(LIBADAPTIVITY_DIR)/cppflags.mk
-LIBADAPTIVITY_LIBS = $(LIBADAPTIVITY_LIB)/libadaptivity.a $(LFLAGS) $(LIB_MPIFORTRAN)
-CXXFLAGS += $(CPPFLAGS)
-
-$(EXE): $(M_OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a $(LIBADAPTIVITY_LIB)/libadaptivity.a $(OBJS)
-		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
-			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
-			$(LIBADAPTIVITY_LIBS) \
-			-o $@
-ifeq ($(OSNAME), Darwin)  # fix for dynamic library problem on Mac
-		install_name_tool -change libboost_program_options.dylib $(BOOST_LIB_DIR)/libboost_program_options.dylib $@
-ifeq ($(useexo), 1)  # fix for dynamic library problem on Mac
-		install_name_tool -change libexodus.dylib $(EXO_LIB_DIR)/libexodus.dylib $@
-endif
-endif
-else # IF useadapt is 0
 $(EXE): $(M_OBJS) $(OBJS) $(C3X3_DIR)/lib$(C3X3_LIBNAME).a $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a
 		$(CXX) $(M_OBJS) $(OBJS) $(LDFLAGS) $(BOOST_LDFLAGS) \
 			-L$(C3X3_DIR) -l$(C3X3_LIBNAME) -L$(ANN_DIR)/lib -l$(ANN_LIBNAME) \
@@ -419,7 +349,6 @@ else
 endif
 endif # end of usemmg
 endif # end of Darwin
-endif # end of useadapt
 
 take-snapshot:
 	@# snapshot of the code for building the executable
@@ -482,7 +411,7 @@ $(C3X3_DIR)/lib$(C3X3_LIBNAME).a:
 $(ANN_DIR)/lib/lib$(ANN_LIBNAME).a:
 	@+$(MAKE) -C $(ANN_DIR) $(ANNFLAGS)
 
-deepclean: cleanadapt
+deepclean: 
 	@rm -f $(TET_OBJS) $(TRI_OBJS) $(OBJS) $(EXE)
 	@+$(MAKE) -C $(C3X3_DIR) clean
 	
@@ -493,7 +422,3 @@ cleanall: clean
 
 clean:
 	@rm -f $(OBJS) $(EXE)
-
-cleanadapt:
-	@rm -f $(LIBADAPTIVITY_DIR)/lflags.mk $(LIBADAPTIVITY_DIR)/cppflags.mk
-	@+$(MAKE) -C $(LIBADAPTIVITY_DIR) clean
