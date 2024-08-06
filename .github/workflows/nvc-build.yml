@@ -33,7 +33,8 @@ jobs:
         sudo apt-get install -y nvhpc
 
     - name: Set env for nvc++
-      run: echo "PATH=$PATH:$NVHPC_PATH/compilers/bin" >> $GITHUB_PATH
+      run: export PATH=${PATH}:${NVHPC_PATH}/compilers/bin
+        #run: echo "PATH=$PATH:$NVHPC_PATH/compilers/bin" >> $GITHUB_PATH
     - name: make 2d CPU with nvidia profiling tools
       run: make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=2 nprof=1
     - name: make 3d CPU with nvidia profiling tools
