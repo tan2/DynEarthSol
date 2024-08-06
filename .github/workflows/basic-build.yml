@@ -1,6 +1,10 @@
 name: Basic build
 
 on:
+  workflow_dispatch:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/README.md'
   push:
     branches: [ "master" ]
     paths-ignore:
