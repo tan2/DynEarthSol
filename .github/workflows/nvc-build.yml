@@ -10,8 +10,8 @@ on:
     paths-ignore:
       - '**/README.md'
 
-env:
-  NVHPC_PATH: /opt/nvidia/hpc_sdk/Linux_x86_64/23.9
+#env:
+#  NVHPC_PATH: /opt/nvidia/hpc_sdk/Linux_x86_64/23.9
   
 jobs:
   build:
@@ -38,7 +38,7 @@ jobs:
         NVCOMPILERS=/opt/nvidia/hpc_sdk; export NVCOMPILERS
         MANPATH=$MANPATH:$NVCOMPILERS/$NVARCH/24.7/compilers/man; export MANPATH
         PATH=$NVCOMPILERS/$NVARCH/24.7/compilers/bin:$PATH; export PATH
-        ls $NVCOMPILERS/$NVARCH/24.7/compilers/bin
+        NVHPC_PATH=$NVCOMPILERS/$NVARCH/24.7; export NVHPC_PATH
     - name: make 2d CPU with nvidia profiling tools
       run: make cleanall; make CUDA_DIR=$NVHPC_PATH/cuda ndims=2 nprof=1
     - name: make 3d CPU with nvidia profiling tools
