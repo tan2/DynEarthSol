@@ -2,7 +2,7 @@ name: nvc build
 
 on:
   push:
-    branches: [ "master", "merge_openacc" ]
+    branches: [ "master", "merge_openacc","dev" ]
     paths-ignore:
       - '**/README.md'
   pull_request:
