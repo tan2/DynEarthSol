@@ -36,8 +36,8 @@ jobs:
       run: | 
         NVARCH=`uname -s`_`uname -m`; export NVARCH
         NVCOMPILERS=/opt/nvidia/hpc_sdk; export NVCOMPILERS
-        MANPATH=$MANPATH:$NVCOMPILERS/$NVARCH/24.7/compilers/man; export MANPATH
         PATH=$NVCOMPILERS/$NVARCH/24.7/compilers/bin:$PATH; export PATH
+        echo $PATH >> $GITHUB_PATH
       env:
         NVHPC_PATH: $NVCOMPILERS/$NVARCH/24.7
     - name: make 2d CPU with nvidia profiling tools
