@@ -118,6 +118,7 @@ struct Control {
 
     bool is_quasi_static;
     bool has_thermal_diffusion;
+    bool has_hydraulic_diffusion;
 
     bool has_hydration_processes;
     double hydration_migration_speed;
@@ -262,6 +263,17 @@ struct Mat {
     double_vec cohesion0, cohesion1;
     double_vec friction_angle0, friction_angle1;
     double_vec dilation_angle0, dilation_angle1;
+
+    // hydraulic parameters
+    double_vec porosity;
+    double_vec hydraulic_perm;
+    double_vec fluid_rho0;  // pore fluid density
+    double_vec fluid_alpha; // pore fluid thermal expansivity
+    double_vec fluid_bulk_modulus;  // pore fluid bulk modulus
+    double_vec fluid_visc;  // pore fluid dynamic viscosity
+
+    double_vec biot_coeff;  // Biot-Willis coefficient
+    double_vec bulk_modulus_s;  // bulk modulus of solid grain (mineral)
 };
 
 struct Time {
@@ -412,6 +424,12 @@ struct Variables {
     double_vec *stressyy, *dpressure, *viscosity;
     double_vec *ntmp;
     double_vec *radiogenic_source;
+
+    // For hyraulic proceses
+    double_vec *fmass; // pore water mass
+    double_vec *ppressure; // pore pressure
+    double_vec *fluid_source; // injection and pumping of pore water
+    array_t *fvel, *fforce;
 
     // For surface processes
     SurfaceInfo surfinfo;

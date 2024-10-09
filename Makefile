@@ -15,15 +15,15 @@
 ## use_R_S = 1: use Rate - State friction law
 ## useexo = 1: import a exodusII mesh (e.g., created with Trelis)
 
-ndims = 3
+ndims = 2
 opt = 2
 openacc = 0
 openmp = 1
 nprof = 0
 gprof = 0
-usemmg = 0
+usemmg = 1
 adaptive_time_step = 0
-use_R_S = 0
+use_R_S = 1
 useexo = 0
 ANNFLAGS = linux-g++
 
@@ -52,7 +52,7 @@ CXX_BACKEND = ${CXX}
 CUDA_DIR = # /cluster/nvidia/hpc_sdk/Linux_x86_64/21.2/cuda
 
 ## path to Boost's base directory, if not in standard system location
-BOOST_ROOT_DIR =
+BOOST_ROOT_DIR = /home/slee91/bin/boost_1_86_0
 
 ########################################################################
 ## Select compiler and linker flags
@@ -82,10 +82,10 @@ endif
 
 ifeq ($(useexo), 1)
 	# path to exodus header files
-	EXO_INCLUDE = ./seacas/include
+	EXO_INCLUDE = ../seacas/include
 
 	# path of exodus library files, if not in standard system location
-	EXO_LIB_DIR = ./seacas/lib
+	EXO_LIB_DIR = ../seacas/lib
 
 	EXO_CXXFLAGS = -I$(EXO_INCLUDE) -DUSEEXODUS
 	EXO_LDFLAGS = -L$(EXO_LIB_DIR) -lexodus
@@ -96,10 +96,10 @@ endif
 
 ifeq ($(usemmg), 1)
 	# path to MMG3D header files
-	MMG_INCLUDE = ./mmg/build/include
+	MMG_INCLUDE = /home/slee91/bin/mmg/build/include/
 
 	# path of MMG3D library files, if not in standard system location
-	MMG_LIB_DIR = ./mmg/build/lib
+	MMG_LIB_DIR = /home/slee91/bin/mmg/build/lib
 
 	MMG_CXXFLAGS = -I$(MMG_INCLUDE) -DUSEMMG
 	ifeq ($(ndims), 3)	

@@ -33,6 +33,17 @@ public:
     double cp(int e) const;
     double k(int e) const;
 
+    // hydraulic parameter function
+    double phi(int e) const;
+    double perm(int e) const;
+    double alpha_fluid(int e) const;
+    double beta_fluid(int e) const;
+    double rho_fluid(int e) const;
+
+    double mu_fluid(int e) const;
+    double alpha_biot(int e) const;
+    double beta_mineral(int e) const;
+
     void plastic_props(int e, double pls,
                        double& amc, double& anphi, double& anpsi,
                        double& hardn, double& ten_max) const;
@@ -71,6 +82,12 @@ private:
     const VectorBase *cohesion0, *cohesion1;
     const VectorBase *friction_angle0, *friction_angle1;
     const VectorBase *dilation_angle0, *dilation_angle1;
+
+    // hydraulic process
+    const double_vec &ppressure;
+    const VectorBase *porosity, *hydraulic_perm, *fluid_rho0;
+    const VectorBase *fluid_alpha, *fluid_bulk_modulus, *fluid_visc;
+    const VectorBase *biot_coeff, *bulk_modulus_s;
 
     void plastic_weakening(int e, double pls,
                            double &cohesion, double &friction_angle,
