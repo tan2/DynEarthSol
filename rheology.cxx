@@ -113,6 +113,21 @@ static void elastic(double bulkm, double shearm, const double* de, double* s)
 
     for (int i=0; i<NDIMS; ++i)
         s[i] += 2 * shearm * de[i] + lambda * dev;
+
+    for (int i=NDIMS; i<NSTR; ++i)
+        s[i] += 2 * shearm * de[i];
+}
+
+#pragma acc routine seq
+static void elastic_effective(double bulkm, double shearm, const double* de, double* s,  double &pp)
+{
+    /* increment the stress s according to the incremental strain de */
+    double lambda = bulkm - 2. /3 * shearm;
+    double dev = trace(de);
+
+    for (int i=0; i<NDIMS; ++i)
+        s[i] += 2 * shearm * de[i] + lambda * dev - pp;
+
     for (int i=NDIMS; i<NSTR; ++i)
         s[i] += 2 * shearm * de[i];
 }
@@ -156,7 +171,9 @@ static void elasto_plastic(double bulkm, double shearm,
                            double amc, double anphi, double anpsi,
                            double hardn, double ten_max,
                            const double* de, double& depls, double* s,
-                           int &failure_mode)
+                           int &failure_mode,
+                           bool has_hydraulic_diffusion,
+                           double &pp)
 {
     /* Elasto-plasticity (Mohr-Coulomb criterion)
      *
@@ -167,7 +184,15 @@ static void elasto_plastic(double bulkm, double shearm,
      */
 
     // elastic trial stress
-    elastic(bulkm, shearm, de, s);
+    if (has_hydraulic_diffusion)
+    {
+        elastic_effective(bulkm, shearm, de, s, pp);
+    }
+    else
+    {
+        elastic(bulkm, shearm, de, s);
+    }
+
     depls = 0;
     failure_mode = 0;
 
@@ -308,7 +333,9 @@ static void elasto_plastic2d(double bulkm, double shearm,
                              double hardn, double ten_max,
                              const double* de, double& depls,
                              double* s, double &syy,
-                             int &failure_mode)
+                             int &failure_mode,
+                             bool has_hydraulic_diffusion,
+                             double &pp)
 {
     /* Elasto-plasticity (Mohr-Coulomb criterion) */
 
@@ -339,6 +366,13 @@ static void elasto_plastic2d(double bulkm, double shearm,
     double sxz = s[2] + de[2]*2*shearm;
     syy += (de[0] + de[1]) * a2; // Stress YY component, plane strain
 
+    // Apply the pore pressure effect if hydraulic diffusion is enabled
+    if (has_hydraulic_diffusion)
+    {
+        sxx -= pp;
+        syy -= pp;
+        szz -= pp;
+    }
 
     //
     // transform to principal stress coordinate system
@@ -514,7 +548,8 @@ static void elasto_plastic2d(double bulkm, double shearm,
 void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                    double_vec& stressyy, double_vec& dpressure, double_vec& viscosity,
                    tensor_t& strain, double_vec& plstrain,
-                   double_vec& delta_plstrain, tensor_t& strain_rate)
+                   double_vec& delta_plstrain, tensor_t& strain_rate,
+                   double_vec& ppressure)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -522,7 +557,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 
     #pragma omp parallel for default(none)                           \
         shared(param, var, stress, stressyy, dpressure, viscosity, strain, plstrain, delta_plstrain, \
-               strain_rate, std::cerr)
+               strain_rate, ppressure, std::cerr)
     #pragma acc parallel loop
     for (int e=0; e<var.nelem; ++e) {
         // stress, strain and strain_rate of this element
@@ -531,6 +566,14 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
         double* es = strain[e];
         double* edot = strain_rate[e];
     	double old_s = trace(s);
+
+        // Calculate the pore pressure term
+        double alpha_b = var.mat->alpha_biot(e); // Biot coefficient
+        double& pp = ppressure[e];
+
+        if (param.control.has_hydraulic_diffusion) {
+            pp = alpha_b * pp; // Use ppressure[e] as a double
+        }
 
         // anti-mesh locking correction on strain rate
         if(1){
@@ -557,7 +600,16 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
             {
                 double bulkm = var.mat->bulkm(e);
                 double shearm = var.mat->shearm(e);
-                elastic(bulkm, shearm, de, s);
+                double alpha_b = var.mat->alpha_biot(e); 
+                
+                if (param.control.has_hydraulic_diffusion)
+                {
+                    elastic_effective(bulkm, shearm, de, s, pp);
+                }
+                else
+                {
+                    elastic(bulkm, shearm, de, s);
+                }
             }
             break;
         case MatProps::rh_viscous:
@@ -572,6 +624,8 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
             {
                 double bulkm = var.mat->bulkm(e);
                 double shearm = var.mat->shearm(e);
+                double alpha_b = var.mat->alpha_biot(e); 
+                
                 viscosity[e] = var.mat->visc(e);
                 double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
                 maxwell(bulkm, shearm, viscosity[e], var.dt, dv, de, s);
@@ -582,17 +636,21 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                 double depls = 0;
                 double bulkm = var.mat->bulkm(e);
                 double shearm = var.mat->shearm(e);
+                double alpha_b = var.mat->alpha_biot(e); 
+                
                 double amc, anphi, anpsi, hardn, ten_max;
                 var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
                 int failure_mode;
                 if (var.mat->is_plane_strain) {
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                     de, depls, s, syy, failure_mode);
+                                     de, depls, s, syy, failure_mode, 
+                                     param.control.has_hydraulic_diffusion, pp);
                 }
                 else {
                     elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                   de, depls, s, failure_mode);
+                                   de, depls, s, failure_mode, 
+                                   param.control.has_hydraulic_diffusion, pp);
                 }
                 plstrain[e] += depls;
                 delta_plstrain[e] = depls;
@@ -603,6 +661,8 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                 double depls = 0;
                 double bulkm = var.mat->bulkm(e);
                 double shearm = var.mat->shearm(e);
+                double alpha_b = var.mat->alpha_biot(e); 
+                
                 viscosity[e] = var.mat->visc(e);
                 double dv = (*var.volume)[e] / (*var.volume_old)[e] - 1;
                 // stress due to maxwell rheology
@@ -621,11 +681,13 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
                 if (var.mat->is_plane_strain) {
                     spyy = syy;
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                     de, depls, sp, spyy, failure_mode);
+                                     de, depls, sp, spyy, failure_mode, 
+                                     param.control.has_hydraulic_diffusion, pp);
                 }
                 else {
                     elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
-                                   de, depls, sp, failure_mode);
+                                   de, depls, sp, failure_mode, 
+                                   param.control.has_hydraulic_diffusion, pp);
                 }
                 double spII = second_invariant2(sp);
 

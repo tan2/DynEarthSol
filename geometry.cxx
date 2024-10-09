@@ -487,6 +487,67 @@ void compute_mass(const Param &param, const Variables &var,
 #endif
 }
 
+void compute_mass_with_fluid(const Param &param, const Variables &var,
+                             double max_vbc_val, double_vec &volume_n,
+                             double_vec &mass, double_vec &tmass, elem_cache &tmp_result)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+    // volume_n is (node-averaged volume * NODES_PER_ELEM)
+    // volume_n.assign(volume_n.size(), 0);
+    // mass.assign(mass.size(), 0);
+    // tmass.assign(tmass.size(), 0);
+
+    const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
+
+#ifdef GPP1X
+    #pragma omp parallel for default(none) shared(var, param, pseudo_speed, tmp_result)
+#else
+    #pragma omp parallel for default(none) shared(var, param, tmp_result)
+#endif
+    #pragma acc parallel loop
+    for (int e = 0; e < var.nelem; e++) {
+        double *tr = tmp_result[e];
+        // Compute the effective density considering both solid and fluid contributions
+        double rho = (param.control.is_quasi_static) ?
+            (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
+            ((*var.mat).rho(e) * (1.0 - (*var.mat).phi(e)) + (*var.mat).rho_fluid(e) * (*var.mat).phi(e)); // true density for dynamic sim
+        
+        // Compute the mass per element node
+        double m = rho * (*var.volume)[e] / NODES_PER_ELEM;
+
+        // Compute the thermal mass (only if thermal diffusion is enabled)
+        double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (*var.volume)[e] / NODES_PER_ELEM;
+
+        // Store the computed values
+        tr[0] = (*var.volume)[e]; // Element volume
+        tr[1] = m; // Mass
+        if (param.control.has_thermal_diffusion)
+            tr[2] = tm; // Thermal mass
+    }
+
+    #pragma omp parallel for default(none) \
+        shared(param, var, volume_n, mass, tmass, tmp_result)
+    #pragma acc parallel loop
+    for (int n = 0; n < var.nnode; n++) {
+        volume_n[n] = 0;
+        mass[n] = 0;
+        tmass[n] = 0;
+        for (auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            double *tr = tmp_result[*e];
+            volume_n[n] += tr[0];
+            mass[n] += tr[1];
+            if (param.control.has_thermal_diffusion)
+                tmass[n] += tr[2];
+        }
+    }
+
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+}
+
 
 void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shapefn &shpdz)
 {
