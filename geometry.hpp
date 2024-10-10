@@ -23,11 +23,6 @@ void compute_mass(const Param &param, const Variables &var,
                   double_vec &mass, double_vec &tmass,
                   elem_cache &tmp_result);
 
-void compute_mass_with_fluid(const Param &param, const Variables &var,
-                  double max_vbc_val, double_vec &volume_n,
-                  double_vec &mass, double_vec &tmass,
-                  elem_cache &tmp_result);
-
 void compute_shape_fn(const Variables &var, shapefn &shpdx,
                       shapefn &shpdy, shapefn &shpdz);
 

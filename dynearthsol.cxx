@@ -314,10 +314,9 @@ void isostasy_adjustment(const Param &param, Variables &var)
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp, *var.tmp_result_sg);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure,
+        update_stress(param ,var, *var.stress, *var.stressyy, *var.dpressure,
             *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
-            *var.strain_rate,
-            *var.ppressure);
+            *var.strain_rate);
         update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);
 
@@ -408,8 +407,7 @@ int main(int argc, const char* argv[])
 
         update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure,
             *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
-            *var.strain_rate,
-            *var.ppressure);
+            *var.strain_rate);
 
 	// Nodal Mixed Discretization For Stress
         if (param.control.is_using_mixed_stress)
