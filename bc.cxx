@@ -795,7 +795,7 @@ void apply_stress_bcs_neumann(const Param& param, const Variables& var, array_t&
             for (int d = 0; d < NDIMS; ++d) {
                 // if(d == 1) std::cout<< force_node[d]<<","<< d <<","<< traction[d]<<std::endl;
                 #pragma acc atomic update
-                force_node[d] += var.dt * traction[d] * normal[d] / NODES_PER_FACET; 
+                force_node[d] += traction[d] * normal[d] / NODES_PER_FACET; 
             }
         }
     }
