@@ -92,7 +92,7 @@ class Dynearthsol:
         elif name in set(['coordinate', 'velocity', 'velocity averaged', 'force', 'coord0']):
             count = self.ndims * nnode
             shape = (nnode, self.ndims)
-        elif name in set(['bcflag', 'temperature', 'mass', 'tmass', 'volume_n']):
+        elif name in set(['bcflag', 'temperature', 'pore pressure', 'mass', 'tmass', 'volume_n']):
             count = nnode
             shape = (nnode, )
         else:

@@ -39,7 +39,6 @@ public:
     double alpha_fluid(int e) const;
     double beta_fluid(int e) const;
     double rho_fluid(int e) const;
-
     double mu_fluid(int e) const;
     double alpha_biot(int e) const;
     double beta_mineral(int e) const;
@@ -53,6 +52,7 @@ public:
     const double visc_max;
     const double tension_max;
     const double therm_diff_max;
+    double hydro_diff_max;
 
     const static int rh_elastic = 1 << 0;
     const static int rh_viscous = 1 << 1;
@@ -85,6 +85,7 @@ private:
 
     // hydraulic process
     const double_vec &ppressure;
+    const double_vec &dppressure;
     const VectorBase *porosity, *hydraulic_perm, *fluid_rho0;
     const VectorBase *fluid_alpha, *fluid_bulk_modulus, *fluid_visc;
     const VectorBase *biot_coeff, *bulk_modulus_s;

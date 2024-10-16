@@ -20,8 +20,8 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.mass = new double_vec(n);
     var.tmass = new double_vec(n);
-    var.fmass = new double_vec(n);
-    
+    var.hmass = new double_vec(n);
+
     var.edvoldt = new double_vec(e);
 
 //    var.marker_in_elem = new int_vec2D(e);
@@ -30,6 +30,7 @@ void allocate_variables(const Param &param, Variables& var)
         // these fields are reallocated during remeshing interpolation
         var.temperature = new double_vec(n);
         var.ppressure = new double_vec(n);
+        var.dppressure = new double_vec(n);
         var.coord0 = new array_t(n);
         var.plstrain = new double_vec(e);
         var.delta_plstrain = new double_vec(e);
@@ -77,6 +78,9 @@ void reallocate_variables(const Param& param, Variables& var)
     delete var.tmass;
     var.mass = new double_vec(n);
     var.tmass = new double_vec(n);
+
+    delete var.hmass;
+    var.hmass = new double_vec(n);
 
     delete var.edvoldt;
     var.edvoldt = new double_vec(e);
@@ -194,72 +198,58 @@ void update_temperature(const Param &param, const Variables &var,
 #endif
 }
 
+// Function to check if a node is a boundary node
+inline bool is_boundary_node_for_pp(const int n, const Variables &var) {
+    int boundary_types[6] = {BOUNDX0, BOUNDX1, BOUNDY0, BOUNDY1, BOUNDZ0, BOUNDZ1};
+    for (int i = 0; i < 6; ++i) {
+        if (((*var.bcflag)[n] & boundary_types[i]) && (var.hbc_types[i] == 1)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
 void update_pore_pressure(const Param &param, const Variables &var,
-                          double_vec &ppressure, double_vec &tdot, elem_cache &tmp_result, tensor_t& strain_rate)
+                          double_vec &ppressure, double_vec &dppressure, double_vec &tdot, elem_cache &tmp_result, tensor_t& strain_rate)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
 
-    // Step 1: Interpolate element-level properties (phi_e, beta_f) to nodes
-    double_vec phi_n(var.nnode, 0.0);    // Node-based porosity
-    double_vec beta_f_n(var.nnode, 0.0); // Node-based fluid compressibility
-    double_vec count_n(var.nnode, 0.0);  // Count for averaging
+    // Initialize diff_max_local for reduction
+    double diff_max_local = 1.0e-38;
 
-    #pragma omp parallel for default(none) shared(var, phi_n, beta_f_n, count_n)
-    #pragma acc parallel loop
-    for (int e = 0; e < var.nelem; e++) {
-        const int *conn = (*var.connectivity)[e];
-        double phi_e = var.mat->phi(e);        // Element porosity
-        double beta_f = var.mat->beta_fluid(e); // Element fluid compressibility
-        // Accumulate contributions to each node
-        for (int i = 0; i < NODES_PER_ELEM; ++i) {
-            int node = conn[i];
-            #pragma omp atomic
-            phi_n[node] += phi_e;
-            #pragma omp atomic
-            beta_f_n[node] += beta_f;
-            #pragma omp atomic
-            count_n[node] += 1.0;
-        }
-    }
-
-    // Average the accumulated values at each node
-    #pragma omp parallel for default(none) shared(var, phi_n, beta_f_n, count_n)
-    #pragma acc parallel loop
-    for (int n = 0; n < var.nnode; n++) {
-        if (count_n[n] > 0) {
-            phi_n[n] /= count_n[n];
-            beta_f_n[n] /= count_n[n];
-        }
-    }
-
-    // Step 2: Perform the main pore pressure update
     #pragma omp parallel for default(none) shared(var, ppressure, tmp_result, strain_rate, param)
     #pragma acc parallel loop
     for (int e = 0; e < var.nelem; e++) {
         const int *conn = (*var.connectivity)[e];
         double *tr = tmp_result[e];
         double* edot = strain_rate[e];
-        double vol_strain = trace(edot); 
+        double vol_strain_rate = trace(edot); 
 
         // Retrieve hydraulic properties for the element
         double perm_e = var.mat->perm(e);                // Intrinsic permeability 
         double mu_e = var.mat->mu_fluid(e);              // Fluid dynamic viscosity
         double alpha_b = var.mat->alpha_biot(e);         // Biot coefficient
         double rho_f = var.mat->rho_fluid(e);            // Fluid density
+        double phi_e = var.mat->phi(e);        // Element porosity
+        double comp_fluid = var.mat->beta_fluid(e);        // fluid comporessibility
+        double bulkm = var.mat->bulkm(e);
 
-        // Hydraulic diffusivity using permeability and viscosity
-        double hydraulic_diffusivity = perm_e / mu_e;
-        double kv = hydraulic_diffusivity * (*var.volume)[e];
-
-        // Assuming the fluid density is constant but responds to changes in the skeleton's volume.
         rho_f = 1000.0; 
-        // Source term (fluid source * fluid density) * element volume
-        double rh = (*var.fluid_source)[e] * (*var.volume)[e] * rho_f / NODES_PER_ELEM;
+        double gamma_w = rho_f * param.control.gravity; // specific weight
+        
+        // Hydraulic conductivity using permeability and viscosity
+        double hydraulic_conductivity = perm_e * gamma_w / mu_e;
+        double kv = hydraulic_conductivity * (*var.volume)[e];
+
+        // Compute element diffusivity and update max using reduction
+        double diff_e = hydraulic_conductivity / (phi_e * comp_fluid * gamma_w + (alpha_b - phi_e) / bulkm);
+        diff_max_local = std::max(diff_max_local, diff_e);
 
         // volume term (poroelastic effect)
-        double pe = alpha_b * vol_strain * (*var.volume)[e] * rho_f / NODES_PER_ELEM;
+        double pe = (alpha_b - phi_e) * vol_strain_rate * (*var.volume)[e] / NODES_PER_ELEM;
         
         const double *shpdx = (*var.shpdx)[e];
 #ifdef THREED
@@ -267,29 +257,28 @@ void update_pore_pressure(const Param &param, const Variables &var,
 #endif
         const double *shpdz = (*var.shpdz)[e];
 
-        double buoy = 0;
         for (int i = 0; i < NODES_PER_ELEM; ++i) {
             double diffusion = 0.0;
             for (int j = 0; j < NODES_PER_ELEM; ++j) {
 #ifdef THREED
-                buoy = (shpdx[i] + shpdy[i] + shpdz[i]) * var.mat->rho_fluid(e) * param.control.gravity; 
                 diffusion += (shpdx[i] * shpdx[j] +
                              shpdy[i] * shpdy[j] +
-                             shpdz[i] * shpdz[j]) * ppressure[conn[j]] + buoy; // sign of buoyancy depends on input
+                             shpdz[i] * shpdz[j]) * (ppressure[conn[j]]/gamma_w + (*var.coord)[conn[j]][NDIMS-1]); 
 #else
-                buoy = (shpdx[i] + shpdz[i]) * var.mat->rho_fluid(e) * param.control.gravity;
                 diffusion += (shpdx[i] * shpdx[j] +
-                             shpdz[i] * shpdz[j]) * ppressure[conn[j]] + buoy;
+                             shpdz[i] * shpdz[j]) * (ppressure[conn[j]]/gamma_w + (*var.coord)[conn[j]][NDIMS-1]);
 #endif
-            }
-            
+                }
+
             // Add diffusion, compressibility, poroelastic effects, and source term
-            // Check sign of source term (rh)
-            tr[i] = kv * diffusion - rh - pe;
+            tr[i] = kv * diffusion + pe;
         }
     }
 
-    #pragma omp parallel for default(none) shared(param, var, tdot, ppressure, tmp_result, phi_n, beta_f_n)
+    // Update global hydro_diff_max after the loop
+    var.mat->hydro_diff_max = diff_max_local;
+
+    #pragma omp parallel for default(none) shared(param, var, tdot, ppressure, dppressure, tmp_result)
     #pragma acc parallel loop
     for (int n = 0; n < var.nnode; n++) {
         tdot[n] = 0.0;
@@ -304,15 +293,21 @@ void update_pore_pressure(const Param &param, const Variables &var,
             }
         }
 
-        // Update pore pressure based on the computed rate of change
-        ppressure[n] -= tdot[n] * var.dt / (phi_n[n] * beta_f_n[n]);
+        // Update pore pressure for non-boundary nodes
+        if (!is_boundary_node_for_pp(n, var)) {
+            // Ensure mass is non-zero before division
+            if ((*var.hmass)[n] > 0.0) {
+                ppressure[n] -= tdot[n] * var.dt / (*var.hmass)[n]; // Update pore pressure
+                dppressure[n] = -1.0 * tdot[n] * var.dt / (*var.hmass)[n]; // Update pressure rate
+            }
+        }
+            
     }
 
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
 }
-
 
 void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 {
@@ -507,21 +502,17 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
         double *tr = tmp_result[e];
 
         double buoy = 0;
-        if (param.control.gravity != 0) 
-        {
-            if (param.control.has_hydraulic_diffusion) 
-            {
-                // Buoyancy with pore fluid
-                buoy = (var.mat->rho(e) * (1 - var.mat->phi(e)) + var.mat->rho_fluid(e) * var.mat->phi(e)) 
-                    * param.control.gravity / NODES_PER_ELEM;
-            } 
-            else 
-            {
-                // Standard buoyancy
-                buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+        if (param.control.gravity != 0) {
+            // Calculate buoyancy based on the gravity and element properties
+            buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+
+            if (param.control.has_hydraulic_diffusion) {
+                // Modified density considering porosity for hydraulic diffusion
+                buoy = (var.mat->rho(e) * (1 - var.mat->phi(e)) + 1000.0 * var.mat->phi(e)) * param.control.gravity / NODES_PER_ELEM;
             }
         }
-            
+
+
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
             tr[i] = (s[0]*shpdx[i] + s[3]*shpdy[i] + s[4]*shpdz[i]) * vol;
@@ -554,9 +545,15 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
 
     apply_stress_bcs(param, var, force);
 
+     if(var.time <= 1.0)
+    {
+        apply_stress_bcs_neumann(param, var, force);
+    }
+
     if (param.control.is_quasi_static) {
         apply_damping(param, var, force);
     }
+
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif

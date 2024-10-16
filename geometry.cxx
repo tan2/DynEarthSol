@@ -356,11 +356,12 @@ double compute_dt(const Param& param, const Variables& var)
     // dynamic dt
     double dt_maxwell = std::numeric_limits<double>::max();
     double dt_diffusion = std::numeric_limits<double>::max();
+    double dt_hydro_diffusion = std::numeric_limits<double>::max();
     double minl = std::numeric_limits<double>::max();
 
-    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion)    \
+    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion,dt_hydro_diffusion)    \
         default(none) shared(param,var)
-    #pragma acc parallel loop reduction(min:minl, dt_maxwell, dt_diffusion)
+    #pragma acc parallel loop reduction(min:minl, dt_maxwell, dt_diffusion,dt_hydro_diffusion)
     for (int e=0; e<var.nelem; ++e) {
         int n0 = (*var.connectivity)[e][0];
         int n1 = (*var.connectivity)[e][1];
@@ -398,6 +399,12 @@ double compute_dt(const Param& param, const Variables& var)
         if (param.control.has_thermal_diffusion)
             dt_diffusion = std::min(dt_diffusion,
                                     0.5 * minh * minh / var.mat->therm_diff_max);
+        
+        // Compute dt_hydro_diffusion (hydraulic)
+        if (var.mat->hydro_diff_max > 0) {
+            dt_hydro_diffusion = std::min(dt_hydro_diffusion,
+                                          0.5 * minh * minh / var.mat->hydro_diff_max);
+        }
         minl = std::min(minl, minh);
     }
 
@@ -414,15 +421,16 @@ double compute_dt(const Param& param, const Variables& var)
     double dt_elastic = (param.control.is_quasi_static) ?
         0.5 * minl / (max_vbc_val * param.control.inertial_scaling) :
         0.5 * minl / std::sqrt(param.mat.bulk_modulus[0] / param.mat.rho0[0]);
-    double dt = std::min(std::min(dt_elastic, dt_maxwell),
-                         std::min(dt_advection, dt_diffusion)) * param.control.dt_fraction;
+
+    // Combine dt calculations and incorporate dt_hydro_diffusion
+    double dt = std::min({dt_elastic, dt_maxwell, dt_advection, dt_diffusion, dt_hydro_diffusion}) * param.control.dt_fraction;
     if (param.debug.dt) {
-        std::cout << "step #" << var.steps << "  dt: " << dt_maxwell << " " << dt_diffusion
-                  << " " << dt_advection << " " << dt_elastic << " sec\n";
+        std::cout << "step #" << var.steps << "  dt: " << dt_maxwell << " " << dt_diffusion << " " 
+                  << dt_hydro_diffusion << " " << dt_advection << " " << dt_elastic << " sec\n";
     }
     if (dt <= 0) {
         std::cerr << "Error: dt <= 0!  " << dt_maxwell << " " << dt_diffusion
-                  << " " << dt_advection << " " << dt_elastic << "\n";
+                  << " " << dt_hydro_diffusion << " " << dt_advection << " " << dt_elastic << "\n";
         std::exit(11);
     }
 #ifdef USE_NPROF
@@ -434,7 +442,7 @@ double compute_dt(const Param& param, const Variables& var)
 
 void compute_mass(const Param &param, const Variables &var,
                   double max_vbc_val, double_vec &volume_n,
-                  double_vec &mass, double_vec &tmass, elem_cache &tmp_result)
+                  double_vec &mass, double_vec &tmass, double_vec &hmass, elem_cache &tmp_result)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -455,91 +463,42 @@ void compute_mass(const Param &param, const Variables &var,
     #pragma acc parallel loop
     for (int e=0;e<var.nelem;e++) {
         double *tr = tmp_result[e];
+        
         double rho = (param.control.is_quasi_static) ?
             (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
             (*var.mat).rho(e);                                     // true density for dynamic sim
+           
+        if (param.control.has_hydraulic_diffusion && (param.control.is_quasi_static == false)) {
+        // Modified density considering porosity for hydraulic diffusion
+            rho = (*var.mat).rho(e) * (1 - (*var.mat).phi(e)) + 1000.0 * (*var.mat).phi(e);
+        }
+
         double m = rho * (*var.volume)[e] / NODES_PER_ELEM;
         double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (*var.volume)[e] / NODES_PER_ELEM;
+        double hm = (*var.mat).phi(e) * (*var.mat).beta_fluid(e) * (*var.volume)[e] / NODES_PER_ELEM;
+
         tr[0] = (*var.volume)[e];
         tr[1] = m;
         if (param.control.has_thermal_diffusion)
             tr[2] = tm;
+        tr[3] = hm; // check
     }
 
     #pragma omp parallel for default(none)      \
-        shared(param,var,volume_n,mass,tmass,tmp_result)
+        shared(param,var,volume_n,mass,tmass,hmass,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         volume_n[n]=0;
         mass[n]=0;
         tmass[n]=0;
+        hmass[n]=0;
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             double *tr = tmp_result[*e];
             volume_n[n] += tr[0];
             mass[n] += tr[1];
             if (param.control.has_thermal_diffusion)
                 tmass[n] += tr[2];
-        }
-    }
-
-#ifdef USE_NPROF
-    nvtxRangePop();
-#endif
-}
-
-void compute_mass_with_fluid(const Param &param, const Variables &var,
-                             double max_vbc_val, double_vec &volume_n,
-                             double_vec &mass, double_vec &tmass, elem_cache &tmp_result)
-{
-#ifdef USE_NPROF
-    nvtxRangePushA(__FUNCTION__);
-#endif
-    // volume_n is (node-averaged volume * NODES_PER_ELEM)
-    // volume_n.assign(volume_n.size(), 0);
-    // mass.assign(mass.size(), 0);
-    // tmass.assign(tmass.size(), 0);
-
-    const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
-
-#ifdef GPP1X
-    #pragma omp parallel for default(none) shared(var, param, pseudo_speed, tmp_result)
-#else
-    #pragma omp parallel for default(none) shared(var, param, tmp_result)
-#endif
-    #pragma acc parallel loop
-    for (int e = 0; e < var.nelem; e++) {
-        double *tr = tmp_result[e];
-        // Compute the effective density considering both solid and fluid contributions
-        double rho = (param.control.is_quasi_static) ?
-            (*var.mat).bulkm(e) / (pseudo_speed * pseudo_speed) :  // pseudo density for quasi-static sim
-            ((*var.mat).rho(e) * (1.0 - (*var.mat).phi(e)) + (*var.mat).rho_fluid(e) * (*var.mat).phi(e)); // true density for dynamic sim
-        
-        // Compute the mass per element node
-        double m = rho * (*var.volume)[e] / NODES_PER_ELEM;
-
-        // Compute the thermal mass (only if thermal diffusion is enabled)
-        double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (*var.volume)[e] / NODES_PER_ELEM;
-
-        // Store the computed values
-        tr[0] = (*var.volume)[e]; // Element volume
-        tr[1] = m; // Mass
-        if (param.control.has_thermal_diffusion)
-            tr[2] = tm; // Thermal mass
-    }
-
-    #pragma omp parallel for default(none) \
-        shared(param, var, volume_n, mass, tmass, tmp_result)
-    #pragma acc parallel loop
-    for (int n = 0; n < var.nnode; n++) {
-        volume_n[n] = 0;
-        mass[n] = 0;
-        tmass[n] = 0;
-        for (auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
-            double *tr = tmp_result[*e];
-            volume_n[n] += tr[0];
-            mass[n] += tr[1];
-            if (param.control.has_thermal_diffusion)
-                tmass[n] += tr[2];
+            hmass[n] += tr[3];
         }
     }
 
@@ -630,7 +589,6 @@ void compute_shape_fn(const Variables &var, shapefn &shpdx, shapefn &shpdy, shap
     nvtxRangePop();
 #endif
 }
-
 
 double elem_quality(const array_t &coord, const conn_t &connectivity,
                     const double_vec &volume, int e)

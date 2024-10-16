@@ -637,7 +637,6 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
 #endif
-    // TODO: add general stress (Neumann) bcs
 
     if (param.control.gravity == 0) return;
 
@@ -674,10 +673,24 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 
             double p;
             if (i==iboundz0 && param.bc.has_winkler_foundation) {
-                // Winkler foundation for the bottom boundary
-                p = var.compensation_pressure -
-                    (var.mat->rho(e) + param.bc.winkler_delta_rho) *
-                    param.control.gravity * (zcenter + param.mesh.zlength);
+                double rho_effective = var.mat->rho(e);  // Base density of the solid material
+
+                // If hydraulic diffusion is active, modify the density to account for porosity and fluid content
+                if (param.control.has_hydraulic_diffusion) {
+                    rho_effective = (var.mat->rho(e) * (1 - var.mat->phi(e)) + 1000.0 * var.mat->phi(e));
+                    // 1000.0 is the fluid density (e.g., water, in kg/m³)
+                    // Winkler foundation for the bottom boundary with adjusted effective density
+                    p = var.compensation_pressure - 
+                        (rho_effective + param.bc.winkler_delta_rho) *  // Effective density with hydraulic diffusion
+                        param.control.gravity * (zcenter + param.mesh.zlength);  // Adjust for depth from base
+                }
+                else
+                {
+                    // Winkler foundation for the bottom boundary with adjusted effective density
+                    p = var.compensation_pressure - 
+                        (rho_effective + param.bc.winkler_delta_rho) *  // Effective density with hydraulic diffusion
+                        param.control.gravity * (zcenter + param.mesh.zlength);  // Adjust for depth from base
+                }
             }
             else if (i==iboundz1 && param.bc.has_water_loading) {
                 // hydrostatic water loading for the surface boundary
@@ -717,6 +730,81 @@ void apply_stress_bcs(const Param& param, const Variables& var, array_t& force)
 #endif
 }
 
+void apply_stress_bcs_neumann(const Param& param, const Variables& var, array_t& force)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+    // Apply general stress (Neumann) boundary conditions
+    for (int i = 0; i < 6; ++i) {
+    // Check if there is a stress BC applied on this boundary
+    if (var.stress_bc_types[i] == 0) continue;
+
+    const auto& bdry = *(var.bfacets[i]);
+    const int bound = static_cast<int>(bdry.size());
+
+    // Loop over all boundary facets
+    #pragma acc parallel loop 
+    for (int n = 0; n < bound; ++n) {
+        int e = bdry[n].first;      // This facet belongs to element e
+        int f = bdry[n].second;     // This facet is the f-th facet of element e
+        const int *conn = (*var.connectivity)[e];  // Element connectivity
+
+        // Outward-normal vector and z-center for the facet
+        double normal[NDIMS] = {0.0}; 
+        double zcenter = 0.0;
+        normal_vector_of_facet(f, conn, *var.coord, normal, zcenter);
+
+        double traction[NDIMS] = {0.0};
+
+#ifdef THREED
+        // 3D case: Apply stress based on boundary type (x0, x1, y0, y1, z0, z1)
+        switch (var.stress_bc_types[i]) {
+            case 1: // Traction in the x-direction
+                traction[0] = var.stress_bc_values[i]; // Set x-direction traction value
+                break;
+            case 2: // Traction in the y-direction
+                traction[1] = var.stress_bc_values[i]; // Set y-direction traction value
+                break;
+            case 3: // Traction in the z-direction
+                traction[2] = var.stress_bc_values[i]; // Set z-direction traction value
+                break;
+            default:
+                continue; // Skip if no valid stress BC type
+        }
+#else
+        // 2D case: Apply stress based on boundary type (x0, x1, z0, z1)
+        switch (var.stress_bc_types[i]) {
+            case 1: // Traction in the x-direction
+                traction[0] = var.stress_bc_values[i]; // Set x-direction traction value
+                break;
+            case 3: // Traction in the z-direction (mapped to y in 2D)
+                traction[1] = var.stress_bc_values[i]; // Set y-direction traction value in 2D
+                break;
+            default:
+                continue; // Skip if no valid stress BC type
+        }
+#endif
+
+        // Apply the traction to the boundary facet nodes
+        for (int j = 0; j < NODES_PER_FACET; ++j) {
+            int nn = conn[NODE_OF_FACET[f][j]];  // Get global node index for this facet
+            double *force_node = force[nn];      // Pointer to the force array for this node
+
+            // Distribute the traction (stress) to the nodes on the facet
+            for (int d = 0; d < NDIMS; ++d) {
+                // if(d == 1) std::cout<< force_node[d]<<","<< d <<","<< traction[d]<<std::endl;
+                #pragma acc atomic update
+                force_node[d] += var.dt * traction[d] * normal[d] / NODES_PER_FACET; 
+            }
+        }
+    }
+    }
+
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+}
 
 namespace {
 

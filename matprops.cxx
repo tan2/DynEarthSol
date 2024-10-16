@@ -193,7 +193,14 @@ double ref_pressure(const Param& param, double z)
     double depth = -z;
     double p;
     if (param.control.ref_pressure_option == 0)
-        p = param.mat.rho0[0] * param.control.gravity * depth;
+        if (param.control.has_hydraulic_diffusion) {
+        // Modified density considering porosity for hydraulic diffusion
+        p = (param.mat.rho0[0] * (1 - param.mat.porosity[0]) + 1000.0 * param.mat.porosity[0]) * param.control.gravity * depth;
+        } else {
+            // Standard reference pressure without hydraulic diffusion
+            p = param.mat.rho0[0] * param.control.gravity * depth;
+        }
+
     else if (param.control.ref_pressure_option == 1)
         p = get_prem_pressure(depth);
     else if (param.control.ref_pressure_option == 2)
@@ -210,13 +217,15 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   visc_max(p.mat.visc_max),
   tension_max(p.mat.tension_max),
   therm_diff_max(p.mat.therm_diff_max),
+  hydro_diff_max(1e-1),
   coord(*var.coord),
   connectivity(*var.connectivity),
   temperature(*var.temperature),
   stress(*var.stress),
   strain_rate(*var.strain_rate),
   elemmarkers(*var.elemmarkers),
-  ppressure(*var.ppressure)
+  ppressure(*var.ppressure),
+  dppressure(*var.dppressure)
 {
     rho0 = VectorBase::create(p.mat.rho0, nmat);
     alpha = VectorBase::create(p.mat.alpha, nmat);

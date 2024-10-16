@@ -296,6 +296,53 @@ static void declare_parameters(po::options_description &cfg,
         ("bc.has_water_loading", po::value<bool>(&p.bc.has_water_loading)->default_value(true),
          "Applying water loading for top boundary that is below sea level?")
 
+         // pore pressure boundary condition
+        ("bc.hbc_x0", po::value<int>(&p.bc.hbc_x0)->default_value(0),
+         "Type of boundary condition for the left/western side"
+         "0 indicates no flow boundary condition."
+         "1 indicates initial pore pressure is fixed.")
+        ("bc.hbc_x1", po::value<int>(&p.bc.hbc_x1)->default_value(0),
+         "Type of boundary condition for the right/eastern side")
+        ("bc.hbc_y0", po::value<int>(&p.bc.hbc_y0)->default_value(0),
+         "Type of boundary condition for the front/southern side")
+        ("bc.hbc_y1", po::value<int>(&p.bc.hbc_y1)->default_value(0),
+         "Type of boundary condition for the back/northern side")
+        ("bc.hbc_z0", po::value<int>(&p.bc.hbc_z0)->default_value(0),
+         "Type of boundary condition for the bottom side")
+        ("bc.hbc_z1", po::value<int>(&p.bc.hbc_z1)->default_value(0),
+         "Type of boundary condition for the top side")
+
+         // General stress (Neumann) boundary conditions 
+        ("bc.stress_bc_x0", po::value<int>(&p.bc.stress_bc_x0)->default_value(0),
+         "Type of boundary condition for the left/western side. "
+         "0: no traction boundary condition, "
+         "1: traction in the x direction, "
+         "2: traction in the y direction, "
+         "3: traction in the z direction.")
+        ("bc.stress_bc_x1", po::value<int>(&p.bc.stress_bc_x1)->default_value(0),
+         "Type of boundary condition for the right/eastern side")
+        ("bc.stress_bc_y0", po::value<int>(&p.bc.stress_bc_y0)->default_value(0),
+         "Type of boundary condition for the front/southern side")
+        ("bc.stress_bc_y1", po::value<int>(&p.bc.stress_bc_y1)->default_value(0),
+         "Type of boundary condition for the back/northern side")
+        ("bc.stress_bc_z0", po::value<int>(&p.bc.stress_bc_z0)->default_value(0),
+         "Type of boundary condition for the bottom side")
+        ("bc.stress_bc_z1", po::value<int>(&p.bc.stress_bc_z1)->default_value(0),
+         "Type of boundary condition for the top side")
+
+        ("bc.stress_val_x0", po::value<double>(&p.bc.stress_val_x0)->default_value(0.0),
+         "Magnitude of stress at the left/western side (in Pa).")
+        ("bc.stress_val_x1", po::value<double>(&p.bc.stress_val_x1)->default_value(0.0),
+         "Magnitude of stress at the right/eastern side (in Pa).")
+        ("bc.stress_val_y0", po::value<double>(&p.bc.stress_val_y0)->default_value(0.0),
+         "Magnitude of stress at the front/southern side (in Pa).")
+        ("bc.stress_val_y1", po::value<double>(&p.bc.stress_val_y1)->default_value(0.0),
+         "Magnitude of stress at the back/northern side (in Pa).")
+        ("bc.stress_val_z0", po::value<double>(&p.bc.stress_val_z0)->default_value(0.0),
+         "Magnitude of stress at the bottom side (in Pa).")
+        ("bc.stress_val_z1", po::value<double>(&p.bc.stress_val_z1)->default_value(0.0),
+         "Magnitude of stress at the top side (in Pa).")
+
         ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
          "Type of velocity boundary condition for the left/western side. "
          "Odd number indicates the normal component of the velocity is fixed. "
@@ -984,6 +1031,16 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         get_numbers(vm, "mat.friction_angle1", p.mat.friction_angle1, p.mat.nmat, 1);
         get_numbers(vm, "mat.dilation_angle0", p.mat.dilation_angle0, p.mat.nmat, 1);
         get_numbers(vm, "mat.dilation_angle1", p.mat.dilation_angle1, p.mat.nmat, 1);
+
+        // Hydraulic parameters
+        get_numbers(vm, "mat.porosity", p.mat.porosity, p.mat.nmat, 1);
+        get_numbers(vm, "mat.hydraulic_perm", p.mat.hydraulic_perm, p.mat.nmat, 1);
+        get_numbers(vm, "mat.fluid_rho0", p.mat.fluid_rho0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.fluid_alpha", p.mat.fluid_alpha, p.mat.nmat, 1);
+        get_numbers(vm, "mat.fluid_bulk_modulus", p.mat.fluid_bulk_modulus, p.mat.nmat, 1);
+        get_numbers(vm, "mat.fluid_visc", p.mat.fluid_visc, p.mat.nmat, 1);
+        get_numbers(vm, "mat.biot_coeff", p.mat.biot_coeff, p.mat.nmat, 1);
+        get_numbers(vm, "mat.bulk_modulus_s", p.mat.bulk_modulus_s, p.mat.nmat, 1);
     }
 
 }

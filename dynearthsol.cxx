@@ -90,6 +90,27 @@ void init_var(const Param& param, Variables& var)
     var.vbc_vertical_ratio_x1[1] = param.bc.vbc_val_x1_ratio1;
     var.vbc_vertical_ratio_x1[2] = param.bc.vbc_val_x1_ratio2;
     var.vbc_vertical_ratio_x1[3] = param.bc.vbc_val_x1_ratio3;
+
+    var.hbc_types[0] = param.bc.hbc_x0;
+    var.hbc_types[1] = param.bc.hbc_x1;
+    var.hbc_types[2] = param.bc.hbc_y0;
+    var.hbc_types[3] = param.bc.hbc_y1;
+    var.hbc_types[4] = param.bc.hbc_z0;
+    var.hbc_types[5] = param.bc.hbc_z1;
+
+    var.stress_bc_types[0] = param.bc.stress_bc_x0;
+    var.stress_bc_types[1] = param.bc.stress_bc_x1;
+    var.stress_bc_types[2] = param.bc.stress_bc_y0;
+    var.stress_bc_types[3] = param.bc.stress_bc_y1;
+    var.stress_bc_types[4] = param.bc.stress_bc_z0;
+    var.stress_bc_types[5] = param.bc.stress_bc_z1;
+
+    var.stress_bc_values[0] = param.bc.stress_val_x0;
+    var.stress_bc_values[1] = param.bc.stress_val_x1;
+    var.stress_bc_values[2] = param.bc.stress_val_y0;
+    var.stress_bc_values[3] = param.bc.stress_val_y1;
+    var.stress_bc_values[4] = param.bc.stress_val_z0;
+    var.stress_bc_values[5] = param.bc.stress_val_z1;
 }
 
 
@@ -121,7 +142,7 @@ void init(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     *var.volume_old = *var.volume;
-    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.hmass, *var.tmp_result);
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, *var.bnormals, var.edge_vectors);
@@ -130,6 +151,7 @@ void init(const Param& param, Variables& var)
     // temperature should be init'd before stress and strain
     initial_temperature(param, var, *var.temperature, *var.radiogenic_source);
     initial_stress_state(param, var, *var.stress, *var.stressyy, *var.strain, var.compensation_pressure);
+    initial_hydrostatic_state(param, var, *var.ppressure, *var.dppressure);
     initial_weak_zone(param, var, *var.plstrain);
 
     phase_changes_init(param, var);
@@ -224,7 +246,7 @@ void restart(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     bin_chkpt.read_array(*var.volume_old, "volume_old");
-    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.hmass, *var.tmp_result);
 
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
@@ -239,6 +261,7 @@ void restart(const Param& param, Variables& var)
         bin_save.read_array(*var.stress, "stress");
         bin_save.read_array(*var.plstrain, "plastic strain");
         bin_save.read_array(*var.radiogenic_source, "radiogenic source");
+        bin_save.read_array(*var.ppressure, "pore pressure");
 
         if (param.mat.is_plane_strain)
             bin_chkpt.read_array(*var.stressyy, "stressyy");
@@ -292,7 +315,7 @@ void update_mesh(const Param& param, Variables& var)
 #endif
 
     compute_volume(var, *var.volume);
-    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.hmass, *var.tmp_result);
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 #ifdef USE_NPROF
     nvtxRangePop();
@@ -317,7 +340,7 @@ void isostasy_adjustment(const Param &param, Variables &var)
         update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure,
             *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
             *var.strain_rate,
-            *var.ppressure);
+            *var.ppressure, *var.dppressure);
         update_force(param, var, *var.force, *var.tmp_result);
         update_velocity(var, *var.vel);
 
@@ -402,15 +425,15 @@ int main(int argc, const char* argv[])
         if (param.control.has_thermal_diffusion)
             update_temperature(param, var, *var.temperature, *var.ntmp, *var.tmp_result);
 
+        update_pore_pressure(param, var, *var.ppressure, *var.dppressure, *var.ntmp, *var.tmp_result, *var.strain_rate);
+        
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp, *var.tmp_result_sg);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-
         update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure,
             *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
             *var.strain_rate,
-            *var.ppressure);
-
+            *var.ppressure, *var.dppressure);
 	// Nodal Mixed Discretization For Stress
         if (param.control.is_using_mixed_stress)
             NMD_stress(param, var, *var.ntmp, *var.stress, *var.tmp_result_sg);

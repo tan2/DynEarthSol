@@ -182,6 +182,29 @@ struct BC {
 
     double_vec vbc_period_x0_ratio;
     double_vec vbc_period_x1_ratio;
+
+    // General stress (Neumann) bcs 
+    int stress_bc_x0;
+    int stress_bc_x1;
+    int stress_bc_y0;
+    int stress_bc_y1;
+    int stress_bc_z0;
+    int stress_bc_z1;
+
+    // hyrdaulic bouncdary
+    int hbc_x0;
+    int hbc_x1;
+    int hbc_y0;
+    int hbc_y1;
+    int hbc_z0;
+    int hbc_z1;
+
+    double stress_val_x0;
+    double stress_val_x1;
+    double stress_val_y0;
+    double stress_val_y1;
+    double stress_val_z0;
+    double stress_val_z1;
 };
 
 struct IC {
@@ -271,7 +294,6 @@ struct Mat {
     double_vec fluid_alpha; // pore fluid thermal expansivity
     double_vec fluid_bulk_modulus;  // pore fluid bulk modulus
     double_vec fluid_visc;  // pore fluid dynamic viscosity
-
     double_vec biot_coeff;  // Biot-Willis coefficient
     double_vec bulk_modulus_s;  // bulk modulus of solid grain (mineral)
 };
@@ -405,7 +427,10 @@ struct Variables {
     std::vector< std::pair<int,int> > *bfacets[nbdrytypes];
     array_t *bnormals;
     int vbc_types[nbdrytypes];
+    int hbc_types[nbdrytypes_hydro];
+    int stress_bc_types[nbdrytypes_hydro];
     double vbc_values[nbdrytypes];
+    double stress_bc_values[nbdrytypes];
     std::map<std::pair<int,int>, double*> edge_vectors;
     double_vec vbc_vertical_div_x0;
     double_vec vbc_vertical_div_x1;
@@ -419,6 +444,7 @@ struct Variables {
 
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;
+    double_vec *hmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
     double_vec *stressyy, *dpressure, *viscosity;
@@ -428,6 +454,7 @@ struct Variables {
     // For hyraulic proceses
     double_vec *fmass; // pore water mass
     double_vec *ppressure; // pore pressure
+    double_vec *dppressure; // delta pore pressure
     double_vec *fluid_source; // injection and pumping of pore water
     array_t *fvel, *fforce;
 
@@ -437,7 +464,7 @@ struct Variables {
 
     array_t *vel, *force, *coord0;
     tensor_t *strain_rate, *strain, *stress;
-    shapefn *shpdx, *shpdy, *shpdz;
+    shapefn *shpdx, *shpdy, *shpdz; // gradient of shape function
     elem_cache *tmp_result;
     double_vec *tmp_result_sg;
 

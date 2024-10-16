@@ -100,9 +100,9 @@ void Output::_write(const Variables& var, bool disable_averaging)
         }
         bin.write_array(coord0, "velocity averaged", coord0.size());
     }
-
+    
     bin.write_array(*var.temperature, "temperature", var.temperature->size());
-
+    bin.write_array(*var.ppressure, "pore pressure", var.ppressure->size());
     bin.write_array(*var.radiogenic_source, "radiogenic source", var.radiogenic_source->size());
 
     bin.write_array(*var.plstrain, "plastic strain", var.plstrain->size());

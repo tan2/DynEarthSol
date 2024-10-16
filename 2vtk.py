@@ -186,6 +186,7 @@ def main(modelname, start, end, delta):
             #convert_field(des, frame, 'mass', fvtu)
             #convert_field(des, frame, 'tmass', fvtu)
             #convert_field(des, frame, 'volume_n', fvtu)
+            convert_field(des, frame, 'pore pressure', fvtu)
 
             # node number for debugging
             vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node number')

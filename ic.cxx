@@ -163,8 +163,13 @@ void initial_stress_state(const Param &param, const Variables &var,
 
     // lithostatic condition for stress and strain
     double rho = var.mat->rho(0);
-    double ks = var.mat->bulkm(0);
+    if (param.control.has_hydraulic_diffusion) {
+        // Modified density considering porosity for hydraulic diffusion
+        rho = var.mat->rho(0) * (1 - var.mat->phi(0)) + 1000.0 * var.mat->phi(0);
+    }
 
+    double ks = var.mat->bulkm(0);
+    double atm = 101325;
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
         double zcenter = 0;
@@ -180,16 +185,43 @@ void initial_stress_state(const Param &param, const Variables &var,
         }
 
         for (int i=0; i<NDIMS; ++i) {
-            stress[e][i] = -p;
-            strain[e][i] = -p / ks / NDIMS;
+            stress[e][i] = -(p + atm);
+            strain[e][i] = -(p + atm) / ks / NDIMS;
         }
         if (param.mat.is_plane_strain)
-            stressyy[e] = -p;
+            stressyy[e] = -(p + atm);
     }
 
     compensation_pressure = ref_pressure(param, -param.mesh.zlength);
 }
 
+void initial_hydrostatic_state(const Param &param, const Variables &var,
+                               double_vec &ppressure, double_vec &dppressure)
+{
+    // Check if gravity is enabled
+    if (param.control.gravity == 0) {
+        return;
+    }
+
+    // Hydrostatic condition for pressure calculation
+    double rho_fluid = var.mat->rho_fluid(0);
+    rho_fluid = 1000.0; // Assuming a standard fluid density (e.g., water)
+    double gravity = param.control.gravity; // Gravitational acceleration
+    double atm = 101325;
+    // Loop over all nodes
+    for (int i = 0; i < var.nnode; ++i) {
+        // Get the z-coordinate (depth) of the current node
+        const double *coord = (*var.coord)[i];
+        double z = coord[NDIMS - 1];
+
+        // Calculate hydrostatic pressure at the node: p = rho * g * z 
+        // positive for compression (sign is opposite to soild matrix) because measurement of groundwater is postive when stress is negative.
+        ppressure[i] = -1.0 * rho_fluid * gravity * z + atm;
+        
+        // Initialize pressure change (dppressure) to zero
+        dppressure[i] = 0.0;
+    }
+}
 
 void initial_weak_zone(const Param &param, const Variables &var,
                        double_vec &plstrain)
