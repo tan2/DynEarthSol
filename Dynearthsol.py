@@ -148,6 +148,7 @@ class Dynearthsol:
 
             flux = v_slope[:-1] * flux_val / norm
             return flux, flux_val
+        
         elif name == 'strain II':
             strain = self.read_field(frame, 'strain')
             sII = second_invariant(strain)

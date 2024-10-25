@@ -125,7 +125,7 @@ static void elastic_effective(double bulkm, double shearm, const double* de, dou
     double dev = trace(de);
 
     for (int i=0; i<NDIMS; ++i)
-        s[i] += 2 * shearm * de[i] + lambda * dev - dpp;
+        s[i] += 2 * shearm * de[i] + lambda * dev + dpp;
 
     for (int i=NDIMS; i<NSTR; ++i)
         s[i] += 2 * shearm * de[i];
@@ -367,9 +367,9 @@ static void elasto_plastic2d(double bulkm, double shearm,
     // Apply the pore pressure effect if hydraulic diffusion is enabled
     if (has_hydraulic_diffusion)
     {
-        sxx -= dpp;
-        syy -= dpp;
-        szz -= dpp;
+        sxx += dpp;
+        syy += dpp;
+        szz += dpp;
     }
     //
     // transform to principal stress coordinate system
@@ -567,7 +567,7 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
             dpp_element += dppressure[conn[j]] / 4.0; // the centroid shape functions are 1/4 for each node in 3D
         #else
             pp_element += ppressure[conn[j]] / 3.0; // the centroid shape functions are 1/3 for each node in 2D
-            dpp_element += dppressure[conn[j]] / 4.0; // the centroid shape functions are 1/4 for each node in 3D
+            dpp_element += dppressure[conn[j]] / 3.0; // the centroid shape functions are 1/4 for each node in 3D
         #endif
         }
         ppressure_element[e] = pp_element;  // Store element-level pore pressure 
@@ -591,6 +591,11 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
         double pp = ppressure_element[e];        // Use element-level interpolated pore pressure
         double dpp = dppressure_element[e];        // Use element-level interpolated pore pressure rate
 
+        //  #pragma omp critical
+        // {
+        //     std::cout << e << ", " << ppressure_element[e] << ", " << dppressure_element[e] << ", " << stress[e][2] << std::endl;
+        // }
+        
         if (param.control.has_hydraulic_diffusion) {
             pp = alpha_b * pp; // Apply Biot coefficient to pore pressure
             dpp = alpha_b * dpp; // Apply Biot coefficient to pore pressure rate
@@ -731,3 +736,62 @@ void update_stress(const Param& param, const Variables& var, tensor_t& stress,
 #endif
 }
 
+void update_old_mean_stress(const Param& param, const Variables& var, tensor_t& stress,
+                   double_vec& old_mean_stress)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+
+    #pragma omp parallel for default(none)                           \
+        shared(param, var, stress, old_mean_stress)
+    #pragma acc parallel loop
+    for (int e=0; e<var.nelem; ++e) {
+        double* s = stress[e];
+        old_mean_stress[e] =trace(s)/NDIMS;
+    }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+}
+
+// void update_stress_old(const Param& param, const Variables& var, tensor_t& stress, tensor_t& stress_old)
+// {
+// #ifdef USE_NPROF
+//     nvtxRangePushA(__FUNCTION__);
+// #endif
+
+//     // Copy current stress into stress_old for each element
+//     #pragma omp parallel for default(none) shared(var, stress, stress_old)
+//     #pragma acc parallel loop
+//     for (int e = 0; e < var.nelem; ++e) {
+//         for (int i = 0; i < NSTR; ++i) {
+//             stress_old[e][i] = stress[e][i];  // Copy current stress to stress_old
+//         }
+//     }
+
+// #ifdef USE_NPROF
+//     nvtxRangePop();
+// #endif
+// }
+
+// void add_stress_old(const Param& param, const Variables& var, tensor_t& stress, tensor_t& stress_old)
+// {
+// #ifdef USE_NPROF
+//     nvtxRangePushA(__FUNCTION__);
+// #endif
+
+//     #pragma omp parallel for default(none) shared(var, stress, stress_old)
+//     #pragma acc parallel loop
+//     for (int e = 0; e < var.nelem; ++e) {
+//         for (int i = 0; i < NSTR; ++i) {
+//             double diff = 0.0;
+//             diff = stress[e][i] - stress_old[e][i];
+//             stress[e][i] += diff;
+//         }
+//     }
+
+// #ifdef USE_NPROF
+//     nvtxRangePop();
+// #endif
+// }

@@ -344,8 +344,104 @@ void NMD_stress(const Param& param, const Variables &var,
 #endif
 }
 
-
 double compute_dt(const Param& param, const Variables& var)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+    // constant dt
+    if (param.control.fixed_dt != 0) return param.control.fixed_dt;
+
+    // dynamic dt
+    double dt_maxwell = std::numeric_limits<double>::max();
+    double dt_diffusion = std::numeric_limits<double>::max();
+    double dt_hydro_diffusion = std::numeric_limits<double>::max();
+    double minl = std::numeric_limits<double>::max();
+    double scaling = 1.0;
+
+    #pragma omp parallel for reduction(min:minl,dt_maxwell,dt_diffusion,dt_hydro_diffusion)    \
+        default(none) shared(param,var)
+    #pragma acc parallel loop reduction(min:minl, dt_maxwell, dt_diffusion,dt_hydro_diffusion)
+    for (int e=0; e<var.nelem; ++e) {
+        int n0 = (*var.connectivity)[e][0];
+        int n1 = (*var.connectivity)[e][1];
+        int n2 = (*var.connectivity)[e][2];
+
+        const double *a = (*var.coord)[n0];
+        const double *b = (*var.coord)[n1];
+        const double *c = (*var.coord)[n2];
+
+        // min height of this element
+        double minh;
+#ifdef THREED
+        {
+            int n3 = (*var.connectivity)[e][3];
+            const double *d = (*var.coord)[n3];
+
+            // max facet area of this tet
+            double maxa = std::max(std::max(triangle_area(a, b, c),
+                                            triangle_area(a, b, d)),
+                                   std::max(triangle_area(c, d, a),
+                                            triangle_area(c, d, b)));
+            minh = 3 * (*var.volume)[e] / maxa;
+        }
+#else
+        {
+            // max edge length of this triangle
+            double maxl = std::sqrt(std::max(std::max(dist2(a, b),
+                                                      dist2(b, c)),
+                                             dist2(a, c)));
+            minh = 2 * (*var.volume)[e] / maxl;
+        }
+#endif
+        dt_maxwell = std::min(dt_maxwell,
+                              0.5 * var.mat->visc_min / (1e-40 + var.mat->shearm(e)));
+        if (param.control.has_thermal_diffusion)
+            dt_diffusion = std::min(dt_diffusion,
+                                    0.5 * minh * minh / var.mat->therm_diff_max);
+        
+        // Compute dt_hydro_diffusion (hydraulic)
+        if (param.control.has_hydraulic_diffusion)
+            if (var.mat->hydro_diff_max > 0) {
+                dt_hydro_diffusion = std::min(dt_hydro_diffusion,
+                                            0.5 * minh * minh / var.mat->hydro_diff_max);
+            }
+        minl = std::min(minl, minh);
+    }
+
+    double max_vbc_val;
+    if (param.control.characteristic_speed == 0) {
+        max_vbc_val = var.max_vbc_val;
+        if (param.control.surface_process_option > 0)
+            max_vbc_val = std::max(max_vbc_val, var.surfinfo.max_surf_vel*5e-1);
+    }
+    else
+        max_vbc_val = param.control.characteristic_speed;
+
+    double dt_advection = 0.5 * minl / max_vbc_val;
+    double dt_elastic = (param.control.is_quasi_static) ?
+        0.5 * minl / (max_vbc_val * param.control.inertial_scaling) :
+        0.5 * minl / std::sqrt(param.mat.bulk_modulus[0] / param.mat.rho0[0]);
+
+    // Combine dt calculations and incorporate dt_hydro_diffusion
+    double dt = std::min({dt_elastic, dt_maxwell, dt_advection, dt_diffusion, dt_hydro_diffusion}) * param.control.dt_fraction;
+    // double dt = std::min({dt_elastic, dt_maxwell, dt_advection, dt_diffusion}) * param.control.dt_fraction;
+    if (param.debug.dt) {
+        std::cout << "step #" << var.steps << "  dt: " << dt_maxwell << " " << dt_diffusion << " " 
+                  << dt_hydro_diffusion << " " << dt_advection << " " << dt_elastic << " sec\n";
+    }
+    if (dt <= 0) {
+        std::cerr << "Error: dt <= 0!  " << dt_maxwell << " " << dt_diffusion
+                  << " " << dt_hydro_diffusion << " " << dt_advection << " " << dt_elastic << "\n";
+        std::exit(11);
+    }
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+    return dt;
+}
+
+double compute_dt_PT(const Param& param, const Variables& var)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -396,15 +492,15 @@ double compute_dt(const Param& param, const Variables& var)
 #endif
         dt_maxwell = std::min(dt_maxwell,
                               0.5 * var.mat->visc_min / (1e-40 + var.mat->shearm(e)));
-        if (param.control.has_thermal_diffusion)
-            dt_diffusion = std::min(dt_diffusion,
-                                    0.5 * minh * minh / var.mat->therm_diff_max);
+        // if (param.control.has_thermal_diffusion)
+        //     dt_diffusion = std::min(dt_diffusion,
+        //                             0.5 * minh * minh / var.mat->therm_diff_max);
         
-        // Compute dt_hydro_diffusion (hydraulic)
-        if (var.mat->hydro_diff_max > 0) {
-            dt_hydro_diffusion = std::min(dt_hydro_diffusion,
-                                          0.5 * minh * minh / var.mat->hydro_diff_max);
-        }
+        // // Compute dt_hydro_diffusion (hydraulic)
+        // if (var.mat->hydro_diff_max > 0) {
+        //     dt_hydro_diffusion = std::min(dt_hydro_diffusion,
+        //                                   0.5 * minh * minh / var.mat->hydro_diff_max);
+        // }
         minl = std::min(minl, minh);
     }
 
@@ -422,15 +518,12 @@ double compute_dt(const Param& param, const Variables& var)
         0.5 * minl / (max_vbc_val * param.control.inertial_scaling) :
         0.5 * minl / std::sqrt(param.mat.bulk_modulus[0] / param.mat.rho0[0]);
 
-    // Combine dt calculations and incorporate dt_hydro_diffusion
-    double dt = std::min({dt_elastic, dt_maxwell, dt_advection, dt_diffusion, dt_hydro_diffusion}) * param.control.dt_fraction;
+    double dt = std::min({dt_elastic, dt_maxwell, dt_advection}) * param.control.dt_fraction;
     if (param.debug.dt) {
-        std::cout << "step #" << var.steps << "  dt: " << dt_maxwell << " " << dt_diffusion << " " 
-                  << dt_hydro_diffusion << " " << dt_advection << " " << dt_elastic << " sec\n";
+        std::cout << "step #" << var.steps << "  dt: " << dt_maxwell << " " << dt_advection << " " << dt_elastic << " sec\n";
     }
     if (dt <= 0) {
-        std::cerr << "Error: dt <= 0!  " << dt_maxwell << " " << dt_diffusion
-                  << " " << dt_hydro_diffusion << " " << dt_advection << " " << dt_elastic << "\n";
+        std::cerr << "Error: dt <= 0!  " << dt_maxwell << " "  << dt_advection << " " << dt_elastic << "\n";
         std::exit(11);
     }
 #ifdef USE_NPROF
@@ -438,7 +531,6 @@ double compute_dt(const Param& param, const Variables& var)
 #endif
     return dt;
 }
-
 
 void compute_mass(const Param &param, const Variables &var,
                   double max_vbc_val, double_vec &volume_n,
@@ -453,6 +545,32 @@ void compute_mass(const Param &param, const Variables &var,
     // tmass.assign(tmass.size(), 0);
 
     const double pseudo_speed = max_vbc_val * param.control.inertial_scaling;
+
+    // Retrieve hydraulic properties for the element
+    double perm_e = var.mat->perm(0);                // Intrinsic permeability 
+    double mu_e = var.mat->mu_fluid(0);              // Fluid dynamic viscosity
+    double alpha_b = var.mat->alpha_biot(0);         // Biot coefficient
+    double rho_f = var.mat->rho_fluid(0);            // Fluid density
+    double phi_e = var.mat->phi(0);        // Element porosity
+    double comp_fluid = var.mat->beta_fluid(0);        // fluid comporessibility
+    double bulkm = var.mat->bulkm(0);
+    double shearm = var.mat->shearm(0);
+    double matrix_comp = 1.0 / (bulkm +4.0*shearm/3.0);
+
+    rho_f = 1000.0; 
+    double gamma_w = rho_f * param.control.gravity; // specific weight
+    
+    // Hydraulic conductivity using permeability and viscosity
+    double hydraulic_conductivity = perm_e * gamma_w / mu_e;
+    
+    // Compute element diffusivity and update max using reduction
+    double diff_e = hydraulic_conductivity / (phi_e * comp_fluid + alpha_b * matrix_comp) / gamma_w;
+
+    if (pseudo_speed < diff_e && param.control.has_hydraulic_diffusion)
+    {
+        std::cout << "pseudo speed is too slow, increase mass scaling" << std::endl;
+        std::exit(11);
+    }
 
 
 #ifdef GPP1X
@@ -473,9 +591,13 @@ void compute_mass(const Param &param, const Variables &var,
             rho = (*var.mat).rho(e) * (1 - (*var.mat).phi(e)) + 1000.0 * (*var.mat).phi(e);
         }
 
+        double bulk_comp = 1.0/(*var.mat).bulkm(e); // lambda + 2G/3
+        if(NDIMS == 2) bulk_comp = 1.0/((*var.mat).bulkm(e) + (*var.mat).shearm(e)/3.0); // lambda + G 
+
+        double hm_coeff = (*var.mat).alpha_biot(e) + (*var.mat).phi(e) - (*var.mat).alpha_biot(e) * (*var.mat).phi(e); 
         double m = rho * (*var.volume)[e] / NODES_PER_ELEM;
         double tm = (*var.mat).rho(e) * (*var.mat).cp(e) * (*var.volume)[e] / NODES_PER_ELEM;
-        double hm = (*var.mat).phi(e) * (*var.mat).beta_fluid(e) * (*var.volume)[e] / NODES_PER_ELEM;
+        double hm = (hm_coeff * bulk_comp + (*var.mat).phi(e) * (*var.mat).beta_fluid(e)) * (*var.volume)[e] / NODES_PER_ELEM;
 
         tr[0] = (*var.volume)[e];
         tr[1] = m;

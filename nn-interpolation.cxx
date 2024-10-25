@@ -323,6 +323,16 @@ namespace {
         var.stressyy = a;
 
         a = new double_vec(e);
+        inject_field(idx, is_changed, elems_vec, ratios_vec, *var.old_mean_stress, *a);
+        delete var.old_mean_stress;
+        var.old_mean_stress = a;
+
+        // b = new tensor_t(e);
+        // inject_field(idx, is_changed, elems_vec, ratios_vec, *var.stress_old, *b);
+        // delete var.stress_old;
+        // var.stress_old = b;
+
+        a = new double_vec(e);
         inject_field(idx, is_changed, elems_vec, ratios_vec, *var.radiogenic_source, *a);
         delete var.radiogenic_source;
         var.radiogenic_source = a;

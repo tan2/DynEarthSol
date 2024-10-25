@@ -6,6 +6,7 @@
 
 #include "ic-read-temp.hpp"
 #include "ic.hpp"
+#include "utils.hpp"
 
 namespace {
 
@@ -153,7 +154,7 @@ namespace {
 
 
 void initial_stress_state(const Param &param, const Variables &var,
-                          tensor_t &stress, double_vec &stressyy, tensor_t &strain,
+                          tensor_t &stress, double_vec &stressyy, double_vec &old_mean_stress, tensor_t &strain,
                           double &compensation_pressure)
 {
     if (param.control.gravity == 0) {
@@ -163,13 +164,8 @@ void initial_stress_state(const Param &param, const Variables &var,
 
     // lithostatic condition for stress and strain
     double rho = var.mat->rho(0);
-    if (param.control.has_hydraulic_diffusion) {
-        // Modified density considering porosity for hydraulic diffusion
-        rho = var.mat->rho(0) * (1 - var.mat->phi(0)) + 1000.0 * var.mat->phi(0);
-    }
-
     double ks = var.mat->bulkm(0);
-    double atm = 101325;
+
     for (int e=0; e<var.nelem; ++e) {
         const int *conn = (*var.connectivity)[e];
         double zcenter = 0;
@@ -185,14 +181,103 @@ void initial_stress_state(const Param &param, const Variables &var,
         }
 
         for (int i=0; i<NDIMS; ++i) {
-            stress[e][i] = -(p + atm);
-            strain[e][i] = -(p + atm) / ks / NDIMS;
+            stress[e][i] = -p;
+            strain[e][i] = -p / ks / NDIMS;
         }
+        
+
+        old_mean_stress[e] = trace(stress[e])/NDIMS; 
         if (param.mat.is_plane_strain)
-            stressyy[e] = -(p + atm);
+            stressyy[e] = -p;
     }
 
     compensation_pressure = ref_pressure(param, -param.mesh.zlength);
+}
+
+void initial_stress_state_1d_load(const Param &param, const Variables &var,
+                          tensor_t &stress, double_vec &stressyy, double_vec &old_mean_stress, tensor_t &strain,
+                          double &compensation_pressure)
+{
+    if (param.control.gravity == 0) {
+        compensation_pressure = 0;
+        return;
+    }
+
+    // lithostatic condition for stress and strain
+    double rho = var.mat->rho(0);
+    if (param.control.has_hydraulic_diffusion) {
+        // Modified density considering porosity for hydraulic diffusion
+        rho = var.mat->rho(0) * (1 - var.mat->phi(0)) + 1000.0 * var.mat->phi(0);
+    }
+
+    double ks = var.mat->bulkm(0);
+    double mu = var.mat->shearm(0);
+    double lame = ks - (2.0 / 3.0) * mu;
+    double loading_zz = 0.0;
+
+    for (int e=0; e<var.nelem; ++e) {
+        const int *conn = (*var.connectivity)[e];
+        double zcenter = 0;
+        for (int i=0; i<NODES_PER_ELEM; ++i) {
+            zcenter += (*var.coord)[conn[i]][NDIMS-1];
+        }
+        zcenter /= NODES_PER_ELEM;
+
+        double p = ref_pressure(param, zcenter);
+        if (param.control.ref_pressure_option == 1 ||
+            param.control.ref_pressure_option == 2) {
+            ks = var.mat->bulkm(e);
+            mu = var.mat->shearm(e);
+            lame = ks - (2.0 / 3.0) * mu;
+        }
+
+#ifdef THREED
+    for (int i=0; i<NDIMS; ++i) {
+        if(i == 2)
+        {
+            stress[e][i] = -(p + loading_zz);
+            strain[e][i] = -(p + loading_zz) / ks / NDIMS;
+        }
+        else
+        {
+            stress[e][i] = -(p + loading_zz)*lame/(lame + 2 * mu); 
+            strain[e][i] = 0.0; // e_xx, e_yy = 0
+        }
+        }
+#else
+    for (int i=0; i<NDIMS; ++i) {
+        if(i == 1)
+        {
+            stress[e][i] = -(p + loading_zz);
+            strain[e][i] = -(p + loading_zz) / ks / NDIMS;
+        }
+        else
+        {
+            stress[e][i] = -(p + loading_zz)*lame/(lame + 2 * mu); // sigzz
+            strain[e][i] = 0.0; // e_xx, e_yy = 0
+        }
+        }
+
+        old_mean_stress[e] = trace(stress[e])/NDIMS; 
+            
+        if (param.mat.is_plane_strain)
+            stressyy[e] = -(p + loading_zz)*lame/(lame + 2 * mu); 
+#endif
+
+    }
+
+    compensation_pressure = ref_pressure(param, -param.mesh.zlength);
+}
+
+// Function to check if a node is a boundary node
+inline bool is_boundary_node_for_pp(const int n, const Variables &var) {
+    int boundary_types[6] = {BOUNDX0, BOUNDX1, BOUNDY0, BOUNDY1, BOUNDZ0, BOUNDZ1};
+    for (int i = 0; i < 6; ++i) {
+        if (((*var.bcflag)[n] & boundary_types[i]) && (var.hbc_types[i] == 1)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void initial_hydrostatic_state(const Param &param, const Variables &var,
@@ -207,7 +292,16 @@ void initial_hydrostatic_state(const Param &param, const Variables &var,
     double rho_fluid = var.mat->rho_fluid(0);
     rho_fluid = 1000.0; // Assuming a standard fluid density (e.g., water)
     double gravity = param.control.gravity; // Gravitational acceleration
-    double atm = 101325;
+    double loading = param.ic.excess_pore_pressure;
+    double ks = var.mat->bulkm(0);
+    double mu = var.mat->shearm(0);
+    double lame = ks - (2.0 / 3.0) * mu;
+    double alpha_c = var.mat->alpha_biot(0);
+    double phi = var.mat->phi(0);
+    double beta_w = var.mat->beta_fluid(0);
+    double skempton = 1.0/(phi * beta_w * (lame + 2 * mu) / (alpha_c + phi - phi*alpha_c) + alpha_c);
+    // skempton = 1.0;
+    
     // Loop over all nodes
     for (int i = 0; i < var.nnode; ++i) {
         // Get the z-coordinate (depth) of the current node
@@ -216,7 +310,20 @@ void initial_hydrostatic_state(const Param &param, const Variables &var,
 
         // Calculate hydrostatic pressure at the node: p = rho * g * z 
         // positive for compression (sign is opposite to soild matrix) because measurement of groundwater is postive when stress is negative.
-        ppressure[i] = -1.0 * rho_fluid * gravity * z + atm;
+        // if(z >= 0)
+        // {
+        //     ppressure[i] = 0.0;
+        
+        // }
+        // else
+        // {
+        //     ppressure[i] = -1.0 * rho_fluid * gravity * z + skempton * loading;
+        // }
+
+        ppressure[i] = -1.0 * rho_fluid * gravity * z;
+
+        // Add excess pore pressure for non-boundary nodes
+        if (!is_boundary_node_for_pp(i, var)) ppressure[i] += skempton * loading;
         
         // Initialize pressure change (dppressure) to zero
         dppressure[i] = 0.0;

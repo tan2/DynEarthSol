@@ -276,6 +276,16 @@ static void declare_parameters(po::options_description &cfg,
          "Does the model have hydration processes? It is required to model some types of phase changes.")
         ("control.hydration_migration_speed", po::value<double>(&p.control.hydration_migration_speed)->default_value(3e-9),
          "The upward migration speed of hydrous fluid (in m/s).\n")
+
+        ("control.has_PT", po::value<bool>(&p.control.has_PT)->default_value(false),
+         "Does the model have Pseudo-transient (PT) loop?\n")
+        ("control.PT_max_iter", po::value<int>(&p.control.PT_max_iter)->default_value(5000),
+         "Maximum iteration for PT loop")
+        ("control.PT_relative_tolerance",po::value<double>(&p.control.PT_relative_tolerance)->default_value(1e-6),
+         "tolerance for relative change for breaking PT loop")
+
+         ("control.has_moving_mesh", po::value<bool>(&p.control.has_moving_mesh)->default_value(true),
+         "Does the model update mesh coordinates (Lagrangian)?\n")
         ;
 
     cfg.add_options()
@@ -418,6 +428,8 @@ static void declare_parameters(po::options_description &cfg,
          "Value of boundary condition for the bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_z1", po::value<double>(&p.bc.vbc_val_z1)->default_value(0),
          "Value of boundary condition for the top side (if velocity, unit is m/s; if stress, unit is Pa)")
+        ("bc.vbc_val_z1_loading_period", po::value<double>(&p.bc.vbc_val_z1_loading_period)->default_value(std::numeric_limits<double>::max()),
+         "Loading period for the velocity on the top side")
 
         ("bc.vbc_n0", po::value<int>(&p.bc.vbc_n0)->default_value(1),
          "Type of boundary condition for slant boundary #0 (only type 1, 3, 11, 13 are supported).")
@@ -544,6 +556,12 @@ static void declare_parameters(po::options_description &cfg,
 
         ("ic.isostasy_adjustment_time_in_yr", po::value<double>(&p.ic.isostasy_adjustment_time_in_yr)->default_value(0),
          "Time for spinning up isostasy adjustment.\n")
+        
+        ("ic.excess_pore_pressure", po::value<double>(&p.ic.excess_pore_pressure)->default_value(0.0),
+         "Initial excess_pore_pressure except for boundary.\n")
+         ("ic.has_body_force_adjustment", po::value<bool>(&p.ic.has_body_force_adjustment)->default_value(false),
+         "Conducting PT loop to get initial stress field from inital guess")
+
         ;
 
     cfg.add_options()
@@ -629,7 +647,7 @@ static void declare_parameters(po::options_description &cfg,
         ("mat.dilation_angle1", po::value<std::string>()->default_value("[0]"),
          "Dilation angle of the materials when weakening saturates '[d0, d1, d2, ...]' (in degree)")
 
-        ("mat.porosity", po::value<std::string>()->default_value("[0.05]"),
+        ("mat.porosity", po::value<std::string>()->default_value("[0.0]"),
          "Porosity of the materials '[d0, d1, d2, ...]' (no unit)")
         ("mat.hydraulic_perm", po::value<std::string>()->default_value("[1e-14]"),
          "Intrinsic permeability of the materials '[d0, d1, d2, ...]' (m^2)")

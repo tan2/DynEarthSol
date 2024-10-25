@@ -70,6 +70,7 @@ private:
     const conn_t &connectivity;
     const double_vec &temperature;
     const tensor_t &stress;
+    // const tensor_t &stress_old;
     const tensor_t &strain_rate;
     const int_vec2D &elemmarkers;
 

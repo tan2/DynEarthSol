@@ -122,6 +122,12 @@ struct Control {
 
     bool has_hydration_processes;
     double hydration_migration_speed;
+
+    bool has_PT;
+    int PT_max_iter;
+    double PT_relative_tolerance;
+
+    bool has_moving_mesh;
 };
 
 struct BC {
@@ -182,6 +188,8 @@ struct BC {
 
     double_vec vbc_period_x0_ratio;
     double_vec vbc_period_x1_ratio;
+
+    double vbc_val_z1_loading_period;
 
     // General stress (Neumann) bcs 
     int stress_bc_x0;
@@ -246,6 +254,9 @@ struct IC {
     int_vec radiogenic_heat_mat_in_layer;
 
     double isostasy_adjustment_time_in_yr;
+
+    double excess_pore_pressure;
+    bool has_body_force_adjustment;
 };
 
 struct Mat {
@@ -402,6 +413,8 @@ class MarkerSet;
 struct Variables {
     double time;
     double dt;
+    double dt_PT;
+    double l2_residual;
     int steps;
     Time func_time;
 
@@ -431,6 +444,8 @@ struct Variables {
     int stress_bc_types[nbdrytypes_hydro];
     double vbc_values[nbdrytypes];
     double stress_bc_values[nbdrytypes];
+    double vbc_val_z1_loading_period;
+
     std::map<std::pair<int,int>, double*> edge_vectors;
     double_vec vbc_vertical_div_x0;
     double_vec vbc_vertical_div_x1;
@@ -448,6 +463,7 @@ struct Variables {
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
     double_vec *stressyy, *dpressure, *viscosity;
+    double_vec *old_mean_stress;
     double_vec *ntmp;
     double_vec *radiogenic_source;
 
@@ -455,18 +471,21 @@ struct Variables {
     double_vec *fmass; // pore water mass
     double_vec *ppressure; // pore pressure
     double_vec *dppressure; // delta pore pressure
+    double_vec *dppressure_zero; // delta pore pressure
     double_vec *fluid_source; // injection and pumping of pore water
-    array_t *fvel, *fforce;
-
+    
     // For surface processes
     SurfaceInfo surfinfo;
     int_vec melt_markers;
 
     array_t *vel, *force, *coord0;
+    array_t *force_residual;
     tensor_t *strain_rate, *strain, *stress;
     shapefn *shpdx, *shpdy, *shpdz; // gradient of shape function
     elem_cache *tmp_result;
     double_vec *tmp_result_sg;
+
+    // tensor_t *stress_old;
 
     MatProps *mat;
 

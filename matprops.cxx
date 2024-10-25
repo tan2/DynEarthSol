@@ -195,7 +195,7 @@ double ref_pressure(const Param& param, double z)
     if (param.control.ref_pressure_option == 0)
         if (param.control.has_hydraulic_diffusion) {
         // Modified density considering porosity for hydraulic diffusion
-        p = (param.mat.rho0[0] * (1 - param.mat.porosity[0]) + 1000.0 * param.mat.porosity[0]) * param.control.gravity * depth;
+            p = (param.mat.rho0[0] * (1 - param.mat.porosity[0]) + 1000.0 * param.mat.porosity[0]) * param.control.gravity * depth;
         } else {
             // Standard reference pressure without hydraulic diffusion
             p = param.mat.rho0[0] * param.control.gravity * depth;
@@ -222,6 +222,7 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   connectivity(*var.connectivity),
   temperature(*var.temperature),
   stress(*var.stress),
+//   stress_old(*var.stress_old),
   strain_rate(*var.strain_rate),
   elemmarkers(*var.elemmarkers),
   ppressure(*var.ppressure),
