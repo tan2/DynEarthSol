@@ -194,7 +194,7 @@ else ifneq (, $(findstring nvc++, $(CXX)))
 	endif
 
 	ifeq ($(openacc), 1)
-		CXXFLAGS += -acc=gpu -gpu=managed,nofma -Mcuda
+		CXXFLAGS += -acc=gpu -gpu=managed,nofma -Mcuda -DACC
 		LDFLAGS += -acc=gpu -gpu=managed -Mcuda
 	endif
 
