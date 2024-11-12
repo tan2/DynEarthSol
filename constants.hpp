@@ -34,6 +34,7 @@ const int iboundn1 = 7;
 const int iboundn2 = 8;
 const int iboundn3 = 9;
 const int nbdrytypes = 10;
+const int nbdrytypes_hydro = 6;
 
 typedef unsigned int uint;
 const uint BOUNDX0 = 1 << iboundx0;  //    1, western (left in 2D)

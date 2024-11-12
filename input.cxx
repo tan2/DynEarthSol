@@ -269,11 +269,23 @@ static void declare_parameters(po::options_description &cfg,
 
         ("control.has_thermal_diffusion", po::value<bool>(&p.control.has_thermal_diffusion)->default_value(true),
          "Does the model have thermal diffusion? If not, temperature is advected, but not diffused.\n")
+        ("control.has_hydraulic_diffusion", po::value<bool>(&p.control.has_hydraulic_diffusion)->default_value(false),
+         "Does the model have hydraulic diffusion? If not, pore pressure is advected, but not diffused.\n") 
 
         ("control.has_hydration_processes", po::value<bool>(&p.control.has_hydration_processes)->default_value(false),
          "Does the model have hydration processes? It is required to model some types of phase changes.")
         ("control.hydration_migration_speed", po::value<double>(&p.control.hydration_migration_speed)->default_value(3e-9),
          "The upward migration speed of hydrous fluid (in m/s).\n")
+
+        ("control.has_PT", po::value<bool>(&p.control.has_PT)->default_value(false),
+         "Does the model have Pseudo-transient (PT) loop?\n")
+        ("control.PT_max_iter", po::value<int>(&p.control.PT_max_iter)->default_value(5000),
+         "Maximum iteration for PT loop")
+        ("control.PT_relative_tolerance",po::value<double>(&p.control.PT_relative_tolerance)->default_value(1e-6),
+         "tolerance for relative change for breaking PT loop")
+
+         ("control.has_moving_mesh", po::value<bool>(&p.control.has_moving_mesh)->default_value(true),
+         "Does the model update mesh coordinates (Lagrangian)?\n")
         ;
 
     cfg.add_options()
@@ -293,6 +305,53 @@ static void declare_parameters(po::options_description &cfg,
 
         ("bc.has_water_loading", po::value<bool>(&p.bc.has_water_loading)->default_value(true),
          "Applying water loading for top boundary that is below sea level?")
+
+         // pore pressure boundary condition
+        ("bc.hbc_x0", po::value<int>(&p.bc.hbc_x0)->default_value(0),
+         "Type of boundary condition for the left/western side"
+         "0 indicates no flow boundary condition."
+         "1 indicates initial pore pressure is fixed.")
+        ("bc.hbc_x1", po::value<int>(&p.bc.hbc_x1)->default_value(0),
+         "Type of boundary condition for the right/eastern side")
+        ("bc.hbc_y0", po::value<int>(&p.bc.hbc_y0)->default_value(0),
+         "Type of boundary condition for the front/southern side")
+        ("bc.hbc_y1", po::value<int>(&p.bc.hbc_y1)->default_value(0),
+         "Type of boundary condition for the back/northern side")
+        ("bc.hbc_z0", po::value<int>(&p.bc.hbc_z0)->default_value(0),
+         "Type of boundary condition for the bottom side")
+        ("bc.hbc_z1", po::value<int>(&p.bc.hbc_z1)->default_value(0),
+         "Type of boundary condition for the top side")
+
+         // General stress (Neumann) boundary conditions 
+        ("bc.stress_bc_x0", po::value<int>(&p.bc.stress_bc_x0)->default_value(0),
+         "Type of boundary condition for the left/western side. "
+         "0: no traction boundary condition, "
+         "1: traction in the x direction, "
+         "2: traction in the y direction, "
+         "3: traction in the z direction.")
+        ("bc.stress_bc_x1", po::value<int>(&p.bc.stress_bc_x1)->default_value(0),
+         "Type of boundary condition for the right/eastern side")
+        ("bc.stress_bc_y0", po::value<int>(&p.bc.stress_bc_y0)->default_value(0),
+         "Type of boundary condition for the front/southern side")
+        ("bc.stress_bc_y1", po::value<int>(&p.bc.stress_bc_y1)->default_value(0),
+         "Type of boundary condition for the back/northern side")
+        ("bc.stress_bc_z0", po::value<int>(&p.bc.stress_bc_z0)->default_value(0),
+         "Type of boundary condition for the bottom side")
+        ("bc.stress_bc_z1", po::value<int>(&p.bc.stress_bc_z1)->default_value(0),
+         "Type of boundary condition for the top side")
+
+        ("bc.stress_val_x0", po::value<double>(&p.bc.stress_val_x0)->default_value(0.0),
+         "Magnitude of stress at the left/western side (in Pa).")
+        ("bc.stress_val_x1", po::value<double>(&p.bc.stress_val_x1)->default_value(0.0),
+         "Magnitude of stress at the right/eastern side (in Pa).")
+        ("bc.stress_val_y0", po::value<double>(&p.bc.stress_val_y0)->default_value(0.0),
+         "Magnitude of stress at the front/southern side (in Pa).")
+        ("bc.stress_val_y1", po::value<double>(&p.bc.stress_val_y1)->default_value(0.0),
+         "Magnitude of stress at the back/northern side (in Pa).")
+        ("bc.stress_val_z0", po::value<double>(&p.bc.stress_val_z0)->default_value(0.0),
+         "Magnitude of stress at the bottom side (in Pa).")
+        ("bc.stress_val_z1", po::value<double>(&p.bc.stress_val_z1)->default_value(0.0),
+         "Magnitude of stress at the top side (in Pa).")
 
         ("bc.vbc_x0", po::value<int>(&p.bc.vbc_x0)->default_value(1),
          "Type of velocity boundary condition for the left/western side. "
@@ -369,6 +428,8 @@ static void declare_parameters(po::options_description &cfg,
          "Value of boundary condition for the bottom side (if velocity, unit is m/s; if stress, unit is Pa)")
         ("bc.vbc_val_z1", po::value<double>(&p.bc.vbc_val_z1)->default_value(0),
          "Value of boundary condition for the top side (if velocity, unit is m/s; if stress, unit is Pa)")
+        ("bc.vbc_val_z1_loading_period", po::value<double>(&p.bc.vbc_val_z1_loading_period)->default_value(std::numeric_limits<double>::max()),
+         "Loading period for the velocity on the top side")
 
         ("bc.vbc_n0", po::value<int>(&p.bc.vbc_n0)->default_value(1),
          "Type of boundary condition for slant boundary #0 (only type 1, 3, 11, 13 are supported).")
@@ -495,6 +556,12 @@ static void declare_parameters(po::options_description &cfg,
 
         ("ic.isostasy_adjustment_time_in_yr", po::value<double>(&p.ic.isostasy_adjustment_time_in_yr)->default_value(0),
          "Time for spinning up isostasy adjustment.\n")
+        
+        ("ic.excess_pore_pressure", po::value<double>(&p.ic.excess_pore_pressure)->default_value(0.0),
+         "Initial excess_pore_pressure except for boundary.\n")
+         ("ic.has_body_force_adjustment", po::value<bool>(&p.ic.has_body_force_adjustment)->default_value(false),
+         "Conducting PT loop to get initial stress field from inital guess")
+
         ;
 
     cfg.add_options()
@@ -579,8 +646,36 @@ static void declare_parameters(po::options_description &cfg,
          "Dilation angle of the materials when weakening starts '[d0, d1, d2, ...]' (in degree)")
         ("mat.dilation_angle1", po::value<std::string>()->default_value("[0]"),
          "Dilation angle of the materials when weakening saturates '[d0, d1, d2, ...]' (in degree)")
-        ;
 
+        ("mat.porosity", po::value<std::string>()->default_value("[0.0]"),
+         "Porosity of the materials '[d0, d1, d2, ...]' (no unit)")
+        ("mat.hydraulic_perm", po::value<std::string>()->default_value("[1e-14]"),
+         "Intrinsic permeability of the materials '[d0, d1, d2, ...]' (m^2)")
+        ("mat.fluid_rho0", po::value<std::string>()->default_value("[1000]"),
+         "Density of the fluids at 0 Pa and 273 K '[d0, d1, d2, ...]' (in kg/m^3)")
+        ("mat.fluid_alpha", po::value<std::string>()->default_value("[2.07e-4]"),
+         "Thermal expansivity of the fluids at 0 Pa and 293 K '[d0, d1, d2, ...]' (in K^-1)")
+        ("mat.fluid_bulk_modulus", po::value<std::string>()->default_value("[2.17e9]"),
+         "Bulk modulus of the fluids at 0 Pa and 293 K '[d0, d1, d2, ...]' (in Pa)")
+        ("mat.fluid_visc", po::value<std::string>()->default_value("[1.002e-3]"),
+         "Dynamic viscosity of the fluids at 0 Pa and 293 K '[d0, d1, d2, ...]' (in Pa)")
+        ("mat.biot_coeff", po::value<std::string>()->default_value("[1.0]"),
+         "Biot-Willis coefficient (HM coupling coeff) '[d0, d1, d2, ...]' (no unit)")
+        ("mat.bulk_modulus_s", po::value<std::string>()->default_value("[37e9]"),
+         "Bulk modulus of the solid grains or minerals '[d0, d1, d2, ...]' (Pa)")
+        ;
+    /*
+    Example of bulk modulus of rock-forming minerals
+    Quartz (SiO₂) 37 GPa
+    Feldspar 60-75 GPa
+    Olivine ((Mg, Fe)₂SiO₄) 125-130 GPa
+    Pyroxene (e.g., Enstatite MgSiO₃, Diopside CaMgSi₂O₆) 100-110 GPa
+    Garnet (e.g., Almandine Fe₃Al₂(SiO₄)₃, Pyrope Mg₃Al₂(SiO₄)₃) 170-180 GPa
+    Muscovite (a type of mica) 55 GPa
+    Calcite (CaCO₃) 70-75 GPa
+    Dolomite (CaMg(CO₃)₂) 90 GPa
+    Amphibole (e.g., Hornblende) 80-90 GPa
+    */
     /* These parameters will enable additional debugging output. DO NOT document these parameters
        in defaults.cfg. */
     cfg.add_options()
@@ -954,6 +1049,16 @@ static void validate_parameters(const po::variables_map &vm, Param &p)
         get_numbers(vm, "mat.friction_angle1", p.mat.friction_angle1, p.mat.nmat, 1);
         get_numbers(vm, "mat.dilation_angle0", p.mat.dilation_angle0, p.mat.nmat, 1);
         get_numbers(vm, "mat.dilation_angle1", p.mat.dilation_angle1, p.mat.nmat, 1);
+
+        // Hydraulic parameters
+        get_numbers(vm, "mat.porosity", p.mat.porosity, p.mat.nmat, 1);
+        get_numbers(vm, "mat.hydraulic_perm", p.mat.hydraulic_perm, p.mat.nmat, 1);
+        get_numbers(vm, "mat.fluid_rho0", p.mat.fluid_rho0, p.mat.nmat, 1);
+        get_numbers(vm, "mat.fluid_alpha", p.mat.fluid_alpha, p.mat.nmat, 1);
+        get_numbers(vm, "mat.fluid_bulk_modulus", p.mat.fluid_bulk_modulus, p.mat.nmat, 1);
+        get_numbers(vm, "mat.fluid_visc", p.mat.fluid_visc, p.mat.nmat, 1);
+        get_numbers(vm, "mat.biot_coeff", p.mat.biot_coeff, p.mat.nmat, 1);
+        get_numbers(vm, "mat.bulk_modulus_s", p.mat.bulk_modulus_s, p.mat.nmat, 1);
     }
 
 }

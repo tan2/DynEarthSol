@@ -34,7 +34,7 @@ output_in_binary = True
 output_in_cwd = False
 
 # Save indivisual components?
-output_tensor_components = False
+output_tensor_components = True
 
 # Save principle stresses
 output_principle_stress = False
@@ -186,6 +186,7 @@ def main(modelname, start, end, delta):
             #convert_field(des, frame, 'mass', fvtu)
             #convert_field(des, frame, 'tmass', fvtu)
             #convert_field(des, frame, 'volume_n', fvtu)
+            convert_field(des, frame, 'pore pressure', fvtu)
 
             # node number for debugging
             vtk_dataarray(fvtu, np.arange(nnode, dtype=np.int32), 'node number')
@@ -229,12 +230,15 @@ def main(modelname, start, end, delta):
             except KeyError:
                 stress = des.read_field(frame, 'stress')
             tI = first_invariant(stress)
+            
             tII = second_invariant(stress)
             vtk_dataarray(fvtu, tI, 'stress I')
             vtk_dataarray(fvtu, tII, 'stress II')
             if output_tensor_components:
+                # for d in range(des.ndims):
+                #     vtk_dataarray(fvtu, stress[:,d] - tI, 'stress ' + des.component_names[d] + ' dev.')
                 for d in range(des.ndims):
-                    vtk_dataarray(fvtu, stress[:,d] - tI, 'stress ' + des.component_names[d] + ' dev.')
+                    vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])                    
                 for d in range(des.ndims, des.nstr):
                     vtk_dataarray(fvtu, stress[:,d], 'stress ' + des.component_names[d])
             if output_principle_stress:
@@ -278,16 +282,16 @@ def main(modelname, start, end, delta):
                 melting[ind] = (etemp[ind]-273. + depth[ind]*3.e-4) - (1120 + (680./7.e9)*pressure[ind])
                 vtk_dataarray(fvtu, melting, 'melting')
 
-            # heat flux
-            # 3D is not implemented and tested yet
-            if output_heatflux:               
-                flux, flux_val = des.load_calculation(frame, 'heat flux')
+            # # heat flux
+            # # 3D is not implemented and tested yet
+            # if output_heatflux:               
+            #     flux, flux_val = des.load_calculation(frame, 'heat flux')
 
-                vtk_dataarray(fvtu, flux[0], 'heat flux x')
-                if des.ndims == 3:
-                    vtk_dataarray(fvtu, flux[1], 'heat flux y')
-                vtk_dataarray(fvtu, flux[-1], 'heat flux z')
-                vtk_dataarray(fvtu, flux_val, 'heat flux magnitude')
+            #     vtk_dataarray(fvtu, flux[0], 'heat flux x')
+            #     if des.ndims == 3:
+            #         vtk_dataarray(fvtu, flux[1], 'heat flux y')
+            #     vtk_dataarray(fvtu, flux[-1], 'heat flux z')
+            #     vtk_dataarray(fvtu, flux_val, 'heat flux magnitude')
 
             fvtu.write('  </CellData>\n')
 
@@ -622,7 +626,7 @@ if __name__ == '__main__':
     if '-melt' in sys.argv:
         output_melting = True
     if '-heat' in sys.argv:
-        output_heatflux = True
+        output_heatflux = False
 
     # delete options
     for i in range(len(sys.argv)):

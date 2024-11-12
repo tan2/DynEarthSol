@@ -140,7 +140,14 @@ double ref_pressure(const Param& param, double z)
     double depth = -z;
     double p;
     if (param.control.ref_pressure_option == 0)
-        p = param.mat.rho0[0] * param.control.gravity * depth;
+        if (param.control.has_hydraulic_diffusion) {
+        // Modified density considering porosity for hydraulic diffusion
+            p = (param.mat.rho0[0] * (1 - param.mat.porosity[0]) + 1000.0 * param.mat.porosity[0]) * param.control.gravity * depth;
+        } else {
+            // Standard reference pressure without hydraulic diffusion
+            p = param.mat.rho0[0] * param.control.gravity * depth;
+        }
+
     else if (param.control.ref_pressure_option == 1)
         p = get_prem_pressure(depth);
     else if (param.control.ref_pressure_option == 2)
@@ -157,12 +164,16 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   visc_max(p.mat.visc_max),
   tension_max(p.mat.tension_max),
   therm_diff_max(p.mat.therm_diff_max),
+  hydro_diff_max(1e-1),
   coord(*var.coord),
   connectivity(*var.connectivity),
   temperature(*var.temperature),
   stress(*var.stress),
+//   stress_old(*var.stress_old),
   strain_rate(*var.strain_rate),
-  elemmarkers(*var.elemmarkers)
+  elemmarkers(*var.elemmarkers),
+  ppressure(*var.ppressure),
+  dppressure(*var.dppressure)
 {
     rho0 = p.mat.rho0;
     alpha = p.mat.alpha;
@@ -181,6 +192,16 @@ MatProps::MatProps(const Param& p, const Variables& var) :
     friction_angle1 = p.mat.friction_angle1;
     dilation_angle0 = p.mat.dilation_angle0;
     dilation_angle1 = p.mat.dilation_angle1;
+
+    // Hydraulic parameters
+    porosity = p.mat.porosity;
+    hydraulic_perm = p.mat.hydraulic_perm;
+    fluid_rho0 = p.mat.fluid_rho0;
+    fluid_alpha = p.mat.fluid_alpha;
+    fluid_bulk_modulus = p.mat.fluid_bulk_modulus;
+    fluid_visc = p.mat.fluid_visc;
+    biot_coeff = p.mat.biot_coeff;
+    bulk_modulus_s = p.mat.bulk_modulus_s;
 }
 
 
@@ -189,6 +210,7 @@ MatProps::~MatProps()
     #pragma acc exit data delete(rho0,alpha,bulk_modulus,shear_modulus,visc_exponent)
     #pragma acc exit data delete(visc_coefficient,visc_activation_energy,heat_capacity,therm_cond,pls0)
     #pragma acc exit data delete(pls1,cohesion0,friction_angle0,friction_angle1,dilation_angle0,dilation_angle1)
+    #pragma acc exit data delete(porosity,hydraulic_perm,fluid_rho0,fluid_alpha,fluid_bulk_modulus,fluid_visc,biot_coeff,bulk_modulus_s)
 }
 
 
@@ -303,6 +325,7 @@ void MatProps::plastic_props(int e, double pls,
     ten_max = (phi == 0)? tension_max : std::min(tension_max, cohesion/std::tan(phi*DEG2RAD));
 }
 
+
 double MatProps::rho(int e) const
 {
     const double celsius0 = 273;
@@ -320,7 +343,8 @@ double MatProps::rho(int e) const
     int n = 0;
     for (int m=0; m<nmat; m++) {
         // TODO: compressibility
-        result += rho0[m] * (1 - alpha[m] * TinCelsius) * elemmarkers[e][m];        n += elemmarkers[e][m];
+        result += rho0[m] * (1 - alpha[m] * TinCelsius) * elemmarkers[e][m];
+        n += elemmarkers[e][m];
     }
     return result / n;
 }
@@ -337,6 +361,80 @@ double MatProps::k(int e) const
     return arithmetic_mean(therm_cond, elemmarkers[e]);
 }
 
+// hydraulic parameters
+double MatProps::phi(int e) const
+{
+    return arithmetic_mean(porosity, elemmarkers[e]);
+}
+
+double MatProps::perm(int e) const
+{
+    return harmonic_mean(hydraulic_perm, elemmarkers[e]);
+}
+
+double MatProps::alpha_fluid(int e) const
+{
+    return arithmetic_mean(fluid_alpha, elemmarkers[e]);
+}
+
+double MatProps::beta_fluid(int e) const
+{
+    // Return the inverse of harmonic mean (compressibility)
+    return 1.0 / harmonic_mean(fluid_bulk_modulus, elemmarkers[e]);
+}
+
+double MatProps::rho_fluid(int e) const
+{
+    const double p0 = 1.0e5; // Reference pressure in Pascals (1 atm)
+    const double T0 = 273; // Reference temperature in Kelvin (0°C)
+
+    // Average temperature of this element
+    double T = 0;
+    const int *conn = connectivity[e];
+    for (int i = 0; i < NODES_PER_ELEM; ++i) {
+        T += temperature[conn[i]];
+    }
+    T /= NODES_PER_ELEM;
+
+    // Average pore pressure of this element
+    double p = 0;
+    for (int i = 0; i < NODES_PER_ELEM; ++i) {
+        p += ppressure[conn[i]];
+    }
+    p /= NODES_PER_ELEM;
+
+    // Use the functions to get thermal expansivity and compressibility
+    double alpha_f = alpha_fluid(e);  // Thermal expansivity for the fluid
+    double beta_f = beta_fluid(e);    // Compressibility for the fluid
+
+    // Calculate fluid density based on thermal expansivity and compressibility
+    double result = 0;
+    int n = 0;
+    for (int m = 0; m < nmat; m++) {
+        double rho_f = (fluid_rho0)[m];  // Reference fluid density
+        result += rho_f * (1 - alpha_f * (T - T0) + beta_f * (p - p0)) * elemmarkers[e][m];
+        n += elemmarkers[e][m];
+    }
+
+    // Return the averaged fluid density
+    return result / n;
+}
+
+double MatProps::mu_fluid(int e) const
+{
+    return arithmetic_mean(fluid_visc, elemmarkers[e]);
+}
+
+double MatProps::alpha_biot(int e) const
+{
+    return arithmetic_mean(biot_coeff, elemmarkers[e]);
+}
+
+double MatProps::beta_mineral(int e) const
+{
+    // Return the inverse of harmonic mean (compressibility)
+    return 1.0 / harmonic_mean(bulk_modulus_s, elemmarkers[e]);
+}
 
 #else
 
@@ -526,7 +624,14 @@ double ref_pressure(const Param& param, double z)
     double depth = -z;
     double p;
     if (param.control.ref_pressure_option == 0)
-        p = param.mat.rho0[0] * param.control.gravity * depth;
+        if (param.control.has_hydraulic_diffusion) {
+        // Modified density considering porosity for hydraulic diffusion
+            p = (param.mat.rho0[0] * (1 - param.mat.porosity[0]) + 1000.0 * param.mat.porosity[0]) * param.control.gravity * depth;
+        } else {
+            // Standard reference pressure without hydraulic diffusion
+            p = param.mat.rho0[0] * param.control.gravity * depth;
+        }
+
     else if (param.control.ref_pressure_option == 1)
         p = get_prem_pressure(depth);
     else if (param.control.ref_pressure_option == 2)
@@ -543,12 +648,16 @@ MatProps::MatProps(const Param& p, const Variables& var) :
   visc_max(p.mat.visc_max),
   tension_max(p.mat.tension_max),
   therm_diff_max(p.mat.therm_diff_max),
+  hydro_diff_max(1e-1),
   coord(*var.coord),
   connectivity(*var.connectivity),
   temperature(*var.temperature),
   stress(*var.stress),
+//   stress_old(*var.stress_old),
   strain_rate(*var.strain_rate),
-  elemmarkers(*var.elemmarkers)
+  elemmarkers(*var.elemmarkers),
+  ppressure(*var.ppressure),
+  dppressure(*var.dppressure)
 {
     rho0 = VectorBase::create(p.mat.rho0, nmat);
     alpha = VectorBase::create(p.mat.alpha, nmat);
@@ -557,6 +666,7 @@ MatProps::MatProps(const Param& p, const Variables& var) :
     visc_exponent = VectorBase::create(p.mat.visc_exponent, nmat);
     visc_coefficient = VectorBase::create(p.mat.visc_coefficient, nmat);
     visc_activation_energy = VectorBase::create(p.mat.visc_activation_energy, nmat);
+    visc_activation_volume = VectorBase::create(p.mat.visc_activation_volume, nmat);
     heat_capacity = VectorBase::create(p.mat.heat_capacity, nmat);
     therm_cond = VectorBase::create(p.mat.therm_cond, nmat);
     pls0 = VectorBase::create(p.mat.pls0, nmat);
@@ -567,6 +677,16 @@ MatProps::MatProps(const Param& p, const Variables& var) :
     friction_angle1 = VectorBase::create(p.mat.friction_angle1, nmat);
     dilation_angle0 = VectorBase::create(p.mat.dilation_angle0, nmat);
     dilation_angle1 = VectorBase::create(p.mat.dilation_angle1, nmat);
+
+    // Hydraulic parameters
+    porosity = VectorBase::create(p.mat.porosity, nmat);
+    hydraulic_perm = VectorBase::create(p.mat.hydraulic_perm, nmat);
+    fluid_rho0 = VectorBase::create(p.mat.fluid_rho0, nmat);
+    fluid_alpha = VectorBase::create(p.mat.fluid_alpha, nmat);
+    fluid_bulk_modulus = VectorBase::create(p.mat.fluid_bulk_modulus, nmat);
+    fluid_visc = VectorBase::create(p.mat.fluid_visc, nmat);
+    biot_coeff = VectorBase::create(p.mat.biot_coeff, nmat);
+    bulk_modulus_s = VectorBase::create(p.mat.bulk_modulus_s, nmat);
 }
 
 
@@ -579,6 +699,7 @@ MatProps::~MatProps()
     delete visc_exponent;
     delete visc_coefficient;
     delete visc_activation_energy;
+    delete visc_activation_volume;
     delete heat_capacity;
     delete therm_cond;
     delete pls0;
@@ -589,6 +710,16 @@ MatProps::~MatProps()
     delete friction_angle1;
     delete dilation_angle0;
     delete dilation_angle1;
+
+    // Deleting hydraulic properties
+    delete porosity;
+    delete hydraulic_perm;
+    delete fluid_rho0;
+    delete fluid_alpha;
+    delete fluid_bulk_modulus;
+    delete fluid_visc;
+    delete biot_coeff;
+    delete bulk_modulus_s;
 }
 
 
@@ -617,6 +748,10 @@ double MatProps::visc(int e) const
     }
     T /= NODES_PER_ELEM;
 
+    // stress
+    const double *s = stress[e];
+    double s0 = trace(s) / NDIMS;
+
     // strain-rate
     double edot = second_invariant(strain_rate[e]);
     // min strain rate to prevent viscosity -> inf
@@ -629,7 +764,8 @@ double MatProps::visc(int e) const
         double pow = 1 / (*visc_exponent)[m] - 1;
         double pow1 = -1 / (*visc_exponent)[m];
         double visc0 = 0.25 * std::pow(edot, pow) * std::pow(0.75 * (*visc_coefficient)[m], pow1)
-            * std::exp((*visc_activation_energy)[m] / ((*visc_exponent)[m] * gas_constant * T)) * 1e6;
+            * std::exp(((*visc_activation_energy)[m] + (*visc_activation_volume)[m] * s0)
+            / ((*visc_exponent)[m] * gas_constant * T)) * 1e6;
         result += elemmarkers[e][m] / visc0;
         n += elemmarkers[e][m];
     }
@@ -737,6 +873,81 @@ double MatProps::cp(int e) const
 double MatProps::k(int e) const
 {
     return arithmetic_mean(*therm_cond, elemmarkers[e]);
+}
+
+// hydraulic parameters
+double MatProps::phi(int e) const
+{
+    return arithmetic_mean(*porosity, elemmarkers[e]);
+}
+
+double MatProps::perm(int e) const
+{
+    return harmonic_mean(*hydraulic_perm, elemmarkers[e]);
+}
+
+double MatProps::alpha_fluid(int e) const
+{
+    return arithmetic_mean(*fluid_alpha, elemmarkers[e]);
+}
+
+double MatProps::beta_fluid(int e) const
+{
+    // Return the inverse of harmonic mean (compressibility)
+    return 1.0 / harmonic_mean(*fluid_bulk_modulus, elemmarkers[e]);
+}
+
+double MatProps::rho_fluid(int e) const
+{
+    const double p0 = 1.0e5; // Reference pressure in Pascals (1 atm)
+    const double T0 = 273; // Reference temperature in Kelvin (0°C)
+
+    // Average temperature of this element
+    double T = 0;
+    const int *conn = connectivity[e];
+    for (int i = 0; i < NODES_PER_ELEM; ++i) {
+        T += temperature[conn[i]];
+    }
+    T /= NODES_PER_ELEM;
+
+    // Average pore pressure of this element
+    double p = 0;
+    for (int i = 0; i < NODES_PER_ELEM; ++i) {
+        p += ppressure[conn[i]];
+    }
+    p /= NODES_PER_ELEM;
+
+    // Use the functions to get thermal expansivity and compressibility
+    double alpha_f = alpha_fluid(e);  // Thermal expansivity for the fluid
+    double beta_f = beta_fluid(e);    // Compressibility for the fluid
+
+    // Calculate fluid density based on thermal expansivity and compressibility
+    double result = 0;
+    int n = 0;
+    for (int m = 0; m < nmat; m++) {
+        double rho_f = (*fluid_rho0)[m];  // Reference fluid density
+        result += rho_f * (1 - alpha_f * (T - T0) + beta_f * (p - p0)) * elemmarkers[e][m];
+        n += elemmarkers[e][m];
+    }
+
+    // Return the averaged fluid density
+    return result / n;
+}
+
+double MatProps::mu_fluid(int e) const
+{
+    return arithmetic_mean(*fluid_visc, elemmarkers[e]);
+}
+
+double MatProps::alpha_biot(int e) const
+{
+    return arithmetic_mean(*biot_coeff, elemmarkers[e]);
+}
+
+double MatProps::beta_mineral(int e) const
+{
+    // Return the inverse of harmonic mean (compressibility)
+    return 1.0 / harmonic_mean(*bulk_modulus_s, elemmarkers[e]);
 }
 
 #endif

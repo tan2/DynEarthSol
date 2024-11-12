@@ -90,6 +90,29 @@ void init_var(const Param& param, Variables& var)
     var.vbc_vertical_ratio_x1[1] = param.bc.vbc_val_x1_ratio1;
     var.vbc_vertical_ratio_x1[2] = param.bc.vbc_val_x1_ratio2;
     var.vbc_vertical_ratio_x1[3] = param.bc.vbc_val_x1_ratio3;
+
+    var.hbc_types[0] = param.bc.hbc_x0;
+    var.hbc_types[1] = param.bc.hbc_x1;
+    var.hbc_types[2] = param.bc.hbc_y0;
+    var.hbc_types[3] = param.bc.hbc_y1;
+    var.hbc_types[4] = param.bc.hbc_z0;
+    var.hbc_types[5] = param.bc.hbc_z1;
+
+    var.stress_bc_types[0] = param.bc.stress_bc_x0;
+    var.stress_bc_types[1] = param.bc.stress_bc_x1;
+    var.stress_bc_types[2] = param.bc.stress_bc_y0;
+    var.stress_bc_types[3] = param.bc.stress_bc_y1;
+    var.stress_bc_types[4] = param.bc.stress_bc_z0;
+    var.stress_bc_types[5] = param.bc.stress_bc_z1;
+
+    var.stress_bc_values[0] = param.bc.stress_val_x0;
+    var.stress_bc_values[1] = param.bc.stress_val_x1;
+    var.stress_bc_values[2] = param.bc.stress_val_y0;
+    var.stress_bc_values[3] = param.bc.stress_val_y1;
+    var.stress_bc_values[4] = param.bc.stress_val_z0;
+    var.stress_bc_values[5] = param.bc.stress_val_z1;
+
+    var.vbc_val_z1_loading_period = param.bc.vbc_val_z1_loading_period;
 }
 
 
@@ -121,7 +144,7 @@ void init(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     *var.volume_old = *var.volume;
-    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.hmass, *var.tmp_result);
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
     create_boundary_normals(var, *var.bnormals, var.edge_vectors);
@@ -129,7 +152,11 @@ void init(const Param& param, Variables& var)
 
     // temperature should be init'd before stress and strain
     initial_temperature(param, var, *var.temperature, *var.radiogenic_source);
-    initial_stress_state(param, var, *var.stress, *var.stressyy, *var.strain, var.compensation_pressure);
+    initial_stress_state(param, var, *var.stress, *var.stressyy, *var.old_mean_stress, *var.strain, var.compensation_pressure);
+    // initial_stress_state_1d_load(param, var, *var.stress, *var.stressyy, *var.old_mean_stress, *var.strain, var.compensation_pressure);
+    if(param.control.has_hydraulic_diffusion)
+        initial_hydrostatic_state(param, var, *var.ppressure, *var.dppressure);
+
     initial_weak_zone(param, var, *var.plstrain);
 
     phase_changes_init(param, var);
@@ -224,7 +251,7 @@ void restart(const Param& param, Variables& var)
 
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     bin_chkpt.read_array(*var.volume_old, "volume_old");
-    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.hmass, *var.tmp_result);
 
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
@@ -239,6 +266,7 @@ void restart(const Param& param, Variables& var)
         bin_save.read_array(*var.stress, "stress");
         bin_save.read_array(*var.plstrain, "plastic strain");
         bin_save.read_array(*var.radiogenic_source, "radiogenic source");
+        bin_save.read_array(*var.ppressure, "pore pressure");
 
         if (param.mat.is_plane_strain)
             bin_chkpt.read_array(*var.stressyy, "stressyy");
@@ -292,7 +320,7 @@ void update_mesh(const Param& param, Variables& var)
 #endif
 
     compute_volume(var, *var.volume);
-    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.hmass, *var.tmp_result);
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 #ifdef USE_NPROF
     nvtxRangePop();
@@ -314,10 +342,11 @@ void isostasy_adjustment(const Param &param, Variables &var)
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp, *var.tmp_result_sg);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-        update_stress(param ,var, *var.stress, *var.stressyy, *var.dpressure,
+        update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure,
             *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
-            *var.strain_rate);
-        update_force(param, var, *var.force, *var.tmp_result);
+            *var.strain_rate,
+            *var.ppressure, *var.dppressure);
+        update_force(param, var, *var.force, *var.force_residual, *var.tmp_result);
         update_velocity(var, *var.vel);
 
         // do not apply vbc to allow free boundary
@@ -345,6 +374,50 @@ void isostasy_adjustment(const Param &param, Variables &var)
 #endif
 }
 
+void initial_body_force_adjustment(const Param &param, Variables &var)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+    
+    double residual_old = std::numeric_limits<double>::max();
+    double relative_change = 1.0;
+    
+    // pseudo transient (PT) loop
+    var.l2_residual = calculate_residual_force(var, *var.force_residual);
+    residual_old = var.l2_residual;
+    if (param.control.has_PT)
+    {   
+        // var.dt = compute_dt_PT(param, var);
+        for (int pt_step = 0; pt_step < param.control.PT_max_iter; ++pt_step) 
+        {
+            apply_vbcs_PT(param, var, *var.vel);
+            if (param.control.has_moving_mesh)
+                update_mesh(param, var);
+            update_strain_rate(var, *var.strain_rate);
+            compute_dvoldt(var, *var.ntmp, *var.tmp_result_sg);
+            compute_edvoldt(var, *var.ntmp, *var.edvoldt);
+            update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure,
+                *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
+                *var.strain_rate,
+                *var.ppressure, *var.dppressure);
+            update_force(param, var, *var.force, *var.force_residual, *var.tmp_result);
+            // update_velocity_PT(var, *var.vel);
+            update_velocity(var, *var.vel);
+            var.l2_residual = calculate_residual_force(var, *var.force_residual);
+            double relative_change = std::fabs((var.l2_residual - residual_old) / residual_old);
+            if (relative_change < param.control.PT_relative_tolerance) {
+            break;  // Exit the loop if relative change is small enough
+            }
+            residual_old = var.l2_residual;
+        }
+        
+    }
+
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+}
 
 int main(int argc, const char* argv[])
 {
@@ -384,11 +457,27 @@ int main(int argc, const char* argv[])
     }
 
     var.dt = compute_dt(param, var);
+    var.dt_PT = compute_dt(param, var);
     output.write_exact(var);
 
     double starting_time = var.time; // var.time & var.steps might be set in restart()
     double starting_step = var.steps;
     int next_regular_frame = 1;  // excluding frames due to output_during_remeshing
+
+    double residual_old = std::numeric_limits<double>::max();
+    double relative_change = 1.0;
+    double dt_copy = 0.0;
+    bool hydraulic_diffusion_switch = false;
+
+    if(param.ic.has_body_force_adjustment)
+    {
+        if(param.control.has_hydraulic_diffusion) {param.control.has_hydraulic_diffusion = false; hydraulic_diffusion_switch = true;}
+        // this is similar to isostasy_adjustment(param, var); so maybe should be merged to it later.
+        // Only works with PT loop
+        initial_body_force_adjustment(param, var); 
+        if(hydraulic_diffusion_switch) {param.control.has_hydraulic_diffusion = true;}
+        param.ic.has_body_force_adjustment = false;
+    }
 
     std::cout << "Starting simulation...\n";
     do {
@@ -397,26 +486,70 @@ int main(int argc, const char* argv[])
 #endif
         var.steps ++;
         var.time += var.dt;
-
+        // dt_copy = 0.0; dt_copy += var.dt;
         if (param.control.has_thermal_diffusion)
             update_temperature(param, var, *var.temperature, *var.ntmp, *var.tmp_result);
 
+        update_old_mean_stress(param, var, *var.stress, *var.old_mean_stress);
         update_strain_rate(var, *var.strain_rate);
         compute_dvoldt(var, *var.ntmp, *var.tmp_result_sg);
         compute_edvoldt(var, *var.ntmp, *var.edvoldt);
-
         update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure,
             *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
-            *var.strain_rate);
+            *var.strain_rate,
+            *var.ppressure, *var.dppressure);
 
 	// Nodal Mixed Discretization For Stress
         if (param.control.is_using_mixed_stress)
             NMD_stress(param, var, *var.ntmp, *var.stress, *var.tmp_result_sg);
-
-        update_force(param, var, *var.force, *var.tmp_result);
+            
+        update_force(param, var, *var.force, *var.force_residual, *var.tmp_result);
         update_velocity(var, *var.vel);
+
+        // pseudo transient (PT) loop
+        var.l2_residual = calculate_residual_force(var, *var.force_residual);
+        residual_old = var.l2_residual;
+        if (param.control.has_PT)
+        {   
+            // var.dt = compute_dt_PT(param, var);
+            if(param.control.has_hydraulic_diffusion) {param.control.has_hydraulic_diffusion = false; hydraulic_diffusion_switch = true;}
+
+            for (int pt_step = 0; pt_step < param.control.PT_max_iter; ++pt_step) 
+            {
+                apply_vbcs_PT(param, var, *var.vel);
+                if (param.control.has_moving_mesh)
+                    update_mesh(param, var);
+                update_strain_rate(var, *var.strain_rate);
+                compute_dvoldt(var, *var.ntmp, *var.tmp_result_sg);
+                compute_edvoldt(var, *var.ntmp, *var.edvoldt);
+                update_stress(param, var, *var.stress, *var.stressyy, *var.dpressure,
+                    *var.viscosity, *var.strain, *var.plstrain, *var.delta_plstrain,
+                    *var.strain_rate,
+                    *var.ppressure, *var.dppressure);
+                update_force(param, var, *var.force, *var.force_residual, *var.tmp_result);
+                // update_velocity_PT(var, *var.vel);
+                update_velocity(var, *var.vel);
+                var.l2_residual = calculate_residual_force(var, *var.force_residual);
+                double relative_change = std::fabs((var.l2_residual - residual_old) / residual_old);
+                if (relative_change < param.control.PT_relative_tolerance) {
+                    // std::cout << "tolerance reached " << pt_step << std::endl;
+                break;  // Exit the loop if relative change is small enough
+                }
+                residual_old = var.l2_residual;
+                // var.dt = std::min({var.dt*1.01, dt_copy});
+            }
+            if(hydraulic_diffusion_switch) {param.control.has_hydraulic_diffusion = true;}
+            // var.dt = dt_copy;
+        }
+
+
+        // if(param.control.has_hydraulic_diffusion && var.steps > 1) // ignoring poroelastic effect due to inital imbalance 
+        if(param.control.has_hydraulic_diffusion) // ignoring poroelastic effect due to inital imbalance 
+            update_pore_pressure(param, var, *var.ppressure, *var.dppressure, *var.ntmp, *var.tmp_result, *var.stress, *var.old_mean_stress);
+
         apply_vbcs(param, var, *var.vel);
-        update_mesh(param, var);
+        if (param.control.has_moving_mesh)
+            update_mesh(param, var);
 
         // elastic stress/strain are objective (frame-indifferent)
         if (var.mat->rheol_type & MatProps::rh_elastic)
@@ -465,24 +598,27 @@ int main(int argc, const char* argv[])
         }
 
         if (var.steps % param.mesh.quality_check_step_interval == 0) {
-            int quality_is_bad, bad_quality_index;
-            quality_is_bad = bad_mesh_quality(param, var, bad_quality_index);
-            if (quality_is_bad) {
+            if (param.control.has_moving_mesh)
+            {
+                int quality_is_bad, bad_quality_index;
+                quality_is_bad = bad_mesh_quality(param, var, bad_quality_index);
+                if (quality_is_bad) {
 
-                if (param.sim.has_output_during_remeshing) {
+                    if (param.sim.has_output_during_remeshing) {
+                        int64_t time_tmp = get_nanoseconds();
+                        output.write_exact(var);
+                        var.func_time.output_time += get_nanoseconds() - time_tmp;
+                    }
+
                     int64_t time_tmp = get_nanoseconds();
-                    output.write_exact(var);
-                    var.func_time.output_time += get_nanoseconds() - time_tmp;
-                }
+                    remesh(param, var, quality_is_bad);
+                    var.func_time.remesh_time += get_nanoseconds() - time_tmp;
 
-                int64_t time_tmp = get_nanoseconds();
-                remesh(param, var, quality_is_bad);
-                var.func_time.remesh_time += get_nanoseconds() - time_tmp;
-
-                if (param.sim.has_output_during_remeshing) {
-                    int64_t time_tmp = get_nanoseconds();
-                    output.write_exact(var);
-                    var.func_time.output_time += get_nanoseconds() - time_tmp;
+                    if (param.sim.has_output_during_remeshing) {
+                        int64_t time_tmp = get_nanoseconds();
+                        output.write_exact(var);
+                        var.func_time.output_time += get_nanoseconds() - time_tmp;
+                    }
                 }
             }
         }

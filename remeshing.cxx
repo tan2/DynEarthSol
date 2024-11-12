@@ -2220,7 +2220,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
     compute_volume(*var.coord, *var.connectivity, *var.volume);
     // TODO: using edvoldt and volume to get volume_old
     std::copy(var.volume->begin(), var.volume->end(), var.volume_old->begin());
-    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.tmp_result);
+    compute_mass(param, var, var.max_vbc_val, *var.volume_n, *var.mass, *var.tmass, *var.hmass, *var.tmp_result);
     compute_shape_fn(var, *var.shpdx, *var.shpdy, *var.shpdz);
 
     if (param.mesh.remeshing_option==1 ||
@@ -2239,7 +2239,7 @@ void remesh(const Param &param, Variables &var, int bad_quality)
         // the following variables need to be re-computed only when we are
         // outputing right after remeshing
         update_strain_rate(var, *var.strain_rate);
-        update_force(param, var, *var.force, *var.tmp_result);
+        update_force(param, var, *var.force, *var.force_residual, *var.tmp_result);
     }
 
     std::cout << "  Remeshing finished.\n";

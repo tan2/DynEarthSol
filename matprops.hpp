@@ -34,6 +34,24 @@ public:
     #pragma acc routine seq
     double k(int e) const;
 
+    // hydraulic parameter function
+    #pragma acc routine seq
+    double phi(int e) const;
+    #pragma acc routine seq
+    double perm(int e) const;
+    #pragma acc routine seq
+    double alpha_fluid(int e) const;
+    #pragma acc routine seq
+    double beta_fluid(int e) const;
+    #pragma acc routine seq
+    double rho_fluid(int e) const;
+    #pragma acc routine seq
+    double mu_fluid(int e) const;
+    #pragma acc routine seq
+    double alpha_biot(int e) const;
+    #pragma acc routine seq
+    double beta_mineral(int e) const;
+    
     #pragma acc routine seq
     void plastic_props(int e, double pls,
                        double& amc, double& anphi, double& anpsi,
@@ -44,6 +62,7 @@ public:
     const double visc_max;
     const double tension_max;
     const double therm_diff_max;
+    double hydro_diff_max;
 
     const static int rh_elastic = 1 << 0;
     const static int rh_viscous = 1 << 1;
@@ -73,6 +92,15 @@ private:
     VectorBase cohesion0, cohesion1;
     VectorBase friction_angle0, friction_angle1;
     VectorBase dilation_angle0, dilation_angle1;
+
+    // const VectorBase *dilation_angle0, *dilation_angle1;
+
+    // hydraulic process
+    const double_vec &ppressure;
+    const double_vec &dppressure;
+    VectorBase porosity, hydraulic_perm, fluid_rho0;
+    VectorBase fluid_alpha, fluid_bulk_modulus, fluid_visc;
+    VectorBase biot_coeff, bulk_modulus_s;
 
     #pragma acc routine seq
     void plastic_weakening(int e, double pls,
@@ -112,6 +140,16 @@ public:
     double cp(int e) const;
     double k(int e) const;
 
+    // hydraulic parameter function
+    double phi(int e) const;
+    double perm(int e) const;
+    double alpha_fluid(int e) const;
+    double beta_fluid(int e) const;
+    double rho_fluid(int e) const;
+    double mu_fluid(int e) const;
+    double alpha_biot(int e) const;
+    double beta_mineral(int e) const;
+
     void plastic_props(int e, double pls,
                        double& amc, double& anphi, double& anpsi,
                        double& hardn, double& ten_max) const;
@@ -121,6 +159,7 @@ public:
     const double visc_max;
     const double tension_max;
     const double therm_diff_max;
+    double hydro_diff_max;
 
     const static int rh_elastic = 1 << 0;
     const static int rh_viscous = 1 << 1;
@@ -138,6 +177,7 @@ private:
     const conn_t &connectivity;
     const double_vec &temperature;
     const tensor_t &stress;
+    // const tensor_t &stress_old;
     const tensor_t &strain_rate;
     const int_vec2D &elemmarkers;
 
@@ -151,10 +191,18 @@ private:
     const VectorBase *friction_angle0, *friction_angle1;
     const VectorBase *dilation_angle0, *dilation_angle1;
 
+    // hydraulic process
+    const double_vec &ppressure;
+    const double_vec &dppressure;
+    const VectorBase *porosity, *hydraulic_perm, *fluid_rho0;
+    const VectorBase *fluid_alpha, *fluid_bulk_modulus, *fluid_visc;
+    const VectorBase *biot_coeff, *bulk_modulus_s;
+
     void plastic_weakening(int e, double pls,
                            double &cohesion, double &friction_angle,
                            double &dilation_angle, double &hardening) const;
 };
+
 
 #endif
 

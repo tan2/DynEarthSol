@@ -7,7 +7,7 @@
 #include "bc.hpp"
 #include "matprops.hpp"
 #include "fields.hpp"
-
+#include "utils.hpp"
 
 void allocate_variables(const Param &param, Variables& var)
 {
@@ -20,6 +20,7 @@ void allocate_variables(const Param &param, Variables& var)
 
     var.mass = new double_vec(n);
     var.tmass = new double_vec(n);
+    var.hmass = new double_vec(n);
 
     var.edvoldt = new double_vec(e);
 
@@ -28,6 +29,8 @@ void allocate_variables(const Param &param, Variables& var)
     {
         // these fields are reallocated during remeshing interpolation
         var.temperature = new double_vec(n);
+        var.ppressure = new double_vec(n);
+        var.dppressure = new double_vec(n);
         var.coord0 = new array_t(n);
         var.plstrain = new double_vec(e);
         var.delta_plstrain = new double_vec(e);
@@ -35,6 +38,8 @@ void allocate_variables(const Param &param, Variables& var)
         var.strain = new tensor_t(e, 0);
         var.stress = new tensor_t(e, 0);
         var.stressyy = new double_vec(e, 0);
+        var.old_mean_stress = new double_vec(e, 0);
+        // var.stress_old = new tensor_t(e, 0);
         var.radiogenic_source = new double_vec(e, 0);
     }
 
@@ -45,6 +50,7 @@ void allocate_variables(const Param &param, Variables& var)
     var.viscosity = new double_vec(e,param.mat.visc_max);
 
     var.force = new array_t(n, 0);
+    var.force_residual = new array_t(n, 0);
 
     var.strain_rate = new tensor_t(e, 0);
 
@@ -76,6 +82,9 @@ void reallocate_variables(const Param& param, Variables& var)
     var.mass = new double_vec(n);
     var.tmass = new double_vec(n);
 
+    delete var.hmass;
+    var.hmass = new double_vec(n);
+
     delete var.edvoldt;
     var.edvoldt = new double_vec(e);
 
@@ -92,6 +101,9 @@ void reallocate_variables(const Param& param, Variables& var)
     var.viscosity = new double_vec(e,param.mat.visc_max);
     delete var.force;
     var.force = new array_t(n, 0);
+
+    delete var.force_residual;
+    var.force_residual = new array_t(n, 0);
 
     delete var.strain_rate;
     var.strain_rate = new tensor_t(e, 0);
@@ -192,6 +204,127 @@ void update_temperature(const Param &param, const Variables &var,
 #endif
 }
 
+// Function to check if a node is a boundary node
+inline bool is_boundary_node_for_pp(const int n, const Variables &var) {
+    int boundary_types[6] = {BOUNDX0, BOUNDX1, BOUNDY0, BOUNDY1, BOUNDZ0, BOUNDZ1};
+    for (int i = 0; i < 6; ++i) {
+        if (((*var.bcflag)[n] & boundary_types[i]) && (var.hbc_types[i] == 1)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+void update_pore_pressure(const Param &param, const Variables &var,
+                          double_vec &ppressure, double_vec &dppressure, double_vec &tdot, elem_cache &tmp_result, tensor_t& stress, double_vec& old_mean_stress)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+
+    // Initialize diff_max_local for reduction
+    double diff_max_local = 1.0e-38;
+
+    #pragma omp parallel for default(none) shared(var, ppressure, tmp_result, stress, old_mean_stress, param, diff_max_local)
+    #pragma acc parallel loop
+    for (int e = 0; e < var.nelem; e++) {
+        const int *conn = (*var.connectivity)[e];
+        double *tr = tmp_result[e];
+        double current_mean_stress = trace(stress[e])/NDIMS;
+        double mean_stress_change = current_mean_stress - old_mean_stress[e];
+
+        // Retrieve hydraulic properties for the element
+        double perm_e = var.mat->perm(e);                // Intrinsic permeability 
+        double mu_e = var.mat->mu_fluid(e);              // Fluid dynamic viscosity
+        double alpha_b = var.mat->alpha_biot(e);         // Biot coefficient
+        double rho_f = var.mat->rho_fluid(e);            // Fluid density
+        double phi_e = var.mat->phi(e);        // Element porosity
+        double comp_fluid = var.mat->beta_fluid(e);        // fluid comporessibility
+        double bulkm = var.mat->bulkm(e);
+        double shearm = var.mat->shearm(e);
+        double matrix_comp = 1.0 / (bulkm +4.0*shearm/3.0);
+
+        double bulk_comp = 1.0/(*var.mat).bulkm(e); // lambda + 2G/3
+        if(NDIMS == 2) bulk_comp = 1.0/((*var.mat).bulkm(e) + (*var.mat).shearm(e)/3.0); // lambda + G 
+
+        rho_f = 1000.0; 
+        double gamma_w = rho_f * param.control.gravity; // specific weight
+        
+        // Hydraulic conductivity using permeability and viscosity
+        double hydraulic_conductivity = perm_e * gamma_w / mu_e;
+        double kv = hydraulic_conductivity * (*var.volume)[e];
+
+        // Compute element diffusivity and update max using reduction
+        double diff_e = hydraulic_conductivity / (phi_e * comp_fluid + alpha_b * matrix_comp) / gamma_w;
+        diff_max_local = std::max(diff_max_local, diff_e);
+
+        // volume term (poroelastic effect)
+        double pe = alpha_b * mean_stress_change * bulk_comp * (*var.volume)[e] / NODES_PER_ELEM  / var.dt;
+       
+        const double *shpdx = (*var.shpdx)[e];
+#ifdef THREED
+        const double *shpdy = (*var.shpdy)[e];
+#endif
+        const double *shpdz = (*var.shpdz)[e];
+
+        for (int i = 0; i < NODES_PER_ELEM; ++i) {
+            double diffusion = 0.0;
+            for (int j = 0; j < NODES_PER_ELEM; ++j) {
+#ifdef THREED
+                diffusion += (shpdx[i] * shpdx[j] +
+                             shpdy[i] * shpdy[j] +
+                             shpdz[i] * shpdz[j]) * (ppressure[conn[j]]/gamma_w + (*var.coord)[conn[j]][NDIMS-1]); 
+#else
+                diffusion += (shpdx[i] * shpdx[j] +
+                             shpdz[i] * shpdz[j]) * (ppressure[conn[j]]/gamma_w + (*var.coord)[conn[j]][NDIMS-1]);
+#endif
+                }
+
+            // Add diffusion, compressibility, poroelastic effects, and source term
+            tr[i] = kv * diffusion + pe;
+            // tr[i] = kv * diffusion;
+        }
+    }
+
+    // Update global hydro_diff_max after the loop
+    var.mat->hydro_diff_max = diff_max_local;
+
+    #pragma omp parallel for default(none) shared(param, var, tdot, ppressure, dppressure, tmp_result)
+    #pragma acc parallel loop
+    for (int n = 0; n < var.nnode; n++) {
+        tdot[n] = 0.0;
+        for (auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+            const int *conn = (*var.connectivity)[*e];
+            const double *tr = tmp_result[*e];
+            for (int i = 0; i < NODES_PER_ELEM; i++) {
+                if (n == conn[i]) {
+                    tdot[n] += tr[i];
+                    break;
+                }
+            }
+        }
+
+        // Update pore pressure for non-boundary nodes
+        if (!is_boundary_node_for_pp(n, var)) {
+            // Ensure mass is non-zero before division
+            if ((*var.hmass)[n] > 0.0) {
+                ppressure[n] -= tdot[n] * var.dt / (*var.hmass)[n]; // Update pore pressure
+                dppressure[n] = tdot[n] * var.dt / (*var.hmass)[n]; // Update pressure change
+            }
+        }
+
+        // if ((*var.bcflag)[n] & BOUNDZ1) {
+        //     ppressure[n] = 0.0; 
+        //     dppressure[n] = 0.0;
+        // }
+            
+    }
+
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+}
 
 void update_strain_rate(const Variables& var, tensor_t& strain_rate)
 {
@@ -366,7 +499,7 @@ static double rho(const conn_t &var_connectivity, \
 }
 */
 
-void update_force(const Param& param, const Variables& var, array_t& force, elem_cache& tmp_result)
+void update_force(const Param& param, const Variables& var, array_t& force, array_t& force_residual, elem_cache& tmp_result)
 {
 #ifdef USE_NPROF
     nvtxRangePushA(__FUNCTION__);
@@ -386,8 +519,12 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
         double *tr = tmp_result[e];
 
         double buoy = 0;
-        if (param.control.gravity != 0)
-            buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+        if (param.control.gravity != 0) {
+            // Calculate buoyancy based on the gravity and element properties
+            // buoy = var.mat->rho(e) * param.control.gravity / NODES_PER_ELEM;
+            buoy = (var.mat->rho(e) * (1 - var.mat->phi(e)) + 1000.0 * var.mat->phi(e)) * param.control.gravity / NODES_PER_ELEM;
+        }
+
 
         for (int i=0; i<NODES_PER_ELEM; ++i) {
 #ifdef THREED
@@ -401,18 +538,23 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
         }
     }
 
-    #pragma omp parallel for default(none) shared(var,force,tmp_result)
+    #pragma omp parallel for default(none) shared(var,force,force_residual,tmp_result)
     #pragma acc parallel loop
     for (int n=0;n<var.nnode;n++) {
         std::fill_n(force[n],NDIMS,0); 
         double *f = force[n];
+        std::fill_n(force_residual[n],NDIMS,0); 
+        double *f_residual = force_residual[n];
         for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
             const int *conn = (*var.connectivity)[*e];
             const double *tr = tmp_result[*e];
             for (int i=0;i<NODES_PER_ELEM;i++) {
                 if (n == conn[i]) {
                     for (int j=0;j<NDIMS;j++)
+                    {
                         f[j] -= tr[i+NODES_PER_ELEM*j];
+                        f_residual[j] = tr[i+NODES_PER_ELEM*j];
+                    }
                     break;
                 }
             }
@@ -421,13 +563,45 @@ void update_force(const Param& param, const Variables& var, array_t& force, elem
 
     apply_stress_bcs(param, var, force);
 
-    if (param.control.is_quasi_static) {
-        apply_damping(param, var, force);
-    }
+    // if(var.time <= 1.0)
+    // {
+    //     apply_stress_bcs_neumann(param, var, force);
+    // }
+
+    // if (param.control.is_quasi_static) {
+    //     apply_damping(param, var, force);
+    // }
+
+    if (!param.ic.has_body_force_adjustment) apply_stress_bcs_neumann(param, var, force);
+    apply_damping(param, var, force);
+    
+
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
 }
+
+double calculate_residual_force(const Variables& var, array_t& force_residual)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+    double l2 = 0.0;
+    double num = var.nnode * NDIMS;
+
+    #pragma omp parallel for default(none) shared(var, force_residual, num) reduction(+:l2)
+    #pragma acc parallel loop
+    for (int i = 0; i < var.nnode; ++i)
+        for (int j = 0; j < NDIMS; ++j)
+            l2 += std::pow(force_residual[i][j], 2) / num;
+
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+
+    return std::sqrt(l2);
+}
+
 
 
 void update_velocity(const Variables& var, array_t& vel)
@@ -447,6 +621,22 @@ void update_velocity(const Variables& var, array_t& vel)
 #endif
 }
 
+void update_velocity_PT(const Variables& var, array_t& vel)
+{
+#ifdef USE_NPROF
+    nvtxRangePushA(__FUNCTION__);
+#endif
+
+    #pragma omp parallel for default(none) shared(var, vel)
+    #pragma acc parallel loop
+    for (int i=0; i<var.nnode; ++i)
+        for (int j=0;j<NDIMS;j++)
+            vel[i][j] += var.dt_PT * (*var.force)[i][j] / (*var.mass)[i];
+
+#ifdef USE_NPROF
+    nvtxRangePop();
+#endif
+}
 
 void update_coordinate(const Variables& var, array_t& coord)
 {

@@ -118,9 +118,16 @@ struct Control {
 
     bool is_quasi_static;
     bool has_thermal_diffusion;
+    bool has_hydraulic_diffusion;
 
     bool has_hydration_processes;
     double hydration_migration_speed;
+
+    bool has_PT;
+    int PT_max_iter;
+    double PT_relative_tolerance;
+
+    bool has_moving_mesh;
 };
 
 struct BC {
@@ -181,6 +188,31 @@ struct BC {
 
     double_vec vbc_period_x0_ratio;
     double_vec vbc_period_x1_ratio;
+
+    double vbc_val_z1_loading_period;
+
+    // General stress (Neumann) bcs 
+    int stress_bc_x0;
+    int stress_bc_x1;
+    int stress_bc_y0;
+    int stress_bc_y1;
+    int stress_bc_z0;
+    int stress_bc_z1;
+
+    // hyrdaulic bouncdary
+    int hbc_x0;
+    int hbc_x1;
+    int hbc_y0;
+    int hbc_y1;
+    int hbc_z0;
+    int hbc_z1;
+
+    double stress_val_x0;
+    double stress_val_x1;
+    double stress_val_y0;
+    double stress_val_y1;
+    double stress_val_z0;
+    double stress_val_z1;
 };
 
 struct IC {
@@ -222,6 +254,9 @@ struct IC {
     int_vec radiogenic_heat_mat_in_layer;
 
     double isostasy_adjustment_time_in_yr;
+
+    double excess_pore_pressure;
+    bool has_body_force_adjustment;
 };
 
 struct Mat {
@@ -262,6 +297,16 @@ struct Mat {
     double_vec cohesion0, cohesion1;
     double_vec friction_angle0, friction_angle1;
     double_vec dilation_angle0, dilation_angle1;
+
+    // hydraulic parameters
+    double_vec porosity;
+    double_vec hydraulic_perm;
+    double_vec fluid_rho0;  // pore fluid density
+    double_vec fluid_alpha; // pore fluid thermal expansivity
+    double_vec fluid_bulk_modulus;  // pore fluid bulk modulus
+    double_vec fluid_visc;  // pore fluid dynamic viscosity
+    double_vec biot_coeff;  // Biot-Willis coefficient
+    double_vec bulk_modulus_s;  // bulk modulus of solid grain (mineral)
 };
 
 struct Time {
@@ -368,6 +413,8 @@ class MarkerSet;
 struct Variables {
     double time;
     double dt;
+    double dt_PT;
+    double l2_residual;
     int steps;
     Time func_time;
 
@@ -393,7 +440,12 @@ struct Variables {
     std::vector< std::pair<int,int> > *bfacets[nbdrytypes];
     array_t *bnormals;
     int vbc_types[nbdrytypes];
+    int hbc_types[nbdrytypes_hydro];
+    int stress_bc_types[nbdrytypes_hydro];
     double vbc_values[nbdrytypes];
+    double stress_bc_values[nbdrytypes];
+    double vbc_val_z1_loading_period;
+
     std::map<std::pair<int,int>, double*> edge_vectors;
     double_vec vbc_vertical_div_x0;
     double_vec vbc_vertical_div_x1;
@@ -407,21 +459,33 @@ struct Variables {
 
     double_vec *volume, *volume_old, *volume_n;
     double_vec *mass, *tmass;
+    double_vec *hmass;
     double_vec *edvoldt;
     double_vec *temperature, *plstrain, *delta_plstrain;
     double_vec *stressyy, *dpressure, *viscosity;
+    double_vec *old_mean_stress;
     double_vec *ntmp;
     double_vec *radiogenic_source;
 
+    // For hyraulic proceses
+    double_vec *fmass; // pore water mass
+    double_vec *ppressure; // pore pressure
+    double_vec *dppressure; // delta pore pressure
+    double_vec *dppressure_zero; // delta pore pressure
+    double_vec *fluid_source; // injection and pumping of pore water
+    
     // For surface processes
     SurfaceInfo surfinfo;
     int_vec melt_markers;
 
     array_t *vel, *force, *coord0;
+    array_t *force_residual;
     tensor_t *strain_rate, *strain, *stress;
-    shapefn *shpdx, *shpdy, *shpdz;
+    shapefn *shpdx, *shpdy, *shpdz; // gradient of shape function
     elem_cache *tmp_result;
     double_vec *tmp_result_sg;
+
+    // tensor_t *stress_old;
 
     MatProps *mat;
 

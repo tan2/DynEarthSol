@@ -100,9 +100,9 @@ void Output::_write(const Variables& var, bool disable_averaging)
         }
         bin.write_array(coord0, "velocity averaged", coord0.size());
     }
-
+    
     bin.write_array(*var.temperature, "temperature", var.temperature->size());
-
+    bin.write_array(*var.ppressure, "pore pressure", var.ppressure->size());
     bin.write_array(*var.radiogenic_source, "radiogenic source", var.radiogenic_source->size());
 
     bin.write_array(*var.plstrain, "plastic strain", var.plstrain->size());
@@ -189,13 +189,28 @@ void Output::_write(const Variables& var, bool disable_averaging)
 
     bin.close();
     int64_t duration_ns = get_nanoseconds() - start_time;
-    std::cout << "  Output # " << frame
+
+    if(dt / YEAR2SEC > 0.001)
+    {
+        std::cout << "  Output # " << frame
               << ", step = " << var.steps
-              << ", time = " << var.time / YEAR2SEC << " yr"
-              << ", dt = " << dt / YEAR2SEC << " yr"
+              << ", time = " << std::scientific << std::setprecision(5) << var.time / YEAR2SEC << " yr"
+              << ", dt = " << std::scientific << std::setprecision(5) << dt / YEAR2SEC << " yr"
               << ", wt = ";
-    print_time_ns(duration_ns);
-    std::cout << "\n";
+        print_time_ns(duration_ns);
+        std::cout << "\n";
+    }
+    else
+    {
+        std::cout << "  Output # " << frame
+              << ", step = " << var.steps
+              << ", time = " << std::scientific << std::setprecision(5) << var.time << " sec"
+              << ", dt = " << std::scientific << std::setprecision(5) << dt<< " sec"
+              << ", wt = ";
+        print_time_ns(duration_ns);
+        std::cout << "\n";
+    }
+    
 
     frame ++;
 

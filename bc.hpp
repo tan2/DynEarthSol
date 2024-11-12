@@ -6,7 +6,9 @@ double find_max_vbc(const BC &bc);
 void create_boundary_normals(const Variables &var, array_t &bnormals,
                              std::map<std::pair<int,int>, double*>  &edge_vectors);
 void apply_vbcs(const Param &param, const Variables &var, array_t &vel);
+void apply_vbcs_PT(const Param &param, const Variables &var, array_t &vel);
 void apply_stress_bcs(const Param& param, const Variables& var, array_t& force);
+void apply_stress_bcs_neumann(const Param& param, const Variables& var, array_t& force);
 void surface_plstrain_diffusion(const Param &param, const Variables& var, double_vec& plstrain);
 void correct_surface_element(const Variables& var, const double_vec& dhacc, MarkerSet& ms, tensor_t& stress, \
                               tensor_t& strain, tensor_t& strain_rate, double_vec& plstrain);
