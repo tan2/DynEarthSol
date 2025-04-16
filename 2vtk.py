@@ -46,7 +46,7 @@ output_markers = True
 output_melting = False
 
 # Calculate heat flow?
-output_heatflux = True
+output_heatflux = False
 conductivity = 3.3
 
 ########################

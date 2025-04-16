@@ -195,6 +195,7 @@ void Output::_write(const Variables& var, bool disable_averaging)
         std::cout << "  Output # " << frame
               << ", step = " << var.steps
               << ", time = " << std::scientific << std::setprecision(5) << var.time / YEAR2SEC << " yr"
+              << ", vmax = " << var.max_global_vel_mag << " m/s"
               << ", dt = " << std::scientific << std::setprecision(5) << dt / YEAR2SEC << " yr"
               << ", wt = ";
         print_time_ns(duration_ns);
@@ -205,12 +206,12 @@ void Output::_write(const Variables& var, bool disable_averaging)
         std::cout << "  Output # " << frame
               << ", step = " << var.steps
               << ", time = " << std::scientific << std::setprecision(5) << var.time << " sec"
+              << ", vmax = " << var.max_global_vel_mag << " m/s"
               << ", dt = " << std::scientific << std::setprecision(5) << dt<< " sec"
               << ", wt = ";
         print_time_ns(duration_ns);
         std::cout << "\n";
     }
-    
 
     frame ++;
 

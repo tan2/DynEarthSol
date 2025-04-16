@@ -21,7 +21,7 @@ void allocate_variables(const Param &param, Variables& var)
     var.mass = new double_vec(n);
     var.tmass = new double_vec(n);
     var.hmass = new double_vec(n);
-
+    var.ymass = new double_vec(n);
     var.edvoldt = new double_vec(e);
 
 //    var.marker_in_elem = new int_vec2D(e);
@@ -41,6 +41,22 @@ void allocate_variables(const Param &param, Variables& var)
         var.old_mean_stress = new double_vec(e, 0);
         // var.stress_old = new tensor_t(e, 0);
         var.radiogenic_source = new double_vec(e, 0);
+
+//         // these fields are from Denis' code
+//         var.MAX_shear = new double_vec(e);
+//         var.MAX_shear_0 = new double_vec(e);
+//         var.CL = new double_vec(e);
+//         var.dl_min = new double_vec(e);
+//         var.maxv = new double_vec(e);
+//         var.strain_energy = new double_vec(e);
+//         var.kinetic_energy = new double_vec(e);
+// #ifdef RS
+//         var.state1 = new double_vec(e);
+//         var.slip_velocity = new double_vec(e);
+//         var.friction_coefficient = new double_vec(e);
+//         var.RS_shear = new double_vec(e);
+//         var.Failure_mode = new double_vec(e);
+// #endif
     }
 
     var.ntmp = new double_vec(n);
@@ -83,7 +99,9 @@ void reallocate_variables(const Param& param, Variables& var)
 
     delete var.hmass;
     var.hmass = new double_vec(n);
-
+    delete var.ymass;
+    var.ymass = new double_vec(n);
+  
     delete var.edvoldt;
     var.edvoldt = new double_vec(e);
 
@@ -458,6 +476,30 @@ static void apply_damping(const Param& param, const Variables& var, array_t& for
         break;
     case 4:
         // rayleigh damping
+#ifdef GPP1X
+        #pragma omp parallel for default(none) \
+            shared(var, param, force, small_vel)
+#else
+        #pragma omp parallel for default(none) \
+        shared(var, param, force, small_vel)
+#endif
+        #pragma acc parallel loop
+        for (int i=0; i<var.nnode; ++i) {
+            double mass = (*var.mass)[i];
+            double young = (*var.ymass)[i];
+            double critical_coeff = 2.0 * std::sqrt(mass * young);
+            
+            for (int i=0; i<var.nnode; ++i) {
+                for (int j=0;j<NDIMS;j++)
+                    if (std::fabs((*var.vel)[i][j]) > small_vel) {
+
+                        double f_C = param.control.damping_factor * std::copysign(force[i][j], (*var.vel)[i][j]);
+                        double f_V = critical_coeff * (*var.vel)[i][j];
+                        double f_damping = (std::fabs(f_C) < std::fabs(f_V)) ? f_V : f_C;
+                        force[i][j] -= f_damping;
+                    }
+            }
+        }
         break;
     default:
         std::cerr << "Error: unknown damping_option: " << param.control.damping_option << '\n';
@@ -572,7 +614,6 @@ void update_force(const Param& param, const Variables& var, array_t& force, arra
     if (!param.ic.has_body_force_adjustment) apply_stress_bcs_neumann(param, var, force);
     apply_damping(param, var, force);
     
-
 #ifdef USE_NPROF
     nvtxRangePop();
 #endif
@@ -598,7 +639,6 @@ double calculate_residual_force(const Variables& var, array_t& force_residual)
 
     return std::sqrt(l2);
 }
-
 
 
 void update_velocity(const Variables& var, array_t& vel)

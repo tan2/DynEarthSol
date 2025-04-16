@@ -233,6 +233,11 @@ void barycentric_node_interpolation(Variables &var,
     interpolate_field(brc, el, old_connectivity, *var.ppressure, *a);
     delete var.ppressure;
     var.ppressure = a;
+  
+    a = new double_vec(var.nnode);
+    interpolate_field(brc, el, old_connectivity, *var.dppressure, *a);
+    delete var.dppressure;
+    var.dppressure = a;
 
     a = new double_vec(var.nnode);
     interpolate_field(brc, el, old_connectivity, *var.dppressure, *a);
